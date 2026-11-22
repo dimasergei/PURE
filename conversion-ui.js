@@ -95,7 +95,21 @@
    document.removeEventListener('mouseout',exitOffer);
    const dialog=document.createElement('dialog');dialog.className='ap-dialog cv-discount-dialog';
    dialog.setAttribute('aria-labelledby','pure-discount-heading');
-   dialog.innerHTML='<button type="button" class="cv-discount-close" data-close aria-label="Close discount offer">×</button><h2 id="pure-discount-heading">Get a discount code</h2><form class="ap-form"><label>Email address<input name="email" type="email" autocomplete="email" placeholder="you@example.com" required maxlength="254"></label><label class="ap-checkbox-label"><input name="consent" type="checkbox" required> I agree to receive PURE offers by email.</label><button class="ap-button">Get my code</button></form><p role="status"></p>';
+   dialog.innerHTML=`
+    <header class="cv-discount-hero">
+     <span class="pure-wordmark" role="img" aria-label="PURE"></span>
+     <button type="button" class="cv-discount-close" data-close aria-label="Close offer">×</button>
+     <h2 id="pure-discount-heading">GET <strong>10% OFF</strong></h2>
+     <p>Save on eligible items at checkout.</p>
+    </header>
+    <div class="cv-discount-body">
+     <form class="ap-form">
+      <label>Email address<input name="email" type="email" autocomplete="email" placeholder="you@example.com" required maxlength="254"></label>
+      <label class="ap-checkbox-label"><input name="consent" type="checkbox" required> I agree to receive PURE offers by email.</label>
+      <button class="ap-button">Unlock 10% off</button>
+     </form>
+     <p role="status"></p>
+    </div>`;
    const form=dialog.querySelector('form'),status=dialog.querySelector('[role=status]');
    dialog.querySelector('[data-close]').onclick=()=>dialog.close();
    dialog.addEventListener('close',()=>dialog.remove(),{once:true});
@@ -104,7 +118,10 @@
     const button=form.querySelector('button');button.disabled=true;
     try{
      const result=await request('campaign=signup',{email:form.elements.email.value,consent:form.elements.consent.checked});
-     form.hidden=true;status.textContent='Use code '+result.code+' at checkout.';
+     form.hidden=true;
+     status.classList.add('cv-discount-code');
+     const code=document.createElement('strong');code.textContent=result.code;
+     status.replaceChildren('Your checkout code',code);
     }catch(error){status.textContent=error.message;button.disabled=false;}
    };
    document.body.append(dialog);dialog.showModal();
