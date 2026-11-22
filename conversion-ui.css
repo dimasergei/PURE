@@ -177,12 +177,19 @@
 }
 
 [data-pure-home-campaign]:not([hidden]) {
-  margin: 0 0 1.25rem;
-  padding: .85rem 1rem;
-  border: 1px solid currentColor;
-  width: fit-content;
-  max-width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: .25rem .75rem;
+  margin-top: 1rem;
+  font-size: .82rem;
 }
-[data-pure-home-campaign] strong { font-size: clamp(1.1rem, 2.3vw, 1.6rem); }
-[data-pure-home-campaign] p { margin: .25rem 0 0; }
-[data-pure-home-campaign] [data-pure-campaign-countdown] { font-variant-numeric: tabular-nums; }
+[data-pure-home-campaign] strong { font-size: .95rem; }
+[data-pure-home-campaign] [data-pure-campaign-countdown] {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  opacity: .8;
+}
+@media (max-width: 760px) {
+  [data-pure-home-campaign]:not([hidden]) { justify-content: center; }
+}

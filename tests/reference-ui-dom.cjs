@@ -18,7 +18,7 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
   const {dom,d}=await setup('/',{server_time:new Date(now).toISOString(),ends_at:new Date(now+60000).toISOString(),eligible_variants:['bpc-157:5mg','ghk-cu:50mg']});
   const offer=d.querySelector('[data-pure-home-campaign]');
   assert.equal(offer.hidden,false);
-  assert.match(offer.textContent,/BUY 1, GET 1 FREE/);
+  assert.match(offer.textContent,/Buy 1, get 1 free/);
   assert.match(offer.textContent,/BPC-157 5mg and GHK-Cu 50mg/);
   assert.match(offer.textContent,/Ends in/);
   dom.window.close();

@@ -95,7 +95,7 @@
     if(homeOffer)homeOffer.hidden=root.hidden;
     if(!root.hidden){
      const hours=Math.floor(left/3600),minutes=Math.floor(left%3600/60),seconds=left%60;
-     root.textContent=(root.dataset.campaignProduct?'Buy 1, get 1 free · ':'BOGO · ')+'Ends in '+hours+'h '+minutes+'m '+seconds+'s';
+     root.textContent=(homeOffer?'':root.dataset.campaignProduct?'Buy 1, get 1 free · ':'BOGO · ')+'Ends in '+hours+'h '+minutes+'m '+seconds+'s';
     }
     return !root.hidden&&root.isConnected;
    };

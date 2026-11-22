@@ -37,7 +37,7 @@
   const picks=catalog.filter(p=>!items.some(x=>x.id===p.id)&&p.variants?.length).slice(0,5);
   let appliedCoupon=storedCoupon(),hasQuote=false;
   root.innerHTML='<div class="nlc-scrollable-items cart__body" data-testid="cart-product-scroll">'
-   +'<div class="nlc-unlock"><p data-nlc-unlock-copy>Free shipping over <strong>$250</strong> after discounts.</p><p>Complimentary 3 mL BAC water at US$299 after discounts.</p><div class="nlc-progress" role="progressbar" aria-label="Free shipping progress" aria-valuemin="0" aria-valuemax="150" aria-valuenow="0"><span class="nlc-progress-fill" style="width:0%"></span></div></div>'
+   +'<div class="nlc-unlock"><p data-nlc-unlock-copy>Free shipping over <strong>$250</strong> after discounts.</p><p>Free recon solution on your first order. Free priority shipping and recon solution at $299.</p><div class="nlc-progress" role="progressbar" aria-label="Free shipping progress" aria-valuemin="0" aria-valuemax="150" aria-valuenow="0"><span class="nlc-progress-fill" style="width:0%"></span></div></div>'
    +'<section class="nlc-cart-lines">'+items.map(x=>
     '<div class="nlc-line"><img src="'+html(window.AltaStore.image(window.AltaStore.product(x.id),x.size))+'" alt="">'
     +'<div class="nlc-name"><div class="nlc-product-title"><strong>'+html(x.name)+'</strong><span class="nlc-size">– '+html(x.size)+'</span></div>'
@@ -105,7 +105,7 @@
     const remaining=Number.isSafeInteger(data.free_shipping_remaining_cents)?data.free_shipping_remaining_cents:Math.max(0,threshold-merchandise);
     const unlockText=root.querySelector('[data-nlc-unlock-copy]');
     const shippingOffer=country==='US'?'free express shipping':'free standard shipping';
-    unlockText.innerHTML=!['US','CA'].includes(country)?'Free standard shipping is available for US and Canadian orders of <strong>'+money(threshold)+'</strong> after discounts.':remaining?'Add <strong>'+money(remaining)+'</strong> more for <strong>'+shippingOffer+'</strong>.':'<strong>Eligible for '+shippingOffer+'.</strong>';
+    unlockText.innerHTML=!['US','CA'].includes(country)?'See the shipping policy for eligibility. Free shipping starts at <strong>'+money(threshold)+'</strong> after discounts.':remaining?'Add <strong>'+money(remaining)+'</strong> more for <strong>'+shippingOffer+'</strong>.':'<strong>Eligible for '+shippingOffer+'.</strong>';
     const progress=root.querySelector('.nlc-progress');progress.hidden=!['US','CA'].includes(country);progress.setAttribute('aria-valuemax',String(threshold/100));progress.setAttribute('aria-valuenow',String(Math.min(threshold,merchandise)/100));
     root.querySelector('.nlc-progress-fill').style.width=Math.min(100,merchandise/threshold*100)+'%';
     root.querySelector('.nlc-proceed').innerHTML='Proceed to Checkout ('+money(data.total_cents)+')';

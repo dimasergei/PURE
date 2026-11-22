@@ -39,7 +39,7 @@ for(const surface of ['cart','checkout'])test(surface+': regular purchased quant
   assert.equal(f.w.localStorage.getItem('ap-checkout-coupon'),null);
   assert.match(f.root.textContent,/\$160\.00/);
   assert.match(f.root.textContent,(surface==='cart'?/\$176\.95/:/\$172\.95/));
-  assert.doesNotMatch(f.root.textContent,/BOGO|\+\d+ FREE|member(ship)?|Free BAC|Free Priority/i);
+  assert.doesNotMatch(f.root.textContent,/BOGO|\+\d+ FREE|member(ship)?/i);
   const cryptoOffer='Pay with Crypto at checkout for an extra 5% off the remaining merchandise.';
   if(surface==='cart')assert.ok(f.root.textContent.includes(cryptoOffer),'Cart explains the conditional crypto incentive without changing the current total');
   assert.doesNotMatch(f.root.textContent.replace(cryptoOffer,''),/\b5% off/i,'No unrelated automatic discount is advertised');

@@ -559,6 +559,22 @@ test('PURE memberships execute verified fees and goods benefits atomically in di
    assert.equal((await member(crypto.customer_id)).invoice_id,crypto.id);assert.equal(await count('commerce_receipts',crypto.id),1);assert.equal(await count('commerce_fulfillment_items',crypto.id),0);
   });
 
+  await t.test('welcome recon gift reaches fulfillment once per customer',async()=>{
+   await db.exec(read('20261122001600_first_paid_order_bac.sql'));
+   for(const route of ['card','interac']){
+    const customer=randomUUID();
+    for(const first of [true,false]){
+     const order=await make({customer,route,items:[{id:'fixture-a',size:'5mg',qty:1}]});
+     await place(order);await pay(order);
+     const saved=await load(order.id);
+     assert.equal(Boolean(saved.pricing.first_order_bac),first);
+     const gifts=(await db.query("select item from commerce_fulfillment_items where invoice_id=$1 and variant_key='gift-bac-3|3 mL'",[order.id])).rows;
+     assert.equal(gifts.length,first?1:0);
+     assert.equal(saved.total_cents,order.total_cents);
+    }
+   }
+  });
+
   await t.test('browser roles cannot mutate fees, benefits, priority or call financial validators directly',async()=>{
    const grants=(await db.query("select has_function_privilege('anon','public.commerce_place_checkout(jsonb)','EXECUTE') anon_place,has_function_privilege('authenticated','public.commerce_place_interac_checkout(jsonb)','EXECUTE') customer_place,has_function_privilege('service_role','public.commerce_place_checkout(jsonb)','EXECUTE') backend_place,has_function_privilege('service_role','commerce_internal.validate_membership_checkout(jsonb)','EXECUTE') backend_validator,has_table_privilege('authenticated','commerce_memberships','INSERT') customer_membership,has_table_privilege('service_role','commerce_invoices','UPDATE') direct_write")).rows[0];
    assert.deepEqual(grants,{anon_place:false,customer_place:false,backend_place:true,backend_validator:false,customer_membership:false,direct_write:false});
