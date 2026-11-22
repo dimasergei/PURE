@@ -120,6 +120,31 @@ test('PURE memberships execute verified fees and goods benefits atomically in di
   }
   for(const route of Object.keys(ids))methods[route]=(await db.query('select * from commerce_payment_methods where id=$1',[ids[route]])).rows[0];
 
+  await t.test('new bulk checkouts exclude retired pooled tiers and coupon codes while existing invoices still settle',async()=>{
+   const items=catalog.slice(0,2).map(product=>({id:product.id,size:product.variants[0].size,qty:25}));
+   const pooled=async()=>{
+    const order=await make({bulk:true,items});
+    // Fifty pooled units used to earn the same 50% as these two current 25-unit tiers.
+    order.pricing.quantity_discount_version='pure-bulk-2026-11-v1';
+    for(const line of order.pricing.lines)line.discount_reason='bulk_50';
+    return order;
+   };
+   const historical=await pooled();
+   await place(historical);
+   await db.exec(read('20261122001900_bulk_offer_exclusivity.sql'));
+   await pay(historical);
+   assert.equal((await load(historical.id)).total_cents,historical.total_cents);
+   assert.equal((await load(historical.id)).status,'paid');
+   await assert.rejects(place(await pooled()),/Bulk pricing/);
+   for(const route of ['card','crypto','interac']){
+    const coupon=await make({bulk:true,items,route});
+    coupon.request.checkout.coupon='BLACKFRIDAY10';
+    coupon.pricing.coupon_code='BLACKFRIDAY10';
+    await assert.rejects(place(coupon),/Bulk pricing/);
+    assert.equal(await load(coupon.id),undefined);
+   }
+  });
+
   await t.test('paid domestic and international orders retain their destination in the manual queue',async()=>{
    await db.query("update commerce_gateway_accounts set countries=array['US','CA','GB'] where method_id=$1",[ids.card]);
    try{
@@ -583,12 +608,13 @@ test('PURE memberships execute verified fees and goods benefits atomically in di
    assert.equal((await member(crypto.customer_id)).invoice_id,crypto.id);assert.equal(await count('commerce_receipts',crypto.id),1);assert.equal(await count('commerce_fulfillment_items',crypto.id),0);
   });
 
-  await t.test('welcome recon gift reaches fulfillment once per customer',async()=>{
+  await t.test('welcome recon gift reaches fulfillment once per customer including bulk first purchases',async()=>{
    await db.exec(read('20261122001600_first_paid_order_bac.sql'));
-   for(const route of ['card','interac']){
+   for(const route of ['card','interac'])for(const firstBulk of [false,true]){
     const customer=randomUUID();
+    const cat=[{...catalog[0],variants:[{size:'5mg',price:10}]}];
     for(const first of [true,false]){
-     const order=await make({customer,route,items:[{id:'fixture-a',size:'5mg',qty:1}]});
+     const order=await make({customer,route,cat,bulk:first&&firstBulk,items:[{id:'fixture-a',size:'5mg',qty:first&&firstBulk?10:1}]});
      await place(order);await pay(order);
      const saved=await load(order.id);
      assert.equal(Boolean(saved.pricing.first_order_bac),first);

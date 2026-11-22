@@ -71,7 +71,7 @@
    <div class="nl-bulk-summary-scroll" aria-label="Selected products">${selection}</div>
    <div class="nl-bulk-totals"><div class="nl-bulk-estimate-total"><span>Merchandise subtotal</span><strong>${priceMarkup(subtotal)}</strong></div>${tierSavingsCents>0?`<div class="nl-bulk-tier-savings"><span>Bulk savings</span><strong>−${priceMarkup(tierSavingsCents/100)}</strong></div><div class="nl-bulk-net"><span>After bulk savings</span><strong>${priceMarkup(tierNet)}</strong></div>`:''} </div>
    <button class="ap-button" data-action="bulk-checkout" ${canCheckout?'':'disabled'}>Checkout · ${priceMarkup(tierNet)}</button>
-   <p class="ap-fine nl-bulk-checkout-note">Save 50% at 10 units or 60% at 50 units per compound. Strengths of the same compound count together. Free two-day express on eligible bulk orders. Bulk savings don't stack with other discounts. Shipping is confirmed at checkout. Your regular cart stays saved.</p>`;
+   <p class="ap-fine nl-bulk-checkout-note">Save 50% at 10 units or 60% at 50 units per compound. Strengths of the same compound count together. Free two-day express on eligible bulk orders. The total includes your volume savings. Your regular cart stays saved.</p>`;
  }
  function render(path,root){
   if(!root)return;

@@ -19,9 +19,9 @@
   try{sessionStorage.setItem(protectionKey,'true');}catch{}
   return true;
  }
- function delivery(data,cart=[]){
+ function delivery(data,cart=[],bulk=false){
   const options=data.delivery_options||[];
-  return `<h3>Delivery speed</h3><p>Free priority shipping on merchandise orders of $250 after discounts.</p><div class="rd-delivery-grid">${options.filter(o=>o.kind==='shipping').map(o=>`<label class="rd-delivery ${!o.enabled?'rd-unavailable':''}"><input type="radio" name="shipping_speed" value="${esc(o.id)}" ${o.id==='economy'?'checked':''} ${!o.enabled?'disabled data-unavailable="true"':''}><strong>${esc(o.label)}</strong><span data-rd-shipping-price="${esc(o.id)}">${money(o.price_cents)}</span><small>${esc(o.description)}</small>${!o.enabled?'<em>Not available yet</em>':''}</label>`).join('')}</div><div class="rd-delivery-extras">${options.filter(o=>o.kind==='extra').map(o=>`<label class="rd-extra ${!o.enabled?'rd-unavailable':''}"><input type="checkbox" name="delivery_extra" value="${esc(o.id)}" ${o.id==='protection'&&o.enabled&&wantsProtection(cart)?'checked ':''}${!o.enabled?'disabled data-unavailable="true"':''}><span><strong>${esc(o.label)}</strong><small>${esc(o.description)}</small>${o.id==='protection'?'<a href="/shipping-protection.html">Shipping protection terms</a>':''}${!o.enabled?'<em>Not available yet</em>':''}</span><b data-rd-extra-price="${esc(o.id)}">${money(o.price_cents)}</b></label>`).join('')}</div>`;
+  return `<h3>Delivery speed</h3><p>${bulk?'US bulk orders include two-day express shipping after dispatch.':'Free priority shipping on merchandise orders of $250 after discounts.'}</p><div class="rd-delivery-grid">${options.filter(o=>o.kind==='shipping').map(o=>`<label class="rd-delivery ${!o.enabled?'rd-unavailable':''}"><input type="radio" name="shipping_speed" value="${esc(o.id)}" ${o.id==='economy'?'checked':''} ${!o.enabled?'disabled data-unavailable="true"':''}><strong>${esc(o.label)}</strong><span data-rd-shipping-price="${esc(o.id)}">${money(o.price_cents)}</span><small>${esc(o.description)}</small>${!o.enabled?'<em>Not available yet</em>':''}</label>`).join('')}</div><div class="rd-delivery-extras">${options.filter(o=>o.kind==='extra').map(o=>`<label class="rd-extra ${!o.enabled?'rd-unavailable':''}"><input type="checkbox" name="delivery_extra" value="${esc(o.id)}" ${o.id==='protection'&&o.enabled&&wantsProtection(cart)?'checked ':''}${!o.enabled?'disabled data-unavailable="true"':''}><span><strong>${esc(o.label)}</strong><small>${esc(o.description)}</small>${o.id==='protection'?'<a href="/shipping-protection.html">Shipping protection terms</a>':''}${!o.enabled?'<em>Not available yet</em>':''}</span><b data-rd-extra-price="${esc(o.id)}">${money(o.price_cents)}</b></label>`).join('')}</div>`;
  }
  function selection(form){return{shipping:form.elements.shipping_speed?.value||'economy',extras:[...form.querySelectorAll('[name=delivery_extra]:checked')].map(x=>x.value)};}
  function syncCheckoutPrices(form,aside,cart,data,quote){
@@ -48,17 +48,25 @@
   // Card wallets are offered by the hosted provider when eligible; no placeholder native buttons.
 
   if(!cart.length||!form.elements.line1)return;
+  const bulk=form.dataset.bulkOrder==='true';
   const optionsById=Object.fromEntries((data.delivery_options||[]).map(option=>[option.id,option]));
   const savedExtras=(()=>{try{return JSON.parse(sessionStorage.getItem(cartKey(cart))||'null');}catch{return null;}})();
   for(const input of form.querySelectorAll('[name=delivery_extra]')){
    input.checked=!!optionsById[input.value]?.enabled&&(input.value==='protection'?wantsProtection(cart):Array.isArray(savedExtras)&&savedExtras.includes(input.value));
   }
+  let previousCountry;
   function syncDelivery(quote){
-   const country=form.elements.country?.value||'US';
+   const country=form.elements.country?.value||'US',includedExpress=bulk&&country==='US';
+   const leavingIncludedExpress=bulk&&previousCountry==='US'&&!includedExpress;
+   previousCountry=country;
    const fallback=Object.fromEntries((data.delivery_options||[]).filter(o=>o.kind==='shipping').map(o=>[o.id,o.price_cents]));
    const rates=data.shipping_zones?.[country]||data.shipping_zones?.OTHER||(country==='US'?fallback:{});
    for(const input of form.querySelectorAll('[name=shipping_speed]')){
-    const eligible=!!optionsById[input.value]?.enabled&&Number.isSafeInteger(rates[input.value]);
+    const eligible=!!optionsById[input.value]?.enabled&&Number.isSafeInteger(rates[input.value])&&(!includedExpress||input.value==='express');
+    if(bulk){
+     input.closest('.rd-delivery')?.toggleAttribute('hidden',includedExpress&&input.value!=='express');
+     if(includedExpress||leavingIncludedExpress)input.checked=eligible&&input.value===(includedExpress?'express':'economy');
+    }
     input.disabled=!eligible;if(!eligible)input.checked=false;
     input.closest('.rd-delivery')?.classList.toggle('rd-unavailable',!eligible);
     const price=form.querySelector('[data-rd-shipping-price="'+input.value+'"]');
@@ -71,9 +79,11 @@
   syncDelivery();
   const estimate=aside.querySelector('.dc-totals'),input=form.elements.coupon,apply=form.querySelector('[data-dc-apply-coupon]'),remove=form.querySelector('[data-dc-remove-coupon]'),status=form.querySelector('[data-dc-coupon-status]');let timer,sequence=0;
   const keys=['ap-checkout-coupon','ap-cart-coupon'];
-  const saved=(localStorage.getItem(keys[0])||localStorage.getItem(keys[1])||'').trim().toUpperCase();
-  form.dataset.appliedCoupon=saved==='BLACKFRIDAY10'?saved:'';
-  keys.forEach(key=>form.dataset.appliedCoupon?localStorage.setItem(key,form.dataset.appliedCoupon):localStorage.removeItem(key));
+  function storeCoupon(value){
+   form.dataset.appliedCoupon=!bulk&&value==='BLACKFRIDAY10'?value:'';
+   if(!bulk)keys.forEach(key=>form.dataset.appliedCoupon?localStorage.setItem(key,form.dataset.appliedCoupon):localStorage.removeItem(key));
+  }
+  storeCoupon(bulk?'':(localStorage.getItem(keys[0])||localStorage.getItem(keys[1])||'').trim().toUpperCase());
   if(input)input.value=form.dataset.appliedCoupon;
   async function refresh(candidate=form.dataset.appliedCoupon,action='refresh'){
    const n=++sequence;form.dataset.couponPending='true';if(apply)apply.disabled=true;if(remove)remove.disabled=true;
@@ -81,21 +91,26 @@
    try{
     const session=await auth.auth.getSession(),headers={'Content-Type':'application/json'};if(session.data.session)headers.Authorization='Bearer '+session.data.session.access_token;
     const method=(data.methods||[]).find(item=>item.id===form.elements.method_id.value),interac=window.DirectCheckout.paymentKind(method)==='interac';
-    const r=await fetch('/api/customer-config?checkout=cart',{method:'POST',cache:'no-store',headers,body:JSON.stringify({items:cart.map(({id,size,qty})=>({id,size,qty})),bulk_order:form.dataset.bulkOrder==='true',coupon:candidate,method_id:form.elements.method_id.value,country:form.elements.country?.value||'US',delivery:selection(form),...(interac&&form.dataset.fxQuote?{fx_quote:form.dataset.fxQuote}:{})})}),q=await r.json();
+    const r=await fetch('/api/customer-config?checkout=cart',{method:'POST',cache:'no-store',headers,body:JSON.stringify({items:cart.map(({id,size,qty})=>({id,size,qty})),bulk_order:bulk,coupon:bulk?'':candidate,method_id:form.elements.method_id.value,country:form.elements.country?.value||'US',delivery:selection(form),...(interac&&form.dataset.fxQuote?{fx_quote:form.dataset.fxQuote}:{})})}),q=await r.json();
     if(n!==sequence)return;if(!r.ok||!Number.isSafeInteger(q.total_cents))throw Error(q.error||'Could not calculate your total.');
     if(q.currency!==(interac?'CAD':'USD')||q.request_only===true||interac&&(!q.fx_quote||!Number.isSafeInteger(q.pricing?.fx_ppm)||q.pricing.fx_ppm<=0))throw Error('The payment currency could not be verified. Refresh your order total.');
     if(interac)form.dataset.fxQuote=q.fx_quote;else delete form.dataset.fxQuote;
-    form.dataset.appliedCoupon=q.pricing?.coupon_code==='BLACKFRIDAY10'?'BLACKFRIDAY10':'';
-    keys.forEach(key=>form.dataset.appliedCoupon?localStorage.setItem(key,form.dataset.appliedCoupon):localStorage.removeItem(key));
+    storeCoupon(q.pricing?.coupon_code);
     if(input)input.value=form.dataset.appliedCoupon;if(remove)remove.hidden=!form.dataset.appliedCoupon;
     if(status)status.textContent=form.dataset.appliedCoupon?'BLACKFRIDAY10 applied — 10% off merchandise.':action==='remove'?(q.pricing?.crypto_discount_cents>0?'Coupon removed. Your 5% Crypto discount still applies.':'Coupon removed. Regular prices restored.'):'';
     const rows=[['Subtotal',q.subtotal_cents]];
+    if(bulk&&q.pricing?.quantity_discount_cents>0)rows.push(['Bulk savings',-q.pricing.quantity_discount_cents]);
     if(q.pricing?.coupon_discount_cents>0)rows.push(['BLACKFRIDAY10 (10%)',-q.pricing.coupon_discount_cents]);
     if(q.pricing?.crypto_discount_cents>0)rows.push(['Crypto discount (5%)',-q.pricing.crypto_discount_cents]);
     rows.push(['Delivery & options',q.shipping_cents]);if(q.tax_cents)rows.push(['Tax',q.tax_cents]);rows.push([interac?'Total (CAD)':'Estimated total',q.total_cents]);
     estimate.innerHTML=rows.map(([label,v])=>`<div class="dc-total-row"><span>${label}</span><strong>${money(v,q.currency)}</strong></div>`).join('')+(q.pricing?.discount_source==='coupon_crypto'?'<p class="dc-note">Your coupon is applied first, then an extra 5% Crypto discount on the remaining merchandise.</p>':'')+(interac?'<p class="dc-note">Your total is in CAD. Interac receiving details appear after you place the order. USD points and store credit cannot be applied to this payment.</p>':'<p class="dc-note">Existing points and store credit are applied when you review the final total.</p>');
     syncDelivery(q);
-   }catch(error){if(n===sequence&&status)status.textContent=error.message;}
+   }catch(error){
+    if(n===sequence){
+     if(status)status.textContent=error.message;
+     else estimate.textContent=error.message;
+    }
+   }
    finally{if(n===sequence){form.dataset.couponPending='false';if(apply)apply.disabled=false;if(remove)remove.disabled=false;}}
   }
   const change=(candidate,action)=>{clearTimeout(timer);form.dispatchEvent(new Event('input',{bubbles:true}));void refresh(candidate,action);};

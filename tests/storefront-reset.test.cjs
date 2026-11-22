@@ -249,7 +249,10 @@ test('bulk ordering grows and clears its summary while preserving exact prices, 
   assert.equal(d.querySelector('[data-action="bulk-checkout"]').disabled,true);
   assert.equal(JSON.stringify(w.AltaStore.cart),regularCart,'bulk selections never replace the existing regular cart');
   assert.equal(w.localStorage.getItem('pp-cart'),storedCart,'the saved regular cart remains intact');
-  assert.doesNotMatch(d.querySelector('#ap-main').textContent,/BOGO|membership|research builder|auto-stack/i);
+  const bulkPage=d.querySelector('#ap-main');
+  assert.match(bulkPage.textContent,/coupon and partner codes, membership discounts and Crypto savings are available on eligible retail orders/i);
+  assert.equal(bulkPage.querySelector('input[name="coupon"], [data-pure-membership-offer], .pure-card-sale'),null);
+  assert.doesNotMatch(bulkPage.textContent,/research builder|auto-stack/i);
  }finally{await f.close();}
 });
 

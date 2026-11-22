@@ -105,6 +105,78 @@ test('Bulk checkout groups strengths by compound and includes US express',async(
  assert.throws(()=>checkout.price(rec,method,null,{points:0,credit_cents:0}),/10 units of each compound/);
 });
 
+test('bulk preview, checkout quote and saved invoice use only the volume price during a live BOGO',async()=>{
+ const partner={customer_id:'c0000000-0000-4000-8000-000000000008',code:'BULKLAB',status:'active'};
+ const db=dbMock({partner});
+ const headers={cookie:'ap_ref='+require('../lib/partner-program').cookieToken(partner.code,env.CHECKOUT_RATE_LIMIT_SECRET)};
+ const deps={env:{...env,BOGO_ENABLED:'true',BOGO_VARIANTS:'catalog',
+  BOGO_STARTS_AT:new Date(Date.now()-86400000).toISOString(),BOGO_ENDS_AT:new Date(Date.now()+86400000).toISOString()}};
+ const cat=[{...catalog[0],variants:[{size:'5mg',price:40},{size:'10mg',price:80}]}];
+ const options={db,cat,headers,deps};
+ const basket={...body,bulk_order:true,items:[{id:cat[0].id,size:'5mg',qty:4,price:.01},{id:cat[0].id,size:'10mg',qty:6,price:.01}]};
+ for(const coupon of ['BLACKFRIDAY10',partner.code,'WHEEL10','REVIEW50']){
+  for(const action of ['cart','quote','place']){
+   const result=await call({...basket,coupon,...(action==='cart'?{country:'US'}:{action})},{...options,params:action==='cart'?'checkout=cart':''});
+   assert.equal(result.res.code,400,action+' '+coupon);
+  }
+ }
+ assert.equal(db.calls.length,0);
+ const {res:preview}=await call({...basket,country:'US'},{...options,params:'checkout=cart'});
+ const {res:quoted}=await call({...basket,action:'quote'},options);
+ assert.equal(preview.code,200);assert.equal(quoted.code,200);
+ for(const priced of [preview.body,quoted.body]){
+  assert.equal(priced.subtotal_cents,64000);assert.equal(priced.discount_cents,32000);
+  assert.equal(priced.total_cents,32000);assert.equal(priced.shipping_cents,0);
+  assert.deepEqual(priced.pricing.lines.map(line=>line.qty),[4,6]);
+  assert.equal(priced.pricing.bogo_campaign,undefined);
+  assert.equal(priced.pricing.affiliate_code,undefined);assert.equal(priced.pricing.coupon_discount_cents,0);
+  assert.equal(priced.automatic_partner_offer,undefined);
+  assert.equal(priced.pricing.bundled_items.length,1);assert.equal(priced.pricing.bundled_items[0].qty,1);
+ }
+ assert.equal(preview.body.membership_offer,null);
+ const {res:placed}=await call({...basket,action:'place',quote:quoted.body.quote},options);
+ assert.equal(placed.code,201);assert.equal(db.calls.length,1);
+ const stored=db.calls[0].args.p_data;
+ assert.deepEqual(stored.pricing,quoted.body.pricing);assert.equal(stored.total_cents,32000);
+ const {res:regular}=await call({...basket,bulk_order:false,country:'US'},{...options,params:'checkout=cart'});
+ assert.equal(regular.code,200);
+ assert.equal(regular.body.pricing.quantity_discount_cents,undefined);
+ assert.deepEqual(regular.body.pricing.bogo_campaign.free_units.map(item=>item.qty),[4,6]);
+ assert.equal(regular.body.pricing.coupon_discount_cents,12800);
+});
+
+test('guest bulk preview enforces per-compound thresholds, quantity limits and Canadian delivery',async()=>{
+ const cat=[{...catalog[0],variants:[{size:'5mg',price:10},{size:'10mg',price:20}]}];
+ const get=items=>call({bulk_order:true,items,country:'CA',delivery:{shipping:'express',extras:['protection']}},
+  {cat,params:'checkout=cart',headers:{authorization:''}});
+ for(const [small,large,rate] of [[4,5,0],[4,6,5000],[40,9,5000],[40,10,6000],[100,100,6000],[101,1,0]]){
+  const items=[{id:cat[0].id,size:'5mg',qty:small},{id:cat[0].id,size:'10mg',qty:large}];
+  const {res}=await get(items);
+  if(!rate){assert.equal(res.code,400);continue;}
+  assert.equal(res.code,200);assert.equal(res.body.pricing.bulk_unit_count,small+large);
+  assert.deepEqual(res.body.pricing.lines.map(line=>line.discount_bps),[rate,rate]);
+  const gross=small*1000+large*2000;
+  assert.equal(res.body.discount_cents,gross*rate/10000);assert.equal(res.body.shipping_cents,5495);
+  assert.equal(res.body.total_cents,gross-res.body.discount_cents+5495);
+ }
+});
+
+test('bulk member earns the promised non-price benefits and retains one recon gift',async()=>{
+ const cat=[{...catalog[0],variants:[{size:'5mg',price:20}]}];
+ const black={plan:'elite',invoice_id:id};
+ for(const qty of [10,50]){
+  const record=await checkout.normalize({},user,{...body,bulk_order:true,items:[{id:cat[0].id,size:'5mg',qty}],
+   delivery:{shipping:'standard',extras:['priority','protection']}},cat);
+  const q=checkout.price(record,method,black,{points:0,credit_cents:0});
+  assert.equal(q.pricing.quantity_discount_cents,qty===10?10000:60000);
+  assert.equal(q.pricing.membership_discount_cents,0);assert.equal(q.pricing.coupon_discount_cents,0);
+  assert.equal(q.pricing.bundled_items.length,1);assert.equal(q.pricing.bundled_items[0].qty,1);
+  assert.equal(q.pricing.delivery.extras.find(extra=>extra.id==='priority').amount_cents,0);
+  assert.equal(q.shipping_cents,500);assert.equal(q.membership_invoice_id,black.invoice_id);
+  assert.equal(q.earned_points,(q.subtotal_cents-q.discount_cents)/10);
+ }
+});
+
 test('modified totals, quantities, delivery, prices and old version quotes fail before placement',async()=>{
  const {res:q,db}=await call({...body,action:'quote'});
  const changes=[{body:{items:[{...body.items[0],qty:2}]}},{body:{coupon:'BLACKFRIDAY10'}},{body:{delivery:{shipping:'express',extras:[]}}},{body:{quote:'0'.repeat(64)}},{cat:[{...catalog[0],variants:[{size:'5mg',price:101}]}]}];
@@ -120,6 +192,20 @@ test('completed request replay returns its existing order without a second debit
  const {res}=await call({...body,action:'place',quote:'old'},{db});assert.equal(res.code,200);assert.equal(res.body.replayed,true);assert.equal(db.calls.length,0);
  const {res:conflict}=await call({...body,action:'place',points:100},{db});assert.equal(conflict.code,409);
 });
+test('an exact retry of a legacy bulk coupon invoice returns the original order once',async()=>{
+ const basket={...body,bulk_order:true,coupon:'BLACKFRIDAY10',items:[{...body.items[0],qty:10}]};
+ // Saved by the previous production normalizer for this fixture, before new bulk codes were rejected.
+ const priorDigest='d82abc044f159eff0a918b6b6081ac4945a15e3dd1aced4903d484b615d245fa';
+ const existing={id,status:'accepted',checkout_version:config.version,request_digest:priorDigest};
+ const db=dbMock({existing}),place={...basket,action:'place',quote:'prior-confirmed-quote'};
+ const {res:replay}=await call(place,{db});
+ assert.equal(replay.code,200);assert.deepEqual(replay.body,{id,status:'accepted',replayed:true});
+ const {res:changed}=await call({...place,items:[{...body.items[0],qty:11}]},{db});
+ assert.equal(changed.code,409);assert.equal(db.calls.length,0);
+ const fresh=await call(place);
+ assert.equal(fresh.res.code,400);assert.match(fresh.res.body.error,/bulk/i);assert.equal(fresh.db.calls.length,0);
+});
+
 test('authentication, origin, malformed cart and credit issuance fail closed',async()=>{
  for(const headers of [{authorization:''},{origin:'https://untrusted.example'}]){const {res,db}=await call({...body,action:'quote'},{headers});assert.ok([401,403].includes(res.code));assert.equal(db.calls.length,0);}
  for(const items of [[{...body.items[0],qty:0}],[{...body.items[0],qty:101}],[{...body.items[0],qty:1.5}],[body.items[0],body.items[0]],[{...body.items[0],size:'unknown'}]]){

@@ -42,7 +42,7 @@ const routes={
  '/research-builder':['PURE Memberships','Member Stack is unlocked in a paid PURE membership account.'],
  '/research-checkout':['PURE Memberships','Member Stack is available in an active membership account.'],
  '/shop':['Research Catalog','Browse all PURE research products and exact product-size variants.'],
- '/bulk-orders':['Bulk Requests','Build exact product quantities and submit a bulk quote inquiry.'],
+ '/bulk-orders':['Bulk Orders','Choose strengths, combine units of the same compound and check out with volume pricing.'],
  '/rewards':['Rewards and Credit','Find the account workspaces for issued rewards and store credit.'],
  '/coas':['Certificates of Analysis','Browse COA reports by product, strength and reported lot. The original report sheets remain available.'],
  '/about':['About PURE','Learn about the connected PURE laboratory research workspace.'],

@@ -43,6 +43,7 @@
  function link(label,url){const a=node('a',label);a.href=url;a.className='ap-button ap-button-secondary';return a;}
  function summary(q){const box=node('section');box.className='dc-review-summary';box.append(node('span',q.currency==='CAD'?'ORDER TOTAL · CAD':'FINAL TOTAL'));const totals=node('div');totals.className='dc-totals';
   const rows=[['Subtotal',q.subtotal_cents]];
+  if(q.pricing?.bulk_unit_count&&q.pricing.quantity_discount_cents>0)rows.push(['Bulk savings',-q.pricing.quantity_discount_cents]);
   if(q.pricing?.discount_source==='member_stack')rows.push(['Member Stack savings ('+(q.pricing.lines?.[0]?.discount_bps===2000?'20%':'40%')+')',-q.pricing.discount_cents]);
    if(q.pricing?.membership_discount_cents>0)rows.push([(q.pricing.membership_name||'Membership')+' savings',-q.pricing.membership_discount_cents]);
   if(q.pricing?.coupon_discount_cents>0)rows.push(['BLACKFRIDAY10 (10%)',-q.pricing.coupon_discount_cents]);
@@ -57,7 +58,7 @@
  }
  function checkoutSteps(form,root,data,cart){
   const original=[...form.querySelectorAll(':scope > .dc-section')],details=original[0],payment=original[1],review=original[2];
-  const delivery=node('section');delivery.className='dc-section';delivery.innerHTML='<span class="dc-kicker">02 · Delivery</span><h2>Delivery method</h2>'+window.ReadinessUI.delivery(data,cart);
+  const delivery=node('section');delivery.className='dc-section';delivery.innerHTML='<span class="dc-kicker">02 · Delivery</span><h2>Delivery method</h2>'+window.ReadinessUI.delivery(data,cart,form.dataset.bulkOrder==='true');
   details.after(delivery);review.querySelector('.dc-kicker')?.remove();review.querySelector('h2')?.remove();payment.append(...review.childNodes);review.remove();payment.querySelector('.dc-kicker').textContent='03 · Payment';
   const sections=[details,delivery,payment],labels=['Shipping','Delivery','Payment'];let current=0;
   const nav=node('nav');nav.className='dc-step-nav';nav.setAttribute('aria-label','Checkout steps');const buttons=labels.map((label,i)=>{const b=node('button');b.type='button';b.innerHTML='<span>'+(i+1)+'</span>'+label;b.onclick=()=>move(i);nav.append(b);return b;});root.querySelector('.dc-steps').replaceWith(nav);
@@ -79,7 +80,7 @@
     // Member Stack is a one-time paid member benefit; no separate plan or renewal is created.
     const cart=stack?window.AltaStore.normalizeLines(Array.isArray(stackDraft.lines)?stackDraft.lines:[]):bulk?window.AltaStore.normalizeLines(window.AltaStore.read('ap-bulk-draft-v2',[])):window.AltaStore?.cart||[];
     if(stack&&(cart.length!==4||new Set(cart.map(item=>item.id)).size!==4||cart.some(item=>item.qty!==1)))throw Error('Choose four different compounds in your Member Stack first.');
-   root.innerHTML='<div class="dc-topline"><a href="'+(stack?'/account/membership#member-stack':bulk?'/bulk-orders':'/shop')+'">← '+(stack?'Back to Member Stack':'Continue shopping')+'</a><a href="/account/purchases">My orders</a></div><header class="dc-heading"><h1>'+(stack?'Member Stack checkout':'Checkout')+'</h1><p class="dc-steps">Your details &nbsp; / &nbsp; Review order &nbsp; / &nbsp; Payment</p></header>';document.title=(stack?'Member Stack Checkout':'Checkout')+' | PURE';
+   root.innerHTML='<div class="dc-topline"><a href="'+(stack?'/account/membership#member-stack':bulk?'/bulk-orders':'/shop')+'">← '+(stack?'Back to Member Stack':bulk?'Back to bulk orders':'Continue shopping')+'</a><a href="/account/purchases">My orders</a></div><header class="dc-heading"><h1>'+(stack?'Member Stack checkout':bulk?'Bulk checkout':'Checkout')+'</h1><p class="dc-steps">Your details &nbsp; / &nbsp; Review order &nbsp; / &nbsp; Payment</p></header>';document.title=(stack?'Member Stack Checkout':bulk?'Bulk Checkout':'Checkout')+' | PURE';
    if(!cart.length){root.append(node('p',bulk?'Your bulk order is empty.':'Your cart is empty.'),link(bulk?'Build a bulk order':'Shop products',bulk?'/bulk-orders':'/shop'));return;}
    const methods=data.methods.filter(method=>(method.sale_scope==='both'||method.sale_scope==='goods')&&paymentKind(method)&&(!stack||['card','crypto'].includes(paymentKind(method))));
    const profile=user.user_metadata?.alta_profile||{},address=profile.shipping||{};
@@ -90,7 +91,7 @@
    const savedCountry=address.country||localStorage.getItem('ap-shipping-country');
    form.elements.country.value=stack?'US':countries.includes(savedCountry)?savedCountry:'US';if(stack){form.elements.country.innerHTML='<option value="US">United States</option>';form.querySelector('.dc-coupon').hidden=true;form.querySelector('.dc-rewards').hidden=true;}
    if(bulk){
-    form.querySelector('.dc-coupon').hidden=true;
+    form.querySelector('.dc-coupon').remove();
     const deliveryCopy=form.querySelector('.dc-section p');
     deliveryCopy.textContent='US bulk orders include two-day express shipping after dispatch. Other destinations show available rates at checkout.';
    }
@@ -121,7 +122,7 @@
    form.addEventListener('input',invalidateReview);form.addEventListener('change',invalidateReview);
    form.onsubmit=async e=>{e.preventDefault();if(busy||form.dataset.couponPending==='true'||!steps.ready())return;busy=true;const button=form.querySelector('button[type="submit"]');button.disabled=true;status.textContent='Calculating your total…';
     try{
-     const d=Object.fromEntries(new FormData(form));for(const control of form.elements)control.disabled=true;const request={kind:'goods',bulk_order:bulk,...(stack?{research_builder_mode:'member_stack'}:{}),items:cart.map(({id,size,qty})=>({id,size,qty})),address:{line1:d.line1,line2:d.line2,city:d.city,region:d.region,postal_code:d.postal_code,country:d.country},research_use:d.research_use==='on',name:d.name,organization:d.organization,note:d.note,consent:d.consent==='on',method_id:d.method_id,points:stack?0:Number(d.points||0),credit_cents:stack?0:Math.round(Number(d.credit||0)*100),coupon:stack?'':form.dataset.appliedCoupon||'',delivery:stack?{shipping:stackShipping,extras:[]}:window.ReadinessUI.selection(form),checkout_version:data.config.version};
+     const d=Object.fromEntries(new FormData(form));for(const control of form.elements)control.disabled=true;const request={kind:'goods',bulk_order:bulk,...(stack?{research_builder_mode:'member_stack'}:{}),items:cart.map(({id,size,qty})=>({id,size,qty})),address:{line1:d.line1,line2:d.line2,city:d.city,region:d.region,postal_code:d.postal_code,country:d.country},research_use:d.research_use==='on',name:d.name,organization:d.organization,note:d.note,consent:d.consent==='on',method_id:d.method_id,points:stack?0:Number(d.points||0),credit_cents:stack?0:Math.round(Number(d.credit||0)*100),coupon:bulk||stack?'':form.dataset.appliedCoupon||'',delivery:stack?{shipping:stackShipping,extras:[]}:window.ReadinessUI.selection(form),checkout_version:data.config.version};
      const fingerprint=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(request))))).map(x=>x.toString(16).padStart(2,'0')).join('');if(lastFingerprint&&lastFingerprint!==fingerprint){requestId=crypto.randomUUID();sessionStorage.setItem('ap-checkout-id',requestId);}lastFingerprint=fingerprint;sessionStorage.setItem('ap-checkout-fingerprint',fingerprint);
      body={...request,id:requestId,action:'quote',...(form.dataset.fxQuote?{fx_quote:form.dataset.fxQuote}:{})};let q=await api(auth,body);
      const selected=methods.find(m=>m.id===body.method_id),kind=paymentKind(selected);
