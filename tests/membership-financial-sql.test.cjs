@@ -111,7 +111,7 @@ test('PURE memberships execute verified fees and goods benefits atomically in di
      '20261122000200_partner_commission_rates.sql',
      '20261122000300_partner_chargebacks.sql',
      '20261122000400_storefront_reviews.sql','20261122000500_review_credit.sql',
-     '20261122000700_bogo_fulfillment.sql','20261122000800_blackfriday10_checkout.sql','20261122001000_partner_first_order_discount.sql']){
+     '20261122000700_bogo_fulfillment.sql','20261122000800_blackfriday10_checkout.sql','20261122001000_partner_first_order_discount.sql','20261122001100_bogo_shipping_threshold.sql']){
    try{await db.exec(read(file));}catch(error){error.message=file+': '+error.message;throw error;}
   }
   for(const route of Object.keys(ids))methods[route]=(await db.query('select * from commerce_payment_methods where id=$1',[ids[route]])).rows[0];
@@ -150,11 +150,12 @@ test('PURE memberships execute verified fees and goods benefits atomically in di
    const p=await make({cat,campaign});
    assert.deepEqual(p.pricing.bogo_campaign.free_units,[{id:'fixture-a',size:'5mg',qty:1}]);
    assert.equal(p.subtotal_cents,15700);
-   assert.ok(p.shipping_cents>0);
-   for(const cents of [24999,25000,25001]){
+   assert.equal(p.shipping_cents,0);
+   for(const cents of [14999,15000,15001,24999,25000,25001]){
     const thresholdCatalog=[{...cat[0],variants:[{size:'5mg',price:cents/100}]}];
     const thresholdOrder=await make({cat:thresholdCatalog,campaign});
-    assert.equal(thresholdOrder.shipping_cents===0,cents>=25000);
+    assert.equal(thresholdOrder.shipping_cents===0,cents>=15000);
+    assert.equal(Boolean(thresholdOrder.pricing.campaign_bac),cents>=25000);
     await place(thresholdOrder);
    }
    await place(p);await pay(p);
