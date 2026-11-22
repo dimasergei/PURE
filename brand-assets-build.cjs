@@ -58,6 +58,7 @@ for(const file of fs.readdirSync(out,{recursive:true}).filter(f=>f.endsWith('.ht
   // Price quotes and reward markers share one contract across the drawer and checkout.
   html=html.replace(/\b(src|href)="\/(cart-reference\.(?:js|css)|checkout-reference\.js|storefront-v2\.js)(?:\?[^"]*)?"/g,'$1="/$2?v=20261122-catalog-rewards"');
   html=html.replace(/src="\/workspace-v2\.js(?:\?[^"]*)?"/g,'src="/workspace-v2.js?v=20261122-partner-pilot"');
+  html=html.replace(/\b(src|href)="\/(checkout-reference\.(?:js|css))(?:\?[^"]*)?"/g,'$1="/$2?v=20261122-summary-gifts"');
   fs.writeFileSync(target,html);
   count++;
 }

@@ -212,19 +212,21 @@
   function renderSummary(){
    const items=snapshotCart();
    view('.nlx-summary-head h2',detail).textContent=state.paymentKind==='interac'?'Order Summary · CAD':'Order Summary';
-   view('[data-nlx-item-count]',detail).textContent=items.reduce((n,x)=>n+x.qty,0)+' items';
+   const bonuses=currentPreview?.pricing?.bogo_campaign?.free_units||[];
+   const gifts=currentPreview?.pricing?.bundled_items||[];
+   let itemCount=gifts.reduce((sum,gift)=>sum+(gift.qty||1),0);
    view('[data-nlx-protection]',detail).innerHTML=isActive('protection')?'<div class="nlx-protection-body"><span class="nlx-shield">'+shieldIcon+'</span><div class="nlx-protection-copy"><strong><span class="nlx-protection-lock" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span>Shipping Protection</strong><button type="button" class="nlx-disclosure-trigger" data-testid="protection-disclosure" data-nlx-info="protection" aria-controls="nlx-protection-detail" aria-expanded="false">Read more</button><div class="nlx-disclosure" id="nlx-protection-detail" data-testid="protection-disclosure-panel" data-nlx-panel hidden><p>'+esc(optionsById.protection.description||'Optional protection for eligible shipments.')+'</p><a href="/shipping-protection.html">Full shipping protection policy</a></div></div><span class="nlx-protection-price">'+extraDisplay('protection')+'</span><label class="nlx-mini-check"><input type="checkbox" data-nlx-extra="protection" '+(state.extras.has('protection')?'checked':'')+' aria-label="Shipping protection"></label></div>':'';
    view('[data-nlx-products]',detail).innerHTML='<div class="nlx-product-head"><span>PRODUCT</span><span>SUBTOTAL</span></div>'+items.map(x=>{
     const image=window.AltaStore?.image?.(window.AltaStore.product(x.id),x.size)||'';
     const line=currentPreview?.pricing?.lines?.find(item=>item.id===x.id&&item.size===x.size&&item.qty===x.qty);
     const amount=currentPreview?.currency===paymentCurrency()&&Number.isSafeInteger(line?.gross_cents)?currentMoney(line.gross_cents):paymentCurrency()==='USD'?usd(Math.round(x.price*100)*x.qty):'Calculating…';
-    return '<div class="nlx-product"><button type="button" class="nlx-remove" data-nlx-remove="'+esc(x.key)+'" aria-label="Remove '+esc(x.name)+'">×</button><img src="'+esc(image)+'" alt=""><div class="nlx-product-name"><strong>'+esc(x.name)+'</strong><div class="nlx-size-line"><small>'+esc(x.size)+'</small>'+'</div><div class="nlx-qty"><button data-nlx-qty="-1" data-key="'+esc(x.key)+'" aria-label="Decrease quantity">−</button><span>'+x.qty+'</span><button data-nlx-qty="1" data-key="'+esc(x.key)+'" aria-label="Increase quantity">+</button></div></div><strong class="nlx-product-price">'+amount+'</strong></div>';
+    const freeQuantity=bonuses.find(bonus=>bonus.id===x.id&&bonus.size===x.size)?.qty||0;
+    itemCount+=x.qty+freeQuantity;
+    const freeBadge=freeQuantity?'<span class="nlx-promo-free">+'+esc(freeQuantity)+' FREE</span>':'';
+    return '<div class="nlx-product"><button type="button" class="nlx-remove" data-nlx-remove="'+esc(x.key)+'" aria-label="Remove '+esc(x.name)+'">×</button><img src="'+esc(image)+'" alt=""><div class="nlx-product-name"><strong>'+esc(x.name)+'</strong><div class="nlx-size-line"><small>'+esc(x.size)+'</small></div><div class="nlx-product-quantity"><div class="nlx-qty"><button data-nlx-qty="-1" data-key="'+esc(x.key)+'" aria-label="Decrease quantity">−</button><span>'+x.qty+'</span><button data-nlx-qty="1" data-key="'+esc(x.key)+'" aria-label="Increase quantity">+</button></div>'+freeBadge+'</div></div><strong class="nlx-product-price">'+amount+'</strong></div>';
    }).join('');
-   for(const free of currentPreview?.pricing?.bogo_campaign?.free_units||[]){
-     const item=items.find(item=>item.id===free.id&&item.size===free.size);
-     if(item)view('[data-nlx-products]',detail).insertAdjacentHTML('beforeend','<div class="nlx-product"><div class="nlx-product-name"><strong>'+esc(item.name)+'</strong><small>'+esc(item.size)+' × '+free.qty+' free</small></div><strong class="nlx-product-price">'+currentMoney(0)+'</strong></div>');
-   }
-   for(const gift of currentPreview?.pricing?.bundled_items||[]){
+   view('[data-nlx-item-count]',detail).textContent=itemCount+(itemCount===1?' item':' items');
+   for(const gift of gifts){
      view('[data-nlx-products]',detail).insertAdjacentHTML('beforeend','<div class="nlx-product"><div class="nlx-product-name"><strong>'+esc(gift.name)+'</strong><small>'+esc(gift.size)+'</small></div><strong class="nlx-product-price">'+currentMoney(0)+'</strong></div>');
    }
    if(currentPreview?.pricing?.membership_addon){

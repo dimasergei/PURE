@@ -388,6 +388,27 @@ body.ap-checkout-page #account-root{box-shadow:none!important;border:0!important
 .nlx-wallet-button[aria-pressed="true"]{outline:2px solid #111;outline-offset:3px}
 .nlx-wallet-button:focus-visible{outline:2px solid #111;outline-offset:3px}
 
+.nlx-product-quantity {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px 8px;
+  max-width: 100%;
+}
+.nlx-product-quantity .nlx-promo-free {
+  align-self: center;
+  white-space: nowrap;
+}
+
+/* Gifts have no remove button or thumbnail. Give their names
+   the available row width and keep their amounts under the subtotal heading. */
+.nlx-product > .nlx-product-name:first-child {
+  grid-column: 1 / -2;
+}
+.nlx-product > .nlx-product-name:first-child + .nlx-product-price {
+  grid-column: -2 / -1;
+  justify-self: end;
+}
 
 /* Membership is a single order item at checkout, not another checkout. */
 .nlx-checkout-root .nlx-membership-line{grid-template-columns:18px minmax(0,1fr) auto;align-items:center;gap:9px;border-top:0;margin-top:0;padding:15px 0}

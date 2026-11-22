@@ -7,14 +7,14 @@ const bank={id:'22222222-2222-4222-8222-222222222222',kind:'bank_transfer',sale_
 const card={id:'11111111-1111-4111-8111-111111111111',kind:'hosted_link',sale_scope:'goods',currency:'USD',label:'Card',native_provider:'rampex',rampex_provider:'hosted',countries:['US','CA']};
 const user={email:'researcher@example.test',user_metadata:{full_name:'Fixture Researcher',alta_profile:{shipping:{name:'Fixture Researcher',line1:'123 Research Lane',city:'Miami',region:'FL',postal_code:'33101',country:'US',phone:'3055550157'}}}};
 const tick=()=>new Promise(resolve=>setTimeout(resolve,20));
-function fixture(surface,{legacyCoupon=false,balances={points:0,credit_cents:0}}={}){
+function fixture(surface,{legacyCoupon=false,balances={points:0,credit_cents:0},campaign}={}){
  const dom=new JSDOM('<main id="root"></main>',{url:'https://pure-labs.live/'+(surface==='cart'?'shop':'checkout'),runScripts:'outside-only',virtualConsole:new VirtualConsole()}),w=dom.window,requests=[],orderRequests=[];
  let cart=[{id:'fixture',key:'fixture:5mg',name:'Fixture compound',size:'5mg',qty:2,price:80}];
  const products=[{id:'fixture',name:'Fixture compound',variants:[{size:'5mg',price:80}]},{id:'addon',name:'Research add-on',variants:[{size:'10mg',price:30}]}];
  const data={config,delivery_options:delivery,shipping_zones:zones,methods:[card,bank],nmi:null,balances,events:[]};
  w.AltaStore={get cart(){return cart;},catalog:products,product:id=>products.find(p=>p.id===id),image:()=>'/fixture.svg',adjustQuantity(key,delta){cart=cart.map(item=>item.key===key?{...item,qty:item.qty+delta}:item).filter(item=>item.qty>0);}};
  function quote(body){
-  const q=price({kind:'goods',request:{items:body.items.map(item=>({...item,name:'Fixture compound',unit_price_usd_cents:8000})),...(body.membership_addon?{membership_addon:body.membership_addon}:{}),address:{country:body.country||body.address?.country||'US'},checkout:{coupon:body.coupon||'',points:body.points||0,credit_cents:body.credit_cents||0,delivery:body.delivery}}},bank,null,balances,null,delivery);
+  const q=price({kind:'goods',request:{items:body.items.map(item=>({...item,name:'Fixture compound',unit_price_usd_cents:8000})),...(body.membership_addon?{membership_addon:body.membership_addon}:{}),address:{country:body.country||body.address?.country||'US'},checkout:{coupon:body.coupon||'',points:body.points||0,credit_cents:body.credit_cents||0,delivery:body.delivery}}},bank,null,balances,null,delivery,null,campaign);
   return {...q,free_shipping_threshold_cents:25000,free_shipping_remaining_cents:Math.max(0,25000-q.subtotal_cents+q.discount_cents)};
  }
  w.fetch=async(url,options={})=>{
@@ -193,5 +193,30 @@ test('an obsolete failed response cannot erase a newer checkout total',async()=>
   rejectOld(Error('Old quote failed'));await tick();
   assert.match(totals.textContent,/Total\$252\.95/);
   assert.equal(f.root.querySelector('[data-nlx-quote-note]').textContent,'');
+ }finally{f.dom.window.close();}
+});
+
+
+test('checkout keeps quoted free units with their paid variant and counts physical gifts once',async()=>{
+ const campaign={ends_at:'2099-01-01T00:00:00Z',eligible_variants:['fixture:5mg']};
+ const f=fixture('checkout',{campaign});
+ const summary=f.root;
+ function check(paid,gifts){
+  const rows=summary.querySelectorAll('.nlx-product');
+  assert.equal(rows.length,1+gifts);
+  assert.equal(rows[0].querySelector('.nlx-promo-free').textContent,'+'+paid+' FREE');
+  assert.equal(rows[0].querySelector('.nlx-qty span').textContent,String(paid));
+  assert.equal(rows[0].querySelector('.nlx-product-price').textContent,'$'+(paid*80).toFixed(2));
+  assert.equal(summary.querySelector('[data-nlx-item-count]').textContent,(2*paid+gifts)+' items');
+  if(gifts)assert.match(rows[1].textContent,/BAC Water.*3 mL.*\$0\.00/);
+ }
+ try{
+  await f.w.DirectCheckout.checkout(f.root,f.auth,f.user);await tick();
+  check(2,0);
+  summary.querySelector('[data-nlx-qty="-1"]').click();await tick();check(1,0);
+  for(let i=2;i<=4;i++){
+   summary.querySelector('[data-nlx-qty="1"]').click();await tick();check(i,i===4?1:0);
+  }
+  summary.querySelector('[data-nlx-qty="-1"]').click();await tick();check(3,0);
  }finally{f.dom.window.close();}
 });
