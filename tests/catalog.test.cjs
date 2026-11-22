@@ -14,7 +14,7 @@ const { catalog, groups } = sandbox;
 test("catalog matches the approved product source snapshot", () => {
   assert.equal(
     createHash("sha256").update(source).digest("hex"),
-    "3943eb8da11e5f70054d87949311ceb1cb4fc3f6470a84c06c0aaa47ac3dd14d"
+    "dfd90343316715e6b73f9faf8c40bc364f309b5882dbf361fa424a6c156ca842"
   );
 });
 

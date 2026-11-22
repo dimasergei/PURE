@@ -4,7 +4,7 @@ const PRICE_MARKUP_FACTOR = 3;
 const CATALOG = [
   {
     id: "retatrutide",
-    display_code: "PU-1 RT",
+    sku_code: "PU-1 RT",
     name: "Retatrutide",
     category: "injectables",
     group: "GLP-1 & Metabolic",
@@ -20,7 +20,7 @@ const CATALOG = [
   },
   {
     id: "tirzepatide",
-    display_code: "PU-2 TZ",
+    sku_code: "PU-2 TZ",
     name: "Tirzepatide",
     category: "injectables",
     group: "GLP-1 & Metabolic",
@@ -35,7 +35,7 @@ const CATALOG = [
   },
   {
     id: "semaglutide",
-    display_code: "PU-8",
+    sku_code: "PU-8",
     name: "Semaglutide",
     category: "injectables",
     group: "GLP-1 & Metabolic",
@@ -48,7 +48,7 @@ const CATALOG = [
   },
   {
     id: "5-amino-1mq",
-    display_code: "PU-9",
+    sku_code: "PU-9",
     name: "5-Amino-1MQ",
     category: "injectables",
     group: "GLP-1 & Metabolic",
@@ -60,7 +60,7 @@ const CATALOG = [
   },
   {
     id: "aod-9604",
-    display_code: "PU-10",
+    sku_code: "PU-10",
     name: "AOD-9604",
     category: "injectables",
     group: "GLP-1 & Metabolic",
@@ -72,7 +72,7 @@ const CATALOG = [
   },
   {
     id: "cagrilintide",
-    display_code: "PU-11",
+    sku_code: "PU-11",
     name: "Cagrilintide",
     category: "injectables",
     group: "GLP-1 & Metabolic",
@@ -84,7 +84,7 @@ const CATALOG = [
   },
   {
     id: "bpc-157",
-    display_code: "PU-4 BP",
+    sku_code: "PU-4 BP",
     name: "BPC-157",
     category: "injectables",
     group: "Healing & Recovery",
@@ -96,7 +96,7 @@ const CATALOG = [
   },
   {
     id: "tb-500",
-    display_code: "PU-5 TB",
+    sku_code: "PU-5 TB",
     name: "TB-500",
     category: "injectables",
     group: "Healing & Recovery",
@@ -108,7 +108,7 @@ const CATALOG = [
   },
   {
     id: "bpc-tb-500",
-    display_code: "PU-14",
+    sku_code: "PU-14",
     name: "Wolverine",
     premixed_blend: true,
     category: "injectables",
@@ -122,7 +122,7 @@ const CATALOG = [
   },
   {
     id: "kpv",
-    display_code: "PU-15",
+    sku_code: "PU-15",
     name: "KPV",
     category: "injectables",
     group: "Healing & Recovery",
@@ -134,7 +134,7 @@ const CATALOG = [
   },
   {
     id: "ara-290",
-    display_code: "PU-16",
+    sku_code: "PU-16",
     name: "ARA-290",
     category: "injectables",
     group: "Healing & Recovery",
@@ -143,7 +143,7 @@ const CATALOG = [
   },
   {
     id: "ll-37",
-    display_code: "PU-17",
+    sku_code: "PU-17",
     name: "LL-37",
     category: "injectables",
     group: "Healing & Recovery",
@@ -155,7 +155,7 @@ const CATALOG = [
   },
   {
     id: "thymosin-alpha-1",
-    display_code: "PU-18",
+    sku_code: "PU-18",
     name: "Thymosin Alpha-1",
     category: "injectables",
     group: "Healing & Recovery",
@@ -164,7 +164,7 @@ const CATALOG = [
   },
   {
     id: "ghk-cu",
-    display_code: "PU-3 GHK",
+    sku_code: "PU-3 GHK",
     name: "GHK-Cu",
     category: "injectables",
     group: "Cosmetic & Skin",
@@ -176,7 +176,7 @@ const CATALOG = [
   },
   {
     id: "ahk-cu",
-    display_code: "PU-20",
+    sku_code: "PU-20",
     name: "AHK-Cu",
     category: "injectables",
     group: "Cosmetic & Skin",
@@ -188,7 +188,7 @@ const CATALOG = [
   },
   {
     id: "glow",
-    display_code: "PU-21",
+    sku_code: "PU-21",
     name: "Glow",
     premixed_blend: true,
     category: "injectables",
@@ -198,7 +198,7 @@ const CATALOG = [
   },
   {
     id: "klow",
-    display_code: "PU-22",
+    sku_code: "PU-22",
     name: "KLOW",
     premixed_blend: true,
     category: "injectables",
@@ -208,7 +208,7 @@ const CATALOG = [
   },
   {
     id: "snap8",
-    display_code: "PU-23",
+    sku_code: "PU-23",
     name: "Snap8",
     category: "injectables",
     group: "Cosmetic & Skin",
@@ -217,7 +217,7 @@ const CATALOG = [
   },
   {
     id: "cjc-1295-no-dac",
-    display_code: "PU-24",
+    sku_code: "PU-24",
     name: "CJC-1295 No DAC",
     category: "injectables",
     group: "Growth Hormone",
@@ -229,7 +229,7 @@ const CATALOG = [
   },
   {
     id: "cjc-1295-dac",
-    display_code: "PU-25",
+    sku_code: "PU-25",
     name: "CJC-1295 W/DAC",
     category: "injectables",
     group: "Growth Hormone",
@@ -241,7 +241,7 @@ const CATALOG = [
   },
   {
     id: "cjc-ipamorelin",
-    display_code: "PU-26",
+    sku_code: "PU-26",
     name: "CJC/Ipamorelin",
     category: "injectables",
     group: "Growth Hormone",
@@ -250,7 +250,7 @@ const CATALOG = [
   },
   {
     id: "ipamorelin",
-    display_code: "PU-27",
+    sku_code: "PU-27",
     name: "Ipamorelin",
     category: "injectables",
     group: "Growth Hormone",
@@ -262,7 +262,7 @@ const CATALOG = [
   },
   {
     id: "sermorelin",
-    display_code: "PU-28",
+    sku_code: "PU-28",
     name: "Sermorelin",
     category: "injectables",
     group: "Growth Hormone",
@@ -274,7 +274,7 @@ const CATALOG = [
   },
   {
     id: "tesamorelin",
-    display_code: "PU-29",
+    sku_code: "PU-29",
     name: "Tesamorelin",
     category: "injectables",
     group: "Growth Hormone",
@@ -286,7 +286,7 @@ const CATALOG = [
   },
   {
     id: "tesa-ipa",
-    display_code: "PU-30",
+    sku_code: "PU-30",
     name: "Tesa/IPA",
     category: "injectables",
     group: "Growth Hormone",
@@ -295,7 +295,7 @@ const CATALOG = [
   },
   {
     id: "semax",
-    display_code: "PU-31",
+    sku_code: "PU-31",
     name: "Semax",
     category: "injectables",
     group: "Cognitive & Nootropic",
@@ -307,7 +307,7 @@ const CATALOG = [
   },
   {
     id: "selank",
-    display_code: "PU-32",
+    sku_code: "PU-32",
     name: "Selank",
     category: "injectables",
     group: "Cognitive & Nootropic",
@@ -319,7 +319,7 @@ const CATALOG = [
   },
   {
     id: "semax-selank",
-    display_code: "PU-33",
+    sku_code: "PU-33",
     name: "Semax/Selank",
     category: "injectables",
     group: "Cognitive & Nootropic",
@@ -328,7 +328,7 @@ const CATALOG = [
   },
   {
     id: "adamax",
-    display_code: "PU-34",
+    sku_code: "PU-34",
     name: "Adamax",
     category: "injectables",
     group: "Cognitive & Nootropic",
@@ -337,7 +337,7 @@ const CATALOG = [
   },
   {
     id: "pinealon",
-    display_code: "PU-35",
+    sku_code: "PU-35",
     name: "Pinealon",
     category: "injectables",
     group: "Cognitive & Nootropic",
@@ -346,7 +346,7 @@ const CATALOG = [
   },
   {
     id: "dsip",
-    display_code: "PU-36",
+    sku_code: "PU-36",
     name: "DSIP",
     category: "injectables",
     group: "Cognitive & Nootropic",
@@ -358,7 +358,7 @@ const CATALOG = [
   },
   {
     id: "nad",
-    display_code: "PU-37",
+    sku_code: "PU-37",
     name: "NAD+",
     category: "injectables",
     group: "Longevity",
@@ -370,7 +370,7 @@ const CATALOG = [
   },
   {
     id: "epithalon",
-    display_code: "PU-38",
+    sku_code: "PU-38",
     name: "Epithalon",
     category: "injectables",
     group: "Longevity",
@@ -382,7 +382,7 @@ const CATALOG = [
   },
   {
     id: "glutathione",
-    display_code: "PU-39",
+    sku_code: "PU-39",
     name: "Glutathione",
     category: "injectables",
     group: "Longevity",
@@ -394,7 +394,7 @@ const CATALOG = [
   },
   {
     id: "ss-31",
-    display_code: "PU-40",
+    sku_code: "PU-40",
     name: "SS-31",
     category: "injectables",
     group: "Longevity",
@@ -406,7 +406,7 @@ const CATALOG = [
   },
   {
     id: "mots-c",
-    display_code: "PU-41",
+    sku_code: "PU-41",
     name: "MOTS-C",
     category: "injectables",
     group: "Longevity",
@@ -419,7 +419,7 @@ const CATALOG = [
   },
   {
     id: "b-12",
-    display_code: "PU-42",
+    sku_code: "PU-42",
     name: "B-12",
     category: "injectables",
     group: "Longevity",
@@ -428,7 +428,7 @@ const CATALOG = [
   },
   {
     id: "melanotan-ii",
-    display_code: "PU-43",
+    sku_code: "PU-43",
     name: "Melanotan II",
     category: "injectables",
     group: "Sexual & Hormonal",
@@ -437,7 +437,7 @@ const CATALOG = [
   },
   {
     id: "melanotan-1",
-    display_code: "PU-44",
+    sku_code: "PU-44",
     name: "Melanotan 1",
     category: "injectables",
     group: "Sexual & Hormonal",
@@ -446,7 +446,7 @@ const CATALOG = [
   },
   {
     id: "pt-141",
-    display_code: "PU-45",
+    sku_code: "PU-45",
     name: "PT-141",
     category: "injectables",
     group: "Sexual & Hormonal",
@@ -455,7 +455,7 @@ const CATALOG = [
   },
   {
     id: "kisspeptin",
-    display_code: "PU-46",
+    sku_code: "PU-46",
     name: "Kisspeptin",
     category: "injectables",
     group: "Sexual & Hormonal",
@@ -467,7 +467,7 @@ const CATALOG = [
   },
   {
     id: "oxytocin",
-    display_code: "PU-47",
+    sku_code: "PU-47",
     name: "Oxytocin",
     category: "injectables",
     group: "Sexual & Hormonal",
@@ -479,7 +479,7 @@ const CATALOG = [
   },
   {
     id: "vip",
-    display_code: "PU-48",
+    sku_code: "PU-48",
     name: "VIP",
     category: "injectables",
     group: "Sexual & Hormonal",
