@@ -10,6 +10,8 @@ const checkout=require('../lib/direct-checkout'),config=require('../config/check
 const delivery=require('../lib/delivery-options'),polygon=require('../lib/polygon-usdc');
 const read=name=>fs.readFileSync(path.join(__dirname,'../supabase/migrations',name),'utf8');
 const migration='20261118180549_pure_membership_checkout.sql';
+// Tests opt into a specific campaign. Hosting settings must never change fixture quantities.
+const noCampaign={ends_at:null,eligible_variants:[]};
 const recipient='0x'+'a'.repeat(40),payer='0x'+'b'.repeat(40);
 const polygonTag=polygon.configuration({POLYGON_USDC_RECIPIENT:recipient}).account_tag;
 const hash=()=> '0x'+randomBytes(32).toString('hex');
@@ -33,7 +35,7 @@ test('PURE memberships execute verified fees and goods benefits atomically in di
  const member=async customer=>(await db.query('select * from commerce_internal.active_paid_membership($1,now())',[customer])).rows[0];
  const count=async(table,id)=>(await db.query('select count(*)::int n from '+table+(id?' where invoice_id=$1':''),id?[id]:[])).rows[0].n;
  let methods={};
- async function make({kind='goods',plan='vip',period='monthly',customer=randomUUID(),route='card',coupon='',points=0,credit=0,shipping='standard',extras=[],country=route==='interac'?'CA':'US',items,cat=catalog,rate=1375000,builder=false,bulk=false,membershipAddon=null,referral=null,campaign}={}){
+ async function make({kind='goods',plan='vip',period='monthly',customer=randomUUID(),route='card',coupon='',points=0,credit=0,shipping='standard',extras=[],country=route==='interac'?'CA':'US',items,cat=catalog,rate=1375000,builder=false,bulk=false,membershipAddon=null,referral=null,campaign=noCampaign}={}){
   const method=methods[route],user={id:customer,email:'membership-fixture@example.test'};
   const body={id:randomUUID(),kind,plan:kind==='membership'?plan:undefined,billing_period:kind==='membership'?period:undefined,
    method_id:method.id,checkout_version:config.version,consent:true,research_use:true,name:'Isolated researcher',
