@@ -43,3 +43,21 @@ body .ap-workspace .uc-order-identity .uc-priority-badge,body .uc-dialog .uc-pri
 .uc-history-item{display:grid;gap:5px;padding:12px 0;border-bottom:1px solid #e5e5e5;font-size:12px}.uc-history-item p{margin:0;overflow-wrap:anywhere}
 .uc-history-item strong{text-transform:capitalize}.uc-portal{display:inline-flex;margin:12px 0;padding:10px 15px;border-radius:9px;background:#e5e5e5;color:#111;font-weight:700;text-decoration:none}
 .uc-preview{margin:12px 0;display:grid;gap:8px}.uc-dialog .uc-input-field input{box-sizing:border-box}.uc-dialog [role=status].failed{color:#333!important}
+
+.uc-dialog .uc-pilot{margin:16px 0 20px}
+.uc-dialog .uc-pilot h4,.uc-dialog .uc-pilot .uc-hint{margin:0 0 10px}
+.uc-dialog .uc-pilot-form{margin:0;padding:0;border:0}
+.uc-dialog .uc-pilot-report{font-size:12px;margin:0;overflow-wrap:anywhere}
+.uc-dialog .uc-pilot-report:empty{display:none}
+.uc-dialog .uc-pilot-report a{color:inherit;text-decoration:underline;text-underline-offset:3px}
+.uc-dialog .uc-pilot-costs{margin:1px 0;padding:12px 0;border-block:1px solid #ddd}
+.uc-dialog .uc-pilot-costs summary{font-size:13px;cursor:pointer;font-weight:700}
+.uc-dialog .uc-pilot-result,.uc-dialog .uc-pilot-inputs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 14px;margin:12px 0}
+.uc-dialog .uc-pilot-inputs input,.uc-dialog .uc-pilot-form select,.uc-dialog .uc-pilot-form input{box-sizing:border-box;min-width:0;max-width:100%}
+@media(max-width:520px){.uc-dialog .uc-pilot-inputs{grid-template-columns:1fr}}
+
+.uc-dialog.uc-pilot-intake{max-width:570px}
+.uc-dialog .uc-intake-record{margin:16px 0}
+.uc-dialog .uc-intake-record p{margin:5px 0}
+.uc-dialog .uc-input-field[hidden]{display:none}
+@media(max-width:520px){.uc-header{align-items:flex-start}.uc-header .uc-button-row{justify-content:flex-end}}

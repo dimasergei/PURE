@@ -2,6 +2,9 @@
   "buildCommand": "npm run build",
   "outputDirectory": "public-build",
   "functions": {
+    "api/admin-suppliers.js": {
+      "includeFiles": "products.js"
+    },
     "api/admin-orders.js": {
       "maxDuration": 60
     },

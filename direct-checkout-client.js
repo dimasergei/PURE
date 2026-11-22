@@ -177,6 +177,43 @@
    };
   }catch(e){root.replaceChildren(node('p',e.message));}
  }
+ function shipmentCertificates(order){
+  if(!['shipped','delivered'].includes(order.status)||!order.coas?.length)return null;
+  const groups=new Map();
+  for(const certificate of order.coas){
+   let url;
+   try{url=new URL(certificate.verification_url);}catch{continue;}
+   if(url.protocol!=='https:'||url.username||url.password)continue;
+   const key=certificate.variant_key;
+   if(!groups.has(key))groups.set(key,[]);
+   groups.get(key).push({lot:certificate.lot_number,report:certificate.report_id,url:url.href});
+  }
+  if(!groups.size)return null;
+  const section=node('section');section.className='dc-shipment-certificates';
+  section.append(node('h3','Certificates for this shipment'));
+  for(const [key,reports] of groups){
+   const shipped=order.shipments?.find(item=>item.variant_key===key);
+   const requested=order.request_data?.items?.find(item=>item.id+'|'+item.size===key);
+   const product=shipped||requested;
+   const group=node('div');group.className='dc-shipment-certificate-group';
+   if(product?.name){
+    const title=node('h4',[product.name,product.size].filter(Boolean).join(' · '));group.append(title);
+   }
+   if(Number.isSafeInteger(shipped?.qty)&&shipped.qty>0){
+    const bonus=shipped.bogo_free_qty;
+    const quantity=shipped.qty+' shipped'+(Number.isSafeInteger(bonus)&&bonus>0&&bonus<=shipped.qty?' ('+bonus+' free)':'');
+    group.append(node('small',quantity));
+   }
+   const list=node('ul');
+   for(const report of reports){
+    const row=node('li'),link=node('a','Lot '+report.lot+' · '+report.report);
+    link.href=report.url;link.target='_blank';link.rel='noopener noreferrer';
+    row.append(link);list.append(row);
+   }
+   group.append(list);section.append(group);
+  }
+  return section;
+ }
  async function orders(root,auth,user,options={}){
   root.replaceChildren(node('p','Loading orders…'));
   const compact=id=>'AP'+String(id||'').replace(/-/g,'').slice(0,10).toUpperCase();
@@ -246,16 +283,8 @@
      if(Number.isSafeInteger(x.line_total_cents))item.append(node('strong',money(x.line_total_cents,r.currency)));
      items.append(item);
     }if(items.childElementCount)card.append(items);
-    if(r.coas?.length){
-     const certificates=node('section');certificates.append(node('h3','Certificates for this shipment'));
-     const list=node('ul');
-     for(const coa of r.coas){
-      const url=String(coa.verification_url||'');
-      if(!url.startsWith('https://'))continue;
-      const row=node('li');row.append(link('Lot '+coa.lot_number+' · '+coa.report_id,url));list.append(row);
-     }
-     if(list.childElementCount){certificates.append(list);card.append(certificates);}
-    }
+    const reports=shipmentCertificates(r);
+    if(reports)card.append(reports);
     const detail=node('div');detail.className='dc-clean-meta';detail.append(node('span','Payment: '+orderState(r)));
     if(r.tracking_number)detail.append(node('span','Tracking: '+r.tracking_carrier+' '+r.tracking_number));
     if(r.status==='accepted'&&!r.cancellation_status)detail.append(node('span','Payment required before fulfillment'));

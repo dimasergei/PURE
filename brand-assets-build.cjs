@@ -27,8 +27,8 @@ for(const file of fs.readdirSync(out,{recursive:true}).filter(f=>f.endsWith('.ht
   html=html.replace(/<link\b[^>]*\brel=["'](?:(?:shortcut )?icon|apple-touch-icon)["'][^>]*>/gi,'');
   html=html.replace(/<meta\b[^>]*\bname=["'](?:theme-color|altapure-promo-end)["'][^>]*>/gi,'');
   if(path.basename(file).startsWith('admin-')){
-    html=html.replace(/src="\/admin-fulfillment\.js(?:\?[^"]*)?"/g,'src="/admin-fulfillment.js?v=20261122-order-units"');
-    html=html.replace(/src="\/(admin-fulfillment)\.js(?:\?[^"]*)?"/g,'src="/$1.js?v=20261118-cad-checkout"');
+    html=html.replace(/src="\/admin-fulfillment\.js(?:\?[^"]*)?"/g,'src="/admin-fulfillment.js?v=20261122-packing-record"');
+    html=html.replace(/href="\/admin-fulfillment\.css(?:\?[^"]*)?"/g,'href="/admin-fulfillment.css?v=20261122-packing-record"');
     html=html.replace(/<link\b[^>]*href=["']\/admin-violet\.css[^"']*["'][^>]*>/gi,'');
     html=html.replace(/href="\/(admin-dashboard|operations)\.css(?:\?[^"]*)?"/g,'href="/$1.css?v=20261117b"');
     html=html.replace('</head>','<link rel="stylesheet" href="/admin-violet.css?v=20261117b">'+iconLinks+'</head>');

@@ -20,11 +20,19 @@ function mockDb({duplicate=false}={}){
  }};
  return{db,state};
 }
-test('real catalog yields 84 unique server-side keys',()=>{
+test('current catalog includes the exact pilot and gift inventory SKUs',()=>{
  const keys=catalogSkuKeys();
- assert.equal(keys.length,84);
- assert.equal(new Set(keys).size,84);
+ assert.equal(new Set(keys).size,keys.length);
+ assert.ok(keys.includes('tirzepatide-40mg'));
+ assert.ok(keys.includes('bac-3-3-ml'));
  assert.ok(keys.includes('bpc-157-10mg'));
+});
+test('catalog growth preserves validation of empty, malformed and duplicate variants',()=>{
+ const read=variants=>catalogSkuKeys([{id:'example',variants}]);
+ assert.equal(read([{size:'1mg'},{size:'2mg'}]).length,2);
+ assert.throws(()=>read([]),/Catalog unavailable/);
+ assert.throws(()=>read([{size:''}]),/SKU registry invalid/);
+ assert.throws(()=>read([{size:'1mg'},{size:'1MG'}]),/SKU registry invalid/);
 });
 test('preview never writes; actual import only writes quarantine status',async()=>{
  const {db,state}=mockDb();

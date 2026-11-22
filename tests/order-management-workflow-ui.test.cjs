@@ -13,7 +13,7 @@ async function setup(t,{row,detail},writeImpl){
  w.HTMLDialogElement.prototype.showModal=function(){this.open=true};w.HTMLDialogElement.prototype.close=function(){this.open=false};w.confirm=()=>true;
  w.URL.createObjectURL=blob=>{objectURLs.push(blob);return'blob:fixture-'+objectURLs.length};w.URL.revokeObjectURL=()=>{};
  w.HTMLAnchorElement.prototype.click=function(){downloads.push({name:this.download,href:this.href})};
- w.eval(source);w.AltaFulfillment.mount(async(url,options)=>{calls.push({url,options});if(options?.body)return writeImpl?writeImpl(JSON.parse(options.body),calls):{saved:true};if(options?.responseType==='blob')return new w.Blob(['fixture document']);if(url.includes('view=detail'))return detail;return{orders:[row],pagination:{page:1,total:1}}});
+ w.eval(source);w.AltaFulfillment.mount(async(url,options)=>{calls.push({url,options});if(options?.body)return writeImpl?writeImpl(JSON.parse(options.body),calls):{saved:true};if(options?.responseType==='blob')return new w.Blob(['fixture document']);if(url.includes('view=manual_pilot')){if(detail.pilotResult instanceof Error)throw detail.pilotResult;return detail.pilotResult}if(url.includes('view=detail'))return detail;return{orders:[row],pagination:{page:1,total:1}}});
  t.after(()=>{w.AltaFulfillment.clear();w.close()});await tick();await w.AltaFulfillment.manage(row);
  return{w,calls,downloads,objectURLs,form:title=>[...w.document.querySelectorAll('dialog form')].find(f=>f.querySelector('h4')?.textContent===title),button:title=>[...w.document.querySelectorAll('dialog button')].find(b=>b.textContent===title),writes:()=>calls.filter(c=>c.options?.body).map(c=>JSON.parse(c.options.body))};
 }
@@ -104,4 +104,56 @@ test('confirmed previous cancellation allows complete manual shipment without re
 test('manual fulfillment with no named supplier can record actual dispatch with tracking',async t=>{
  const ctx=await setup(t,fixture('processing',{allocations:manual().map(a=>({...a,supplier_name:''}))})),f=ctx.form('Update complete order');assert.ok(f);assert.deepEqual([...f.elements.namedItem('status').options].map(o=>o.value),['shipped']);assert.doesNotMatch(ctx.w.document.querySelector('dialog').textContent,/assign.*supplier/i);
  field(f,'carrier','Canada Post');field(f,'tracking','CA-FIXTURE-123');field(f,'note','All items packed and dispatched');await submit(f);assert.deepEqual(ctx.writes(),[{action:'update_order',id,version:7,status:'shipped',note:'All items packed and dispatched',tracking_carrier:'Canada Post',tracking_number:'CA-FIXTURE-123'}]);
+});
+
+
+const pilotLot={lot_number:'LAB-07',report_id:'LAB-426',document_id:'00000000-0000-4000-8000-000000000007',verification_url:'https://example.test/report/426',lab_name:'Example Lab'};
+function pilotOrder(status, overrides={}){
+ const details={eligible:true,writable:true,lots:[pilotLot],gift_lots:[{lot_number:'BW-05'}],record:null,paid_qty:1,free_qty:1,gift_qty:1,receipts_cents:16158,commission_cents:6145,ready_to_ship:false,...overrides};
+ return fixture(status,{allocations:[{variant_key:'tirzepatide|40mg',route:'manual'}],manual_pilot_eligible:true,pilotResult:details});
+}
+test('eligible orders save an exact lot and gift with no placeholder costs, and retain paid/free counts',async t=>{
+ const ctx=await setup(t,pilotOrder('paid')),section=ctx.w.document.querySelector('.uc-pilot'),f=section.querySelector('form');
+ assert.match(section.textContent,/1 paid \+ 1 free · 1 recon gift/);
+ assert.equal(ctx.form('Packed lot certificates'),undefined);
+ assert.deepEqual([...ctx.form('Update complete order').elements.namedItem('status').options].map(o=>o.value),['processing']);
+ assert.equal(f.elements.namedItem('delivered_cost_cents').value,'');
+ const choose=f.elements.namedItem('pilot_document_id');
+ choose.value=pilotLot.document_id;choose.dispatchEvent(new ctx.w.Event('change'));
+ assert.equal(section.querySelector('a').href,pilotLot.verification_url);
+ field(f,'gift_lot_number','BW-05');await submit(f);
+ assert.deepEqual(ctx.writes(),[{action:'save_manual_pilot',id,revision:0,lot_number:pilotLot.lot_number,report_id:pilotLot.report_id,document_id:pilotLot.document_id,gift_lot_number:'BW-05'}]);
+});
+test('unverified, withdrawn and unavailable lot evidence keeps dispatch off the status menu',async t=>{
+ for(const testResult of [null,new Error('Unable to read evidence')]){
+  const fix=pilotOrder('processing',{lots:[],record:{revision:4,lot_number:'OLD'}});
+  if(testResult)fix.detail.pilotResult=testResult;
+  const ctx=await setup(t,fix);
+  assert.equal(ctx.form('Update complete order'),undefined);
+  assert.match(ctx.w.document.querySelector('dialog').textContent,/No released lot|packing record could not be loaded/);
+  assert.equal(ctx.writes().length,0);
+ }
+});
+test('cost reconciliation requires all amounts, includes explicit zero, and keeps the recorded shipment lot fixed',async t=>{
+ const record={revision:4,...pilotLot,gift_lot_number:'BW-05'};
+ const ctx=await setup(t,pilotOrder('shipped',{record,ready_to_ship:true})),f=ctx.w.document.querySelector('.uc-pilot form');
+ assert.equal(f.elements.namedItem('pilot_document_id'),null);assert.equal(f.elements.namedItem('gift_lot_number'),null);
+ assert.equal(ctx.form('Update complete order').elements.namedItem('status').value,'delivered');
+ field(f,'delivered_cost_cents','56.35');await submit(f);
+ assert.equal(ctx.writes().length,0);
+ for(const [key,value] of [['processing_fee_cents','5.96'],['overhead_cents','30'],['loss_allowance_cents','0'],['cost_reference','INV-123; payout F002']])field(f,key,value);
+ await submit(f);
+ assert.deepEqual(ctx.writes(),[{action:'save_manual_pilot',id,revision:4,lot_number:'LAB-07',report_id:'LAB-426',document_id:pilotLot.document_id,gift_lot_number:'BW-05',delivered_cost_cents:5635,processing_fee_cents:596,overhead_cents:3000,loss_allowance_cents:0,cost_reference:'INV-123; payout F002'}]);
+});
+test('only server-ready pilot orders expose dispatch and a recorded margin, untrusted report links cannot navigate',async t=>{
+ const item={...pilotLot,verification_url:'javascript:alert(1)'},record={...item,revision:4,gift_lot_number:'BW-05',delivered_cost_cents:5635,processing_fee_cents:596,overhead_cents:3000,loss_allowance_cents:0,cost_reference:'REF',profit_cents:783,margin_bps:485};
+ const ctx=await setup(t,pilotOrder('processing',{lots:[item],record,ready_to_ship:true}));
+ assert.equal(ctx.form('Update complete order').elements.namedItem('status').value,'shipped');
+ assert.match(ctx.w.document.querySelector('.uc-pilot-result').textContent,/\$7.83.*4.8|\$7.83.*4.9/);
+ assert.equal(ctx.w.document.querySelector('.uc-pilot-report a'),null);assert.equal(ctx.writes().length,0);
+});
+test('other orders use the existing packed lots path without requesting pilot details',async t=>{
+ const ctx=await setup(t,fixture('paid',{allocations:manual()}));
+ assert.ok(ctx.form('Packed lot certificates'));assert.equal(ctx.w.document.querySelector('.uc-pilot'),null);
+ assert.equal(ctx.calls.filter(c=>c.url.includes('view=manual_pilot')).length,0);
 });

@@ -10,7 +10,7 @@ const requestEstimate=o=>o.request_data?.checkout?.usd_estimate;
 const priorityOrder=o=>o.source==='commerce'&&['goods','bulk'].includes(o.kind)&&o.priority_fulfillment===true&&typeof o.membership_invoice_id==='string'
  &&/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(o.membership_invoice_id)&&['paid','processing'].includes(o.commerce_status||o.status)&&!o.cancellation_requested_at&&!o.cancellation_status;
 const priorityBadge=()=>el('span','PURE BLACK / Priority','uc-priority-badge');
-let api,root,dlg,orders=[],paging={},page=1,query='',sort='fulfillment_priority',filter='all',epoch=0,poll,timer;
+let api,root,dlg,orders=[],paging={},page=1,query='',sort='fulfillment_priority',filter='all',epoch=0,detailVersion=0,poll,timer;
 const lotus=(view,more='')=>'/api/customer-config?lotus=admin&view='+view+more;
 const send=(url,body,method='POST')=>api(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
 const write=b=>send(lotus('write'),b);
@@ -23,7 +23,7 @@ function form(title,host){const f=el('form',undefined,'uc-action-form');f.append
 function submit(f,text,action){const x=el('button',text,'primary');x.type='submit';f.append(x);f.onsubmit=async ev=>{ev.preventDefault();x.disabled=true;try{await action()}catch(e){msg(e.message,true)}finally{x.disabled=false}}}
 const when=t=>t?new Date(t).toLocaleString():'—';
 const address=a=>[a?.line1,a?.line2,[a?.city,a?.region||a?.state,a?.postal_code].filter(Boolean).join(', '),a?.country].filter(Boolean).join(' · ');
-function close(){epoch++;clearInterval(poll);clearTimeout(timer);dlg?.remove();dlg=null;root?.replaceChildren();root=null;api=null;orders=[]}
+function close(){window.PurePilotIntake?.close();epoch++;clearInterval(poll);clearTimeout(timer);dlg?.remove();dlg=null;root?.replaceChildren();root=null;api=null;orders=[]}
 function rows(){const host=root?.querySelector('[data-unified-list]');if(!host)return;host.replaceChildren();const list=orders;
  if(!list.length){host.append(el('p','No matching checkout orders or subscriptions.','uc-empty'));return}
  for(const o of list){const card=el('article',undefined,'uc-order-row'),identity=el('div',undefined,'uc-order-identity'),sum=el('div',undefined,'uc-order-total');
@@ -35,7 +35,9 @@ function rows(){const host=root?.querySelector('[data-unified-list]');if(!host)r
 }
 async function load(){if(!api||!root)return;const ticket=++epoch,params=new URLSearchParams({status:'all',page:String(page),page_size:'25',sort,search:query,type:filter});
  try{const result=await api('/api/admin-orders?'+params);if(ticket!==epoch)return;orders=result.orders||[];paging=result.pagination||{};const count=document.getElementById('orders-message');if(count)count.textContent=(paging.total||0)+' orders · use Manage order for payment and fulfillment';root.replaceChildren();
-  const head=el('div',undefined,'uc-header');head.append(el('h2','Orders'),btn('Refresh',load));root.append(head);
+  const head=el('div',undefined,'uc-header');head.append(el('h2','Orders'));const actions=el('div',undefined,'uc-button-row');
+  if(window.PurePilotIntake)actions.append(btn('Receive pilot stock',()=>window.PurePilotIntake.open(api)));
+  actions.append(btn('Refresh',load));head.append(actions);root.append(head);
   const tools=el('div',undefined,'uc-search'),q=el('input');q.type='search';q.placeholder='Search orders or customers';q.setAttribute('aria-label','Search orders');q.value=query;
   q.oninput=()=>{query=q.value;page=1;clearTimeout(timer);timer=setTimeout(()=>{const focused=document.activeElement===q,pos=q.selectionStart;load().then(()=>{if(focused){const replacement=root?.querySelector('.uc-search input');replacement?.focus();replacement?.setSelectionRange(pos,pos)}})},300)};
   const sorting=el('select');for(const [v,t]of [['fulfillment_priority','Fulfillment priority'],['newest','Newest first'],['oldest','Oldest first'],['highest_total','Highest total']]){const option=el('option',t);option.value=v;sorting.append(option)}sorting.value=sort;sorting.setAttribute('aria-label','Sort orders');sorting.onchange=()=>{sort=sorting.value;page=1;load()};
@@ -46,10 +48,15 @@ async function load(){if(!api||!root)return;const ticket=++epoch,params=new URLS
   pager.append(prev,el('span',`Page ${page} · ${paging.total||0} records`),next);root.append(pager);
  }catch(e){if(ticket===epoch){root.replaceChildren(el('p',e.message,'uc-message failed'),btn('Retry',load))}}}
 async function reload(o){await load();await detail(o.id)}
-async function detail(record){let row=typeof record==='object'?record:orders.find(o=>o.id===record);
+async function detail(record){const openVersion=++detailVersion;let row=typeof record==='object'?record:orders.find(o=>o.id===record);
  if(!row){const result=await api('/api/admin-orders?'+new URLSearchParams({status:'all',search:String(record),page_size:'5'}));row=result.orders?.find(o=>o.id===record)}
  if(!row)throw Error('Order unavailable. Refresh the list.');const ticket=epoch;
- const data=row.source==='commerce'?await api(lotus('detail','&id='+encodeURIComponent(row.id))):{order:row,allocations:[],jobs:[]};if(ticket!==epoch)return;const o=data.order;
+ const data=row.source==='commerce'?await api(lotus('detail','&id='+encodeURIComponent(row.id))):{order:row,allocations:[],jobs:[]};
+ if(data.manual_pilot_eligible){
+  try{data.manual_pilot=await api(lotus('manual_pilot','&id='+encodeURIComponent(row.id)))}
+  catch{data.manual_pilot=null}
+ }
+ if(ticket!==epoch||openVersion!==detailVersion)return;const o=data.order;
  if(!dlg){dlg=el('dialog');dlg.className='fh-dialog uc-dialog';document.body.append(dlg)}dlg.replaceChildren();
  const head=el('div',undefined,'uc-dialog-head'),title=el('div');title.append(el('h2',ref(row)),el('small',type(row)+' · '+orderState(o,o.status||row.research_status||row.fulfillment_status)));if(priorityOrder({...row,...o,commerce_status:o.status||row.commerce_status}))title.append(priorityBadge());head.append(title,btn('Close',()=>dlg.close()));dlg.append(head);
  const notice=el('p','','uc-message');notice.setAttribute('data-unified-message','');notice.setAttribute('role','status');dlg.append(notice);
@@ -96,6 +103,116 @@ function historySection(host,changes){const box=el('details',undefined,'uc-histo
   if(routing){box.append(item);continue}
   if(change.from||change.to)item.append(el('p',[change.from&&state(change.from),change.to&&state(change.to)].filter(Boolean).join(' → ')));
   if(change.note)item.append(el('p',change.note));if(change.reference)item.append(el('p','Reference: '+change.reference));box.append(item)}host.append(box)}
+function reportLink(host,report){
+ host.replaceChildren();
+ if(!report)return;
+ let url;
+ try{url=new URL(report.verification_url)}catch{return}
+ if(url.protocol!=='https:'||url.username||url.password)return;
+ const link=el('a','Verify '+report.report_id+(report.lab_name?' · '+report.lab_name:''));
+ link.href=url.href;link.target='_blank';link.rel='noopener noreferrer';host.append(link);
+}
+function pilotReconciliation(host,row,data){
+ const pilot=data.manual_pilot, o=data.order;
+ if(!pilot?.eligible){
+  const notice=el('p','The packing record could not be loaded. Refresh before dispatch.','uc-hint');
+  host.append(notice,btn('Reload packing record',()=>detail(row)));
+  return;
+ }
+ const record=pilot.record, lots=pilot.lots||[];
+ const section=el('section',undefined,'uc-pilot');
+ section.append(el('h4','Manual fulfillment'));
+ section.append(el('p','Tirzepatide 40 mg · '+pilot.paid_qty+' paid + '+pilot.free_qty+' free'+(pilot.gift_qty?' · '+pilot.gift_qty+' recon gift':''),'uc-hint'));
+ host.append(section);
+ const historical=['shipped','delivered','refunded','void'].includes(o.status);
+ const writable=pilot.writable!==false;
+ if(!writable&&!record){
+  section.append(el('p','No packing record was saved before dispatch.','uc-hint'));
+  return;
+ }
+ const f=el('form',undefined,'uc-action-form uc-pilot-form');
+ section.append(f);
+ const report=el('p',undefined,'uc-pilot-report');
+ const savedDocument=record&&lots.find(l=>l.document_id===record.document_id&&l.lot_number===record.lot_number);
+ let chooseLot, gift;
+ if(historical||!writable){
+  if(record){f.append(field('Packed lot',record.lot_number),field('Lab report',record.report_id));
+   if(pilot.gift_qty)f.append(field('Recon gift lot',record.gift_lot_number));
+   reportLink(report,record.verification_url?record:savedDocument);f.append(report);}
+ }else{
+  if(!lots.length){
+   f.append(el('p','No released lot has a verified report for this product. Complete lot intake and verify its report before packing.','uc-hint'));
+   if(record)f.append(field('Previously recorded lot',record.lot_number));
+   return;
+  }
+  chooseLot=select(f,'Packed lot and lab report','pilot_document_id',[['','Choose the lot printed on every product vial'],...lots.map(l=>[l.document_id,l.lot_number+' · '+l.report_id])],savedDocument?.document_id||'');
+  chooseLot.required=true;
+  const showReport=()=>reportLink(report,lots.find(l=>l.document_id===chooseLot.value));
+  chooseLot.addEventListener('change',showReport);showReport();f.append(report);
+  if(pilot.gift_qty){
+   const giftLots=pilot.gift_lots||[];
+   if(!giftLots.length){f.append(el('p','No released gift lot is available. Receive and release a recon solution lot before packing.','uc-hint'));return;}
+   gift=select(f,'Recon gift lot','gift_lot_number',[['','Choose the lot printed on the gift'],...giftLots.map(l=>[l.lot_number,l.lot_number])],record?.gift_lot_number||'');gift.required=true;
+  }
+ }
+ const hasCosts=Number.isSafeInteger(record?.delivered_cost_cents);
+ if(hasCosts&&Number.isSafeInteger(record.profit_cents)&&Number.isSafeInteger(record.margin_bps)&&!['refunded','void'].includes(o.status)){
+  const result=el('div',undefined,'uc-pilot-result');
+  result.append(field('Order profit',cash(record.profit_cents)),field('Margin',(record.margin_bps/100).toFixed(1)+'%'));f.append(result);
+ }
+ if(hasCosts&&record.profit_cents==null&&writable)f.append(el('p','Margin pending receipt reconciliation.','uc-hint'));
+ const costs=el('details',undefined,'uc-pilot-costs');
+ costs.append(el('summary',hasCosts?'Recorded costs · USD':'Reconcile order costs · USD'));
+ const basis=el('div',undefined,'uc-pilot-result');
+ basis.append(field('Receipts excluding tax',Number.isSafeInteger(pilot.receipts_cents)?cash(pilot.receipts_cents):'Pending'),
+  field('Commission',Number.isSafeInteger(pilot.commission_cents)?cash(pilot.commission_cents):'Pending'));
+ costs.append(basis);
+ const entries=[
+  ['delivered_cost_cents','Total product and fulfillment cost'],
+  ['processing_fee_cents','Payment processing fees'],
+  ['overhead_cents','Allocated overhead'],
+  ['loss_allowance_cents','Loss allowance']
+ ];
+ const amounts=new Map(),grid=el('div',undefined,'uc-pilot-inputs');
+ for(const [key,title] of entries){
+  const value=Number.isSafeInteger(record?.[key])?(record[key]/100).toFixed(2):'';
+  const control=input(grid,title,key,value);
+  control.type='number';control.min='0';control.step='0.01';control.max='10000000';control.inputMode='decimal';control.readOnly=!writable;
+  amounts.set(key,control);
+ }
+ costs.append(el('p','Include both paid and free units, the gift, labeling, packing and postage in the delivered cost.','uc-hint'),grid);
+ const reference=input(costs,'Cost record reference','cost_reference',record?.cost_reference||'');
+ reference.maxLength=180;reference.readOnly=!writable;
+ function syncCosts(){const required=hasCosts||reference.value.trim()!==''||[...amounts.values()].some(control=>control.value!=='');
+  for(const control of amounts.values())control.required=required;
+  reference.required=required;return required;
+ }
+ for(const control of [...amounts.values(),reference]){
+  control.addEventListener('input',syncCosts);control.addEventListener('invalid',()=>{costs.open=true});
+ }
+ syncCosts();f.append(costs);
+ if(!writable)return;
+ submit(f,historical?'Save order costs':record?'Save packing record':'Record packed lot',async()=>{
+  const selected=chooseLot?lots.find(l=>l.document_id===chooseLot.value):record;
+  if(!selected)throw Error('Select the verified report for the packed lot.');
+  const body={action:'save_manual_pilot',id:o.id,revision:record?.revision||0,lot_number:selected.lot_number,report_id:selected.report_id,document_id:selected.document_id};
+  if(pilot.gift_qty){
+   body.gift_lot_number=(gift?gift.value:record?.gift_lot_number||'').trim();
+   if(!body.gift_lot_number)throw Error('Enter the recon gift lot printed on the vial.');
+  }
+  if(syncCosts()){
+   costs.open=true;
+   for(const [key,control] of amounts){
+    if(!/^\d+(?:\.\d{1,2})?$/.test(control.value))throw Error('Enter every cost in dollars and cents. Use 0 for a cost that does not apply.');
+    const [dollars,cents='']=control.value.split('.');
+    body[key]=Number(dollars)*100+Number(cents.padEnd(2,'0'));
+    if(!Number.isSafeInteger(body[key]))throw Error('Enter a valid amount in dollars and cents.');
+   }
+   body.cost_reference=reference.value.trim();if(!body.cost_reference)throw Error('Enter the cost record reference.');
+  }
+  await write(body);await reload(row);msg('Packing record saved.');
+ });
+}
 function commerceActions(host,row,data){const o=data.order,id=o.id,allocations=data.allocations||[],job=data.jobs?.[0];
  const pay=el('section',undefined,'uc-payment');pay.append(el('h3','Payment'));
  if(interacRequest(o)){
@@ -118,7 +235,8 @@ function commerceActions(host,row,data){const o=data.order,id=o.id,allocations=d
   exportSection(host,row,o);
   const shipment=el('section',undefined,'uc-shipment');shipment.append(el('h3','Shipping and delivery'));
   const manual=allocations.length>0&&allocations.every(a=>a.route==='manual'),remote=!!(job?.supplier_id||job?.has_payload||['working','submitted','shipped'].includes(job?.status)),unresolved=remote&&!(job?.status==='cancelled'&&job?.provider_status==='cancelled');
-  if(allocations.length&&['paid','processing','shipped','delivered'].includes(o.status)){
+  if(data.manual_pilot_eligible&&(data.manual_pilot?.eligible||!['refunded','void'].includes(o.status)))pilotReconciliation(shipment,row,data);
+  if(!data.manual_pilot_eligible&&allocations.length&&['paid','processing','shipped','delivered'].includes(o.status)){
    const f=form('Packed lot certificates',shipment);
    for(const packed of data.packed_lots||[]){
     const allocation=allocations.find(a=>a.variant_key===packed.variant_key);
@@ -131,7 +249,7 @@ function commerceActions(host,row,data){const o=data.order,id=o.id,allocations=d
    f.append(btn('Remove packed lot link',async()=>{if(!lot.value.trim())throw Error('Enter the exact lot number to remove.');await write({action:'record_packed_lot',id,variant_key:variant.value,lot_number:lot.value,remove:true});await reload(row);msg('Packed lot link removed.');}));
   }
   const options=[];if(o.status==='paid')options.push(['processing','Processing']);
-  if(manual&&!unresolved&&['paid','processing'].includes(o.status))options.push(['shipped','Shipped']);
+  if(manual&&!unresolved&&(!data.manual_pilot_eligible||data.manual_pilot?.ready_to_ship===true)&&['paid','processing'].includes(o.status))options.push(['shipped','Shipped']);
   if(o.status==='shipped')options.push(['delivered','Delivered']);
   if(options.length){const f=form('Update complete order',shipment),next=select(f,'Next status','status',options),carrier=input(f,'Carrier','carrier',o.tracking_carrier),tracking=input(f,'Tracking number','tracking',o.tracking_number),note=input(f,'Audit note','note','',true);note.minLength=8;
    submit(f,'Save fulfillment status',async()=>{if(next.value==='shipped'&&(!carrier.value.trim()||!tracking.value.trim()))throw Error('Carrier and tracking required before shipment.');await write({action:'update_order',id,version:o.version,status:next.value,note:note.value,tracking_carrier:carrier.value,tracking_number:tracking.value});await reload(row)})}
