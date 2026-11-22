@@ -201,7 +201,7 @@ test('PURE memberships execute verified fees and goods benefits atomically in di
    const cat=require('node:vm').runInNewContext(source+'; CATALOG');
    const items=Object.entries(variants).map(([id,size])=>({id,size,qty:1}));
    const p=await make({cat,items});
-   assert.equal(p.subtotal_cents,27900);
+   assert.equal(p.subtotal_cents,26141);
    assert.equal(p.pricing.campaign_bac,undefined);
    await place(p);await pay(p);
    const allocations=(await db.query("select item from commerce_fulfillment_items where invoice_id=$1 and variant_key<>'gift-bac-3|3 mL'",[p.id])).rows;

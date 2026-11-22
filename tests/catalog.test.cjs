@@ -14,7 +14,7 @@ const { catalog, groups } = sandbox;
 test("catalog matches the approved product source snapshot", () => {
   assert.equal(
     createHash("sha256").update(source).digest("hex"),
-    "dfd90343316715e6b73f9faf8c40bc364f309b5882dbf361fa424a6c156ca842"
+    "b1b1bd7b6f3ab0166bb124f5abebd05c63186fed3ec93fccdb365a8f83cd45c3"
   );
 });
 
@@ -32,7 +32,7 @@ test("current products and variants remain unique and valid", () => {
 });
 
 test("featured and spotlight entries show the configured minimum prices", () => {
-  for (const [id, expected] of [["retatrutide", 66], ["tirzepatide", 39], ["semaglutide", 63], ["bpc-157", 30]]) {
+  for (const [id, expected] of [["retatrutide", 78], ["tirzepatide", 72], ["semaglutide", 63], ["bpc-157", 30]]) {
     const product = catalog.find((item) => item.id === id);
     assert.equal(Math.min(...product.variants.map((variant) => variant.price)), expected);
   }

@@ -40,7 +40,7 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
   for(const card of featured){
    const p=w.AltaStore.product(card.dataset.product),photo=card.querySelector('.ap-product-image');
    assert.equal(card.querySelector('.nl-featured-meta h3').textContent,p.name);
-   assert.match(card.querySelector('.nl-featured-price').textContent,/^\$[\d,]+$/);
+   assert.match(card.querySelector('.nl-featured-price').textContent,/^\$[\d,]+(?:\.\d{2})?$/);
    assert.equal(new URL(photo.href).pathname,'/product/'+p.id);
    assert.equal(card.querySelector('button,select,.nl-card-actions,.nl-size-label'),null);
    assert.equal(photo.contains(card.querySelector('.nl-featured-meta')),false,'name and price are outside the image');
@@ -74,7 +74,7 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
    assert.equal(url.pathname,'/product/'+p.id);
    assert.equal(card.querySelector('.nl-featured-meta h3').textContent,p.name);
    assert.equal(card.querySelector('.nl-featured-meta h3 a').href,photo.href);
-   assert.equal(card.querySelector('.nl-featured-price').textContent,new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',minimumFractionDigits:0,maximumFractionDigits:0}).format(variant.price));
+   assert.equal(card.querySelector('.nl-featured-price').textContent,new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',minimumFractionDigits:Number.isInteger(variant.price)?0:2,maximumFractionDigits:2}).format(variant.price));
    assert.equal(card.querySelector('select,button,.nl-card-actions,.nl-size-label,.ap-card-body'),null);
    assert.doesNotMatch(card.textContent,/per unit|View More|Add to Cart|\(\d+\s*mg\)/i);
   }

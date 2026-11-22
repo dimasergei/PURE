@@ -96,8 +96,7 @@ test('catalog photo cards preserve product navigation, integer prices, search, f
     assert.equal(photo.querySelector('img').getAttribute('src'),w.AltaStore.image(p,variant.size),'photo matches the linked strength');
     assert.equal(name.getAttribute('href'),photo.getAttribute('href'));assert.equal(name.textContent,p.name);
     const price=card.querySelector('.nl-featured-price');assert.ok(price);
-    assert.equal(price.textContent,'$'+Math.round(variant.price).toLocaleString('en-US'));
-    assert.match(price.textContent,/^\$[\d,]+$/,'catalog prices have no decimal suffix');
+    assert.equal(price.textContent,'$'+variant.price.toLocaleString('en-US',{minimumFractionDigits:Number.isInteger(variant.price)?0:2,maximumFractionDigits:2}));
     assert.equal(photo.contains(name),false,'name remains separate from the product photo');
     assert.equal(photo.contains(price),false,'price remains separate from the product photo');
     assert.equal(card.querySelectorAll('select,button,input,[data-action]').length,0,'purchasing and strength selection happen on the product page');

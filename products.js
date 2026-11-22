@@ -1,6 +1,55 @@
 /** Source prices receive a 200% markup (3× total); shipping is not included. */
 const PRICE_MARKUP_FACTOR = 3;
 
+// Verified NeuroLabs public USD merchandise prices before its checkout code,
+// observed November 22, 2026. The key matches the exact PURE product and strength.
+const MATCHED_USD_PRICES = new Map([
+  ["retatrutide:10mg", 79.05],
+  ["retatrutide:20mg", 129.89],
+  ["retatrutide:30mg", 163.79],
+  ["retatrutide:40mg", 208.99],
+  ["tirzepatide:10mg", 79.04],
+  ["tirzepatide:40mg", 192.04],
+  ["5-amino-1mq:10mg", 55.94],
+  ["aod-9604:5mg", 67.80],
+  ["aod-9604:10mg", 90.34],
+  ["cagrilintide:5mg", 123.69],
+  ["bpc-157:10mg", 67.52],
+  ["tb-500:10mg", 54.17],
+  ["bpc-tb-500:5mg/5mg", 96.05],
+  ["kpv:10mg", 62.47],
+  ["ara-290:10mg", 110.57],
+  ["ghk-cu:50mg", 45.14],
+  ["ghk-cu:100mg", 50.79],
+  ["ahk-cu:100mg", 87.01],
+  ["glow:70mg", 75.34],
+  ["klow:80mg", 90.02],
+  ["cjc-1295-dac:5mg", 67.80],
+  ["ipamorelin:5mg", 50.85],
+  ["ipamorelin:10mg", 73.45],
+  ["tesamorelin:10mg", 107.35],
+  ["tesamorelin:20mg", 135.60],
+  ["semax:10mg", 36.49],
+  ["selank:10mg", 43.78],
+  ["adamax:10mg", 121.97],
+  ["pinealon:10mg", 67.73],
+  ["dsip:5mg", 52.13],
+  ["nad:500mg", 84.75],
+  ["nad:1000mg", 107.29],
+  ["epithalon:10mg", 63.35],
+  ["glutathione:600mg", 45.14],
+  ["glutathione:1500mg", 74.52],
+  ["ss-31:10mg", 67.12],
+  ["mots-c:10mg", 50.79],
+  ["mots-c:40mg", 203.40],
+  ["melanotan-ii:10mg", 54.33],
+  ["melanotan-1:10mg", 43.71],
+  ["pt-141:10mg", 111.15],
+  ["kisspeptin:10mg", 56.87],
+  ["bac-3:3 mL", 14.95],
+  ["bac-10:10 mL", 21.95],
+]);
+
 const CATALOG = [
   {
     id: "retatrutide",
@@ -518,7 +567,7 @@ const CATALOG = [
   },
 ].map((product) => ({
   ...product,
-  variants: product.variants.map(([size, price]) => ({ size, price: price * PRICE_MARKUP_FACTOR })),
+  variants: product.variants.map(([size, price]) => ({ size, price: MATCHED_USD_PRICES.get(product.id + ":" + size) ?? price * PRICE_MARKUP_FACTOR })),
 }));
 
 const GROUPS = [
