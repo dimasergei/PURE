@@ -77,11 +77,14 @@ test('database kill switch blocks Lotus even with a live API key and enabled env
  await handle({method:'POST',headers:{'x-admin-password':password,origin:env.SITE_URL,'content-type':'application/json'},body:{action:'preview_lotus_order',id}},res,new URLSearchParams(),{db,env,fetchImpl:async()=>{throw Error('Unexpected network call')}});
  assert.equal(code,409);
 });
-test('manual assignment accepts only the selected supplier and remains available when Lotus is disabled',async()=>{
+test('manual assignment uses PURE’s manual route with Lotus disabled and ignores client-supplied provider names',async()=>{
  const password='fixture-admin-password-'+'x'.repeat(32),env={ADMIN_ORDERS_PASSWORD:password,SITE_URL:'https://altapurelabs.com',LOTUS_FULFILLMENT_ENABLED:'false'};
- let calls=0;const db={rpc:async(name,args)=>{calls++;assert.equal(name,'commerce_fulfillment_admin');assert.equal(args.p_data.supplier_name,'99Purity Peptides');return{data:true}}};
- const req={method:'POST',headers:{'x-admin-password':password,origin:env.SITE_URL,'content-type':'application/json'},body:{action:'assign',id,route:'manual',note:'Supplier confirmed allocation',supplier_name:'99Purity Peptides'}};
- let code;const res={setHeader(){},status(n){code=n;return this},json(x){return x}};
- await handle(req,res,new URLSearchParams(),{db,env});assert.equal(code,200);assert.equal(calls,1);
- await handle({...req,body:{...req.body,supplier_name:'Lotus'}},res,new URLSearchParams(),{db,env});assert.equal(code,400);assert.equal(calls,1);
+ const recorded=[];
+ const db={rpc:async(name,args)=>{assert.equal(name,'commerce_fulfillment_admin');recorded.push(args.p_data);return{data:true}}};
+ for(const suppliedName of ['99Purity Peptides','Lotus']){
+  const req={method:'POST',headers:{'x-admin-password':password,origin:env.SITE_URL,'content-type':'application/json'},body:{action:'assign',id,route:'manual',note:'Supplier confirmed allocation',supplier_name:suppliedName}};
+  let code;const res={setHeader(){},status(n){code=n;return this},json(x){return x}};
+  await handle(req,res,new URLSearchParams(),{db,env});assert.equal(code,200);
+ }
+ assert.deepEqual(recorded.map(row=>[row.route,row.supplier_name]),[['manual','PURE manual fulfillment'],['manual','PURE manual fulfillment']]);
 });
