@@ -5,12 +5,26 @@ const retiredCopy=/\bBOGO\b|\b(?:ALTA|PURE)\s+(?:GOLD|PLATINUM)\b|buy\s*1\s*,?\s
 const retiredRoute=/^\/offers(?:[/.?#]|$)/;
 function assertCurrentView(d,route){
  for(const a of d.querySelectorAll('a[href]'))assert.doesNotMatch(a.getAttribute('href'),retiredRoute,route+' has no retired destinations');
- for(const area of d.querySelectorAll('header,#ap-main,footer'))assert.doesNotMatch(area.textContent,retiredCopy,route+' has no retired brand or BOGO offer copy');
+ for(const area of d.querySelectorAll('header,#ap-main,footer')){
+  const content=area.cloneNode(true);
+  content.querySelector('[data-pure-home-campaign]')?.remove();
+  assert.doesNotMatch(content.textContent,retiredCopy,route+' has no retired brand or BOGO offer copy');
+ }
  assert.equal(d.querySelectorAll('#ap-main [data-promo-clock],#ap-main .nl-offer-grid').length,0,route+' has no old sale presentation');
 }
-async function setup(route){const errors=[];const console=new VirtualConsole();console.on('jsdomError',e=>errors.push(e.message));const dom=new JSDOM(read('public-build/index.html'),{url:'https://getpurelabs.com'+route,runScripts:'outside-only',virtualConsole:console}),w=dom.window;w.localStorage.setItem('ap-age-verified','true');w.matchMedia=()=>({matches:false});w.HTMLElement.prototype.scrollIntoView=()=>{};w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;};w.fetch=async()=>({ok:true,json:async()=>[]});w.AltaConversionConfig=require('../config/conversion.json');w.eval(read('public-build/quantity-pricing.js')+'\n'+read('public-build/membership-experience.js')+'\n'+read('public-build/conversion-ui.js')+'\n'+read('public-build/products.js')+'\n'+read('public-build/product-images.js')+'\n'+read('public-build/storefront-v2.js')+'\n'+read('public-build/workspace-v2.js'));await new Promise(r=>setTimeout(r,0));assert.deepEqual(errors,[],route);assertCurrentView(w.document,route);return{dom,w,d:w.document};}
+async function setup(route,campaign=null){const errors=[];const console=new VirtualConsole();console.on('jsdomError',e=>errors.push(e.message));const dom=new JSDOM(read('public-build/index.html'),{url:'https://getpurelabs.com'+route,runScripts:'outside-only',virtualConsole:console}),w=dom.window;w.localStorage.setItem('ap-age-verified','true');w.matchMedia=()=>({matches:false});w.HTMLElement.prototype.scrollIntoView=()=>{};w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;};w.fetch=async url=>({ok:true,json:async()=>String(url).includes('campaign=window')?(campaign||{}):[]});w.AltaConversionConfig=require('../config/conversion.json');w.eval(read('public-build/quantity-pricing.js')+'\n'+read('public-build/membership-experience.js')+'\n'+read('public-build/conversion-ui.js')+'\n'+read('public-build/products.js')+'\n'+read('public-build/product-images.js')+'\n'+read('public-build/storefront-v2.js')+'\n'+read('public-build/workspace-v2.js'));await new Promise(r=>setTimeout(r,0));assert.deepEqual(errors,[],route);assertCurrentView(w.document,route);return{dom,w,d:w.document};}
 (async()=>{
+ {const now=Date.now();
+  const {dom,d}=await setup('/',{server_time:new Date(now).toISOString(),ends_at:new Date(now+60000).toISOString(),eligible_variants:['bpc-157:5mg','ghk-cu:50mg']});
+  const offer=d.querySelector('[data-pure-home-campaign]');
+  assert.equal(offer.hidden,false);
+  assert.match(offer.textContent,/BUY 1, GET 1 FREE/);
+  assert.match(offer.textContent,/BPC-157 5mg and GHK-Cu 50mg/);
+  assert.match(offer.textContent,/Ends in/);
+  dom.window.close();
+ }
  {const{dom,d,w}=await setup('/');
+  assert.equal(d.querySelector('[data-pure-home-campaign]').hidden,true);
   assert.match(d.querySelector('h1').textContent,/CUTTING EDGEPURITY/);
    // Desktop navigation and mobile side menu share this single route/link.
    const testingLink=d.querySelector('#ap-nav a[href="/coas"]');
