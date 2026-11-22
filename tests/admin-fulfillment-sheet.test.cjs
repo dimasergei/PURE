@@ -159,3 +159,24 @@ test('loader validates IDs/sources and membership/subscription non-shippable rec
   await assert.rejects(loadFulfillmentSheet(db,new URLSearchParams({id,source:'commerce'})),/Membership purchases/);
   assert.deepEqual(db.reads,['commerce_invoices']);
 });
+
+test('a premixed retail vial, BOGO units and overlapping recon awards export once per physical SKU',()=>{
+ const raw=order({status:'paid',public_order_number:'P00001000'});
+ const item={id:'bpc-tb-500',name:'Wolverine',size:'10mg',qty:2};
+ const gift={id:'gift-bac-3',name:'Recon solution',size:'3 mL',qty:1,unit_price_cents:0,line_total_cents:0};
+ raw.request_data.items=[item];
+ raw.pricing={...raw.pricing,lines:[{...item,unit_price_cents:9605,line_total_cents:19210,bogo_free_units:0}],
+  bogo_campaign:{free_units:[{id:item.id,size:item.size,qty:2}]},first_order_bac:true,campaign_bac:true,bundled_items:[gift]};
+ const allocations=[{variant_key:'bpc-tb-500|10mg',item:{...item,qty:4,bogo_free_qty:2},route:'manual'},
+  {variant_key:'gift-bac-3|3 mL',item:{...gift,campaign_gift:true},route:'manual'}];
+ const financial=JSON.stringify(raw.pricing);
+ for(const saved of [[],allocations]){
+  const s=normalizeSheet({order:raw,source:'commerce',allocations:saved});
+  assert.equal(s.order_number,'P00001000');
+  assert.deepEqual(s.items.map(x=>[x.product_id,x.purchased,x.free,x.total]),[['bpc-tb-500',2,2,4],['gift-bac-3',0,1,1]]);
+  assert.match(buildFulfillmentCsv(s).toString(),/Wolverine/);
+  assert.equal(JSON.stringify(raw.pricing),financial);
+ }
+ assert.throws(()=>normalizeSheet({order:raw,source:'commerce',allocations:allocations.slice(0,1)}),/missing/);
+ assert.throws(()=>normalizeSheet({order:raw,source:'commerce',allocations:[{...allocations[0],item},allocations[1]]}),/quantities/);
+});

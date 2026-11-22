@@ -11,30 +11,30 @@ test('regular catalog quantity is charged without automatic discounts or free un
   assert.equal(p.lines[0].qty,qty);assert.equal(p.lines[0].line_total_cents,qty*1999);assert.equal(p.bogo_free_units,0);
  }
 });
-test('BLACKFRIDAY15 discounts each purchased line by 15 percent with exact order rounding and deterministic line allocation',()=>{
- const p=applyPromotions(base.priceLines([line(2),line(1,3001,'10mg')]),'goods','blackfriday15');
- assert.equal(p.subtotal_cents,6999);assert.equal(p.discount_cents,1050);
- assert.deepEqual(p.lines.map(x=>x.coupon_discount_cents),[600,450]);
- assert.deepEqual(p.lines.map(x=>x.qty),[2,1]);assert.equal(p.coupon_code,'BLACKFRIDAY15');
- assert.equal(p.bogo_free_units,0);assert.ok(p.lines.every(x=>x.discount_bps===1500&&x.discount_reason==='coupon_blackfriday15'));
+test('BLACKFRIDAY10 discounts each purchased line by 10 percent with exact order rounding and deterministic line allocation',()=>{
+ const p=applyPromotions(base.priceLines([line(2),line(1,3001,'10mg')]),'goods','blackfriday10');
+ assert.equal(p.subtotal_cents,6999);assert.equal(p.discount_cents,700);
+ assert.deepEqual(p.lines.map(x=>x.coupon_discount_cents),[400,300]);
+ assert.deepEqual(p.lines.map(x=>x.qty),[2,1]);assert.equal(p.coupon_code,'BLACKFRIDAY10');
+ assert.equal(p.bogo_free_units,0);assert.ok(p.lines.every(x=>x.discount_bps===1000&&x.discount_reason==='coupon_blackfriday10'));
  const before=structuredClone(p);applyBankDiscount(p,{kind:'bank_transfer',active:true},'goods');assert.deepEqual(p,before);
 });
 test('removing a coupon restores regular catalog prices',()=>{
- const p=applyPromotions(base.priceLines([line(3)]),'goods','BLACKFRIDAY15');
- assert.equal(p.discount_cents,900);applyPromotions(p,'goods','');
+ const p=applyPromotions(base.priceLines([line(3)]),'goods','BLACKFRIDAY10');
+ assert.equal(p.discount_cents,600);applyPromotions(p,'goods','');
  assert.equal(p.discount_cents,0);assert.equal(p.coupon_discount_cents,0);assert.equal(p.coupon_code,'');
  assert.equal(p.lines[0].line_total_cents,5997);assert.equal(p.lines[0].discount_reason,'none');
 });
 test('all permitted quantities have exact nonnegative totals without fulfillment inflation',()=>{
  for(let qty=1;qty<=100;qty++){
-  const p=applyPromotions(base.priceLines([line(qty)],'elite'),'goods','BLACKFRIDAY15');
-  assert.equal(p.discount_cents,Math.round(qty*1999*1500/10000));assert.equal(p.lines[0].qty,qty);
+  const p=applyPromotions(base.priceLines([line(qty)],'elite'),'goods','BLACKFRIDAY10');
+  assert.equal(p.discount_cents,Math.round(qty*1999*1000/10000));assert.equal(p.lines[0].qty,qty);
   assert.equal(p.lines[0].bogo_free_units,0);assert.equal(p.lines[0].line_total_cents,p.subtotal_cents-p.discount_cents);
  }
 });
-test('only BLACKFRIDAY15 is redeemable and membership purchases are unavailable',()=>{
- assert.equal(normalizeCoupon(' BlackFriday15 '),'BLACKFRIDAY15');assert.equal(normalizeCoupon(undefined),'');
+test('only BLACKFRIDAY10 is redeemable and membership purchases are unavailable',()=>{
+ assert.equal(normalizeCoupon(' BlackFriday10 '),'BLACKFRIDAY10');assert.equal(normalizeCoupon(undefined),'');
  assert.equal(normalizeCoupon('  '),'');
- for(const value of ['BOGO','FREE','AP-ABCDEFGH2345','BLACKFRIDAY10',{},true,15,'x'.repeat(41)])assert.throws(()=>normalizeCoupon(value),e=>e.status===400);
- assert.throws(()=>applyPromotions(base.priceLines([line()]),'membership','BLACKFRIDAY15'),e=>e.status===409);
+ for(const value of ['BOGO','FREE','AP-ABCDEFGH2345','BLACKFRIDAY15',{},true,15,'x'.repeat(41)])assert.throws(()=>normalizeCoupon(value),e=>e.status===400);
+ assert.throws(()=>applyPromotions(base.priceLines([line()]),'membership','BLACKFRIDAY10'),e=>e.status===409);
 });

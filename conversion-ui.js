@@ -54,9 +54,10 @@
    const codeField='<label>Choose your referral code<input name="code" maxlength="24" minlength="3" pattern="[A-Za-z0-9][A-Za-z0-9_-]{2,23}" placeholder="YOURNAME" required autocomplete="off"><small>3–24 letters, numbers, hyphens or underscores.</small></label>';
    if(!d.partner){root.innerHTML=`<section class="ae-panel"><h2>Become a PURE partner</h2><p>Join free, choose your code and receive a referral link immediately. No application review.</p><p>Earn 40% on eligible first orders and 10% on future orders.</p><form class="ap-form rd-partner-form">${codeField}<label class="ap-checkbox-label"><input type="checkbox" required> I accept the <a href="/partner-terms.html" target="_blank" rel="noopener">partner terms</a>.</label><button class="ap-button">Join and Get My Code</button><p role="status"></p></form></section>`;root.querySelector('form').onsubmit=async e=>{e.preventDefault();const f=e.target,b=f.querySelector('button');b.disabled=true;try{await request('partner=dashboard',{action:'join',code:f.elements.code.value,accepted:true,terms_version:d.terms.version},auth);await partner(root,auth);}catch(err){f.querySelector('[role=status]').textContent=err.message;b.disabled=false;}};return;}
    const link=location.origin+'/?ref='+encodeURIComponent(d.partner.code),codes=d.codes||[{code:d.partner.code}],summary=d.summary||{};
-   root.innerHTML=`<section class="ae-panel rd-referral"><div><small>PARTNER DASHBOARD · ${esc(d.partner.status)}</small><h2>Your referral link</h2><input readonly value="${esc(link)}" aria-label="Your referral link"><button class="ap-button" data-copy="${esc(link)}">Copy Link</button><p role="status"></p></div></section><nav class="ae-subnav rd-partner-tabs" aria-label="Partner dashboard"><button type="button" data-partner-tab="overview" aria-selected="true">Overview</button><button type="button" data-partner-tab="commissions">Commissions</button><button type="button" data-partner-tab="wallet">Wallet</button></nav><section data-partner-panel="overview"><section class="ae-panel"><h3>Your referral codes</h3><p>Use up to three codes. Every code tracks commissions to your account; older links keep working.</p><div class="rd-code-list">${codes.map(c=>`<div><code>${esc(c.code)}</code>${c.code===d.partner.code?'<small>PRIMARY</small>':''}<button type="button" data-copy="${esc(c.code)}">Copy</button></div>`).join('')}</div>${codes.length<3?`<form class="ap-form rd-code-form">${codeField}<button class="ap-button">Create code</button><p role="status"></p></form>`:''}</section><div class="rd-stat-grid"><article><strong>40%</strong><span>First-order commission</span></article><article><strong>10%</strong><span>Repeat-order commission</span></article><article><strong>${summary.orders||0}</strong><span>Referred orders</span></article></div><div class="cv-partner-metrics"><article><small>Total commission</small><strong>${money(summary.earned_cents||0)}</strong></article><article><small>Eligible for payout</small><strong>${money(summary.eligible_cents||0)}</strong></article><article><small>Paid</small><strong>${money(summary.paid_cents||0)}</strong></article></div></section><section data-partner-panel="commissions" hidden><section class="ae-panel"><h3>Referral activity</h3>${d.events.length?'<div class="rd-table"><table><thead><tr><th>Order</th><th>Commission</th><th>Status</th></tr></thead><tbody>'+d.events.map(e=>`<tr><td>${esc(e.invoice_id.slice(0,8).toUpperCase())}</td><td>${money(e.amount_cents)} (${e.rate_bps/100}%)</td><td>${esc(e.status)}</td></tr>`).join('')+'</tbody></table></div>':'<div class="rd-empty"><h3>No commissions yet</h3><p>Verified referred orders appear here after payment.</p></div>'}</section></section><section data-partner-panel="wallet" hidden><div class="rd-stat-grid"><article><strong>${money(summary.pending_cents||0)}</strong><span>Accruing / on hold</span></article><article><strong>${money(summary.eligible_cents||0)}</strong><span>Eligible for payout</span></article><article><strong>${money(summary.paid_cents||0)}</strong><span>Total paid</span></article></div><section class="ae-panel"><h3>Payout method</h3>${d.bank?`<p>Direct deposit · ${esc(d.bank.bank_name)} · ${esc(d.bank.account_type)} ending in ${esc(d.bank.last4)}</p>`:'<p>Add your US bank details to receive partner commissions.</p>'}<details ${d.bank?'':'open'}><summary>${d.bank?'Change payout details':'Set up payout details'}</summary><form class="ap-form rd-bank-form"><div class="ae-fields"><label>Name on bank account<input name="holder" maxlength="120" required autocomplete="name"></label><label>Phone<input name="phone" maxlength="40" minlength="7" required type="tel" autocomplete="tel"></label><label>Bank name<input name="bank_name" maxlength="120" required></label><label>Account type<select name="account_type"><option value="checking">Checking</option><option value="savings">Savings</option></select></label></div><input type="hidden" name="country" value="US"><label>Account holder address<input name="address" maxlength="300" minlength="5" required autocomplete="street-address"></label><div class="ae-fields"><label>Routing number<input name="routing_number" inputmode="numeric" pattern="[0-9]{9}" maxlength="9" required autocomplete="off"></label><label>Account number<input name="account_number" type="password" inputmode="numeric" pattern="[0-9]{4,17}" maxlength="17" required autocomplete="off"></label><label>Confirm account number<input name="confirm_account" type="password" inputmode="numeric" pattern="[0-9]{4,17}" maxlength="17" required autocomplete="off"></label></div><label class="ap-checkbox-label"><input name="authorized" type="checkbox" required> I confirm that I control this account and authorize PURE to use these details for partner commission deposits.</label><p class="dc-note">Bank details are encrypted and displayed with only the last four account digits. Saving does not initiate a transfer or debit. For a bank outside the US, contact support for payout setup.</p><button class="ap-button" ${d.bank_setup_available?'':'disabled data-unavailable="true"'}>Save payout details</button><p role="status">${d.bank_setup_available?'':'Secure bank setup is temporarily unavailable.'}</p></form></details></section><section class="ae-panel"><h3>Payout schedule</h3><p>Monthly manual payouts, minimum $100. Delivered orders become eligible on the first day of the following month (UTC). Refunded commissions reverse; refunds after payout offset later earnings.</p><a href="/partner-terms.html">Program terms →</a></section></section>`;
+   const disclosure='I earn a commission when you buy through my PURE link or code.';
+   root.innerHTML=`<section class="ae-panel rd-referral"><div><small>PARTNER DASHBOARD · ${esc(d.partner.status)}</small><h2>Your referral link</h2><input readonly value="${esc(link)}" aria-label="Your referral link"><button class="ap-button" data-copy="${esc(link)}">Copy Link</button><details class="pure-partner-disclosure"><summary>Affiliate disclosure</summary><p>${esc(disclosure)}</p><button type="button" data-copy="${esc(disclosure)}">Copy disclosure</button></details><p role="status"></p></div></section><nav class="ae-subnav rd-partner-tabs" aria-label="Partner dashboard"><button type="button" data-partner-tab="overview" aria-selected="true">Overview</button><button type="button" data-partner-tab="commissions">Commissions</button><button type="button" data-partner-tab="wallet">Wallet</button></nav><section data-partner-panel="overview"><section class="ae-panel"><h3>Your referral codes</h3><p>Use up to three codes. Every code tracks commissions to your account; older links keep working.</p><div class="rd-code-list">${codes.map(c=>`<div><code>${esc(c.code)}</code>${c.code===d.partner.code?'<small>PRIMARY</small>':''}<button type="button" data-copy="${esc(c.code)}">Copy</button></div>`).join('')}</div>${codes.length<3?`<form class="ap-form rd-code-form">${codeField}<button class="ap-button">Create code</button><p role="status"></p></form>`:''}</section><div class="rd-stat-grid"><article><strong>40%</strong><span>First-order commission</span></article><article><strong>10%</strong><span>Repeat-order commission</span></article><article><strong>${summary.orders||0}</strong><span>Referred orders</span></article></div><div class="cv-partner-metrics"><article><small>Total commission</small><strong>${money(summary.earned_cents||0)}</strong></article><article><small>Eligible for payout</small><strong>${money(summary.eligible_cents||0)}</strong></article><article><small>Paid</small><strong>${money(summary.paid_cents||0)}</strong></article></div></section><section data-partner-panel="commissions" hidden><section class="ae-panel"><h3>Referral activity</h3>${d.events.length?'<div class="rd-table"><table><thead><tr><th>Order</th><th>Commission</th><th>Status</th></tr></thead><tbody>'+d.events.map(e=>`<tr><td>${esc(e.invoice_id.slice(0,8).toUpperCase())}</td><td>${money(e.amount_cents)} (${e.rate_bps/100}%)</td><td>${esc(e.status)}</td></tr>`).join('')+'</tbody></table></div>':'<div class="rd-empty"><h3>No commissions yet</h3><p>Verified referred orders appear here after payment.</p></div>'}</section></section><section data-partner-panel="wallet" hidden><div class="rd-stat-grid"><article><strong>${money(summary.pending_cents||0)}</strong><span>Accruing / on hold</span></article><article><strong>${money(summary.eligible_cents||0)}</strong><span>Eligible for payout</span></article><article><strong>${money(summary.paid_cents||0)}</strong><span>Total paid</span></article></div><section class="ae-panel"><h3>Payout method</h3>${d.bank?`<p>Direct deposit · ${esc(d.bank.bank_name)} · ${esc(d.bank.account_type)} ending in ${esc(d.bank.last4)}</p>`:'<p>Add your US bank details to receive partner commissions.</p>'}<details ${d.bank?'':'open'}><summary>${d.bank?'Change payout details':'Set up payout details'}</summary><form class="ap-form rd-bank-form"><div class="ae-fields"><label>Name on bank account<input name="holder" maxlength="120" required autocomplete="name"></label><label>Phone<input name="phone" maxlength="40" minlength="7" required type="tel" autocomplete="tel"></label><label>Bank name<input name="bank_name" maxlength="120" required></label><label>Account type<select name="account_type"><option value="checking">Checking</option><option value="savings">Savings</option></select></label></div><input type="hidden" name="country" value="US"><label>Account holder address<input name="address" maxlength="300" minlength="5" required autocomplete="street-address"></label><div class="ae-fields"><label>Routing number<input name="routing_number" inputmode="numeric" pattern="[0-9]{9}" maxlength="9" required autocomplete="off"></label><label>Account number<input name="account_number" type="password" inputmode="numeric" pattern="[0-9]{4,17}" maxlength="17" required autocomplete="off"></label><label>Confirm account number<input name="confirm_account" type="password" inputmode="numeric" pattern="[0-9]{4,17}" maxlength="17" required autocomplete="off"></label></div><label class="ap-checkbox-label"><input name="authorized" type="checkbox" required> I confirm that I control this account and authorize PURE to use these details for partner commission deposits.</label><p class="dc-note">Bank details are encrypted and displayed with only the last four account digits. Saving does not initiate a transfer or debit. For a bank outside the US, contact support for payout setup.</p><button class="ap-button" ${d.bank_setup_available?'':'disabled data-unavailable="true"'}>Save payout details</button><p role="status">${d.bank_setup_available?'':'Secure bank setup is temporarily unavailable.'}</p></form></details></section><section class="ae-panel"><h3>Payout schedule</h3><p>Monthly manual payouts, minimum $100. Delivered orders become eligible on the first day of the following month (UTC). Refunded commissions reverse; refunds after payout offset later earnings.</p><a href="/partner-terms.html">Program terms →</a></section></section>`;
    const show=id=>{root.querySelectorAll('[data-partner-panel]').forEach(x=>x.hidden=x.dataset.partnerPanel!==id);root.querySelectorAll('[data-partner-tab]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.partnerTab===id)));};root.querySelectorAll('[data-partner-tab]').forEach(b=>b.onclick=()=>show(b.dataset.partnerTab));
-   root.querySelectorAll('[data-copy]').forEach(b=>b.onclick=async()=>{try{await navigator.clipboard.writeText(b.dataset.copy);b.textContent='Copied';}catch{root.querySelector('[role=status]').textContent='Select the code or link to copy it.';}});
+   root.querySelectorAll('[data-copy]').forEach(b=>b.onclick=async()=>{try{await navigator.clipboard.writeText(b.dataset.copy);b.textContent='Copied';}catch{root.querySelector('[role=status]').textContent='Select the text and copy it manually.';}});
    const codesForm=root.querySelector('.rd-code-form');if(codesForm)codesForm.onsubmit=async e=>{e.preventDefault();const b=codesForm.querySelector('button');b.disabled=true;try{await request('partner=dashboard',{action:'add_code',code:codesForm.elements.code.value},auth);await partner(root,auth);}catch(err){codesForm.querySelector('[role=status]').textContent=err.message;b.disabled=false;}};
    const bank=root.querySelector('.rd-bank-form');bank.onsubmit=async e=>{e.preventDefault();const b=bank.querySelector('button');b.disabled=true;try{await request('partner=dashboard',{...Object.fromEntries(new FormData(bank)),action:'save_bank',authorized:bank.elements.authorized.checked},auth);bank.reset();await partner(root,auth);root.querySelector('[data-partner-tab=wallet]').click();root.querySelector('.rd-bank-form [role=status]').textContent='Payout details saved securely.';}catch(err){bank.querySelector('[role=status]').textContent=err.message;b.disabled=false;}};
   }catch(e){root.textContent=e.message;}
@@ -66,63 +67,35 @@
   campaignRequest ||= request('campaign=window').then(data=>({...data,clockOffset:Date.parse(data.server_time)-Date.now()})).catch(error=>{campaignRequest=null;throw error;});
   return campaignRequest;
  }
+ let eligibleVariants=new Set(),campaignStatus='loading';
+ function publishCampaign(status,variants=[]){
+  eligibleVariants=new Set(variants);
+  campaignStatus=status;
+  window.dispatchEvent(new Event('pure:campaign'));
+ }
  async function mountCampaignStrip(){
   const announcement=document.querySelector('.ap-announcement');
   const fallback=announcement?.querySelector('#ap-announcement-text');
-  if(!fallback)return;
   let campaign;
-  try{campaign=await readCampaign();}catch{return;}
-  const deadline=Date.parse(campaign.ends_at);
-  const timeLeft=()=>deadline-Date.now()-campaign.clockOffset;
-  if(!(timeLeft()>0))return;
-  const products=[];
-  for(const key of new Set(campaign.eligible_variants||[])){
-   const [id,size]=key.split(':');
-   const product=window.AltaStore?.product(id);
-   if(product?.variants.some(variant=>variant.size===size))products.push({product,size});
-  }
-  if(!products.length)return;
+  try{campaign=await readCampaign();}catch{publishCampaign('unavailable');return;}
+  const timeLeft=()=>Date.parse(campaign.ends_at)-Date.now()-campaign.clockOffset;
+  if(!(timeLeft()>0)||!campaign.eligible_variants?.length){publishCampaign('inactive');return;}
+  publishCampaign('active',campaign.eligible_variants);
 
-  const trigger=document.createElement('button');
-  trigger.type='button';
+  const trigger=document.createElement('a');
+  trigger.href='/shop?offer=bogo';
   trigger.className='pure-offer-trigger';
-  trigger.setAttribute('aria-haspopup','dialog');
-  trigger.setAttribute('aria-controls','pure-campaign-dialog');
   trigger.setAttribute('aria-label','Buy one, get one free. Shop eligible products.');
   trigger.innerHTML='<span class="pure-offer-buy">Buy 1</span><strong class="pure-offer-free"><span>Get 1 free</span></strong><span class="pure-offer-action">Shop eligible vials</span>';
-  const dialog=document.createElement('dialog');
-  dialog.id='pure-campaign-dialog';
-  dialog.className='pure-offer-dialog';
-  dialog.setAttribute('aria-labelledby','pure-offer-title');
-  const date=new Intl.DateTimeFormat(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'}).format(new Date(deadline));
-  dialog.innerHTML=`
-   <div class="pure-offer-head">
-    <button type="button" class="pure-offer-close" aria-label="Close offer"><span aria-hidden="true">×</span></button>
-    <h2 id="pure-offer-title">Buy 1,<br>get 1 free.</h2>
-    <p>Ends <time datetime="${esc(campaign.ends_at)}">${esc(date)}</time></p>
-   </div>
-   <p class="pure-offer-detail">Get a second vial in the same strength with each eligible vial below.</p>
-   <ul class="pure-offer-items">${products.map(({product,size})=>`<li><a href="/product/${encodeURIComponent(product.id)}?size=${encodeURIComponent(size)}"><img src="${esc(window.AltaStore.image(product,size))}" loading="lazy" alt=""><span><strong>${esc(product.name)}</strong><small>${esc(size)}</small></span></a></li>`).join('')}</ul>`;
-  announcement.classList.add('pure-offer-active');
-  fallback.replaceWith(trigger);
-  document.body.append(dialog);
-  trigger.addEventListener('click',()=>{if(timeLeft()>0)dialog.showModal();else expire();});
-  dialog.querySelector('.pure-offer-close').addEventListener('click',()=>dialog.close());
-  dialog.addEventListener('click',event=>{
-   if(event.target!==dialog)return;
-   const {left,right,top,bottom}=dialog.getBoundingClientRect();
-   if(event.clientX<left||event.clientX>right||event.clientY<top||event.clientY>bottom)dialog.close();
-  });
+  if(fallback){
+   announcement.classList.add('pure-offer-active');
+   fallback.replaceWith(trigger);
+  }
   function expire(){
    const remaining=timeLeft();
-   if(remaining>0){
-    setTimeout(expire,Math.min(remaining,2147483647));
-    return;
-   }
-   if(dialog.open)dialog.close();
-   trigger.replaceWith(fallback);
-   dialog.remove();
-   announcement.classList.remove('pure-offer-active');
+   if(remaining>0){setTimeout(expire,Math.min(remaining,2147483647));return;}
+   publishCampaign('inactive');
+   if(fallback){trigger.replaceWith(fallback);announcement.classList.remove('pure-offer-active');}
   }
   expire();
  }
@@ -133,12 +106,15 @@
    if(!campaign.ends_at||!root.isConnected)return;
    if(root.dataset.campaignProduct&&!campaign.eligible_variants?.includes(root.dataset.campaignProduct))return;
    const deadline=Date.parse(campaign.ends_at),clockOffset=campaign.clockOffset;
+   const offer=document.createElement('strong'),clock=document.createElement('span');
+   offer.textContent='Buy 1, get 1 free';
+   root.replaceChildren(offer,clock);
    const update=()=>{
     const left=Math.ceil((deadline-Date.now()-clockOffset)/1000);
     root.hidden=!(left>0);
     if(!root.hidden){
      const hours=Math.floor(left/3600),minutes=Math.floor(left%3600/60),seconds=left%60;
-     root.textContent=(root.dataset.campaignProduct?'Buy 1, get 1 free · ':'BOGO · ')+'Ends in '+hours+'h '+minutes+'m '+seconds+'s';
+     clock.textContent='Ends in '+hours+'h '+minutes+'m '+seconds+'s';
     }
     return !root.hidden&&root.isConnected;
    };
@@ -158,7 +134,7 @@
    root.hidden=false;
   }catch{}
  }
- window.PureCampaign={mountCountdown,mountDispatch};
+ window.PureCampaign={mountCountdown,mountDispatch,eligible:(id,size)=>eligibleVariants.has(id+':'+size),get status(){return campaignStatus;}};
  if(/^\/(?:$|index(?:\.html)?$|shop(?:\.html)?\/?$|product\/)/.test(location.pathname)){
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mountCampaignStrip,{once:true});
   else mountCampaignStrip();
@@ -213,6 +189,6 @@
    document.body.append(dialog);dialog.showModal();
   });
  }
- const ref=new URLSearchParams(location.search).get('ref');if(ref&&/^[A-Z0-9][A-Z0-9_-]{2,23}$/i.test(ref))request('partner=visit',{action:'visit',code:ref}).catch(()=>{});
+ const ref=new URLSearchParams(location.search).get('ref');if(ref&&/^[A-Z0-9][A-Z0-9_-]{2,23}$/i.test(ref))window.PurePartnerVisit=request('partner=visit',{action:'visit',code:ref}).catch(()=>{});
  window.ConversionUI={cart,partner,membershipCards,mountMembership};
 })();

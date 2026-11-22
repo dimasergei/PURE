@@ -60,10 +60,16 @@ async function detail(record){let row=typeof record==='object'?record:orders.fin
  if(row.kind==='membership')info.append(field('Membership plan',({vip:'PURE WHITE',elite:'PURE BLACK'})[o.plan||row.plan]||'Membership'),field('Term',o.request_data?.billing_period==='annual'?'12 months prepaid':o.request_data?.billing_period==='monthly'?'1 month prepaid':'View purchase terms'));
  if(row.source==='research_subscription')info.append(field('Paid cycles',row.paid_cycles),field('Next billing',when(row.next_billing_at)));dlg.append(info);
  const items=el('section',undefined,'uc-items');items.append(el('h3',row.source==='research_subscription'?'Subscription items':'Order items'));
- const lines=row.source==='commerce'?(o.pricing?.lines||o.request_data?.items||[]):row.source==='research_subscription'?(row.lines||[]):row.store_order_items||[];
+ const recorded=o.pricing?.lines||o.request_data?.items||[];
+ const physical=data.physical_items?.map(item=>{
+  const charge=recorded.find(line=>line.id===item.id&&line.size===item.size);
+  return {...charge,...item,...(item.purchased===0?{line_total_cents:0}:{})};
+ });
+ if(data.quantity_error)items.append(el('p',data.quantity_error,'uc-hint'));
+ const lines=row.source==='commerce'?(physical||recorded):row.source==='research_subscription'?(row.lines||[]):row.store_order_items||[];
  for(const line of lines){const item=el('div',undefined,'uc-item'),name=line.name||line.product_name||line.id||'Product',size=line.size||line.variant_size||'',qty=line.qty||line.quantity||1;
-  const description=[name+(size?' · '+size:'')+' × '+qty,row.source==='store'&&line.lot_number?'Lot: '+line.lot_number:''].filter(Boolean).join(' — ');
-  item.append(el('span',description));const cents=line.line_total_cents??line.gross_cents??(line.unit_price_cents!=null?line.unit_price_cents*qty:pendingCad&&Number.isSafeInteger(line.unit_price_usd_cents)?line.unit_price_usd_cents*qty:null);if(cents!==null)item.append(el('strong',cash(cents,pendingCad?'USD':o.currency||row.currency)+(pendingCad?' USD':'')));items.append(item);
+  const description=[name+(size?' · '+size:'')+' × '+qty+(line.free?(line.purchased===0?' (free gift)':' ('+line.purchased+' paid + '+line.free+' free)'):''),row.source==='store'&&line.lot_number?'Lot: '+line.lot_number:''].filter(Boolean).join(' — ');
+  item.append(el('span',description));const cents=line.line_total_cents??line.gross_cents??(line.unit_price_cents!=null?line.unit_price_cents*(line.purchased??qty):pendingCad&&Number.isSafeInteger(line.unit_price_usd_cents)?line.unit_price_usd_cents*(line.purchased??qty):null);if(cents!==null)item.append(el('strong',cash(cents,pendingCad?'USD':o.currency||row.currency)+(pendingCad?' USD':'')));items.append(item);
  }dlg.append(items);
  if(row.source!=='research_subscription'&&!pendingCad){const totals=el('section',undefined,'uc-total');totals.append(field('Subtotal',cash(o.subtotal_cents??row.subtotal_cents,o.currency||row.currency)),field('Discounts','−'+cash(o.discount_cents??row.discount_cents,o.currency||row.currency)),field('Shipping',cash(o.shipping_cents??row.shipping_cents,o.currency||row.currency)),field('Tax',cash(o.tax_cents??row.tax_cents,o.currency||row.currency)),field('Total',cash(o.total_cents??row.total_cents,o.currency||row.currency)));dlg.append(totals)}
  const addr=row.source==='commerce'?o.kind==='goods'?o.request_data?.address:null:row.shipping_address;if(addr&&Object.keys(addr).length)dlg.append(el('p','Ship to: '+address(addr),'uc-address'));
@@ -117,9 +123,9 @@ function commerceActions(host,row,data){const o=data.order,id=o.id,allocations=d
    for(const packed of data.packed_lots||[]){
     const allocation=allocations.find(a=>a.variant_key===packed.variant_key);
     const lotNumber=packed.enterprise_inventory_lots?.lot_number;
-    if(allocation&&lotNumber)f.append(el('p',allocation.item.name+' · '+allocation.item.size+' — Lot '+lotNumber));
+    if(allocation&&lotNumber)f.append(el('p',(allocation.item?.name?allocation.item.name+' · '+allocation.item.size:allocation.variant_key)+' — Lot '+lotNumber));
    }
-   const variant=select(f,'Fulfilled item','packed_variant',allocations.map(a=>[a.variant_key,a.item.name+' · '+a.item.size]));
+   const variant=select(f,'Fulfilled item','packed_variant',allocations.map(a=>[a.variant_key,a.item?.name?a.item.name+' · '+a.item.size:a.variant_key]));
    const lot=input(f,'Packed lot number','lot_number','',true);lot.maxLength=120;
    submit(f,'Link packed lot',async()=>{await write({action:'record_packed_lot',id,variant_key:variant.value,lot_number:lot.value});await reload(row);msg('Packed lot linked. Verified reports appear in the customer account after shipping.');});
    f.append(btn('Remove packed lot link',async()=>{if(!lot.value.trim())throw Error('Enter the exact lot number to remove.');await write({action:'record_packed_lot',id,variant_key:variant.value,lot_number:lot.value,remove:true});await reload(row);msg('Packed lot link removed.');}));

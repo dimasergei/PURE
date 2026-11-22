@@ -33,3 +33,29 @@ test('the cart shows confirmed bonus units and gifts beside merchandise, once',a
   assert.match(root.querySelector('.nlc-proceed').textContent,/299\.00/);
  }finally{w.close();}
 });
+
+test('the drawer uses a verified session for partner savings without turning a link into a typed coupon',async()=>{
+ const dom=new JSDOM('<main></main>',{url:'https://example.test/shop',runScripts:'outside-only'});
+ const w=dom.window;
+ try{
+  const item={id:'test',key:'test:10mg',size:'10mg',qty:1,price:125,name:'Sample'};
+  w.AltaStore={cart:[item],catalog:[],product:()=>item,image:()=>'/sample.svg'};
+  w.AltaWorkspace={authClient:async()=>({auth:{getSession:async()=>({data:{session:{access_token:'fixture-session'}}})}})};
+  const requests=[];
+  w.fetch=async(url,options)=>{
+   if(String(url).endsWith('=public'))return {ok:true,json:async()=>({methods:[],delivery_options:[]})};
+   requests.push(options);
+   return {ok:true,json:async()=>({subtotal_cents:12500,discount_cents:2500,total_cents:10000,automatic_partner_offer:true,
+    pricing:{affiliate_code:'LAB20',coupon_discount_cents:2500}})};
+  };
+  w.eval(fs.readFileSync('cart-reference.js','utf8'));
+  const root=w.document.querySelector('main');
+  await w.AltaCartNmi.offer(root);
+  assert.equal(requests[0].headers.Authorization,'Bearer fixture-session');
+  assert.equal(JSON.parse(requests[0].body).coupon,'');
+  assert.equal(w.localStorage.getItem('ap-checkout-coupon'),null);
+  assert.equal(root.querySelector('[name=nlc_coupon]').value,'');
+  assert.match(root.querySelector('[data-nlc-cart-totals]').textContent,/Partner savings.*25.00/);
+  assert.equal(root.querySelector('details').open,false);
+ }finally{w.close();}
+});

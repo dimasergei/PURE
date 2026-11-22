@@ -79,3 +79,20 @@ test('non-goods and canceled orders cannot contact Lotus; malformed identifiers 
  for(const alter of [f=>f.order.kind='membership',f=>f.order.status='void']){const f=fixture();alter(f);const r=await f.preview();assert.equal(r.quote_available,false);assert.equal(f.requests.length,0);}
  await assert.rejects(previewOrder({}, {invoiceId:'invalid'}),error=>error.status===400);
 });
+
+test('supplier preview quotes the same doubled blend and single gift before and after allocation',async()=>{
+ const f=fixture(),item={id:'bpc-tb-500',name:'Wolverine',size:'10mg',qty:2};
+ const gift={id:'gift-bac-3',name:'Recon solution',size:'3 mL',qty:1,unit_price_cents:0,line_total_cents:0};
+ f.order.request_data.items=[item];f.order.pricing={bogo_campaign:{free_units:[{id:item.id,size:item.size,qty:2}]},bundled_items:[gift]};
+ f.values.commerce_supplier_mappings=[{variant_key:'bpc-tb-500|10mg',product:19,vials:1,verified_at:'2026-11-11'},
+  {variant_key:'gift-bac-3|3 mL',product:11,vials:1,verified_at:'2026-11-11'}];
+ const check=async()=>{
+  const out=await f.preview();assert.ok(out.quote_available);
+  assert.deepEqual(out.lines.map(row=>row.qty),[4,1]);
+  assert.deepEqual(JSON.parse(f.requests.at(-1).options.body).lines,[{product:19,vials:1,quantity:4},{product:11,vials:1,quantity:1}]);
+ };
+ await check();
+ f.order.status='paid';
+ f.values.commerce_fulfillment_items=f.values.commerce_supplier_mappings.map((row,i)=>({...row,route:'lotus',item:i?{...gift,campaign_gift:true}:{...item,qty:4,bogo_free_qty:2}}));
+ await check();
+});

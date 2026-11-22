@@ -113,7 +113,7 @@ test('PURE memberships execute verified fees and goods benefits atomically in di
      '20261122000200_partner_commission_rates.sql',
      '20261122000300_partner_chargebacks.sql',
      '20261122000400_storefront_reviews.sql','20261122000500_review_credit.sql',
-     '20261122000700_bogo_fulfillment.sql','20261122000800_blackfriday10_checkout.sql','20261122001000_partner_first_order_discount.sql','20261122001100_bogo_shipping_threshold.sql','20261122001200_commerce_order_numbers.sql','20261122001300_compound_bulk_checkout.sql','20261122001400_order_lot_coas.sql','20261122001500_shipping_thresholds.sql']){
+     '20261122000700_bogo_fulfillment.sql','20261122000800_blackfriday10_checkout.sql','20261122001000_partner_first_order_discount.sql','20261122001100_bogo_shipping_threshold.sql','20261122001200_commerce_order_numbers.sql','20261122001300_compound_bulk_checkout.sql','20261122001400_order_lot_coas.sql','20261122001500_shipping_thresholds.sql','20261122001700_catalog_bogo_eligibility.sql']){
    try{await db.exec(read(file));}catch(error){error.message=file+': '+error.message;throw error;}
   }
   for(const route of Object.keys(ids))methods[route]=(await db.query('select * from commerce_payment_methods where id=$1',[ids[route]])).rows[0];
@@ -139,7 +139,7 @@ test('PURE memberships execute verified fees and goods benefits atomically in di
     await db.query("update commerce_gateway_accounts set countries=array['US','CA'] where method_id=$1",[ids.card]);
    }
   });
-  await t.test('BOGO sends one free unit per paid unit and preserves paid shipping and blend exclusion',async()=>{
+  await t.test('BOGO sends one free unit per paid unit and preserves paid shipping and exact allowlist selection',async()=>{
    const cat=[{...catalog[0],variants:[{size:'5mg',price:40}]},
      {id:'klow',name:'KLOW',variants:[{size:'80mg',price:117}]}];
    const campaign={ends_at:new Date(Date.now()+600000).toISOString(),eligible_variants:['fixture-a:5mg']};
@@ -170,6 +170,28 @@ test('PURE memberships execute verified fees and goods benefits atomically in di
    assert.match(message.text,/Fixture A — complimentary/);
    assert.match(message.html,/Fixture A — complimentary/);
    assert.match(message.text,new RegExp((p.total_cents/100).toFixed(2).replace('.', '\\.')));
+  });
+  await t.test('catalog BOGO delivers each paid premix as two finished vials and counts paid supplies once',async()=>{
+   const cat=require('node:vm').runInNewContext(fs.readFileSync(path.join(__dirname,'../products.js'),'utf8')+';CATALOG');
+   const env={BOGO_ENABLED:'true',BOGO_STARTS_AT:new Date(Date.now()-60000).toISOString(),BOGO_ENDS_AT:new Date(Date.now()+600000).toISOString(),BOGO_VARIANTS:'catalog'};
+   const campaign=require('../lib/campaign-window').checkoutCampaign(env,Date.now(),cat);
+   const ids=['semaglutide','bpc-tb-500','glow','klow','vip','bac-3','needles'];
+   const items=ids.map(id=>({id,size:cat.find(p=>p.id===id).variants[0].size,qty:id==='semaglutide'?2:1}));
+   const p=await make({cat,items,campaign});
+   assert.equal(p.pricing.coupon_discount_cents,0);
+   assert.deepEqual(p.pricing.bogo_campaign.free_units,items.slice(0,5));
+   const subtotal=items.reduce((sum,item)=>sum+Math.round(cat.find(x=>x.id===item.id).variants[0].price*100)*item.qty,0);
+   assert.equal(p.subtotal_cents,subtotal);assert.equal(p.discount_cents,0);
+   const invalid=await make({cat,items,campaign});
+   invalid.pricing.bogo_campaign.free_units.push(items.find(item=>item.id==='bac-3'));
+   await assert.rejects(place(invalid),/excluded from BOGO/);
+   await place(p);await pay(p);
+   const rows=(await db.query('select item from commerce_fulfillment_items where invoice_id=$1',[p.id])).rows;
+   for(const item of items){
+    const fulfilled=rows.find(row=>row.item.id===item.id).item;
+    const free=campaign.eligible_variants.includes(item.id+':'+item.size)?item.qty:0;
+    assert.equal(fulfilled.bogo_free_qty||0,free);assert.equal(fulfilled.qty,item.qty+free);
+   }
   });
   await t.test('review invitation waits seven days and earns one redeemable US$50 credit per customer',async()=>{
    const customer=randomUUID();

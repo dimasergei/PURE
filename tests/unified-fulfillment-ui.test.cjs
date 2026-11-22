@@ -71,3 +71,17 @@ test('paid manual orders record complete shipment without supplier assignment or
  const writes=calls.filter(x=>x.options?.body).map(x=>JSON.parse(x.options.body));
  assert.equal(writes.length,1);assert.deepEqual(writes[0],{action:'update_order',id:row.id,version:1,status:'shipped',note:'Complete order dispatched',tracking_carrier:'Canada Post',tracking_number:'CA-TRACK-123'});assert.ok(!writes.some(write=>write.action==='assign'));
 });
+
+test('the order dashboard shows physical blend units beside their original charge, and the recon gift once',async t=>{
+ const row={id:uuid(7),source:'commerce',kind:'goods',commerce_status:'paid',payment_status:'paid',fulfillment_status:'unfulfilled',order_number:'P00001000',currency:'USD',total_cents:18000};
+ const item={id:'bpc-tb-500',name:'Wolverine',size:'10mg',qty:2,line_total_cents:19210};
+ const detail={order:{...row,status:'paid',pricing:{lines:[item]},request_data:{items:[item]}},allocations:[],jobs:[],physical_items:[
+  {id:item.id,name:item.name,size:item.size,qty:4,purchased:2,free:2},
+  {id:'gift-bac-3',name:'Recon solution',size:'3 mL',qty:1,purchased:0,free:1},
+ ]};
+ const {dom,w}=setup([row],detail);t.after(()=>{w.AltaFulfillment.clear();dom.window.close();});
+ await tick();w.document.querySelector('.uc-order-row button').click();await tick();
+ const lines=w.document.querySelectorAll('.uc-item');
+ assert.equal(lines.length,2);assert.match(lines[0].textContent,/Wolverine · 10mg × 4 \(2 paid \+ 2 free\)\$192\.10/);
+ assert.match(lines[1].textContent,/Recon solution · 3 mL × 1 \(free gift\)\$0\.00/);
+});

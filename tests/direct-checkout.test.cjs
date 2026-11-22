@@ -6,14 +6,14 @@ const user={id:uid,email:'customer@example.test',email_confirmed_at:'2026-01-01'
 const method={id:mid,active:true,kind:'hosted_link',native_provider:'rampex',rampex_provider:'hosted',countries:['US','CA','GB'],version:1,currency:'USD',sale_scope:'goods',label:'Card'};
 const catalog=[{id:'fixture-product',name:'Fixture product',variants:[{size:'5mg',price:100}]}];
 const body={id,kind:'goods',method_id:mid,consent:true,checkout_version:config.version,items:[{id:'fixture-product',size:'5mg',qty:1,price:0.01}],name:'Customer',organization:'Lab',address:{line1:'123 Fixture Street',city:'Fixture City',region:'FL',postal_code:'34287',country:'US'},research_use:true};
-const env={RAMPEX_API_KEY:'isolated-rampex-fixture',RAMPEX_WEBHOOK_SECRET:'isolated-rampex-webhook-secret',RAMPEX_ENABLED:'true',RAMPEX_MODE:'live',SITE_URL:'https://getpurelabs.com',ADMIN_ORDERS_PASSWORD:'x'.repeat(40),CHECKOUT_RATE_LIMIT_SECRET:'fixture-secret-with-at-least-32-characters'};
+const env={POLYGON_USDC_ENABLED:'true',POLYGON_USDC_RECIPIENT:'0x1111111111111111111111111111111111111111',POLYGON_USDC_RPC_URL:'https://primary.fixture.test',POLYGON_USDC_SECONDARY_RPC_URL:'https://secondary.fixture.test',RAMPEX_API_KEY:'isolated-rampex-fixture',RAMPEX_WEBHOOK_SECRET:'isolated-rampex-webhook-secret',RAMPEX_ENABLED:'true',RAMPEX_MODE:'live',SITE_URL:'https://getpurelabs.com',ADMIN_ORDERS_PASSWORD:'x'.repeat(40),CHECKOUT_RATE_LIMIT_SECRET:'fixture-secret-with-at-least-32-characters'};
 function response(){return{code:200,setHeader(){},status(n){this.code=n;return this;},json(b){this.body=b;return this;}};}
 function dbMock({balance={points:1000,credit_cents:5000},membership=null,existing=null,partner=null,existingReferral=null,paymentMethods=[method]}={}){
  const calls=[];return{calls,auth:{getUser:async()=>({data:{user}})},from(table){const value=table==='commerce_gateway_accounts'?paymentMethods.filter(m=>m.native_provider).map(m=>({method_id:m.id,provider:m.native_provider,rampex_provider:m.rampex_provider,mode:'live',account_tag:require('../lib/gateway-config').configuration(m.native_provider,env).account_tag,countries:m.countries})):table==='commerce_delivery_options'?require('../config/delivery-options.json'):table==='commerce_partner_codes'?(partner?{partner_id:partner.customer_id}:null):table==='commerce_partners'?partner:table==='commerce_referrals'?existingReferral:table==='commerce_payment_methods'?paymentMethods:table==='commerce_memberships'?(membership?[membership]:[]):table==='commerce_balance_accounts'?balance:table==='commerce_invoices'?existing:[];
   const q={select(){return q;},eq(){return q;},in(){return q;},ilike(){return q;},is(){return q;},lte(){return q;},gt(){return q;},order(){return q;},limit(){return q;},maybeSingle(){return q;},then(resolve,reject){return Promise.resolve({data:value}).then(resolve,reject);}};return q;},rpc:async(name,args)=>{calls.push({name,args});return{data:{id,status:'accepted'}};}};
 }
 const request=(b,headers={})=>({method:'POST',headers:{origin:env.SITE_URL,'content-type':'application/json',authorization:'Bearer fixture-auth-token-long-enough',...headers},body:b});
-async function call(b,{db=dbMock(),cat=catalog,params='',headers={}}={}){const res=response();await checkout.handle(request(b,headers),res,new URLSearchParams(params),{env,db,catalog:cat,rateLimit:async()=>{}});return{res,db};}
+async function call(b,{db=dbMock(),cat=catalog,params='',headers={},deps={}}={}){const res=response();await checkout.handle(request(b,headers),res,new URLSearchParams(params),{env,db,catalog:cat,rateLimit:async()=>{},...deps});return{res,db};}
 
 test('checkout quotes work on both verified domains without placing orders',async()=>{
  for(const configured of ['https://getpurelabs.com','https://altapurelabs.com'])for(const origin of ['https://getpurelabs.com','https://altapurelabs.com']){
@@ -136,7 +136,7 @@ test('public preview needs no card processor and public/account terms expose cur
  }
 });
 
-test('signed partner attribution and existing commissions do not add a customer discount',async()=>{
+test('partner links below the net minimum retain attribution and respect an explicit coupon',async()=>{
  const partners=require('../lib/partner-program');
  const partner={customer_id:'c0000000-0000-4000-8000-000000000004',code:'AP-ABCDEFGH2345',status:'active'};
  const cookie='ap_ref='+partners.cookieToken(partner.code,env.CHECKOUT_RATE_LIMIT_SECRET);
@@ -149,4 +149,68 @@ test('signed partner attribution and existing commissions do not add a customer 
  assert.equal(res.code,200);assert.equal(res.body.pricing.referral,undefined);assert.equal(res.body.discount_cents,0);
  assert.equal(require('../config/conversion.json').partner.first_order_bps,4000);assert.equal(require('../config/conversion.json').partner.repeat_order_bps,1000);
  assert.equal(require('../config/conversion.json').partner.customer_discount_bps,2000);
+});
+
+test('signed first touch qualifies only a verified new buyer and reaches the stored invoice',async()=>{
+ const partner={customer_id:'c0000000-0000-4000-8000-000000000004',code:'LAB20',status:'active'};
+ const cookie='ap_ref='+require('../lib/partner-program').cookieToken(partner.code,env.CHECKOUT_RATE_LIMIT_SECRET);
+ const cat=[{...catalog[0],variants:[{size:'5mg',price:125}]}];
+ const db=dbMock({partner}), data={...body,country:'US'};
+ const {res:guest}=await call(data,{cat,db,params:'checkout=cart',headers:{authorization:'',cookie}});
+ assert.equal(guest.body.partner_offer_pending,true);assert.equal(guest.body.discount_cents,0);assert.equal(guest.body.pricing.referral,undefined);
+ const {res:cart}=await call(data,{cat,db,params:'checkout=cart',headers:{cookie}});
+ const {res:q}=await call({...data,action:'quote'},{cat,db,headers:{cookie}});
+ assert.equal(cart.body.discount_cents,2500);assert.equal(q.body.automatic_partner_offer,true);
+ assert.equal(q.body.pricing.affiliate_code,partner.code);assert.deepEqual(cart.body.pricing,q.body.pricing);
+ const {res:placed}=await call({...data,action:'place',quote:q.body.quote},{cat,db,headers:{cookie}});
+ assert.equal(placed.code,201);assert.equal(db.calls[0].args.p_data.request.checkout.affiliate_code,partner.code);
+ assert.equal(db.calls[0].args.p_data.total_cents,q.body.total_cents);
+ const explicit=await call({...data,coupon:'BLACKFRIDAY10',action:'quote'},{cat,db,headers:{cookie}});
+ assert.equal(explicit.res.body.discount_cents,1250);assert.equal(explicit.res.body.automatic_partner_offer,undefined);
+ assert.equal(explicit.res.body.pricing.referral.code,partner.code);
+ const otherPartner={...partner,customer_id:'c0000000-0000-4000-8000-000000000005',code:'OTHER20'};
+ const conflictDb=dbMock({partner});
+ const table=conflictDb.from.bind(conflictDb);
+ conflictDb.from=name=>{
+  const query=table(name);const filter=query.eq.bind(query);
+  query.eq=(column,value)=>{
+   if(name==='commerce_partner_codes'&&value===otherPartner.code)query.then=resolve=>resolve({data:{partner_id:otherPartner.customer_id}});
+   if(name==='commerce_partners'&&value===otherPartner.customer_id)query.then=resolve=>resolve({data:otherPartner});
+   return filter(column,value);
+  };
+  return query;
+ };
+ const conflict=await call({...data,coupon:otherPartner.code,action:'quote'},{cat,db:conflictDb,headers:{cookie}});
+ assert.equal(conflict.res.code,400);
+ const repeat=await call({...data,action:'quote'},{cat,db:dbMock({partner,existingReferral:{partner_id:partner.customer_id}}),headers:{cookie}});
+ assert.equal(repeat.res.body.discount_cents,0);assert.equal(repeat.res.body.pricing.referral.first_order,false);
+ const self=await call({...data,action:'quote'},{cat,db:dbMock({partner:{...partner,customer_id:uid}}),headers:{cookie}});
+ assert.equal(self.res.body.discount_cents,0);assert.equal(self.res.body.pricing.referral,undefined);
+});
+
+test('an automatic partner discount respects the post-Crypto threshold and CAD uses the USD threshold',async()=>{
+ const partner={customer_id:'c0000000-0000-4000-8000-000000000004',code:'LAB20',status:'active'};
+ const cookie='ap_ref='+require('../lib/partner-program').cookieToken(partner.code,env.CHECKOUT_RATE_LIMIT_SECRET);
+ const crypto={...method,native_provider:'polygon_usdc',rampex_provider:undefined};
+ const db=dbMock({partner,paymentMethods:[crypto]});
+ for(const [price,discount] of [[125,625],[150,3600]]){
+  const cat=[{...catalog[0],variants:[{size:'5mg',price}]}];
+  const q=await call({...body,action:'quote'},{cat,db,headers:{cookie}});
+  assert.equal(q.res.code,200);assert.equal(q.res.body.discount_cents,discount);
+  assert.equal(Boolean(q.res.body.automatic_partner_offer),price===150);
+ }
+ const interac={...method,kind:'interac',currency:'CAD',provider_key:'interac',native_provider:null,label:'Business e-Transfer'};
+ const transferDb=dbMock({partner,paymentMethods:[interac]});
+ const cat=[{...catalog[0],variants:[{size:'5mg',price:125}]}];
+ const fx={fx_ppm:1400000,token:'fixture-fx'};
+ const deps={interacFx:{resolve:async()=>fx}};
+ const input={...body,address:{...body.address,country:'CA'}};
+ const {res:q}=await call({...input,action:'quote'},{cat,db:transferDb,headers:{cookie},deps});
+ assert.equal(q.code,200);assert.equal(q.body.discount_cents,3500);assert.equal(q.body.pricing.usd_basis.merchandise_cents,10000);
+ const {res:place}=await call({...input,action:'place',quote:q.body.quote},{cat,db:transferDb,headers:{cookie},deps});
+ assert.equal(place.code,201);const stored=transferDb.calls[0].args.p_data;
+ const existing={id:stored.id,status:'accepted',checkout_version:stored.checkout_version,request_data:stored.request,request_digest:stored.digest,total_cents:stored.total_cents,currency:'CAD'};
+ const replayDb=dbMock({existing,paymentMethods:[interac]});
+ const {res:replay}=await call({...input,action:'place',quote:q.body.quote},{cat,db:replayDb,deps});
+ assert.equal(replay.body.replayed,true);assert.equal(replay.body.total_cents,stored.total_cents);assert.equal(replayDb.calls.length,0);
 });

@@ -119,3 +119,18 @@ test('research plan and cycle history come from account records, without unsuppo
   assert.ok(env.calls.every(call=>call.options.method==='GET'));
   env.dom.window.close();
 });
+
+test('partners can copy the commission disclosure beside their referral link',async()=>{
+ const env=setup({partner:{code:'LABTEAM',status:'active'},events:[],summary:{},terms:config.partner});
+ const copied=[];
+ Object.defineProperty(env.w.navigator,'clipboard',{value:{writeText:async text=>copied.push(text)}});
+ try{
+  await env.w.ConversionUI.partner(env.root,auth);
+  const disclosure=env.root.querySelector('.rd-referral .pure-partner-disclosure');
+  assert.ok(disclosure);
+  assert.equal(disclosure.open,false);
+  await disclosure.querySelector('button').onclick();
+  assert.deepEqual(copied,['I earn a commission when you buy through my PURE link or code.']);
+  assert.equal(disclosure.querySelector('p').textContent,copied[0]);
+ }finally{env.dom.window.close();}
+});

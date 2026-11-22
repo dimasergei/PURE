@@ -109,7 +109,10 @@
    couponStatus.textContent=action==='remove'?'Removing coupon…':candidate?'Checking coupon…':'';
    input.removeAttribute('aria-invalid');
    try{
-    const settings=await methods();
+    const session=async()=>{
+     try{return (await (await window.AltaWorkspace?.authClient?.())?.auth.getSession())?.data?.session;}catch{return null;}
+    };
+    const [settings,account]=await Promise.all([methods(),session(),window.PurePartnerVisit]);
     if(!input.isConnected||id!==seq)return;
     const country=localStorage.getItem('ap-shipping-country')||'US';
     const availableExtras=(settings.delivery_options||[]).filter(option=>option.kind==='extra'&&option.enabled===true);
@@ -119,7 +122,7 @@
      delivery:{shipping:'standard',extras:selectedExtras.sort()}};
     const fetchQuote=async coupon=>{
      const response=await fetch('/api/customer-config?checkout=cart',{method:'POST',cache:'no-store',
-      headers:{'Content-Type':'application/json'},body:JSON.stringify({...quoteBody,coupon})});
+      headers:{'Content-Type':'application/json',...(account?.access_token?{Authorization:'Bearer '+account.access_token}:{})},body:JSON.stringify({...quoteBody,coupon})});
      const result=await response.json().catch(()=>null);
      if(!response.ok||!Number.isSafeInteger(result?.total_cents)){
       throw Object.assign(Error(result?.error||'Cart totals are temporarily unavailable.'),{status:response.status});
@@ -137,16 +140,17 @@
      rejectedCode=candidate;
     }
     if(id!==seq||!input.isConnected)return;
-    appliedCoupon=data.pricing?.affiliate_code||data.pricing?.coupon_code||'';
+    appliedCoupon=data.automatic_partner_offer?'':data.pricing?.affiliate_code||data.pricing?.coupon_code||'';
     saveCoupon(appliedCoupon);input.value=appliedCoupon;remove.hidden=!appliedCoupon;
-    root.querySelector('[data-nlc-coupon-label]').textContent=appliedCoupon?'Coupon · '+appliedCoupon:'Add coupon code';
-    couponStatus.textContent=appliedCoupon?appliedCoupon+' applied.':action==='remove'?'Coupon removed.':'';
+    root.querySelector('[data-nlc-coupon-label]').textContent=appliedCoupon?'Coupon · '+appliedCoupon:data.partner_offer_pending?'Partner link saved · Add coupon':'Add coupon code';
+    couponStatus.textContent=data.partner_offer_pending?'First-order eligibility is confirmed when you sign in.':appliedCoupon?appliedCoupon+' applied.':action==='remove'?'Coupon removed.':'';
     if(rejectedCode)couponStatus.textContent=rejectedCode+' no longer applies.';
     const shipping=data.pricing?.delivery?.shipping_cents||0;
     const features=data.pricing?.delivery?.extras||[];
     const nodes=[['Subtotal',data.subtotal_cents]];
-    const discount=appliedCoupon?data.pricing?.coupon_discount_cents||0:0;
-    if(discount>0)nodes.push(['Coupon savings',-discount]);
+    const discount=data.pricing?.coupon_discount_cents||0;
+    if(discount>0)nodes.push([data.pricing?.affiliate_code?(data.partner_offer_pending?'Estimated partner savings':'Partner savings'):'Coupon savings',-discount]);
+    if(data.pricing?.membership_discount_cents>0)nodes.push(['Member savings',-data.pricing.membership_discount_cents]);
     if(data.pricing?.quantity_discount_cents>0)nodes.push(['Quantity savings',-data.pricing.quantity_discount_cents]);
     const bonuses=data.pricing?.bogo_campaign?.free_units||[];
     for(const badge of root.querySelectorAll('[data-bonus-product]')){

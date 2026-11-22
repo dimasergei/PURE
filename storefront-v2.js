@@ -25,7 +25,8 @@
  let compared=[];
  const selections={};
  const route=()=>location.pathname.replace(/\.html$/,'').replace(/\/$/,'')||'/';
- const initialCategory=new URLSearchParams(location.search).get('category')||'All';
+ const initialParams=new URLSearchParams(location.search);
+ const initialCategory=initialParams.get('offer')==='bogo'?'BOGO':initialParams.get('category')||'All';
  const shopCategories=['All','Peptides','Mist Applicators','Supplies','Equipment'];
  const categoryOf=p=>p.id==='needles'?'Equipment':p.category==='supplies'?'Supplies':'Peptides';
  const state={query:'',group:initialCategory==='BAC Water & Supplies'?'Supplies':groups.includes(initialCategory)&&initialCategory!=='All'?'Peptides':initialCategory,sort:'popular',limit:12,maxPrice:Math.ceil(Math.max(0,...catalog.flatMap(p=>p.variants.map(v=>v.price)))),savedOnly:false};
@@ -39,14 +40,25 @@
  function showDialog(id){const d=$(id);if(d&&!d.open)d.showModal();}
  function closeDialog(button){button.closest('dialog')?.close();}
  function exportLines(lines,name='PURE-research-list.csv'){const list=normalizeLines(lines);const cell=x=>'"'+String(x).replace(/"/g,'""')+'"';const csv=['Product,Size,Quantity,Unit price USD,Line total USD',...list.map(x=>[x.name,x.size,x.qty,x.price.toFixed(2),(x.qty*x.price).toFixed(2)].map(cell).join(',')),'','"Planning document only. Shipping, tax, discounts, and payment are not included."'].join('\r\n');const url=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+ function eligibleSizes(p){return p.variants.filter(v=>window.PureCampaign?.eligible?.(p.id,v.size));}
+ function cardVariant(p){
+  const eligible=eligibleSizes(p);
+  const selected=p.variants.find(v=>v.size===selections[p.id]);
+  if(state.group==='BOGO')return eligible.find(v=>v===selected)||eligible[0]||p.variants[0];
+  return selected||eligible[0]||p.variants[0];
+ }
+ function cardBadge(p,v){
+  if(!window.PureCampaign?.eligible?.(p.id,v.size))return '';
+  return '<span class="pure-card-sale"><span aria-hidden="true">BOGO</span><span class="ap-sr">Buy one, get one free</span></span>';
+ }
  function card(p,options={}) {
- const size=selections[p.id]||p.variants[0].size,v=p.variants.find(x=>x.size===size)||p.variants[0];
+ const v=cardVariant(p);
  const url='/product/'+encodeURIComponent(p.id)+'?size='+encodeURIComponent(v.size);
  if(options.featured){
   const price=new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',minimumFractionDigits:0,maximumFractionDigits:0}).format(v.price);
-  return `<article class="ap-product-card nl-product nl-featured-product" data-product="${esc(p.id)}"><a class="ap-product-image" href="${url}"><img src="${esc(image(p,v.size))}" alt="${esc(p.name+' '+v.size+' product label')}" loading="lazy"></a><div class="nl-featured-meta"><h3><a href="${url}">${esc(p.name)}</a></h3><strong class="nl-featured-price" aria-label="${esc(price+' USD')}">${esc(price)}</strong></div></article>`;
+  return `<article class="ap-product-card nl-product nl-featured-product" data-product="${esc(p.id)}"><a class="ap-product-image" href="${url}">${cardBadge(p,v)}<img src="${esc(image(p,v.size))}" alt="${esc(p.name+' '+v.size+' product label')}" loading="lazy"></a><div class="nl-featured-meta"><h3><a href="${url}">${esc(p.name)}</a></h3><strong class="nl-featured-price" aria-label="${esc(price+' USD')}">${esc(price)}</strong></div></article>`;
  }
- return `<article class="ap-product-card nl-product" data-product="${esc(p.id)}"><a class="ap-product-image" href="${url}"><img src="${esc(image(p,v.size))}" alt="${esc(p.name+' '+v.size+' product label')}" loading="lazy"></a><div class="ap-card-body"><h3><a href="${url}">${esc(p.name)} <span>(${esc(v.size)})</span></a></h3><label class="nl-size-label"><span class="ap-sr">Size for ${esc(p.name)}</span><select class="ap-card-size" data-card-size="${esc(p.id)}">${p.variants.map(x=>`<option value="${esc(x.size)}" ${x.size===v.size?'selected':''}>${esc(x.size)}</option>`).join('')}</select></label><div class="nl-prices"><strong class="ap-card-price">${priceMarkup(v.price)}</strong><small>per unit</small></div><div class="nl-card-actions"><a class="ap-button ap-button-secondary" href="${url}">View More</a><button class="ap-add" data-action="add" data-id="${esc(p.id)}" data-size="${esc(v.size)}" data-quantity="1">Add to Cart</button></div></div></article>`;
+ return `<article class="ap-product-card nl-product" data-product="${esc(p.id)}"><a class="ap-product-image" href="${url}">${cardBadge(p,v)}<img src="${esc(image(p,v.size))}" alt="${esc(p.name+' '+v.size+' product label')}" loading="lazy"></a><div class="ap-card-body"><h3><a href="${url}">${esc(p.name)} <span>(${esc(v.size)})</span></a></h3><label class="nl-size-label"><span class="ap-sr">Size for ${esc(p.name)}</span><select class="ap-card-size" data-card-size="${esc(p.id)}">${p.variants.map(x=>`<option value="${esc(x.size)}" ${x.size===v.size?'selected':''}>${esc(x.size)}</option>`).join('')}</select></label><div class="nl-prices"><strong class="ap-card-price">${priceMarkup(v.price)}</strong><small>per unit</small></div><div class="nl-card-actions"><a class="ap-button ap-button-secondary" href="${url}">View More</a><button class="ap-add" data-action="add" data-id="${esc(p.id)}" data-size="${esc(v.size)}" data-quantity="1">Add to Cart</button></div></div></article>`;
 }
  const heading=(eyebrow,title,description='')=>`<div class="ap-container ap-page-intro"><div class="ap-breadcrumbs"><a href="/">PURE</a><span>/</span><span>${esc(eyebrow)}</span></div><span class="ap-eyebrow">${esc(eyebrow)}</span><h1>${title}</h1>${description?'<p>'+description+'</p>':''}</div>`;
  const featureLinks=()=>'';
@@ -66,9 +78,47 @@
  const bulkExamples=[['bpc-157','10mg',10],['ghk-cu','50mg',50]].map(([id,size,qty])=>{const p=product(id);return p?{p,v:p.variants.find(v=>v.size===size)||p.variants[0],qty}:null;}).filter(Boolean);
  return `<section class="nl-hero"><div class="ap-container nl-hero-inner"><div class="nl-hero-copy"><h1>CUTTING EDGE<br><em>PURITY</em></h1><p class="nl-hero-description">Research compounds, product documentation, and straightforward ordering for laboratories and research teams.</p><div class="ap-actions"><a class="ap-button nl-primary" href="/shop">SHOP NOW</a></div></div><div class="nl-vial-stage" aria-label="Featured PURE products"><svg class="ap-vial-clip" width="0" height="0" aria-hidden="true"><defs><clipPath id="ap-vial-outline" clipPathUnits="objectBoundingBox"><path d="M .296 .127 C .296 .094 .409 .079 .499 .079 C .592 .079 .705 .095 .705 .128 L .705 .168 Q .705 .179 .691 .186 L .691 .239 Q .691 .259 .648 .267 L .648 .311 C .696 .328 .713 .342 .720 .372 L .725 .379 L .727 .824 Q .727 .879 .681 .880 L .319 .880 Q .273 .879 .272 .827 L .277 .379 L .283 .373 C .289 .343 .307 .327 .355 .312 L .355 .268 Q .310 .260 .310 .238 L .310 .187 Q .296 .180 .296 .168 Z"/></clipPath></defs></svg>${hero.map((p,i)=>`<a class="nl-vial nl-vial-${i}" href="/product/${p.id}"><img src="${esc(image(p,p.variants[0].size))}" alt="${esc(p.name+' '+p.variants[0].size)}" ${i===2?'fetchpriority="high"':''}></a>`).join('')}<span class="nl-stage-word" aria-hidden="true">PURE</span></div>${homeHighlights()}</div></section><section class="ap-container nl-featured"><div class="ap-section-head"><div><span class="ap-eyebrow">THE COLLECTION</span><h2>Featured Compounds</h2></div><div class="nl-carousel-controls"><button data-carousel="-1" aria-label="Previous products">‹</button><button data-carousel="1" aria-label="Next products">›</button></div></div><div class="nl-carousel" id="nl-featured">${featured.map(p=>card(p,{featured:true})).join('')}</div><div class="nl-center"><a class="ap-button" href="/shop">View All Products</a></div></section><section class="ap-container nl-editorial"><div><span class="nl-capsule">PURE DOCUMENTATION</span><h2>KNOW WHAT’S<br>IN YOUR ORDER.</h2><p>Explore certificates of analysis by product, strength, laboratory or report ID.</p><p class="ap-fine">Request the certificate for your fulfilled lot when you order.</p><a class="ap-button" href="/coas">Explore COAS</a></div><div class="nl-doc-art"><span>PURE</span><strong>Certificate<br>of Analysis</strong><div class="nl-doc-purity"><span class="nl-doc-purity-check" aria-hidden="true">✓</span><span><b>Testing reports</b><small>See available product documentation</small></span></div><div><b>Retatrutide</b> / 60mg</div><hr><div><b>Janoshik</b> / Report ID</div><hr><div><b>PURE</b> / Lot</div><a class="ap-button" href="/coas">View COAS</a></div></section><section class="nl-soft nl-home-bulk" aria-labelledby="nl-home-bulk-title"><div class="ap-container"><article class="ap-feature ap-dark nl-home-bulk-card"><div class="nl-home-bulk-copy"><span class="ap-eyebrow">BULK ORDERS</span><h2 id="nl-home-bulk-title">More units.<br>Less busywork.</h2><p>Select exact strengths and quantities across the catalog. Review every line at regular unit prices, then check out in one order.</p><a class="ap-text-link" href="/bulk-orders">Build your order</a></div><div class="nl-home-bulk-preview"><table class="nl-home-bulk-table"><caption>Example order</caption><thead><tr><th scope="col">Compound / strength</th><th scope="col">Qty</th><th scope="col">Unit price</th></tr></thead><tbody>${bulkExamples.map(({p,v,qty})=>`<tr><td><span class="ap-mini-product"><span class="ap-vial-example"><img src="${esc(image(p,v.size))}" alt="" loading="lazy"></span><span class="nl-home-bulk-product-name">${esc(p.name)}<small>${esc(v.size)}</small></span></span></td><td>${qty}</td><td>${priceMarkup(v.price)}</td></tr>`).join('')}</tbody></table><p class="nl-home-bulk-note">Regular catalog pricing at every quantity.</p></div></article></div></section><section class="ap-container ap-section ap-faq-layout" id="faq"><div><span class="ap-eyebrow">FREQUENTLY ASKED QUESTIONS</span><h2>Have a question?</h2><a class="ap-text-link" href="/contact">Contact Us</a></div><div class="ap-faq">${[['How do I order?','Choose a product and strength, select the number of units, and add them to your cart. Review your order and the available payment methods at checkout.'],['Where are the COAS?','Open COAS to view original supplier reports. Each report is specific to its stated sample and lot. Request the exact fulfilled-lot report with your order.'],['How do I pay?','Choose an available payment method at checkout. Your order is fulfilled after payment is confirmed.'],['When will my order arrive?','Allow approximately 1–3 business days for processing, followed by 3–7 business days in transit for standard US delivery. Available shipping options and fees are shown at checkout. Tracking appears in Orders after dispatch.'],['Can I use my existing points or store credit?','Available points and store credit remain visible in your account and can be applied at checkout according to their redemption terms.'],['Are these products for human use?','No. All products are for controlled laboratory research only, not human or animal use. Purchasers must be 21 or older.']].map(([q,a])=>`<details><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join('')}</div></section>`;
 }
- function catalogResults(){let list=catalog.filter(p=>(state.group==='All'||categoryOf(p)===state.group)&&(!state.savedOnly||saved.includes(p.id))&&Math.min(...p.variants.map(v=>v.price))<=state.maxPrice&&searchText(p).includes(state.query.toLowerCase()));if(state.sort!=='popular')list.sort((a,b)=>state.sort==='low'?Math.min(...a.variants.map(v=>v.price))-Math.min(...b.variants.map(v=>v.price)):state.sort==='high'?Math.min(...b.variants.map(v=>v.price))-Math.min(...a.variants.map(v=>v.price)):a.name.localeCompare(b.name));return list;}
- function renderCatalogResults(){const list=catalogResults();const grid=$('#ap-catalog-grid');if(!grid)return;grid.innerHTML=list.slice(0,state.limit).map(p=>card(p,{featured:true})).join('')||`<div class="ap-empty"><h3>${t('noResults')}</h3><button class="ap-button ap-button-secondary" data-action="clear-filters">${t('clear')}</button></div>`;const more=$('#ap-load-more');more.hidden=list.length<=state.limit;$$('[data-filter-group]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.filterGroup===state.group)));}
- function shop(){const shopGroups=shopCategories;return `<section class="ap-container nl-shop"><header class="nl-shop-header"><h1>All Products</h1><p>Browse research compounds and available testing reports.</p></header><div class="ap-toolbar nl-shop-controls"><label class="nl-shop-search"><span class="ap-sr">Search products</span><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.7"></circle><path d="m16 16 5 5"></path></svg><input id="ap-catalog-query" type="search" placeholder="Search products..." value="${esc(state.query)}" maxlength="120"></label><div class="nl-shop-sort"><label class="nl-shop-sort-label" for="ap-catalog-sort">Sort by:</label><select id="ap-catalog-sort"><option value="popular" ${state.sort==='popular'?'selected':''}>Most Popular</option><option value="low" ${state.sort==='low'?'selected':''}>Price: Low to High</option><option value="high" ${state.sort==='high'?'selected':''}>Price: High to Low</option><option value="name" ${state.sort==='name'?'selected':''}>Name: A–Z</option></select></div></div><div class="nl-filter-pills" role="group" aria-label="Product categories">${shopGroups.map(g=>`<button type="button" data-filter-group="${esc(g)}" aria-pressed="${state.group===g}">${esc(g==='All'?'All Products':g)}</button>`).join('')}</div><div class="ap-grid" id="ap-catalog-grid"></div><button class="ap-button ap-button-secondary ap-load-more" id="ap-load-more" data-action="more">Load More Products</button></section>`;}
+ function catalogResults(){
+  const lowest=p=>Math.min(...(state.group==='BOGO'?eligibleSizes(p):p.variants).map(v=>v.price));
+  const list=catalog.filter(p=>(state.group==='All'||(state.group==='BOGO'?eligibleSizes(p).length>0:categoryOf(p)===state.group))
+   &&(!state.savedOnly||saved.includes(p.id))&&lowest(p)<=state.maxPrice&&searchText(p).includes(state.query.toLowerCase()));
+  if(state.sort!=='popular')list.sort((a,b)=>state.sort==='low'?lowest(a)-lowest(b):state.sort==='high'?lowest(b)-lowest(a):a.name.localeCompare(b.name));
+  return list;
+ }
+ function renderCatalogResults(){
+  const grid=$('#ap-catalog-grid');
+  if(!grid)return;
+  const active=window.PureCampaign?.status==='active',filters=$('.nl-filter-pills');
+  const offerView=active&&state.group==='BOGO';
+  for(const [selector,offerCopy] of [['[data-pure-collection-title]','BOGO OFFERS'],['[data-pure-collection-intro]','Buy one eligible vial and get a second of the same strength free.']]){
+   const node=$(selector);
+   if(node){node.dataset.defaultText??=node.textContent;node.textContent=offerView?offerCopy:node.dataset.defaultText;}
+  }
+  let offerButton=filters?.querySelector('[data-filter-group="BOGO"]');
+  if(active&&filters&&!offerButton){
+   offerButton=document.createElement('button');
+   offerButton.type='button';offerButton.dataset.filterGroup='BOGO';offerButton.textContent='BOGO offers';
+   filters.firstElementChild?.after(offerButton);
+  }else if(!active)offerButton?.remove();
+  const list=catalogResults(),more=$('#ap-load-more');
+  if(state.group==='BOGO'&&!active){
+   const status=window.PureCampaign?.status;
+   const title=status==='loading'?'Loading offers…':status==='inactive'?'No active BOGO offer':'Offers are temporarily unavailable';
+   grid.innerHTML='<div class="ap-empty" role="status"><h3>'+title+'</h3><a class="ap-button ap-button-secondary" href="/shop">View all products</a></div>';
+  }else{
+   grid.innerHTML=list.slice(0,state.limit).map(p=>card(p,{featured:true})).join('')||`<div class="ap-empty"><h3>${t('noResults')}</h3><button class="ap-button ap-button-secondary" data-action="clear-filters">${t('clear')}</button></div>`;
+  }
+  more.hidden=list.length<=state.limit;
+  $$('[data-filter-group]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.filterGroup===state.group)));
+ }
+ window.addEventListener('pure:campaign',()=>{
+  if(route()==='/shop'){renderCatalogResults();return;}
+  for(const item of $$('#nl-featured .ap-product-card')){
+   const p=product(item.dataset.product);
+   if(p)item.outerHTML=card(p,{featured:true});
+  }
+ });
+ function shop(){const shopGroups=shopCategories;return `<section class="ap-container nl-shop"><header class="nl-shop-header"><h1 data-pure-collection-title>All Products</h1><p data-pure-collection-intro>Browse research compounds and available testing reports.</p></header><div class="ap-toolbar nl-shop-controls"><label class="nl-shop-search"><span class="ap-sr">Search products</span><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.7"></circle><path d="m16 16 5 5"></path></svg><input id="ap-catalog-query" type="search" placeholder="Search products..." value="${esc(state.query)}" maxlength="120"></label><div class="nl-shop-sort"><label class="nl-shop-sort-label" for="ap-catalog-sort">Sort by:</label><select id="ap-catalog-sort"><option value="popular" ${state.sort==='popular'?'selected':''}>Most Popular</option><option value="low" ${state.sort==='low'?'selected':''}>Price: Low to High</option><option value="high" ${state.sort==='high'?'selected':''}>Price: High to Low</option><option value="name" ${state.sort==='name'?'selected':''}>Name: A–Z</option></select></div></div><div class="nl-filter-pills" role="group" aria-label="Product categories">${shopGroups.map(g=>`<button type="button" data-filter-group="${esc(g)}" aria-pressed="${state.group===g}">${esc(g==='All'?'All Products':g)}</button>`).join('')}</div><div class="ap-grid" id="ap-catalog-grid"></div><button class="ap-button ap-button-secondary ap-load-more" id="ap-load-more" data-action="more">Load More Products</button></section>`;}
  function detail(id) {
  const p=product(id);if(!p)return heading('Product','Product not found','Browse the current catalog.')+'<a href="/shop">View products</a>';
  const v=p.variants.find(x=>x.size===(selections[p.id]||new URLSearchParams(location.search).get('size')))||p.variants[0];
@@ -104,12 +154,12 @@
   if(action==='cart-remove'){cart=cart.filter(x=>x.key!==button.dataset.key);syncCart(true);return;}
   if(action==='cart-quantity'){cart=cart.map(x=>x.key===button.dataset.key?{...x,qty:Math.max(0,Math.min(100,x.qty+Number(button.dataset.step)))}:x).filter(x=>x.qty>0);syncCart(true);return;}
   if(action==='cart-export'){exportLines(cart,'PURE-cart.csv');return;}
-  if(action==='clear-filters'){state.query='';state.group='All';state.maxPrice=Math.ceil(Math.max(...catalog.flatMap(p=>p.variants.map(v=>v.price))));state.savedOnly=false;state.limit=12;render();return;}
+  if(action==='clear-filters'){state.query='';state.group=new URLSearchParams(location.search).get('offer')==='bogo'?'BOGO':'All';state.maxPrice=Math.ceil(Math.max(...catalog.flatMap(p=>p.variants.map(v=>v.price))));state.savedOnly=false;state.limit=12;render();return;}
   if(action==='more'){state.limit+=12;renderCatalogResults();return;}
   if(action==='compare-clear'){compared=[];updateCompare();return;}
   if(action==='compare-open'){renderCompare();showDialog('#ap-compare-dialog');return;}
  });
- document.addEventListener('click',event=>{const group=event.target.closest('[data-filter-group]');if(group){state.group=group.dataset.filterGroup;state.limit=12;renderCatalogResults();}const mega=$('.ap-mega');if(mega&&!event.target.closest('.ap-mega'))mega.open=false;});
+ document.addEventListener('click',event=>{const group=event.target.closest('[data-filter-group]');if(group){state.group=group.dataset.filterGroup;state.limit=12;const url=new URL(location.href);if(state.group==='BOGO'){url.searchParams.set('offer','bogo');url.searchParams.delete('category');}else url.searchParams.delete('offer');history.replaceState(null,'',url);renderCatalogResults();}const mega=$('.ap-mega');if(mega&&!event.target.closest('.ap-mega'))mega.open=false;});
  document.addEventListener('change',event=>{const el=event.target;if(el.matches('[data-card-size]')){const p=product(el.dataset.cardSize);selections[p.id]=el.value;const cardNode=el.closest('.ap-product-card');cardNode.outerHTML=card(p);}
   if(el.matches('[data-compare]')){if(el.checked&&!compared.includes(el.dataset.compare)){if(compared.length>=4){el.checked=false;toast(t('compareLimit'));return;}compared.push(el.dataset.compare);}else compared=compared.filter(id=>id!==el.dataset.compare);updateCompare();}
   if(el.id==='ap-catalog-sort'){state.sort=el.value;renderCatalogResults();}
@@ -121,7 +171,7 @@
  $$('#ap-search-dialog,#ap-cart-dialog,#ap-compare-dialog').forEach(d=>d.addEventListener('click',e=>{if(e.target===d){const r=d.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)d.close();}}));
  if($('#year'))$('#year').textContent=String(new Date().getFullYear());
  const mega=$('#ap-mega-content');if(mega)mega.innerHTML=groups.slice(1).map(g=>`<a href="/shop?category=${encodeURIComponent(g)}">${esc(t(g,g))}<small>${catalog.filter(p=>p.group===g).length} products <span aria-hidden="true">↗</span></small></a>`).join('');
- if(!shopCategories.includes(state.group))state.group='All';
+ if(state.group!=='BOGO'&&!shopCategories.includes(state.group))state.group='All';
  window.addEventListener('storage',e=>{if(e.key==='pp-cart'){cart=normalizeLines(read('pp-cart',[]));syncCart();}});
  window.AltaLocale?.onChange(event=>{if(!event||event.reason==='language'){render();renderCart();translateShell();}else window.AltaLocale?.refreshPrices?.(document);});
  render();syncCart();translateShell();

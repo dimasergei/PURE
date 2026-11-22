@@ -168,7 +168,7 @@
    if(!res.ok||!Number.isSafeInteger(result?.total_cents))throw Object.assign(Error(result?.error||'Could not calculate final total.'),{status:res.status});
    if(result.currency!==paymentCurrency()||result.request_only===true||state.paymentKind==='interac'&&(!result.fx_quote||!Number.isSafeInteger(result.pricing?.fx_ppm)||result.pricing.fx_ppm<=0))throw Error('The payment currency could not be verified. Refresh your order total.');
    if(state.paymentKind==='interac')state.fxQuote=result.fx_quote;
-   state.coupon=result.pricing?.affiliate_code||result.pricing?.coupon_code||'';saveCoupon(state.coupon);
+   state.coupon=result.automatic_partner_offer?'':result.pricing?.affiliate_code||result.pricing?.coupon_code||'';saveCoupon(state.coupon);
    currentPreview=result;return result;
   }
   function moneyLines(){
@@ -296,6 +296,7 @@
     loadingPreview=false;renderSummary();
     let feedback=rejection;
     if(!feedback&&state.coupon)feedback=state.coupon==='BLACKFRIDAY10'?'BLACKFRIDAY10 applied — 10% off merchandise.':'Partner code applied — 20% off your first eligible order.';
+    if(!feedback&&currentPreview.automatic_partner_offer)feedback='First-order partner savings applied.';
     if(!feedback&&action==='remove')feedback=currentPreview.pricing?.crypto_discount_cents?'Coupon removed. The 5% crypto discount applies.':'Coupon removed. Regular prices restored.';
     message.textContent=feedback;
     syncCurrencyDisplays();

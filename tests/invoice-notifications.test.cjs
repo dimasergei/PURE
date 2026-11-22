@@ -56,3 +56,19 @@ test('job endpoint rejects anonymous tokens and non-POST methods',async()=>{cons
 test('automation settings remain admin-only and recovery is same-origin',async()=>{const a=response();await entry.handle({method:'GET',headers:{}},a,new URLSearchParams({commerce:'admin',view:'automation'}),{env,db:{}});assert.equal(a.code,401);const b=response();await entry.handle({method:'POST',headers:{'x-admin-password':env.ADMIN_ORDERS_PASSWORD,origin:'https://wrong.test','content-type':'application/json'},body:{action:'retry_notifications'}},b,new URLSearchParams({commerce:'admin'}),{env,db:{}});assert.equal(b.code,403);});
 test('failed original invoice commands never send mail',async()=>{const original=base.handle;try{base.handle=async(req,res)=>res.status(409).json({error:'Rejected'});const out=response();await entry.handle({method:'POST',headers:{},body:{action:'issue',id}},out,new URLSearchParams({commerce:'admin'}),{env,db:{}});assert.equal(out.code,409);assert.equal(out.body.error,'Rejected');}finally{base.handle=original;}});
 test('successful financial command stays successful even if notification storage is unavailable',async()=>{const original=base.handle;try{base.handle=async(req,res)=>res.status(200).json({id,status:'paid'});const out=response();await entry.handle({method:'POST',headers:{},body:{action:'record_payment',id}},out,new URLSearchParams({commerce:'admin'}),{env,db:{from(){throw Error('unavailable');}}});assert.equal(out.code,200);assert.equal(out.body.status,'paid');assert.equal(out.body.notification,'queued');}finally{base.handle=original;}});
+
+test('customer and admin receipts list paid premixed vials and their free matches, plus a single recon gift',()=>{
+ const snapshot={...notification.snapshot,public_order_number:'P00001000',kind:'goods',status:'paid',checkout_version:'checkout-2026-11-v8',total_cents:15000};
+ const item={id:'bpc-tb-500',name:'Wolverine',size:'10mg',qty:2,unit_price_cents:9605,line_total_cents:19210};
+ const detail={subtotal_cents:19210,discount_cents:0,shipping_cents:0,tax_cents:0,credit_redeemed_cents:4210,pricing:{
+  lines:[item],bogo_campaign:{free_units:[{id:item.id,size:item.size,qty:2}]},
+  first_order_bac:true,campaign_bac:true,bundled_items:[{id:'gift-bac-3',name:'Recon solution',size:'3 mL',qty:1,unit_price_cents:0,line_total_cents:0}]}};
+ for(const audience of ['customer','admin']){
+  const rendered=mail.envelope({...notification,audience,snapshot,detail,event_action:'payment_recorded'},env);
+  assert.match(rendered.subject,/P00001000/);
+  assert.match(rendered.text,/Wolverine 10mg × 2: \$192\.10/);
+  assert.match(rendered.text,/Wolverine — complimentary 10mg × 2: \$0\.00/);
+  assert.equal(rendered.text.match(/Recon solution 3 mL × 1: \$0\.00/g)?.length,1);
+  assert.match(rendered.text,/Total: \$150\.00/);
+ }
+});

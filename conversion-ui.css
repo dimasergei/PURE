@@ -235,100 +235,42 @@ html:root body.ap-site .ap-announcement.pure-offer-active::before {
 }
 .pure-offer-trigger:hover .pure-offer-action { text-decoration: underline; text-underline-offset: 3px; }
 .ap-announcement .pure-offer-trigger:focus-visible { outline: 2px solid #fff; outline-offset: -3px; }
-body.ap-site .pure-offer-dialog {
-  position: fixed;
-  inset: 0;
-  width: min(400px, calc(100% - 32px));
-  max-height: calc(100dvh - 32px);
-  overflow: auto;
-  margin: auto;
-  padding: 0;
-  border: 1px solid #bbb;
-  border-radius: 14px;
-  background: #fff;
-  color: #101010;
-  box-shadow: 0 18px 80px #0005;
-}
-.pure-offer-dialog::backdrop { background: #080808ad; }
-.pure-offer-head {
-  position: relative;
-  padding: 24px 26px 22px;
-  overflow: hidden;
-  background: #131313;
-  color: #fff;
-}
-.pure-offer-head::before {
-  content: '';
+html:root body.ap-site .pure-offer-active a.pure-offer-trigger { display: flex; color: #fff; text-decoration: none; }
+.pure-offer-action::after { transform: rotate(-45deg); }
+.ap-product-card .pure-card-sale {
   position: absolute;
-  inset: -6% -6% -6% auto;
-  width: 44%;
-  transform: skewX(-16deg);
-  background: repeating-linear-gradient(90deg, #242424 0 17%, transparent 17% 28%);
-  pointer-events: none;
-}
-body.ap-site .pure-offer-head h2 {
-  position: relative;
-  margin: 0;
+  z-index: 2;
+  top: .7rem;
+  left: .7rem;
+  display: inline-flex;
+  padding: .24rem .55rem;
+  background: #111;
   color: #fff;
-  font-size: clamp(2.55rem, 8vw, 3.6rem);
-  font-weight: 900;
-  letter-spacing: -.065em;
-  line-height: .91;
+  border: 1px solid #fff;
+  border-radius: 3px;
+  font-size: .75rem;
+  font-weight: 850;
+  letter-spacing: .06em;
+  line-height: 1.2;
+}
+.ap-product-card .ap-product-image { position: relative; }
+body.ap-site .nl-detail [data-campaign-product]:not([hidden]) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .38rem .65rem;
+  margin: .6rem 0 .85rem;
+}
+.nl-detail [data-campaign-product] strong {
+  padding: .26rem .58rem;
+  background: #111;
+  border-radius: 3px;
+  color: #fff;
+  font-weight: 800;
+  font-size: .84rem;
   text-transform: uppercase;
 }
-body.ap-site .pure-offer-head p {
-  position: relative;
-  margin: 14px 0 0;
-  color: #dfdfdf;
-  font-size: .875rem;
-}
-body.ap-site .pure-offer-close {
-  display: grid;
-  place-content: center;
-  position: absolute;
-  z-index: 1;
-  right: 10px;
-  top: 10px;
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  border: 1px solid #656565;
-  border-radius: 50%;
-  background: #161616;
-  color: #fff;
-  line-height: 1;
-  font-size: 24px;
-}
-body.ap-site .pure-offer-detail {
-  margin: 0;
-  padding: 18px 24px 8px;
-  font-size: .9375rem;
-  line-height: 1.45;
-}
-.pure-offer-items { margin: 0; padding: 0 24px 14px; list-style: none; }
-.pure-offer-items li + li { border-top: 1px solid #e2e2e2; }
-.pure-offer-items a {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  min-height: 65px;
-  padding: 8px 4px;
-}
-.pure-offer-items a::after {
-  content: '';
-  width: .5rem;
-  height: .5rem;
-  margin: 0 4px 0 auto;
-  border-top: 1.5px solid;
-  border-right: 1.5px solid;
-  transform: rotate(45deg);
-}
-.pure-offer-items a:hover strong { text-decoration: underline; text-underline-offset: 3px; }
-.pure-offer-items img { width: 44px; height: 50px; object-fit: contain; border-radius: 5px; background: #f5f5f5; }
-.pure-offer-items strong,
-.pure-offer-items small { display: block; }
-.pure-offer-items strong { font-size: 1rem; font-weight: 780; line-height: 1.2; }
-.pure-offer-items small { color: #555; font-size: .875rem; }
+.nl-detail [data-campaign-product] span { color: #555; font-size: .82rem; font-variant-numeric: tabular-nums; }
 
 /* Two delivery benefits expand evenly until a verified review summary is available. */
 html:root body.ap-site .nl-hero .nl-trust {
@@ -337,3 +279,21 @@ html:root body.ap-site .nl-hero .nl-trust {
   grid-auto-columns: minmax(0, 1fr);
 }
 .nl-trust small { display: block; color: #d6d6d6; font-size: .8rem; font-weight: 500; }
+
+.rd-referral .pure-partner-disclosure {
+  margin-top: .75rem;
+  padding-top: .65rem;
+  border-top: 1px solid #dedede;
+  font-size: .875rem;
+}
+.pure-partner-disclosure summary { width: fit-content; cursor: pointer; font-weight: 650; }
+body.ap-site .pure-partner-disclosure p { margin: .65rem 0 .35rem; }
+.pure-partner-disclosure button {
+  border: 0;
+  padding: .3rem 0;
+  background: transparent;
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-weight: 650;
+}

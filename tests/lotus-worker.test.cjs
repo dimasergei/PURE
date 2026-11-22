@@ -40,3 +40,25 @@ test('mixed supplier routing never submits or retries a partial shipment',async(
 test('all-manual orders never call Lotus',async()=>{const f=fixture();f.values.commerce_fulfillment_items[0].route='manual';let calls=0;const r=await run(f.db,{env,fetchImpl:async()=>{calls++;throw Error('unexpected')}});assert.equal(calls,0);assert.equal(r.status,'manual');});
 test('manual takeover reconciles cancellation before releasing allocations',async()=>{const f=fixture({supplier_id:'opaque1'});f.job.takeover_requested=true;const methods=[];await run(f.db,{env,fetchImpl:async(u,o)=>{methods.push(o.method);return reply({id:'opaque1',reference:'ALTA-'+id,mode:'live',status:o.method==='POST'?'cancelled':'paid'});}});assert.deepEqual(methods,['GET','POST']);assert.ok(f.rpc.some(x=>x.name==='commerce_fulfillment_release_lotus'));});
 test('unconfirmed cancellation never releases allocations for duplicate manual fulfillment',async()=>{const f=fixture({supplier_id:'opaque1'});f.job.takeover_requested=true;await run(f.db,{env,fetchImpl:async()=>reply({id:'opaque1',reference:'ALTA-'+id,mode:'live',status:'paid'})});assert.equal(f.rpc.some(x=>x.name==='commerce_fulfillment_release_lotus'),false);assert.equal(f.saved.at(-1).status,'blocked');});
+
+test('the worker sends physical BOGO quantities and one gift once, including after a provider retry',async()=>{
+ const f=fixture(),request={id:'bpc-tb-500',name:'Wolverine',size:'10mg',qty:2};
+ const gift={id:'gift-bac-3',name:'Recon solution',size:'3 mL',qty:1,unit_price_cents:0,line_total_cents:0};
+ f.order.request_data.items=[request];
+ f.order.pricing={bogo_campaign:{free_units:[{id:request.id,size:request.size,qty:2}]},bundled_items:[gift],first_order_bac:true};
+ f.values.commerce_fulfillment_items=[{variant_key:'bpc-tb-500|10mg',route:'lotus',item:{...request,qty:4,bogo_free_qty:2},product:22,vials:1},
+  {variant_key:'gift-bac-3|3 mL',route:'lotus',item:{...gift,campaign_gift:true},product:8,vials:1}];
+ const payloads=[],remote={id:'fixture1',reference:'ALTA-'+id,mode:'live',status:'paid',owed_total:'40.00'};
+ const fetchImpl=async(url,options)=>{
+  if(url.endsWith('/quote'))return reply({lines:[{problem:null}],owed_total:'40.00',problems:[]});
+  if(options.method==='POST'){
+   payloads.push(JSON.parse(options.body));throw Error('Simulated lost acknowledgement');
+  }
+  return reply(remote);
+ };
+ assert.equal((await run(f.db,{env,fetchImpl})).status,'retry');
+ f.job.payload=f.saved.find(row=>row.payload).payload;
+ assert.equal((await run(f.db,{env,fetchImpl})).status,'submitted');
+ assert.deepEqual(payloads.map(p=>p.lines),[[{product:22,vials:1,quantity:4},{product:8,vials:1,quantity:1}]]);
+ assert.equal(f.order.request_data.items[0].qty,2);
+});
