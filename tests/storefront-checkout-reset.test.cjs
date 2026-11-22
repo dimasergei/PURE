@@ -15,7 +15,7 @@ function fixture(surface,{legacyCoupon=false,balances={points:0,credit_cents:0}}
  w.AltaStore={get cart(){return cart;},catalog:products,product:id=>products.find(p=>p.id===id),image:()=>'/fixture.svg',adjustQuantity(key,delta){cart=cart.map(item=>item.key===key?{...item,qty:item.qty+delta}:item).filter(item=>item.qty>0);}};
  function quote(body){
   const q=price({kind:'goods',request:{items:body.items.map(item=>({...item,name:'Fixture compound',unit_price_usd_cents:8000})),...(body.membership_addon?{membership_addon:body.membership_addon}:{}),address:{country:body.country||body.address?.country||'US'},checkout:{coupon:body.coupon||'',points:body.points||0,credit_cents:body.credit_cents||0,delivery:body.delivery}}},bank,null,balances,null,delivery);
-  return {...q,free_shipping_threshold_cents:15000,free_shipping_remaining_cents:Math.max(0,15000-q.subtotal_cents+q.discount_cents)};
+  return {...q,free_shipping_threshold_cents:25000,free_shipping_remaining_cents:Math.max(0,25000-q.subtotal_cents+q.discount_cents)};
  }
  w.fetch=async(url,options={})=>{
   if(String(url).includes('checkout=public'))return {ok:true,json:async()=>data};
@@ -38,7 +38,7 @@ for(const surface of ['cart','checkout'])test(surface+': regular purchased quant
   assert.equal(f.requests[0].coupon,'');
   assert.equal(f.w.localStorage.getItem('ap-checkout-coupon'),null);
   assert.match(f.root.textContent,/\$160\.00/);
-  assert.match(f.root.textContent,/\$165\.00/);
+  assert.match(f.root.textContent,(surface==='cart'?/\$176\.95/:/\$172\.95/));
   assert.doesNotMatch(f.root.textContent,/BOGO|\+\d+ FREE|member(ship)?|Free BAC|Free Priority/i);
   const cryptoOffer='Pay with Crypto at checkout for an extra 5% off the remaining merchandise.';
   if(surface==='cart')assert.ok(f.root.textContent.includes(cryptoOffer),'Cart explains the conditional crypto incentive without changing the current total');
@@ -56,7 +56,7 @@ for(const surface of ['cart','checkout'])test(surface+': regular purchased quant
   assert.match(f.root.textContent,/BLACKFRIDAY10 applied/);
   assert.match(f.root.textContent,/\$16\.00/);
   assert.match(f.root.textContent,surface==='cart'?/\$160\.95/:/\$156\.95/);
-  if(surface==='cart')assert.match(f.root.querySelector('[data-nlc-unlock-copy]').textContent,/\$6\.00/);
+  if(surface==='cart')assert.match(f.root.querySelector('[data-nlc-unlock-copy]').textContent,/\$106\.00/);
   input.value='BOGO';apply.click();await tick();await tick();
   assert.equal(f.w.localStorage.getItem('ap-checkout-coupon'),'BLACKFRIDAY10','Rejected code cannot replace the applied coupon');
   assert.match(f.root.textContent,surface==='cart'?/\$160\.95/:/\$156\.95/);
@@ -67,8 +67,8 @@ for(const surface of ['cart','checkout'])test(surface+': regular purchased quant
   assert.equal(f.w.localStorage.getItem('ap-cart-coupon'),null);
   assert.equal(remove.hidden,true);
   assert.match(f.root.textContent,/Coupon removed/);
-  assert.match(f.root.textContent,/\$165\.00/);
-  if(surface==='cart')assert.match(f.root.querySelector('[data-nlc-unlock-copy]').textContent,/Free standard shipping included/);
+  assert.match(f.root.textContent,(surface==='cart'?/\$176\.95/:/\$172\.95/));
+  if(surface==='cart')assert.match(f.root.querySelector('[data-nlc-unlock-copy]').textContent,/\$90\.00/);
  }finally{f.dom.window.close();}
 });
 test('checkout Card order quotes and places the same purchased quantity and confirmed coupon',async()=>{

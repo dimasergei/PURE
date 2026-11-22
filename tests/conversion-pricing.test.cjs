@@ -17,7 +17,7 @@ test('PURE memberships expose canonical prepaid terms and tier benefits without 
  for(const period of ['weekly','subscription',null])assert.throws(()=>pricing.membershipItem('vip',period),e=>e.status===400);
 });
 test('verified membership tiers determine shipping and integer points earnings',()=>{
- assert.equal(pricing.shipping(14999,null),1495);assert.equal(pricing.shipping(15000,null),0);
+ assert.equal(pricing.shipping(24999,null),1495);assert.equal(pricing.shipping(25000,null),0);
  assert.equal(pricing.earnings(99999,null),0);
  for(const [plan,points] of [['vip',4999],['elite',9999]]){
   assert.equal(pricing.shipping(14999,{plan}),0);assert.equal(pricing.shipping(15000,{plan}),0);

@@ -6,8 +6,8 @@ const { partner, free_shipping_threshold_cents } = require('../config/conversion
 const { promotions } = require('../config/checkout.json');
 
 const offers = [
-  { name: 'Regular checkout', shipping: free_shipping_threshold_cents, bac: 25000, bogo: false },
-  { name: 'BOGO campaign', shipping: 25000, bac: 25000, bogo: true },
+  { name: 'Regular checkout', shipping: free_shipping_threshold_cents, bac: 29900, bogo: false },
+  { name: 'BOGO campaign', shipping: free_shipping_threshold_cents, bac: 29900, bogo: true },
 ];
 const affiliateMinimum = 10000;
 

@@ -41,7 +41,7 @@ test('US and Canada both qualify for free standard shipping at the same USD thre
  for(const country of ['US','CA']){
   assert.equal(delivery.price({shipping:'standard',extras:[]},true,delivery.defaults,country).shipping_cents,0);
   assert.equal(delivery.price({shipping:'standard',extras:[]},false,delivery.defaults,country).shipping_cents,country==='US'?1195:2495);
-  assert.equal(delivery.price({shipping:'express',extras:[]},true,delivery.defaults,country).shipping_cents,country==='US'?2995:4995);
+  assert.equal(delivery.price({shipping:'express',extras:[]},true,delivery.defaults,country).shipping_cents,country==='US'?0:4995);
  }
  assert.equal(delivery.price({shipping:'standard',extras:[]},true,delivery.defaults,'GB').shipping_cents,4995);
 });

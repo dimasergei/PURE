@@ -60,19 +60,19 @@ test('BLACKFRIDAY10 is normalized and cart, quote and persisted order have ident
 });
 test('removing the explicit coupon restores regular price and invalidates the prior quote',async()=>{
  const b={...body,coupon:'BLACKFRIDAY10',items:[{...body.items[0],qty:2}]};
- const {res:q,db}=await call({...b,action:'quote'});assert.equal(q.body.discount_cents,2000);assert.equal(q.body.total_cents,18000);
- const {res:r}=await call({...b,coupon:'',action:'quote'},{db});assert.equal(r.body.discount_cents,0);assert.equal(r.body.total_cents,20000);
+ const {res:q,db}=await call({...b,action:'quote'});assert.equal(q.body.discount_cents,2000);assert.equal(q.body.total_cents,18795);
+ const {res:r}=await call({...b,coupon:'',action:'quote'},{db});assert.equal(r.body.discount_cents,0);assert.equal(r.body.total_cents,20795);
  const {res:stale}=await call({...b,coupon:'',action:'place',quote:q.body.quote},{db});assert.equal(stale.code,409);assert.equal(db.calls.length,0);
 });
 test('US standard shipping threshold uses discounted merchandise before account balances',async()=>{
- for(const [cents,coupon,shipping] of [[14999,'',795],[15000,'',0],[16666,'BLACKFRIDAY10',795],[16667,'BLACKFRIDAY10',0]]){
+ for(const [cents,coupon,shipping] of [[24999,'',795],[25000,'',0],[27777,'BLACKFRIDAY10',795],[27778,'BLACKFRIDAY10',0]]){
   const cat=[{...catalog[0],variants:[{size:'5mg',price:cents/100}]}];
   const r=await checkout.normalize({},user,{...body,coupon,points:500,credit_cents:1000},cat),q=checkout.price(r,method,null,{points:1000,credit_cents:2000});
   assert.equal(q.shipping_cents,shipping,'subtotal '+cents+' '+coupon);assert.equal(q.total_cents,cents-Math.round(cents*(coupon?0.10:0))+shipping-1500);
  }
 });
 test('coupon does not make express, international shipping, priority or protection free',async()=>{
- for(const [country,shipping,extras,expected] of [['US','standard',['protection'],500],['US','express',['protection'],3495],['US','next_day',['priority','protection'],7494],['CA','standard',[],0],['CA','next_day',[],6495],['CA','next_day',['protection'],6995],['GB','express',[],7995]]){
+ for(const [country,shipping,extras,expected] of [['US','standard',['protection'],1695],['US','express',['protection'],3495],['US','next_day',['priority','protection'],7494],['CA','standard',[],2495],['CA','next_day',[],6495],['CA','next_day',['protection'],6995],['GB','express',[],7995]]){
   const r=await checkout.normalize({},user,{...body,coupon:'BLACKFRIDAY10',items:[{...body.items[0],qty:2}],address:{...body.address,country},delivery:{shipping,extras}},catalog);
   assert.equal(checkout.price(r,method,null,{points:0,credit_cents:0}).shipping_cents,expected);
  }

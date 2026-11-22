@@ -1,6 +1,6 @@
 {
   "version": "conversion-2026-11-v3",
-  "free_shipping_threshold_cents": 15000,
+  "free_shipping_threshold_cents": 25000,
   "shipping_service": "Standard US delivery",
   "plans": {
     "member": {

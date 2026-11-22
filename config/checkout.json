@@ -255,11 +255,11 @@
   "tax_cents": 0,
   "promotions": {
     "version": "blackfriday10-2026-11-v1",
-    "bogo": false,
+    "bogo": true,
     "coupon": "BLACKFRIDAY10",
     "coupon_discount_bps": 1000
   },
-  "free_shipping_threshold_cents": 15000,
+  "free_shipping_threshold_cents": 25000,
   "payments": {
     "version": "pure-payments-2026-11-v2",
     "card_provider": "rampex",
