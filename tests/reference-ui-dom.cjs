@@ -7,24 +7,45 @@ function assertCurrentView(d,route){
  for(const a of d.querySelectorAll('a[href]'))assert.doesNotMatch(a.getAttribute('href'),retiredRoute,route+' has no retired destinations');
  for(const area of d.querySelectorAll('header,#ap-main,footer')){
   const content=area.cloneNode(true);
-  content.querySelector('[data-pure-home-campaign]')?.remove();
   assert.doesNotMatch(content.textContent,retiredCopy,route+' has no retired brand or BOGO offer copy');
  }
  assert.equal(d.querySelectorAll('#ap-main [data-promo-clock],#ap-main .nl-offer-grid').length,0,route+' has no old sale presentation');
 }
 async function setup(route,campaign=null){const errors=[];const console=new VirtualConsole();console.on('jsdomError',e=>errors.push(e.message));const dom=new JSDOM(read('public-build/index.html'),{url:'https://getpurelabs.com'+route,runScripts:'outside-only',virtualConsole:console}),w=dom.window;w.localStorage.setItem('ap-age-verified','true');w.matchMedia=()=>({matches:false});w.HTMLElement.prototype.scrollIntoView=()=>{};w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;};w.fetch=async url=>({ok:true,json:async()=>String(url).includes('campaign=window')?(campaign||{}):[]});w.AltaConversionConfig=require('../config/conversion.json');w.eval(read('public-build/quantity-pricing.js')+'\n'+read('public-build/membership-experience.js')+'\n'+read('public-build/conversion-ui.js')+'\n'+read('public-build/products.js')+'\n'+read('public-build/product-images.js')+'\n'+read('public-build/storefront-v2.js')+'\n'+read('public-build/workspace-v2.js'));await new Promise(r=>setTimeout(r,0));assert.deepEqual(errors,[],route);assertCurrentView(w.document,route);return{dom,w,d:w.document};}
 (async()=>{
+ for(const route of ['/','/shop','/product/semaglutide?size=10mg']){
+  const now=Date.now();
+  const {dom,d}=await setup(route,{server_time:new Date(now).toISOString(),ends_at:new Date(now+60000).toISOString(),eligible_variants:['bpc-157:5mg','ghk-cu:50mg']});
+  const trigger=d.querySelector('.ap-announcement .pure-offer-trigger');
+  assert.ok(trigger,'active campaign occupies the existing announcement slot on '+route);
+  assert.equal(trigger.querySelector('.pure-offer-free').textContent,'Get 1 free');
+  assert.equal(d.querySelector('[data-pure-home-campaign]'),null,'no duplicate hero message');
+  trigger.click();
+  const offer=d.querySelector('#pure-campaign-dialog');
+  assert.equal(offer.open,true);
+  assert.deepEqual([...offer.querySelectorAll('li a')].map(a=>[a.textContent,a.getAttribute('href')]),[
+   ['BPC-1575mg','/product/bpc-157?size=5mg'],['GHK-Cu50mg','/product/ghk-cu?size=50mg']
+  ]);
+  assert.equal(offer.querySelector('time').dateTime,new Date(now+60000).toISOString());
+  offer.querySelector('.pure-offer-close').click();
+  assert.equal(offer.open,false);
+  dom.window.close();
+ }
  {const now=Date.now();
-  const {dom,d}=await setup('/',{server_time:new Date(now).toISOString(),ends_at:new Date(now+60000).toISOString(),eligible_variants:['bpc-157:5mg','ghk-cu:50mg']});
-  const offer=d.querySelector('[data-pure-home-campaign]');
-  assert.equal(offer.hidden,false);
-  assert.match(offer.textContent,/Buy 1, get 1 free/);
-  assert.match(offer.textContent,/BPC-157 5mg and GHK-Cu 50mg/);
-  assert.match(offer.textContent,/Ends in/);
+  const {dom,d}=await setup('/',{server_time:new Date(now).toISOString(),ends_at:new Date(now+60000).toISOString(),eligible_variants:['bpc-157:5mg']});
+  d.querySelector('.pure-offer-trigger').click();
+  // A backgrounded tab can regain focus before its pending expiry timer runs.
+  const nativeNow=dom.window.Date.now;
+  dom.window.Date.now=()=>nativeNow()+61000;
+  d.querySelector('.pure-offer-close').click();
+  d.querySelector('.pure-offer-trigger').click();
+  assert.equal(d.querySelector('.pure-offer-dialog'),null,'an expired offer cannot reopen');
+  assert.match(d.querySelector('.ap-announcement').textContent,/BLACKFRIDAY10/);
   dom.window.close();
  }
  {const{dom,d,w}=await setup('/');
-  assert.equal(d.querySelector('[data-pure-home-campaign]').hidden,true);
+  assert.equal(d.querySelector('.pure-offer-trigger'),null);
+  assert.match(d.querySelector('.ap-announcement').textContent,/BLACKFRIDAY10/);
   assert.match(d.querySelector('h1').textContent,/CUTTING EDGEPURITY/);
    // Desktop navigation and mobile side menu share this single route/link.
    const testingLink=d.querySelector('#ap-nav a[href="/coas"]');

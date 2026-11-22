@@ -176,20 +176,164 @@
   letter-spacing: .055em;
 }
 
-[data-pure-home-campaign]:not([hidden]) {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: .25rem .75rem;
-  margin-top: 1rem;
-  font-size: .82rem;
+/* Keep the active offer in the existing announcement slot on every shopping screen. */
+html:root body.ap-site .ap-announcement.pure-offer-active {
+  background: #111 !important;
+  border-bottom: 1px solid #383838;
 }
-[data-pure-home-campaign] strong { font-size: .95rem; }
-[data-pure-home-campaign] [data-pure-campaign-countdown] {
-  font-variant-numeric: tabular-nums;
+html:root body.ap-site .ap-announcement.pure-offer-active::before {
+  display: none !important;
+}
+.ap-announcement .pure-offer-trigger {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  gap: .48rem;
+  border: 0;
+  padding: 0 .65rem;
+  background: transparent;
+  color: #fff;
+  line-height: 1;
+  cursor: pointer;
+}
+.pure-offer-trigger .pure-offer-buy,
+.pure-offer-trigger .pure-offer-free {
+  font-size: clamp(.94rem, 1.5vw, 1.12rem);
+  font-weight: 900;
+  letter-spacing: -.045em;
+  text-transform: uppercase;
   white-space: nowrap;
-  opacity: .8;
 }
-@media (max-width: 760px) {
-  [data-pure-home-campaign]:not([hidden]) { justify-content: center; }
+.pure-offer-trigger .pure-offer-free {
+  padding: .12em .45em .14em;
+  transform: skewX(-12deg);
+  background: #fafafa;
+  color: #101010;
 }
+.pure-offer-free span { display: block; transform: skewX(12deg); }
+.pure-offer-action {
+  display: inline-flex;
+  align-items: center;
+  gap: .48rem;
+  margin-left: .4rem;
+  font-weight: 650;
+  font-size: .8rem;
+  letter-spacing: 0;
+}
+.pure-offer-action::after {
+  content: '';
+  width: .36rem;
+  height: .36rem;
+  border-right: 1.5px solid;
+  border-bottom: 1.5px solid;
+  transform: translateY(-.1rem) rotate(45deg);
+}
+.pure-offer-trigger:hover .pure-offer-action { text-decoration: underline; text-underline-offset: 3px; }
+.ap-announcement .pure-offer-trigger:focus-visible { outline: 2px solid #fff; outline-offset: -3px; }
+body.ap-site .pure-offer-dialog {
+  position: fixed;
+  inset: 0;
+  width: min(400px, calc(100% - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  margin: auto;
+  padding: 0;
+  border: 1px solid #bbb;
+  border-radius: 14px;
+  background: #fff;
+  color: #101010;
+  box-shadow: 0 18px 80px #0005;
+}
+.pure-offer-dialog::backdrop { background: #080808ad; }
+.pure-offer-head {
+  position: relative;
+  padding: 24px 26px 22px;
+  overflow: hidden;
+  background: #131313;
+  color: #fff;
+}
+.pure-offer-head::before {
+  content: '';
+  position: absolute;
+  inset: -6% -6% -6% auto;
+  width: 44%;
+  transform: skewX(-16deg);
+  background: repeating-linear-gradient(90deg, #242424 0 17%, transparent 17% 28%);
+  pointer-events: none;
+}
+body.ap-site .pure-offer-head h2 {
+  position: relative;
+  margin: 0;
+  color: #fff;
+  font-size: clamp(2.55rem, 8vw, 3.6rem);
+  font-weight: 900;
+  letter-spacing: -.065em;
+  line-height: .91;
+  text-transform: uppercase;
+}
+body.ap-site .pure-offer-head p {
+  position: relative;
+  margin: 14px 0 0;
+  color: #dfdfdf;
+  font-size: .875rem;
+}
+body.ap-site .pure-offer-close {
+  display: grid;
+  place-content: center;
+  position: absolute;
+  z-index: 1;
+  right: 10px;
+  top: 10px;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid #656565;
+  border-radius: 50%;
+  background: #161616;
+  color: #fff;
+  line-height: 1;
+  font-size: 24px;
+}
+body.ap-site .pure-offer-detail {
+  margin: 0;
+  padding: 18px 24px 8px;
+  font-size: .9375rem;
+  line-height: 1.45;
+}
+.pure-offer-items { margin: 0; padding: 0 24px 14px; list-style: none; }
+.pure-offer-items li + li { border-top: 1px solid #e2e2e2; }
+.pure-offer-items a {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 65px;
+  padding: 8px 4px;
+}
+.pure-offer-items a::after {
+  content: '';
+  width: .5rem;
+  height: .5rem;
+  margin: 0 4px 0 auto;
+  border-top: 1.5px solid;
+  border-right: 1.5px solid;
+  transform: rotate(45deg);
+}
+.pure-offer-items a:hover strong { text-decoration: underline; text-underline-offset: 3px; }
+.pure-offer-items img { width: 44px; height: 50px; object-fit: contain; border-radius: 5px; background: #f5f5f5; }
+.pure-offer-items strong,
+.pure-offer-items small { display: block; }
+.pure-offer-items strong { font-size: 1rem; font-weight: 780; line-height: 1.2; }
+.pure-offer-items small { color: #555; font-size: .875rem; }
+
+/* Two delivery benefits expand evenly until a verified review summary is available. */
+html:root body.ap-site .nl-hero .nl-trust {
+  grid-template-columns: none;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+}
+.nl-trust small { display: block; color: #d6d6d6; font-size: .8rem; font-weight: 500; }

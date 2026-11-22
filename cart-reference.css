@@ -77,17 +77,100 @@ html[data-display-currency]:not([data-display-currency="USD"]) .nlc-price strong
 .nlc-quantity-row{display:flex;align-items:center;gap:10px;margin-top:11px}
 .nlc-name [data-nlc-bogo-line]:not([hidden]){display:inline-block;margin:5px 0 0}
 .nlc-quantity-row .ap-quantity{margin:0!important}
-.nlc-unlock{padding:11px 15px 13px;border-bottom:1px solid #e5e5e5;background:#fff}
-.nlc-unlock p{font-size:12px;line-height:1.35;margin:0 0 10px;color:#666}
-.nlc-unlock p strong{color:#111;font-weight:800}
-.nlc-progress{position:relative;height:7px;border-radius:12px;background:#f5f5f5;margin:0 15px 8px 0}
-.nlc-progress-fill{display:block;height:100%;border-radius:12px;background:linear-gradient(100deg,#111,#111 65%,#e5e5e5);background-size:200% 100%;animation:nlc-shimmer 2.8s ease-in-out infinite}
-@keyframes nlc-shimmer{0%{background-position:100% 50%}100%{background-position:0 50%}}
-@media(prefers-reduced-motion:reduce){.nlc-progress-fill{animation:none}}
-.nlc-gift{position:absolute;top:50%;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;width:26px;height:26px;border:3px solid #fff;border-radius:50%;background:#111;color:#fff;font-size:16px;box-shadow:0 1px 6px #0005;cursor:help}
-.nlc-gift-one{left:83.61%}.nlc-gift-two{left:100%}
-.nlc-gift-tip{position:absolute;bottom:calc(100% + 12px);right:0;display:none;min-width:180px;max-width:210px;background:#111;color:#fff;padding:12px;border-radius:12px;text-align:center;font-size:12px;line-height:1.5;box-shadow:0 3px 14px #0004;white-space:normal;z-index:8}
-.nlc-gift:hover .nlc-gift-tip,.nlc-gift:focus .nlc-gift-tip{display:block}
+/* The two markers share the same merchandise scale as the fill. */
+.nlc-rewards {
+  position: relative;
+  z-index: 2;
+  padding: 12px 18px 4px;
+  border-bottom: 1px solid #e5e5e5;
+  background: #fff;
+}
+@media (max-width: 360px) { .nlc-rewards { padding-inline: 10px; } }
+.nlc-rewards[hidden], .nlc-reward-tip[hidden] { display: none; }
+.nlc-rewards p {
+  margin: 0;
+  color: #4a4a4a;
+  font-size: .875rem;
+  line-height: 1.4;
+  text-align: center;
+}
+.nlc-rewards p strong { color: #141414; font-weight: 700; }
+.nlc-reward-rail {
+  position: relative;
+  height: 34px;
+  margin-inline-end: 13px;
+}
+.nlc-reward-meter {
+  position: absolute;
+  inset: 50% 0 auto;
+  height: 5px;
+  transform: translateY(-50%);
+  overflow: hidden;
+  border-radius: 5px;
+  background: #e0e0e0;
+}
+.nlc-reward-meter > span { display: block; height: 100%; border-radius: inherit; background: #171717; }
+.nlc-reward-stop {
+  position: absolute;
+  top: 50%;
+  width: 0;
+  height: 0;
+}
+.nlc-reward-trigger {
+  position: absolute;
+  top: -22px;
+  left: -22px;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.nlc-reward-trigger > span {
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 24px;
+  height: 24px;
+  border: 1px solid #777;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px #fff;
+  background: #fff;
+  color: #222;
+}
+.nlc-reward-trigger[data-reached="true"] > span { background: #161616; color: #fff; border-color: #161616; }
+.nlc-reward-trigger svg { width: 14px; height: 14px; }
+.nlc-reward-trigger:focus-visible { outline: none; }
+.nlc-reward-trigger:focus-visible > span { outline: 2px solid #111; outline-offset: 3px; }
+.nlc-reward-stop:has(.nlc-reward-trigger[aria-expanded="true"]) { z-index: 1; }
+.nlc-reward-tip {
+  position: absolute;
+  top: 18px;
+  right: -13px;
+  z-index: 1;
+  box-sizing: border-box;
+  width: max-content;
+  max-width: min(210px, 65vw);
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #171717;
+  color: #fff;
+  font-size: .8125rem;
+  font-weight: 600;
+  line-height: 1.4;
+  box-shadow: 0 4px 12px #0002;
+}
+.nlc-reward-tip::before {
+  content: "";
+  position: absolute;
+  bottom: 100%;
+  right: 8px;
+  border: 5px solid transparent;
+  border-bottom-color: #171717;
+}
 .nlc-cart-totals .nlc-first-subtotal{font-size:13px;color:#111}
 .nlc-cart-totals .nlc-first-subtotal strong{font-size:16px;color:#111}
 .nlc-bank-discount{color:#111!important;font-weight:800}
@@ -98,15 +181,6 @@ html[data-display-currency]:not([data-display-currency="USD"]) .nlc-price strong
 .nlc-rec small{display:block;font-size:10px;color:#111;font-weight:700;margin:4px 0 7px}
 .nlc-wallet-row svg.nlc-google-mark{display:block!important;width:23px;height:23px;flex:none;background:none!important;clip-path:none!important;color:initial!important}
 
-/* Screenshot fixes: tooltip must open below the milestone, never behind the header. */
-.nlc-unlock{position:relative;isolation:isolate;z-index:2;padding-top:12px;padding-bottom:15px}
-.nlc-progress{margin-top:10px;margin-bottom:10px}
-.nlc-gift{z-index:3}
-.nlc-gift-tip{top:calc(100% + 11px)!important;bottom:auto!important;right:50%!important;transform:translateX(50%);z-index:20!important;white-space:normal;min-width:190px;max-width:220px;pointer-events:none}
-.nlc-gift-two .nlc-gift-tip{right:-8px!important;transform:none}
-.nlc-gift-one .nlc-gift-tip{right:-50px!important;transform:none}
-.nlc-gift-tip::before{content:"";position:absolute;bottom:100%;right:21px;border:7px solid transparent;border-bottom-color:#d4d4d4}
-.nlc-gift:focus-visible{outline:3px solid #111;outline-offset:3px}
 .nlc-scrollable-items{overflow-x:hidden;scroll-padding-top:18px}
 /* The reference uses one connected pill: pale endcaps, white quantity and full capsule outline. */
 .ap-cart-dialog .nlc-line .nlc-quantity-row{display:block!important;margin-top:14px!important}
@@ -129,17 +203,6 @@ html[data-display-currency]:not([data-display-currency="USD"]) .nlc-price strong
 
 /* Compact cart item stack: product and strength share a line, with the
    free-unit badge beside the quantity pill. Keeps existing cart actions. */
-.ap-cart-dialog .nlc-unlock {
-  padding: 9px 15px 9px !important;
-}
-.ap-cart-dialog .nlc-unlock p {
-  font-size: 11px !important;
-  line-height: 1.35 !important;
-  margin: 0 0 6px !important;
-}
-.ap-cart-dialog .nlc-progress {
-  margin: 6px 15px 5px 0 !important;
-}
 .ap-cart-dialog .nlc-cart-lines {
   padding: 0 16px !important;
 }
@@ -329,3 +392,115 @@ html[data-display-currency]:not([data-display-currency="USD"]) .nlc-price strong
 .nlc-wallet-link{text-decoration:none;cursor:pointer}
 .nlc-wallet-link[aria-disabled="true"]{cursor:not-allowed}
 .nlc-wallet-link:focus-visible{outline:2px solid #111;outline-offset:3px}
+
+.ap-cart-dialog .nlc-coupon {
+  border: 1px solid #cecece;
+  border-radius: 9px;
+  background: #fafafa;
+  padding: 0;
+}
+.ap-cart-dialog .nlc-coupon summary {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 42px;
+  padding: 9px 13px;
+  border-radius: inherit;
+  list-style: none;
+  color: #171717;
+  font-size: 14px;
+  line-height: 1.25;
+}
+.nlc-coupon summary::-webkit-details-marker { display: none; }
+.nlc-coupon summary svg { flex: none; }
+.nlc-coupon summary span { overflow-wrap: anywhere; }
+.nlc-coupon summary i {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  margin-left: auto;
+  margin-right: 3px;
+  border: solid currentColor;
+  border-width: 0 1.5px 1.5px 0;
+  transform: translateY(-2px) rotate(45deg);
+}
+.nlc-coupon[open] summary i { transform: translateY(2px) rotate(225deg); }
+.nlc-coupon summary:hover { background: #f1f1f1; }
+.nlc-coupon :is(summary,input,button):focus-visible {
+  outline: 2px solid #111;
+  outline-offset: -3px;
+}
+.ap-cart-dialog .nlc-coupon .nlc-coupon-fields {
+  display: flex;
+  align-items: stretch;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 10px 10px;
+}
+.ap-cart-dialog .nlc-coupon-fields input {
+  flex: 1 1 100px;
+  border-radius: 6px;
+  background: #fff;
+  height: 38px;
+}
+.ap-cart-dialog .nlc-coupon-fields button {
+  min-height: 38px;
+  border-radius: 6px;
+  padding: 0 12px;
+}
+.nlc-coupon-fields [data-nlc-apply] { background: #171717; color: #fff; border-color: #171717; }
+.ap-cart-dialog .nlc-coupon [data-nlc-coupon-status]:not(:empty) { margin: 0 11px 9px; line-height: 1.35; }
+.nlc-unit-bonus:not([hidden]), .nlc-included-gift b {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 4px;
+  background: #222;
+  color: #fff;
+  padding: 4px 7px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .025em;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.nlc-included-gift {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px;
+  margin: 6px 0;
+  background: #f5f5f5;
+  border-radius: 8px;
+  font-size: 13px;
+}
+.nlc-included-gift strong span { margin-left: 3px; color: #545454; font-weight: 500; }
+.ap-cart-dialog .nlc-wallet-area { border: 0; padding: 0; }
+.nlc-pay-divider::before, .nlc-pay-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #dedede;
+}
+.ap-cart-dialog .nlc-pay-divider { gap: 10px; }
+.nlc-express[hidden], .nlc-unit-bonus[hidden] { display: none !important; }
+.nlc-cart-checkout { padding-bottom: max(10px, env(safe-area-inset-bottom)); }
+.nlc-wallet-area p a { text-underline-offset: 2px; }
+.ap-cart-dialog .nlc-cart-totals > p {
+  margin: 3px 0;
+  color: #535353;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.ap-cart-dialog [data-nlc-retry] {
+  border: 0;
+  padding: 4px 6px;
+  background: transparent;
+  color: #171717;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

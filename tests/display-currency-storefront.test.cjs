@@ -99,11 +99,10 @@ test('cart display currency changes preserve the coupon and exact quote request 
   const coupon=root.querySelector('[name="nlc_coupon"]');coupon.value='BLACKFRIDAY15';root.querySelector('[data-nlc-apply]').click();
   for(let i=0;i<4;i++)await settle();
   assert.equal(requests.length,2);assert.equal(requests[1].coupon,'BLACKFRIDAY15');
-  const before=JSON.stringify(requests),savedCart=w.localStorage.getItem('pp-cart'),instant=root.querySelector('[data-nlc-instant-amount]').textContent;
+  const before=JSON.stringify(requests),savedCart=w.localStorage.getItem('pp-cart');
   await w.AltaLocale.setCurrency('CAD');await settle();
   assert.equal(root.querySelector('[name="nlc_coupon"]'),coupon);assert.equal(coupon.value,'BLACKFRIDAY15');
-  assert.match(root.querySelector('.nlc-proceed').textContent,/CAD/);
-  assert.equal(root.querySelector('[data-nlc-instant-amount]').textContent,instant);assert.match(instant,/USD/);
+  assert.match(root.querySelector('.nlc-proceed').textContent,/CA\$/);
   await w.AltaLocale.setCurrency('JPY');await settle();
   assert.equal(JSON.stringify(requests),before);assert.equal(w.localStorage.getItem('pp-cart'),savedCart);
   assert.ok(requests.every(body=>body.country==='US'&&body.method_id===null&&!('currency' in body)&&!('display_currency' in body)));

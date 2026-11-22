@@ -13,7 +13,7 @@ function referenceSource(file,scope,anchor){
  assert.ok(source.includes(anchor),file+' exposes the reference view insertion point');
  return source.replace(anchor,Object.entries(views).map(([name,fn])=>'\n '+name+' = '+fn.toString()+';\n').join('')+anchor);
 }
-async function fixture(route,{workspace=false,cart=[]}={}){
+async function fixture(route,{workspace=false,cart=[],reviews=null}={}){
  const errors=[],vc=new VirtualConsole();vc.on('jsdomError',e=>errors.push(e.message));
  const dom=new JSDOM(read('storefront-v2.html'),{url:'https://getpurelabs.com'+route,runScripts:'outside-only',virtualConsole:vc}),w=dom.window;
  w.localStorage.setItem('ap-age-verified','true');w.matchMedia=()=>({matches:false});
@@ -21,7 +21,7 @@ async function fixture(route,{workspace=false,cart=[]}={}){
  w.HTMLElement.prototype.scrollIntoView=()=>{};
  w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};
  w.HTMLDialogElement.prototype.close=function(){this.open=false;};
- w.fetch=async url=>({ok:true,json:async()=>String(url).includes('/data/supplier-coas.json')?require('../data/supplier-coas.json'):[]});
+ w.fetch=async url=>({ok:true,json:async()=>String(url).includes('reviews=summary')?reviews:String(url).includes('/data/supplier-coas.json')?require('../data/supplier-coas.json'):[]});
  const scripts=['products.js','product-images.js','quantity-pricing.js'].map(read);
  // The production build replaces these views inside the storefront closure.
  scripts.push(referenceSource('storefront-v2.js','store',' window.AltaStore='));
@@ -40,8 +40,8 @@ test('homepage keeps the announcement, five-vial hero and product links without 
   assert.equal([...hero.querySelector('h1').childNodes].map(n=>n.nodeName==='BR'?'\n':n.textContent).join(''),'CUTTING EDGE\nPURITY');
   assert.equal(hero.querySelector('.nl-hero-description').textContent,'Research compounds, product documentation, and straightforward ordering for laboratories and research teams.');
   assert.deepEqual([...hero.querySelectorAll('.ap-actions a')].map(a=>[a.textContent,a.getAttribute('href')]),[['SHOP NOW','/shop']]);
-  assert.deepEqual([...hero.querySelectorAll('.nl-trust>div>span')].map(n=>n.textContent),['99%+ Purity','Free priority shipping at $250','Free recon solution on your first order']);
-  assert.equal(hero.querySelectorAll('.nl-trust-check').length,3);
+  assert.deepEqual([...hero.querySelectorAll('.nl-trust>div>span')].map(n=>n.textContent),['Free priority shipping at $250','Free recon solution on your first order']);
+  assert.equal(hero.querySelectorAll('.nl-trust-check').length,2);
   assert.equal(hero.querySelectorAll('.nl-vial').length,5);
   const featured=[...d.querySelectorAll('#nl-featured .ap-product-card')];
   assert.equal(featured.length,10);
@@ -78,6 +78,20 @@ test('homepage keeps the announcement, five-vial hero and product links without 
   assert.doesNotMatch(coaCard.textContent,/ILLUSTRATIVE PREVIEW|FULFILLED LOT|Retatrutide\s*60\s*mg/i);
   assert.doesNotMatch(d.body.textContent,retired);
  }finally{await f.close();}
+});
+test('homepage adds verified ratings with the incentive disclosure only when at least one review exists',async()=>{
+ for(const [reviews,expected] of [[{count:7,rating:4.1},'4.1/5 · 7 reviews'],[{count:1,rating:3},'3.0/5 · 1 review'],[{count:0,rating:null},null]]){
+  const f=await fixture('/',{reviews});
+  try{
+   const row=f.d.querySelector('.nl-trust');
+   assert.doesNotMatch(row.textContent,/99%/);
+   assert.equal(row.children.length,expected?3:2);
+   if(expected){
+    assert.ok(row.lastElementChild.textContent.includes(expected));
+    assert.equal(row.querySelector('small').textContent,'Review credit offered');
+   }else assert.equal(row.querySelector('small'),null);
+  }finally{await f.close();}
+ }
 });
 test('catalog photo cards preserve product navigation, integer prices, search, filters, sorting and pagination',async()=>{
  const f=await fixture('/shop');

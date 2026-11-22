@@ -10,7 +10,7 @@ function fixture(authorized=false,country='US'){
  w.AltaCartNmi={open(){}};w.localStorage.setItem('ap-shipping-country',country);
  w.fetch=async(url,options={})=>{
   requests.push({url,body:options.body?JSON.parse(options.body):undefined});
-  if(String(url).includes('checkout=public'))return{ok:true,json:async()=>({methods:authorized?[{id:'method-1',native_provider:'nmi',kind:'card'}]:[{id:'rampex-1',native_provider:'rampex',rampex_provider:'hosted',countries:['US','CA'],kind:'hosted_link'}],delivery_options:[{id:'protection',enabled:true,price_cents:500}],nmi:authorized?{ready:true,method_id:'method-1',wallets:{apple:true,google:true}}:null})};
+  if(String(url).includes('checkout=public'))return{ok:true,json:async()=>({methods:authorized?[{id:'method-1',native_provider:'nmi',kind:'card'}]:[{id:'rampex-1',native_provider:'rampex',rampex_provider:'hosted',countries:['US','CA'],kind:'hosted_link'}],delivery_options:[{id:'protection',kind:'extra',enabled:true,price_cents:500}],nmi:authorized?{ready:true,method_id:'method-1',wallets:{apple:true,google:true}}:null})};
   const b=JSON.parse(options.body);
   const protectedFee=b.delivery.extras.includes('protection')?500:0;
   return{ok:true,json:async()=>({subtotal_cents:10000,discount_cents:b.coupon==='BLACKFRIDAY15'?1500:0,total_cents:11495+protectedFee-(b.coupon==='BLACKFRIDAY15'?1500:0),free_shipping_threshold_cents:15000,free_shipping_remaining_cents:5000+(b.coupon==='BLACKFRIDAY15'?1500:0),pricing:{coupon_code:b.coupon==='BLACKFRIDAY15'?'BLACKFRIDAY15':null,delivery:{shipping_cents:1495,extras:protectedFee?[{id:'protection',label:'Shipping Protection',amount_cents:500}]:[]}}})};
@@ -29,9 +29,9 @@ test('cart has editable rows, coupon, protection and wallet shortcuts to reviewe
   assert.equal(f.cart.querySelector('[name=nlc_protection]'),null,'No shipping protection checkbox or removal action');
   assert.ok(f.cart.querySelector('.nlc-protection-static'),'Shipping protection must appear as a fixed line item');
   assert.doesNotMatch(f.cart.textContent,/OR PAY INSTANTLY/);
-  assert.match(f.cart.textContent,/Apple Pay or Google Pay.*secure provider checkout/);
+  assert.equal(f.cart.querySelector('.nlc-express').hidden,false);
   assert.ok(f.cart.querySelector('[data-nlc-estimate]').textContent.includes('–'));
-  assert.match(f.cart.textContent,/Review delivery and your total first/);
+  assert.equal(f.cart.querySelector('[data-nlc-wallet-note]'),null);
   assert.match(f.cart.textContent,/Shipping Protection/);
   assert.match(f.cart.textContent,/Proceed to Checkout/);
   assert.equal(f.cart.querySelectorAll('[data-nlc-wallet]').length,2);
@@ -41,6 +41,9 @@ test('cart has editable rows, coupon, protection and wallet shortcuts to reviewe
   f.cart.querySelector('[name=nlc_coupon]').value='BLACKFRIDAY15';
   f.cart.querySelector('[data-nlc-apply]').click();await wait();
   assert.equal(f.w.localStorage.getItem('ap-checkout-coupon'),'BLACKFRIDAY15');
+  await f.w.AltaCartNmi.offer(f.cart);
+  assert.equal(f.cart.querySelector('.nlc-coupon').open,false);
+  assert.match(f.cart.querySelector('.nlc-coupon summary').textContent,/BLACKFRIDAY15/);
  }finally{f.dom.window.close();}
 });
 test('legacy NMI configuration cannot add a retired payment option to the new cart',async()=>{
@@ -91,6 +94,6 @@ test('cart wallet shortcuts stay unavailable outside the hosted Card destination
  const f=fixture(false,'GB');try{
   await f.w.AltaCartNmi.offer(f.cart);await wait();
   assert.ok([...f.cart.querySelectorAll('[data-nlc-wallet]')].every(link=>link.getAttribute('aria-disabled')==='true'&&!link.hasAttribute('href')));
-  assert.match(f.cart.textContent,/Digital wallet payments are unavailable for this destination/);
+  assert.equal(f.cart.querySelector('.nlc-express').hidden,true);
  }finally{f.dom.window.close();}
 });

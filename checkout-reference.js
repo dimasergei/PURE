@@ -155,9 +155,8 @@
     delivery:selection(),checkout_version:data.config.version,...(state.membershipAddon?{membership_addon:state.membershipAddon}:{}),
     ...(state.paymentKind==='interac'&&state.fxQuote?{fx_quote:state.fxQuote}:{})
   });
-  async function fetchPreview(coupon=state.coupon){
-   const current=++quoteVersion,addr=shippingCountry();
-   loadingPreview=true;
+  async function fetchPreview(coupon,current){
+   const addr=shippingCountry();
    const s=await auth.auth.getSession(),token=s.data?.session?.access_token;
    const res=await fetch('/api/customer-config?checkout=cart',{method:'POST',cache:'no-store',
      headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},
@@ -166,8 +165,7 @@
        ...(state.paymentKind==='interac'&&state.fxQuote?{fx_quote:state.fxQuote}:{})})});
    const result=await res.json().catch(()=>null);
    if(current!==quoteVersion||onePayment||lastPlaced)return null;
-   loadingPreview=false;
-   if(!res.ok||!Number.isSafeInteger(result?.total_cents))throw Error(result?.error||'Could not calculate final total.');
+   if(!res.ok||!Number.isSafeInteger(result?.total_cents))throw Object.assign(Error(result?.error||'Could not calculate final total.'),{status:res.status});
    if(result.currency!==paymentCurrency()||result.request_only===true||state.paymentKind==='interac'&&(!result.fx_quote||!Number.isSafeInteger(result.pricing?.fx_ppm)||result.pricing.fx_ppm<=0))throw Error('The payment currency could not be verified. Refresh your order total.');
    if(state.paymentKind==='interac')state.fxQuote=result.fx_quote;
    state.coupon=result.pricing?.affiliate_code||result.pricing?.coupon_code||'';saveCoupon(state.coupon);
@@ -275,20 +273,41 @@
   const refresh=async(candidate=state.coupon,action='refresh')=>{
    if(lastPlaced||onePayment)return;
    const apply=view('[data-nlx-coupon]',detail),remove=view('[data-nlx-remove-coupon]',detail),message=view('[data-nlx-coupon-status]',detail);
-   apply.disabled=true;remove.disabled=true;
+   const version=++quoteVersion;
+   const isCurrent=()=>version===quoteVersion&&!lastPlaced&&!onePayment;
+   loadingPreview=true;apply.disabled=true;remove.disabled=true;
    if(action!=='refresh')message.textContent=action==='remove'?'Removing coupon…':'Checking coupon…';
+   // On a rejected edit, retain a previously confirmed code if it still applies.
+   // A rejected saved code is cleared only when a regular-price quote succeeds.
+   const candidates=new Set(action==='apply'?[candidate,state.coupon,'']:[candidate,'']);
+   let rejection='';
    try{
-    const q=await fetchPreview(candidate);
-    if(q){
-     renderSummary();
-     message.textContent=state.coupon?(state.coupon==='BLACKFRIDAY10'?'BLACKFRIDAY10 applied — 10% off merchandise.':'Partner code applied — 20% off your first eligible order.'):action==='remove'?(q.pricing?.crypto_discount_cents?'Coupon removed. The 5% crypto discount applies.':'Coupon removed. Regular prices restored.'):'';
-     syncCurrencyDisplays();
-     if(stage===2)updatePayment();
+    for(const code of candidates){
+     try{
+      const preview=await fetchPreview(code,version);
+      if(!preview||!isCurrent())return;
+     }catch(error){
+      if(!isCurrent())return;
+      if(!code||error.status!==400)throw error;
+      rejection=error.message;continue;
+     }
+     break;
     }
+    loadingPreview=false;renderSummary();
+    let feedback=rejection;
+    if(!feedback&&state.coupon)feedback=state.coupon==='BLACKFRIDAY10'?'BLACKFRIDAY10 applied — 10% off merchandise.':'Partner code applied — 20% off your first eligible order.';
+    if(!feedback&&action==='remove')feedback=currentPreview.pricing?.crypto_discount_cents?'Coupon removed. The 5% crypto discount applies.':'Coupon removed. Regular prices restored.';
+    message.textContent=feedback;
+    syncCurrencyDisplays();
+    if(stage===2)updatePayment();
    }catch(error){
-    loadingPreview=false;
-    if(action!=='refresh'){await refresh();message.textContent=error.message;}else{view('[data-nlx-quote-note]',detail).textContent=error.message;note(error.message,true);}
-   }finally{apply.disabled=!!(lastPlaced||onePayment);remove.disabled=!!(lastPlaced||onePayment);}
+    if(!isCurrent())return;
+    loadingPreview=false;currentPreview=null;quote=null;
+    renderSummary();syncCurrencyDisplays();
+    view('[data-nlx-totals]',detail).textContent='';
+    view('[data-nlx-quote-note]',detail).textContent=error.message;
+    note(error.message,true);if(stage===2)updatePayment();
+   }finally{if(isCurrent()){apply.disabled=false;remove.disabled=false;}}
   };
   function schedule(){if(lastPlaced||onePayment)return;invalidate();clearTimeout(quoteTimer);quoteTimer=setTimeout(refresh,180);}
   function showStep(i){if(lastPlaced||onePayment){note('This order is already saved. Check its payment status before making a new order.',true);return;}stage=i;all('[data-nlx-step]',div).forEach((b,n)=>{

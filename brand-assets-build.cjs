@@ -54,6 +54,8 @@ for(const file of fs.readdirSync(out,{recursive:true}).filter(f=>f.endsWith('.ht
   // Keep the display layer and its opt-in price markup on the same release.
   html=html.replace(/src="\/(locale|storefront-v2|workspace-v2|reference-ui|cart-reference|membership-experience|research-builder-client|research-checkout-client)\.js(?:\?[^"]*)?"/g,'src="/$1.js?v=20261118-local-currency"');
   html=html.replace(/href="\/(pure-currency|pure-bulk-layout|reference-ui|cart-reference|membership-experience|research-builder-parity|research-checkout)\.css(?:\?[^"]*)?"/g,'href="/$1.css?v=20261118-local-currency"');
+  // Price quotes and reward markers share one contract across the drawer and checkout.
+  html=html.replace(/\b(src|href)="\/(cart-reference\.(?:js|css)|checkout-reference\.js|storefront-v2\.js)(?:\?[^"]*)?"/g,'$1="/$2?v=20261122-cart-rewards"');
   fs.writeFileSync(target,html);
   count++;
 }

@@ -20,7 +20,8 @@ function fixture(surface,{legacyCoupon=false,balances={points:0,credit_cents:0}}
  w.fetch=async(url,options={})=>{
   if(String(url).includes('checkout=public'))return {ok:true,json:async()=>data};
   const body=JSON.parse(options.body);requests.push(body);
-  try{return {ok:true,json:async()=>quote(body)};}catch(error){return {ok:false,json:async()=>({error:error.message})};}
+  try{const result=quote(body);return {ok:true,status:200,json:async()=>result};}
+  catch(error){return {ok:false,status:error.status||500,json:async()=>({error:error.message})};}
  };
  const auth={auth:{getSession:async()=>({data:{session:{access_token:'isolated-fixture-token'}}})}};
  w.eval(fs.readFileSync('direct-checkout-client.js','utf8'));
@@ -41,7 +42,15 @@ for(const surface of ['cart','checkout'])test(surface+': regular purchased quant
   assert.match(f.root.textContent,(surface==='cart'?/\$176\.95/:/\$172\.95/));
   assert.doesNotMatch(f.root.textContent,/BOGO|\+\d+ FREE|member(ship)?/i);
   const cryptoOffer='Pay with Crypto at checkout for an extra 5% off the remaining merchandise.';
-  if(surface==='cart')assert.ok(f.root.textContent.includes(cryptoOffer),'Cart explains the conditional crypto incentive without changing the current total');
+  if(surface==='cart'){
+   const coupon=f.root.querySelector('.nlc-coupon');
+   assert.equal(coupon.open,false);
+   assert.equal(coupon.querySelector('summary').textContent,'Add coupon code');
+   assert.doesNotMatch(f.root.textContent,/Converted prices are estimates|Choose Card or Crypto at checkout|Pay with Crypto at checkout/);
+   assert.equal(f.root.querySelector('[data-pure-campaign-countdown]'),null);
+   coupon.querySelector('summary').click();
+   assert.equal(coupon.open,true);
+  }
   assert.doesNotMatch(f.root.textContent.replace(cryptoOffer,''),/\b5% off/i,'No unrelated automatic discount is advertised');
   assert.equal(f.root.querySelector('s,del'),null);
   const input=f.root.querySelector(surface==='cart'?'[name=nlc_coupon]':'[name=sidebar_coupon]');
@@ -54,6 +63,7 @@ for(const surface of ['cart','checkout'])test(surface+': regular purchased quant
   assert.equal(f.w.localStorage.getItem('ap-cart-coupon'),'BLACKFRIDAY10');
   assert.equal(remove.hidden,false);
   assert.match(f.root.textContent,/BLACKFRIDAY10 applied/);
+  if(surface==='cart')assert.match(f.root.querySelector('.nlc-coupon summary').textContent,/BLACKFRIDAY10/);
   assert.match(f.root.textContent,/\$16\.00/);
   assert.match(f.root.textContent,surface==='cart'?/\$160\.95/:/\$156\.95/);
   if(surface==='cart')assert.match(f.root.querySelector('[data-nlc-unlock-copy]').textContent,/\$106\.00/);
@@ -120,5 +130,68 @@ test('checkout membership item lines up with product prices and no redundant pay
   assert.ok(f.root.querySelector('[name=payment_choice][value=card]'),'Card payment remains available');
   assert.ok(f.root.querySelector('[name=ruo]'),'Required RUO checkbox remains');
   assert.ok(f.root.querySelector('[name=responsibility]'),'Required responsibility checkbox remains');
+ }finally{f.dom.window.close();}
+});
+
+
+test('a rejected saved coupon and retired delivery extra cannot block cart totals',async()=>{
+ const f=fixture('cart');
+ try{
+  for(const key of ['ap-checkout-coupon','ap-cart-coupon'])f.w.localStorage.setItem(key,'BLACKFRIDAY15');
+  const items=f.w.AltaStore.cart.map(({id,size,qty})=>({id,size,qty}));
+  f.w.sessionStorage.setItem('ap-v2-cart-extras:'+JSON.stringify(items),JSON.stringify(['cold_chain','protection']));
+  await f.w.AltaCartNmi.offer(f.root);
+  assert.deepEqual(f.requests.map(body=>body.coupon),['BLACKFRIDAY15','']);
+  assert.deepEqual(f.requests[1].delivery.extras,['protection']);
+  assert.equal(f.root.querySelector('.nlc-coupon').open,false);
+  assert.match(f.root.querySelector('.nlc-proceed').textContent,/\$176\.95/);
+  assert.match(f.root.querySelector('[data-nlc-cart-totals]').textContent,/Subtotal\$160\.00/);
+  for(const key of ['ap-checkout-coupon','ap-cart-coupon'])assert.equal(f.w.localStorage.getItem(key),null);
+ }finally{f.dom.window.close();}
+});
+
+test('a temporarily unavailable quote keeps the saved coupon and allows retrying the same cart',async()=>{
+ const f=fixture('cart');
+ try{
+  f.w.localStorage.setItem('ap-cart-coupon','BLACKFRIDAY10');
+  const fetch=f.w.fetch;
+  f.w.fetch=async(url,options)=>String(url).includes('checkout=cart')?{ok:false,status:503,json:async()=>({})}:fetch(url,options);
+  await f.w.AltaCartNmi.offer(f.root);
+  assert.equal(f.w.localStorage.getItem('ap-cart-coupon'),'BLACKFRIDAY10');
+  assert.match(f.root.querySelector('[data-nlc-cart-totals]').textContent,/Items subtotal\$160\.00/);
+  assert.doesNotMatch(f.root.querySelector('.nlc-proceed').textContent,/\$/);
+  f.w.fetch=fetch;
+  f.root.querySelector('[data-nlc-retry]').click();await tick();
+  assert.match(f.root.querySelector('.nlc-proceed').textContent,/\$160\.95/);
+  assert.equal(f.root.querySelector('[data-nlc-retry]'),null);
+ }finally{f.dom.window.close();}
+});
+
+
+test('opening checkout directly removes an expired saved code only after a successful new quote',async()=>{
+ const f=fixture('checkout');
+ try{
+  for(const key of ['ap-checkout-coupon','ap-cart-coupon'])f.w.localStorage.setItem(key,'BLACKFRIDAY15');
+  await f.w.DirectCheckout.checkout(f.root,f.auth,f.user);await tick();
+  assert.deepEqual(f.requests.map(body=>body.coupon),['BLACKFRIDAY15','']);
+  assert.match(f.root.querySelector('[data-nlx-totals]').textContent,/Total\$172\.95/);
+  for(const key of ['ap-checkout-coupon','ap-cart-coupon'])assert.equal(f.w.localStorage.getItem(key),null);
+  assert.equal(f.root.querySelector('[data-nlx-quote-note]').textContent,'');
+ }finally{f.dom.window.close();}
+});
+
+test('an obsolete failed response cannot erase a newer checkout total',async()=>{
+ const f=fixture('checkout');
+ try{
+  let rejectOld;
+  const fetch=f.w.fetch;
+  f.w.fetch=(url,options)=>JSON.parse(options.body).items[0].qty===2?new Promise((resolve,reject)=>{rejectOld=reject;}):fetch(url,options);
+  await f.w.DirectCheckout.checkout(f.root,f.auth,f.user);await tick();
+  f.root.querySelector('[data-nlx-qty="1"]').click();await tick();
+  const totals=f.root.querySelector('[data-nlx-totals]');
+  assert.match(totals.textContent,/Total\$252\.95/);
+  rejectOld(Error('Old quote failed'));await tick();
+  assert.match(totals.textContent,/Total\$252\.95/);
+  assert.equal(f.root.querySelector('[data-nlx-quote-note]').textContent,'');
  }finally{f.dom.window.close();}
 });

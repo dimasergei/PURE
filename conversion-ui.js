@@ -66,20 +66,65 @@
   campaignRequest ||= request('campaign=window').then(data=>({...data,clockOffset:Date.parse(data.server_time)-Date.now()})).catch(error=>{campaignRequest=null;throw error;});
   return campaignRequest;
  }
- async function mountHomeOffer(root){
-  if(!root)return;
-  try{
-   const campaign=await readCampaign();
-   if(!campaign.ends_at||!root.isConnected)return;
-   const labels=campaign.eligible_variants.map(key=>{
-    const [id,size]=key.split(':');
-    const product=window.AltaStore?.product(id);
-    return product?product.name+' '+size:null;
-   }).filter(Boolean);
-   if(!labels.length)return;
-   root.querySelector('[data-pure-campaign-products]').textContent=labels.join(' and ');
-   await mountCountdown(root.querySelector('[data-pure-campaign-countdown]'));
-  }catch{root.hidden=true;}
+ async function mountCampaignStrip(){
+  const announcement=document.querySelector('.ap-announcement');
+  const fallback=announcement?.querySelector('#ap-announcement-text');
+  if(!fallback)return;
+  let campaign;
+  try{campaign=await readCampaign();}catch{return;}
+  const deadline=Date.parse(campaign.ends_at);
+  const timeLeft=()=>deadline-Date.now()-campaign.clockOffset;
+  if(!(timeLeft()>0))return;
+  const products=[];
+  for(const key of new Set(campaign.eligible_variants||[])){
+   const [id,size]=key.split(':');
+   const product=window.AltaStore?.product(id);
+   if(product?.variants.some(variant=>variant.size===size))products.push({product,size});
+  }
+  if(!products.length)return;
+
+  const trigger=document.createElement('button');
+  trigger.type='button';
+  trigger.className='pure-offer-trigger';
+  trigger.setAttribute('aria-haspopup','dialog');
+  trigger.setAttribute('aria-controls','pure-campaign-dialog');
+  trigger.setAttribute('aria-label','Buy one, get one free. Shop eligible products.');
+  trigger.innerHTML='<span class="pure-offer-buy">Buy 1</span><strong class="pure-offer-free"><span>Get 1 free</span></strong><span class="pure-offer-action">Shop eligible vials</span>';
+  const dialog=document.createElement('dialog');
+  dialog.id='pure-campaign-dialog';
+  dialog.className='pure-offer-dialog';
+  dialog.setAttribute('aria-labelledby','pure-offer-title');
+  const date=new Intl.DateTimeFormat(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'}).format(new Date(deadline));
+  dialog.innerHTML=`
+   <div class="pure-offer-head">
+    <button type="button" class="pure-offer-close" aria-label="Close offer"><span aria-hidden="true">×</span></button>
+    <h2 id="pure-offer-title">Buy 1,<br>get 1 free.</h2>
+    <p>Ends <time datetime="${esc(campaign.ends_at)}">${esc(date)}</time></p>
+   </div>
+   <p class="pure-offer-detail">Get a second vial in the same strength with each eligible vial below.</p>
+   <ul class="pure-offer-items">${products.map(({product,size})=>`<li><a href="/product/${encodeURIComponent(product.id)}?size=${encodeURIComponent(size)}"><img src="${esc(window.AltaStore.image(product,size))}" loading="lazy" alt=""><span><strong>${esc(product.name)}</strong><small>${esc(size)}</small></span></a></li>`).join('')}</ul>`;
+  announcement.classList.add('pure-offer-active');
+  fallback.replaceWith(trigger);
+  document.body.append(dialog);
+  trigger.addEventListener('click',()=>{if(timeLeft()>0)dialog.showModal();else expire();});
+  dialog.querySelector('.pure-offer-close').addEventListener('click',()=>dialog.close());
+  dialog.addEventListener('click',event=>{
+   if(event.target!==dialog)return;
+   const {left,right,top,bottom}=dialog.getBoundingClientRect();
+   if(event.clientX<left||event.clientX>right||event.clientY<top||event.clientY>bottom)dialog.close();
+  });
+  function expire(){
+   const remaining=timeLeft();
+   if(remaining>0){
+    setTimeout(expire,Math.min(remaining,2147483647));
+    return;
+   }
+   if(dialog.open)dialog.close();
+   trigger.replaceWith(fallback);
+   dialog.remove();
+   announcement.classList.remove('pure-offer-active');
+  }
+  expire();
  }
  async function mountCountdown(root){
   if(!root)return;
@@ -88,14 +133,12 @@
    if(!campaign.ends_at||!root.isConnected)return;
    if(root.dataset.campaignProduct&&!campaign.eligible_variants?.includes(root.dataset.campaignProduct))return;
    const deadline=Date.parse(campaign.ends_at),clockOffset=campaign.clockOffset;
-   const homeOffer=root.closest('[data-pure-home-campaign]');
    const update=()=>{
     const left=Math.ceil((deadline-Date.now()-clockOffset)/1000);
     root.hidden=!(left>0);
-    if(homeOffer)homeOffer.hidden=root.hidden;
     if(!root.hidden){
      const hours=Math.floor(left/3600),minutes=Math.floor(left%3600/60),seconds=left%60;
-     root.textContent=(homeOffer?'':root.dataset.campaignProduct?'Buy 1, get 1 free · ':'BOGO · ')+'Ends in '+hours+'h '+minutes+'m '+seconds+'s';
+     root.textContent=(root.dataset.campaignProduct?'Buy 1, get 1 free · ':'BOGO · ')+'Ends in '+hours+'h '+minutes+'m '+seconds+'s';
     }
     return !root.hidden&&root.isConnected;
    };
@@ -115,8 +158,11 @@
    root.hidden=false;
   }catch{}
  }
- window.PureCampaign={mountCountdown,mountDispatch,mountHomeOffer};
- mountHomeOffer(document.querySelector('[data-pure-home-campaign]'));
+ window.PureCampaign={mountCountdown,mountDispatch};
+ if(/^\/(?:$|index(?:\.html)?$|shop(?:\.html)?\/?$|product\/)/.test(location.pathname)){
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mountCampaignStrip,{once:true});
+  else mountCampaignStrip();
+ }
  if(/^\/(?:$|shop(?:\/|$)|product\/)/.test(location.pathname)){
   document.addEventListener('mouseout',function exitOffer(event){
    if(event.relatedTarget||event.clientY>0||document.querySelector('dialog[open]'))return;
