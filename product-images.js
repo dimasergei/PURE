@@ -92,6 +92,7 @@ const PRODUCT_IMAGES = {
     "10mg": "assets/products-pure/23_tb-500_10mg.svg"
   },
   "bpc-tb-500": {
+    "5mg/5mg": "assets/products-pure/wolverine-5mg-5mg.svg",
     "10mg/10mg": "assets/products-pure/24_bpc_tb-500_10mg_10mg.svg",
     "15mg/15mg": "assets/products-pure/25_bpc_tb-500_15mg_15mg.svg"
   },

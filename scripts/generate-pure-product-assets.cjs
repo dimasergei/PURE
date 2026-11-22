@@ -67,6 +67,7 @@ for (const product of sandbox.catalog) {
     const water = product.id === 'bac-3' || product.id === 'bac-10';
     const tone = water ? 'black-water' : 'black';
     const title = 'PURE ' + product.name + ' ' + variant.size;
+    const compoundLabel = product.id === 'bpc-tb-500' ? 'BPC-157 + TB-500' : '';
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1081" height="1455" viewBox="0 0 1081 1455" role="img" aria-labelledby="title description">
 <title id="title">${escape(title)}</title>
 <desc id="description">${escape(product.name)} ${escape(variant.size)}. Matte black PURE label with white artwork matching the supplied packaging reference. Research use only.</desc>
@@ -74,7 +75,7 @@ for (const product of sandbox.catalog) {
 <g fill="#ffffff">
   <svg x="338" y="617" width="415" height="134" viewBox="${wordmarkViewBox}" preserveAspectRatio="none" aria-label="PURE">${wordmarkPaths}</svg>
   ${outlinedText(product.name, { x: 333, y: 1015, size: 72, weight: 'bold', maxWidth: 316 })}
-  <g transform="translate(698 949) scale(1.42)" aria-hidden="true">
+${compoundLabel ? '  ' + outlinedText(compoundLabel, { x: 334, y: 1052, size: 34, maxWidth: 283 }) + '\n' : ''}  <g transform="translate(698 949) scale(1.42)" aria-hidden="true">
     <path d="M8 12H16L8 44H0Z M21 1H29L16 54H8Z M31 8H38L29 47H22Z"/>
   </g>
   ${outlinedText('RESEARCH USE ONLY', { x: 334, y: 1108, size: 28, width: 223 })}
@@ -87,6 +88,6 @@ for (const product of sandbox.catalog) {
   }
 }
 const mappedCount = Object.values(sandbox.images).reduce((sum, variants) => sum + Object.keys(variants).length, 0);
-if (records.length !== mappedCount || records.length !== 83) throw new Error('Catalog image coverage changed: ' + records.length + ' / ' + mappedCount);
+if (records.length !== mappedCount || records.length !== 84) throw new Error('Catalog image coverage changed: ' + records.length + ' / ' + mappedCount);
 fs.writeFileSync(path.join(output, 'manifest.json'), JSON.stringify(records, null, 2) + '\n');
 console.log('Generated ' + records.length + ' PURE product labels from the reference artwork. Catalog names and strengths unchanged.');

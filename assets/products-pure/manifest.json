@@ -193,7 +193,15 @@
   },
   {
     "product_id": "bpc-tb-500",
-    "name": "BPC/TB-500",
+    "name": "Wolverine",
+    "size": "5mg/5mg",
+    "file": "assets/products-pure/wolverine-5mg-5mg.svg",
+    "label": "black",
+    "contents": "lyophilized compound"
+  },
+  {
+    "product_id": "bpc-tb-500",
+    "name": "Wolverine",
     "size": "10mg/10mg",
     "file": "assets/products-pure/24_bpc_tb-500_10mg_10mg.svg",
     "label": "black",
@@ -201,7 +209,7 @@
   },
   {
     "product_id": "bpc-tb-500",
-    "name": "BPC/TB-500",
+    "name": "Wolverine",
     "size": "15mg/15mg",
     "file": "assets/products-pure/25_bpc_tb-500_15mg_15mg.svg",
     "label": "black",
