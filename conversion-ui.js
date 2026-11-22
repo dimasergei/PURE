@@ -93,8 +93,9 @@
     sessionStorage.setItem('pure-exit-offer-shown','1');
    }catch{}
    document.removeEventListener('mouseout',exitOffer);
-   const dialog=document.createElement('dialog');dialog.className='ap-dialog';
-   dialog.innerHTML='<section class="ap-panel"><h2>Get a discount code</h2><form class="ap-form"><label>Email<input name="email" type="email" autocomplete="email" required maxlength="254"></label><label>Phone<input name="phone" type="tel" autocomplete="tel" required maxlength="24"></label><label class="ap-checkbox-label"><input name="consent" type="checkbox" required> I agree to receive PURE offers by email and text.</label><button class="ap-button">Get my code</button></form><p role="status"></p><button type="button" class="ap-button ap-button-secondary" data-close>Close</button></section>';
+   const dialog=document.createElement('dialog');dialog.className='ap-dialog cv-discount-dialog';
+   dialog.setAttribute('aria-labelledby','pure-discount-heading');
+   dialog.innerHTML='<button type="button" class="cv-discount-close" data-close aria-label="Close discount offer">×</button><h2 id="pure-discount-heading">Get a discount code</h2><form class="ap-form"><label>Email address<input name="email" type="email" autocomplete="email" placeholder="you@example.com" required maxlength="254"></label><label class="ap-checkbox-label"><input name="consent" type="checkbox" required> I agree to receive PURE offers by email.</label><button class="ap-button">Get my code</button></form><p role="status"></p>';
    const form=dialog.querySelector('form'),status=dialog.querySelector('[role=status]');
    dialog.querySelector('[data-close]').onclick=()=>dialog.close();
    dialog.addEventListener('close',()=>dialog.remove(),{once:true});
@@ -102,7 +103,7 @@
     event.preventDefault();
     const button=form.querySelector('button');button.disabled=true;
     try{
-     const result=await request('campaign=signup',{email:form.elements.email.value,phone:form.elements.phone.value,consent:form.elements.consent.checked});
+     const result=await request('campaign=signup',{email:form.elements.email.value,consent:form.elements.consent.checked});
      form.hidden=true;status.textContent='Use code '+result.code+' at checkout.';
     }catch(error){status.textContent=error.message;button.disabled=false;}
    };

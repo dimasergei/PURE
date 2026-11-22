@@ -113,3 +113,35 @@
 .ap-account-site .cv-member-stack-inner [data-cv-member-stack-root]{min-width:0}
 .ap-account-site .cv-programs [data-cv-open-member-stack]{cursor:pointer}
 @media(max-width:600px){.ap-account-site .cv-programs .cv-member-stack-feature{padding:0 15px}.ap-account-site .cv-programs .cv-member-stack-feature>summary{flex-wrap:wrap;gap:8px}.ap-account-site .cv-programs .cv-member-stack-feature>summary small{flex:1 1 100%;order:2;margin:0;text-align:left}.ap-account-site .cv-programs .cv-member-stack-feature>summary>span:last-child{margin-left:auto}}
+
+.ap-dialog.cv-discount-dialog {
+  position: fixed;
+  width: min(420px, calc(100% - 32px));
+  padding: 32px;
+  border: 1px solid #e5e5e5;
+  border-radius: 18px;
+  box-shadow: 0 24px 80px rgb(0 0 0 / 22%);
+}
+.cv-discount-dialog h2 {
+  margin: 0 28px 20px 0;
+  font-size: clamp(23px, 5vw, 29px);
+  letter-spacing: -.04em;
+}
+.cv-discount-dialog .cv-discount-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: #f3f3f3;
+  color: #141414;
+  font-size: 23px;
+  line-height: 1;
+  cursor: pointer;
+}
+.cv-discount-close:hover { background: #e7e7e7; }
+.cv-discount-dialog [role=status]:empty { display: none; }
