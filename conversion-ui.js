@@ -122,6 +122,14 @@
      status.classList.add('cv-discount-code');
      const code=document.createElement('strong');code.textContent=result.code;
      status.replaceChildren('Your checkout code',code);
+     try{
+      const keys=['ap-checkout-coupon','ap-cart-coupon'];
+      const existing=keys.map(key=>localStorage.getItem(key)).find(Boolean);
+      if(result.code==='BLACKFRIDAY10'&&(!existing||existing===result.code)){
+       for(const key of keys)localStorage.setItem(key,result.code);
+       status.replaceChildren('10% off saved to your cart',code);
+      }
+     }catch{}
     }catch(error){status.textContent=error.message;button.disabled=false;}
    };
    document.body.append(dialog);dialog.showModal();
