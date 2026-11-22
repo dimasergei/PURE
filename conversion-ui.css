@@ -175,3 +175,14 @@
   font-size: clamp(18px, 5vw, 27px);
   letter-spacing: .055em;
 }
+
+[data-pure-home-campaign]:not([hidden]) {
+  margin: 0 0 1.25rem;
+  padding: .85rem 1rem;
+  border: 1px solid currentColor;
+  width: fit-content;
+  max-width: 100%;
+}
+[data-pure-home-campaign] strong { font-size: clamp(1.1rem, 2.3vw, 1.6rem); }
+[data-pure-home-campaign] p { margin: .25rem 0 0; }
+[data-pure-home-campaign] [data-pure-campaign-countdown] { font-variant-numeric: tabular-nums; }

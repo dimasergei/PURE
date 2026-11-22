@@ -62,17 +62,37 @@
   }catch(e){root.textContent=e.message;}
  }
  let campaignRequest;
+ function readCampaign(){
+  campaignRequest ||= request('campaign=window').then(data=>({...data,clockOffset:Date.parse(data.server_time)-Date.now()})).catch(error=>{campaignRequest=null;throw error;});
+  return campaignRequest;
+ }
+ async function mountHomeOffer(root){
+  if(!root)return;
+  try{
+   const campaign=await readCampaign();
+   if(!campaign.ends_at||!root.isConnected)return;
+   const labels=campaign.eligible_variants.map(key=>{
+    const [id,size]=key.split(':');
+    const product=window.AltaStore?.product(id);
+    return product?product.name+' '+size:null;
+   }).filter(Boolean);
+   if(!labels.length)return;
+   root.querySelector('[data-pure-campaign-products]').textContent=labels.join(' and ');
+   await mountCountdown(root.querySelector('[data-pure-campaign-countdown]'));
+  }catch{root.hidden=true;}
+ }
  async function mountCountdown(root){
   if(!root)return;
   try{
-   campaignRequest ||= request('campaign=window').then(data=>({...data,clockOffset:Date.parse(data.server_time)-Date.now()}));
-   const campaign=await campaignRequest;
+   const campaign=await readCampaign();
    if(!campaign.ends_at||!root.isConnected)return;
    if(root.dataset.campaignProduct&&!campaign.eligible_variants?.includes(root.dataset.campaignProduct))return;
    const deadline=Date.parse(campaign.ends_at),clockOffset=campaign.clockOffset;
+   const homeOffer=root.closest('[data-pure-home-campaign]');
    const update=()=>{
     const left=Math.ceil((deadline-Date.now()-clockOffset)/1000);
     root.hidden=!(left>0);
+    if(homeOffer)homeOffer.hidden=root.hidden;
     if(!root.hidden){
      const hours=Math.floor(left/3600),minutes=Math.floor(left%3600/60),seconds=left%60;
      root.textContent=(root.dataset.campaignProduct?'Buy 1, get 1 free · ':'BOGO · ')+'Ends in '+hours+'h '+minutes+'m '+seconds+'s';
@@ -95,7 +115,8 @@
    root.hidden=false;
   }catch{}
  }
- window.PureCampaign={mountCountdown,mountDispatch};
+ window.PureCampaign={mountCountdown,mountDispatch,mountHomeOffer};
+ mountHomeOffer(document.querySelector('[data-pure-home-campaign]'));
  if(/^\/(?:$|shop(?:\/|$)|product\/)/.test(location.pathname)){
   document.addEventListener('mouseout',function exitOffer(event){
    if(event.relatedTarget||event.clientY>0||document.querySelector('dialog[open]'))return;

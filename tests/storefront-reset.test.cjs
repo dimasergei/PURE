@@ -7,7 +7,7 @@ const {JSDOM,VirtualConsole}=require('jsdom');
 const root=path.resolve(__dirname,'..');
 const read=file=>fs.readFileSync(path.join(root,file),'utf8');
 const settle=()=>new Promise(resolve=>setTimeout(resolve,0));
-const retired=/BOGO|buy\s*1\s*,?\s*get\s*1|additional free|5%.*bank/i;
+const retired=/additional free|5%.*bank/i;
 function referenceSource(file,scope,anchor){
  const source=read(file),views=require('../reference-ui-functions.cjs')[scope];
  assert.ok(source.includes(anchor),file+' exposes the reference view insertion point');
@@ -40,7 +40,7 @@ test('homepage keeps the announcement, five-vial hero and product links without 
   assert.equal([...hero.querySelector('h1').childNodes].map(n=>n.nodeName==='BR'?'\n':n.textContent).join(''),'CUTTING EDGE\nPURITY');
   assert.equal(hero.querySelector('.nl-hero-description').textContent,'Research compounds, product documentation, and straightforward ordering for laboratories and research teams.');
   assert.deepEqual([...hero.querySelectorAll('.ap-actions a')].map(a=>[a.textContent,a.getAttribute('href')]),[['SHOP NOW','/shop']]);
-  assert.deepEqual([...hero.querySelectorAll('.nl-trust>div>span')].map(n=>n.textContent),['99%+ Purity','Free shipping over $150','Lab Tested']);
+  assert.deepEqual([...hero.querySelectorAll('.nl-trust>div>span')].map(n=>n.textContent),['99%+ Purity','Free US express shipping at US$250','Lab Tested']);
   assert.equal(hero.querySelectorAll('.nl-trust-check').length,3);
   assert.equal(hero.querySelectorAll('.nl-vial').length,5);
   const featured=[...d.querySelectorAll('#nl-featured .ap-product-card')];
