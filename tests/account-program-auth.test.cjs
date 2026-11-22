@@ -96,8 +96,8 @@ test('account aliases preserve a safe canonical program destination',async()=>{
  finally{env.dom.window.close();}
 });
 
-test('auth cross-links retain membership checkout in fresh page contexts and through password reset feedback',async()=>{
- for(const destination of ['/checkout?plan=vip&period=monthly','/checkout?plan=elite&period=annual']){
+test('auth cross-links retain partner enrollment and membership checkout in fresh page contexts and through password reset feedback',async()=>{
+ for(const destination of ['/account/partner','/checkout?plan=vip&period=monthly','/checkout?plan=elite&period=annual']){
   const pages=[];
   try{
    const login=await page('/account/login?returnTo='+encodeURIComponent(destination));pages.push(login);

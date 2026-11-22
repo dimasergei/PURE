@@ -47,7 +47,7 @@ const routes={
  '/coas':['Certificates of Analysis','Browse COA reports by product, strength and reported lot. The original report sheets remain available.'],
  '/about':['About PURE','Learn about the connected PURE laboratory research workspace.'],
  '/contact':['Contact PURE','Submit a documented inquiry for support, product documentation or an existing order.'],
- '/partner-program':['Partner Program','Submit an organizational partnership inquiry.'],
+ '/partner-program':['Partner Program','Explore PURE’s referral program for laboratory research organizations, review commission and payout terms, and join through your account.'],
  '/track-order':['Track Your Order','Sign in to see your order and assigned carrier tracking.']
 };
 fs.writeFileSync(path.join(out,'index.html'),page(shell,'/','PURE | Cutting Edge Purity','Research compounds, product documentation, and straightforward ordering for laboratories and research teams.'));

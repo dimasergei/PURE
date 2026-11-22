@@ -242,6 +242,26 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
   assert.ok(d.querySelector('.nl-partner-actions a[href="/account/partner"]'));
   assert.ok(d.querySelector('.nl-partner-actions a[href="/partner-terms.html"]'));
   assert.equal(d.querySelectorAll('.nl-partner-step-grid article').length,4);
+  const rawPage=new JSDOM(read('public-build/partner-program.html'));
+  const raw=rawPage.window.document;
+  assert.equal(raw.title,d.title);
+  assert.equal(raw.querySelector('link[rel="canonical"]').href,'https://getpurelabs.com/partner-program');
+  assert.equal(raw.querySelector('meta[property="og:url"]').content,raw.querySelector('link[rel="canonical"]').href);
+  assert.match(raw.querySelector('meta[property="og:description"]').content,/40%.*first qualifying.*10%.*later qualifying/);
+  assert.equal(raw.querySelector('meta[name="description"]').content,raw.querySelector('meta[property="og:description"]').content);
+  assert.equal(raw.querySelector('#ap-main').innerHTML,d.querySelector('#ap-main').innerHTML,'the public landing page is identical before and after JavaScript');
+  assert.match(raw.querySelector('main').textContent,/20% off[\s\S]*at least \$100 USD in merchandise after discounts/);
+  assert.match(raw.querySelector('main').textContent,/first day of the following month.*eligible balance reaches \$100 USD/);
+  assert.match(raw.querySelector('main').textContent,/recorded chargebacks reverse/);
+  assert.match(raw.querySelector('main').textContent,/first valid referral link is remembered for 30 days/);
+  assert.match(read('public-build/sitemap.xml'),/<loc>https:\/\/getpurelabs\.com\/partner-program<\/loc>/);
+  assert.doesNotMatch(read('public-build/robots.txt'),/Disallow: \/(?:partner|$)/m);
+  const termsPage=new JSDOM(read('public-build/partner-terms.html'));
+  const policy=termsPage.window.document;
+  assert.equal(policy.querySelector('link[rel="canonical"]').href,'https://getpurelabs.com/partner-terms.html');
+  assert.equal(policy.querySelector('meta[property="og:url"]').content,policy.querySelector('link[rel="canonical"]').href);
+  assert.match(policy.querySelector('main').textContent,/discounted merchandise subtotal must be at least \$100 USD/i);
+  rawPage.window.close();termsPage.window.close();
   dom.window.close();
  }
  console.log('PASS: built reference pages, retired view removal, product size changes, regular quantities/prices, search/category filters and isolated bulk order.');

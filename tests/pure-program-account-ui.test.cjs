@@ -131,6 +131,86 @@ test('partners can copy the commission disclosure beside their referral link',as
   assert.equal(disclosure.open,false);
   await disclosure.querySelector('button').onclick();
   assert.deepEqual(copied,['I earn a commission when you buy through my PURE link or code.']);
-  assert.equal(disclosure.querySelector('p').textContent,copied[0]);
+  assert.equal(disclosure.querySelector('textarea').value.split('\n')[0],copied[0]);
  }finally{env.dom.window.close();}
+});
+
+test('partner links open the selected catalog variant and record the chosen referral alias', async () => {
+ const env = setup({partner:{code:'LABTEAM',status:'active'},codes:[{code:'OTHER'},{code:'LABTEAM'}],events:[]});
+ const storefront = fs.readFileSync('products.js','utf8') + '\n' + fs.readFileSync('storefront-v2.js','utf8');
+ const copied = [];
+ Object.defineProperty(env.w.navigator, 'clipboard', {value:{writeText:async value => copied.push(value)}});
+ let visitor;
+ try {
+  env.w.eval(storefront);
+  await env.w.ConversionUI.partner(env.root, auth);
+  const select = env.root.querySelector('[data-link-destination]');
+  const code = env.root.querySelector('[data-link-code]');
+  const link = env.root.querySelector('[data-referral-url]');
+  const variants = env.w.AltaStore.catalog.flatMap(product => product.variants);
+  assert.equal(select.options.length, variants.length + 2);
+  assert.equal(link.value, 'https://pure.example/?ref=LABTEAM');
+  select.value = '/shop';
+  select.dispatchEvent(new env.w.Event('change'));
+  assert.equal(link.value, 'https://pure.example/shop?ref=LABTEAM');
+
+  select.value = '/product/bpc-tb-500?size=5mg%2F5mg';
+  select.dispatchEvent(new env.w.Event('change'));
+  code.value = 'OTHER';
+  code.dispatchEvent(new env.w.Event('change'));
+  await env.root.querySelector('[data-copy-link]').onclick();
+  await env.root.querySelector('[data-copy-caption]').onclick();
+  assert.equal(copied[0], 'https://pure.example/product/bpc-tb-500?size=5mg%2F5mg&ref=OTHER');
+  assert.match(copied[1], /^I earn a commission/);
+  assert.ok(copied[1].includes(select.selectedOptions[0].textContent));
+  assert.match(copied[1], /laboratory research use only/);
+  assert.ok(copied[1].endsWith(copied[0]));
+  assert.doesNotMatch(copied[1], /\d+% off|BOGO|free shipping/i);
+
+  visitor = new JSDOM('<main id="ap-main"></main>', {url:copied[0], runScripts:'outside-only'});
+  const w = visitor.window, visits = [];
+  w.fetch = async (url, options) => {
+   if (url.includes('partner=visit')) visits.push(JSON.parse(options.body));
+   return {ok:true, json:async () => ({})};
+  };
+  w.eval(fs.readFileSync('conversion-ui.js','utf8'));
+  w.eval(storefront);
+  await w.PurePartnerVisit;
+  assert.match(w.document.querySelector('#ap-main h1').textContent, /5mg\/5mg/);
+  assert.equal(w.AltaStore.selections['bpc-tb-500'], '5mg/5mg');
+  assert.deepEqual(visits.map(visit => visit.code), ['OTHER']);
+ } finally {
+  visitor?.window.close();
+  env.dom.window.close();
+ }
+});
+
+test('partners can select a caption manually if clipboard access fails', async () => {
+ const env = setup({partner:{code:'LABTEAM',status:'active'},events:[]});
+ try {
+  await env.w.ConversionUI.partner(env.root, auth);
+  assert.equal(env.root.querySelector('[data-link-code]'), null);
+  await env.root.querySelector('[data-copy-caption]').onclick();
+  const caption = env.root.querySelector('[data-referral-caption]');
+  assert.equal(caption.closest('details').open, true);
+  assert.equal(env.w.document.activeElement, caption);
+  assert.equal(caption.selectionStart, 0);
+  assert.equal(caption.selectionEnd, caption.value.length);
+  assert.match(env.root.querySelector('[data-referral-message]').textContent, /copy command/);
+ } finally {
+  env.dom.window.close();
+ }
+});
+
+test('suspended partner accounts have no campaign link builder', async () => {
+ const env = setup({partner:{code:'LABTEAM',status:'suspended'},events:[]});
+ try {
+  await env.w.ConversionUI.partner(env.root, auth);
+  assert.equal(env.root.querySelector('[data-partner-links]'), null);
+  assert.equal(env.root.querySelector('.rd-code-form, [data-copy]'), null);
+  assert.match(env.root.querySelector('.rd-referral').textContent, /Referral sharing is paused/);
+  assert.ok(env.root.querySelector('[data-partner-tab="wallet"]'));
+ } finally {
+  env.dom.window.close();
+ }
 });
