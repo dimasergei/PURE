@@ -184,7 +184,7 @@ async function setup(route){const errors=[];const console=new VirtualConsole();c
   assert.equal(d.querySelector('.pure-partner-program-page'),null,'the light-theme wrapper is removed');
   const rates=[...d.querySelectorAll('.nl-partner-rates article')];
   assert.equal(rates.length,2);
-  assert.deepEqual(rates.map(x=>x.querySelector('strong').textContent),['20%','10%']);
+  assert.deepEqual(rates.map(x=>x.querySelector('strong').textContent),['40%','10%']);
   assert.ok(d.querySelector('.nl-partner-actions a[href="/account/partner"]'));
   assert.ok(d.querySelector('.nl-partner-actions a[href="/partner-terms.html"]'));
   assert.equal(d.querySelectorAll('.nl-partner-step-grid article').length,4);

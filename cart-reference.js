@@ -5,7 +5,7 @@
  const html=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const couponKeys=['ap-checkout-coupon','ap-cart-coupon'];
  const saveCoupon=value=>couponKeys.forEach(key=>value?localStorage.setItem(key,value):localStorage.removeItem(key));
- const storedCoupon=()=>{const code=(localStorage.getItem(couponKeys[0])||localStorage.getItem(couponKeys[1])||'').trim().toUpperCase();const valid=code==='BLACKFRIDAY15'?code:'';saveCoupon(valid);return valid;};
+ const storedCoupon=()=>{const code=(localStorage.getItem(couponKeys[0])||localStorage.getItem(couponKeys[1])||'').trim().toUpperCase();const valid=/^[A-Z0-9][A-Z0-9_-]{2,23}$/.test(code)&&code!=='BOGO'?code:'';saveCoupon(valid);return valid;};
  let seq=0,config=null;
  const methods=async()=>{
   if(config)return config;
@@ -49,8 +49,9 @@
     const v=p.variants[0];
     return '<div class="nlc-rec"><img src="'+html(window.AltaStore.image(p,v.size))+'" alt=""><div><strong>'+html(p.name)+'</strong><div class="nlc-rec-prices"><b>'+money(Math.round(v.price*100))+'</b></div><button data-action="add" data-id="'+html(p.id)+'" data-size="'+html(v.size)+'" type="button" aria-label="Add '+html(p.name)+' '+html(v.size)+' to cart">ADD MORE</button></div></div>';
    }).join('')+'</div></div>':'')
-   +'</div><div class="nlc-cart-checkout cart__checkout" data-testid="cart-fixed-footer"><details class="nlc-coupon"'+(appliedCoupon?' open':'')+'><summary>Coupon code</summary><p>Use <strong>BLACKFRIDAY15</strong> for 15% off merchandise. Pay with Crypto at checkout for an extra 5% off the remaining merchandise.</p><div><input type="text" name="nlc_coupon" aria-label="Coupon code" placeholder="BLACKFRIDAY15" maxlength="40" value="'+html(appliedCoupon)+'"><button type="button" data-nlc-apply>APPLY</button><button type="button" data-nlc-remove-coupon hidden>REMOVE</button></div><p data-nlc-coupon-status role="status" aria-live="polite"></p></details>'
+   +'</div><div class="nlc-cart-checkout cart__checkout" data-testid="cart-fixed-footer"><details class="nlc-coupon"'+(appliedCoupon?' open':'')+'><summary>Coupon code</summary><p>Use <strong>BLACKFRIDAY10</strong> for 10% off merchandise. Pay with Crypto at checkout for an extra 5% off the remaining merchandise.</p><div><input type="text" name="nlc_coupon" aria-label="Coupon code" placeholder="BLACKFRIDAY10" maxlength="40" value="'+html(appliedCoupon)+'"><button type="button" data-nlc-apply>APPLY</button><button type="button" data-nlc-remove-coupon hidden>REMOVE</button></div><p data-nlc-coupon-status role="status" aria-live="polite"></p></details>'
    +'<p class="nlc-delivery-est"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 6h11v11H3zM14 10h4l3 4v3h-7z"/><circle cx="7" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></svg> <strong>Estimated delivery:</strong> <span data-nlc-estimate></span></p>'
+   +'<p data-pure-campaign-countdown hidden></p>'
    +'<div class="nlc-cart-totals" data-nlc-cart-totals><p role="status">Calculating your order total…</p></div>'
    +'<p class="nlc-display-note">Converted prices are estimates. Checkout confirms your total and payment currency.</p>'
    +'<a class="nlc-proceed" href="/checkout">Proceed to Checkout</a>'
@@ -59,6 +60,7 @@
    +'<a class="nlc-wallet-link" data-nlc-wallet="google" role="link" aria-disabled="true" aria-label="Continue with Google Pay"><span class="nlc-wallet-lockup"><img class="nlc-wallet-logo nlc-google-mark" src="/assets/payment-brands/google-g-clean.svg" width="20" height="20" alt="" aria-hidden="true"><span class="nlc-google-pay-word">Pay</span></span></a></div>'
    +'<p data-nlc-wallet-note>Choose Card or Crypto at checkout. Digital wallets are offered in the secure provider checkout when eligible.</p>'
    +'<p>Orders are for customers 21+ and research use only. Review the <a href="/research-use-policy.html">RUO Agreement</a> and <a href="/commercial-terms.html">Terms</a> before checkout.</p></div></div>';
+  window.PureCampaign?.mountCountdown(root.querySelector('[data-pure-campaign-countdown]'));
   const track=root.querySelector('[data-nlc-cart-totals]'),input=root.querySelector('[name=nlc_coupon]'),apply=root.querySelector('[data-nlc-apply]'),remove=root.querySelector('[data-nlc-remove-coupon]'),couponStatus=root.querySelector('[data-nlc-coupon-status]');
   const redraw=async(candidate=appliedCoupon,action='refresh')=>{
    const id=++seq;
@@ -80,15 +82,20 @@
     const data=await request.json().catch(()=>null);
     if(id!==seq||!root.isConnected)return;
     if(!request.ok||!Number.isSafeInteger(data?.total_cents))throw Error(data?.error||'Could not calculate your order total.');
-    appliedCoupon=data.pricing?.coupon_code==='BLACKFRIDAY15'?'BLACKFRIDAY15':'';
+    appliedCoupon=data.pricing?.affiliate_code||data.pricing?.coupon_code||'';
     saveCoupon(appliedCoupon);input.value=appliedCoupon;remove.hidden=!appliedCoupon;
-    couponStatus.textContent=appliedCoupon?'BLACKFRIDAY15 applied — 15% off merchandise.':action==='remove'?'Coupon removed. Regular prices restored.':'';
+    couponStatus.textContent=appliedCoupon?(appliedCoupon==='BLACKFRIDAY10'?'BLACKFRIDAY10 applied — 10% off merchandise.':'Affiliate code applied.'):action==='remove'?'Coupon removed. Regular prices restored.':'';
     const shipping=data.pricing?.delivery?.shipping_cents||0;
     const features=data.pricing?.delivery?.extras||[];
     const nodes=[['Subtotal',data.subtotal_cents]];
     const discount=appliedCoupon?data.pricing?.coupon_discount_cents||0:0;
-    if(discount>0)nodes.push(['BLACKFRIDAY15 (15%)',-discount]);
+    if(discount>0)nodes.push(['BLACKFRIDAY10 (10%)',-discount]);
      if(data.pricing?.quantity_discount_cents>0)nodes.push(['Quantity savings',-data.pricing.quantity_discount_cents]);
+    for(const free of data.pricing?.bogo_campaign?.free_units||[]){
+     const item=items.find(item=>item.id===free.id&&item.size===free.size);
+     if(item)nodes.push([item.name+' · '+item.size+' × '+free.qty+' free',0]);
+    }
+    for(const gift of data.pricing?.bundled_items||[]) nodes.push([gift.name+' · '+gift.size,0]);
     nodes.push(['Shipping',shipping]);
     for(const feature of features)nodes.push([feature.label,feature.amount_cents]);
     if(data.tax_cents>0)nodes.push(['Tax',data.tax_cents]);

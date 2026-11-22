@@ -2267,7 +2267,14 @@
     },
     {
       "product_id": "bpc-tb-500",
-      "product": "BPC/TB-500",
+      "product": "Wolverine",
+      "size": "5mg/5mg",
+      "report_ids": [],
+      "status": "exact_report_needed"
+    },
+    {
+      "product_id": "bpc-tb-500",
+      "product": "Wolverine",
       "size": "10mg/10mg",
       "report_ids": [
         "pd-bpc-157-tb-500-10mg-10mg"
@@ -2276,7 +2283,7 @@
     },
     {
       "product_id": "bpc-tb-500",
-      "product": "BPC/TB-500",
+      "product": "Wolverine",
       "size": "15mg/15mg",
       "report_ids": [],
       "status": "exact_report_needed"

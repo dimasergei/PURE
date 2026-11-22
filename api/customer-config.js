@@ -7,6 +7,21 @@ module.exports=async(req,res)=>{
  if(url.searchParams.has('inventory'))return require('../lib/standalone-inventory').handle(req,res);
  if(url.searchParams.has('research_builder'))return require('../lib/research-builder-handler')(req,res);
  if(url.searchParams.has('lotus'))return require('../lib/lotus-admin').handle(req,res,url.searchParams);
+ if(url.searchParams.has('campaign')){
+  if(req.method==='POST'&&url.searchParams.get('campaign')==='signup')return require('../lib/campaign-signup').handle(req,res);
+  if(req.method!=='GET')return res.status(405).json({error:'Method not allowed.'});
+  return res.status(200).json(require('../lib/campaign-window').checkoutCampaign());
+ }
+ if(url.searchParams.has('reviews')){
+  if(req.method==='POST')return require('../lib/review-credit').handle(req,res);
+  if(req.method!=='GET')return res.status(405).json({error:'Method not allowed.'});
+  try{
+   const {data,error}=await require('../lib/inventory-db').inventoryDb().rpc('commerce_storefront_review_summary');
+   if(error||!data)throw Error('Review summary unavailable.');
+   res.setHeader('Cache-Control','public, max-age=60');
+   return res.status(200).json(data);
+  }catch{return res.status(503).json({error:'Review summary unavailable.'});}
+ }
  if(url.searchParams.has('partner'))return require('../lib/partner-program').handle(req,res,url.searchParams);
  if(url.searchParams.get('instagram')==='callback')return require('../lib/admin-marketing-platform').oauthCallback(req,res);
  if(url.searchParams.has('marketing'))return require('../lib/admin-marketing')(req,res);

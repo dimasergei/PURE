@@ -72,7 +72,7 @@
   const estimate=aside.querySelector('.dc-totals'),input=form.elements.coupon,apply=form.querySelector('[data-dc-apply-coupon]'),remove=form.querySelector('[data-dc-remove-coupon]'),status=form.querySelector('[data-dc-coupon-status]');let timer,sequence=0;
   const keys=['ap-checkout-coupon','ap-cart-coupon'];
   const saved=(localStorage.getItem(keys[0])||localStorage.getItem(keys[1])||'').trim().toUpperCase();
-  form.dataset.appliedCoupon=saved==='BLACKFRIDAY15'?saved:'';
+  form.dataset.appliedCoupon=saved==='BLACKFRIDAY10'?saved:'';
   keys.forEach(key=>form.dataset.appliedCoupon?localStorage.setItem(key,form.dataset.appliedCoupon):localStorage.removeItem(key));
   if(input)input.value=form.dataset.appliedCoupon;
   async function refresh(candidate=form.dataset.appliedCoupon,action='refresh'){
@@ -85,12 +85,12 @@
     if(n!==sequence)return;if(!r.ok||!Number.isSafeInteger(q.total_cents))throw Error(q.error||'Could not calculate your total.');
     if(q.currency!==(interac?'CAD':'USD')||q.request_only===true||interac&&(!q.fx_quote||!Number.isSafeInteger(q.pricing?.fx_ppm)||q.pricing.fx_ppm<=0))throw Error('The payment currency could not be verified. Refresh your order total.');
     if(interac)form.dataset.fxQuote=q.fx_quote;else delete form.dataset.fxQuote;
-    form.dataset.appliedCoupon=q.pricing?.coupon_code==='BLACKFRIDAY15'?'BLACKFRIDAY15':'';
+    form.dataset.appliedCoupon=q.pricing?.coupon_code==='BLACKFRIDAY10'?'BLACKFRIDAY10':'';
     keys.forEach(key=>form.dataset.appliedCoupon?localStorage.setItem(key,form.dataset.appliedCoupon):localStorage.removeItem(key));
     if(input)input.value=form.dataset.appliedCoupon;if(remove)remove.hidden=!form.dataset.appliedCoupon;
-    if(status)status.textContent=form.dataset.appliedCoupon?'BLACKFRIDAY15 applied — 15% off merchandise.':action==='remove'?(q.pricing?.crypto_discount_cents>0?'Coupon removed. Your 5% Crypto discount still applies.':'Coupon removed. Regular prices restored.'):'';
+    if(status)status.textContent=form.dataset.appliedCoupon?'BLACKFRIDAY10 applied — 10% off merchandise.':action==='remove'?(q.pricing?.crypto_discount_cents>0?'Coupon removed. Your 5% Crypto discount still applies.':'Coupon removed. Regular prices restored.'):'';
     const rows=[['Subtotal',q.subtotal_cents]];
-    if(q.pricing?.coupon_discount_cents>0)rows.push(['BLACKFRIDAY15 (15%)',-q.pricing.coupon_discount_cents]);
+    if(q.pricing?.coupon_discount_cents>0)rows.push(['BLACKFRIDAY10 (10%)',-q.pricing.coupon_discount_cents]);
     if(q.pricing?.crypto_discount_cents>0)rows.push(['Crypto discount (5%)',-q.pricing.crypto_discount_cents]);
     rows.push(['Delivery & options',q.shipping_cents]);if(q.tax_cents)rows.push(['Tax',q.tax_cents]);rows.push([interac?'Total (CAD)':'Estimated total',q.total_cents]);
     estimate.innerHTML=rows.map(([label,v])=>`<div class="dc-total-row"><span>${label}</span><strong>${money(v,q.currency)}</strong></div>`).join('')+(q.pricing?.discount_source==='coupon_crypto'?'<p class="dc-note">Your coupon is applied first, then an extra 5% Crypto discount on the remaining merchandise.</p>':'')+(interac?'<p class="dc-note">Your total is in CAD. Interac receiving details appear after you place the order. USD points and store credit cannot be applied to this payment.</p>':'<p class="dc-note">Existing points and store credit are applied when you review the final total.</p>');

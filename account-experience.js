@@ -26,6 +26,34 @@
  async function orders(root,auth,user,legacyApi,legacyCard){
   const query=new URLSearchParams(location.search),view=['history','tracking','pending'].includes(query.get('view'))?query.get('view'):'all';
   root.innerHTML=`<nav class="ae-subnav" aria-label="Order views">${[['all','All orders'],['pending','Awaiting payment'],['tracking','Tracking'],['history','Earlier orders']].map(([id,label])=>`<a href="/account/purchases${id==='all'?'':'?view='+id}" ${id===view?'aria-current="page"':''}>${label}</a>`).join('')}</nav><div class="ae-order-tools"><label>Search orders<input id="ae-order-search" type="search" placeholder="Order number, product or carrier"></label><a class="ap-button ap-button-secondary" href="/shop">Continue shopping</a></div><p id="ae-search-count" role="status"></p><section id="ae-current-orders"></section><section id="ae-earlier-orders"></section>`;
+  const review=query.get('review');
+  if(/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(review||'')){
+   const panel=document.createElement('section');panel.className='ae-panel';
+   panel.innerHTML='<h2>Review your order</h2><p>Share an honest rating. Eligible customers receive US$50 store credit regardless of rating, once every 90 days.</p><form class="ae-form"><label>Rating <select name="rating" required><option value="">Select a rating</option><option value="5">5 out of 5</option><option value="4">4 out of 5</option><option value="3">3 out of 5</option><option value="2">2 out of 5</option><option value="1">1 out of 5</option></select></label><button class="ap-button">Submit review</button></form><p role="status"></p>';
+   root.prepend(panel);
+   const form=panel.querySelector('form'),status=panel.querySelector('[role=status]');
+   async function reviewRequest(body){
+    const {data}=await auth.auth.getSession();
+    if(!data.session)throw Error('Sign in to continue.');
+    const response=await fetch('/api/customer-config?reviews=credit',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+data.session.access_token},body:JSON.stringify(body)});
+    const result=await response.json();
+    if(!response.ok)throw Error(result.error);
+    return result;
+   }
+   form.onsubmit=async event=>{
+    event.preventDefault();
+    const submit=form.querySelector('button');submit.disabled=true;
+    try{
+     const result=await reviewRequest({action:'submit',invoice_id:review,rating:Number(form.elements.rating.value)});
+     form.hidden=true;status.textContent='Review submitted.';
+     if(result.code&&!result.redeemed){
+      const redeem=document.createElement('button');redeem.className='ap-button';redeem.type='button';redeem.textContent='Redeem US$50 store credit';
+      panel.append(redeem);
+      redeem.onclick=async()=>{redeem.disabled=true;try{await reviewRequest({action:'redeem',code:result.code});status.textContent='US$50 store credit added to your account.';redeem.remove();}catch(error){status.textContent=error.message;redeem.disabled=false;}};
+     }
+    }catch(error){status.textContent=error.message;submit.disabled=false;}
+   };
+  }
   const current=root.querySelector('#ae-current-orders'),earlier=root.querySelector('#ae-earlier-orders');
   const tasks=[];
   if(view!=='history')tasks.push(window.DirectCheckout.orders(current,auth,user,{view}));

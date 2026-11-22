@@ -29,7 +29,7 @@ function fixture(surface,{legacyCoupon=false,balances={points:0,credit_cents:0}}
  w.eval(fs.readFileSync(surface==='cart'?'cart-reference.js':'checkout-reference.js','utf8'));
  return {dom,w,root:w.document.querySelector('main'),requests,orderRequests,auth,user};
 }
-for(const surface of ['cart','checkout'])test(surface+': regular purchased quantity, explicit 15% coupon, invalid-code recovery and removal use server totals',async()=>{
+for(const surface of ['cart','checkout'])test(surface+': regular purchased quantity, explicit 10% coupon, invalid-code recovery and removal use server totals',async()=>{
  const f=fixture(surface,{legacyCoupon:true});
  try{
   if(surface==='cart')await f.w.AltaCartNmi.offer(f.root);else await f.w.DirectCheckout.checkout(f.root,f.auth,f.user);
@@ -47,19 +47,19 @@ for(const surface of ['cart','checkout'])test(surface+': regular purchased quant
   const input=f.root.querySelector(surface==='cart'?'[name=nlc_coupon]':'[name=sidebar_coupon]');
   const apply=f.root.querySelector(surface==='cart'?'[data-nlc-apply]':'[data-nlx-coupon]');
   const remove=f.root.querySelector(surface==='cart'?'[data-nlc-remove-coupon]':'[data-nlx-remove-coupon]');
-  input.value=' blackfriday15 ';apply.click();await tick();
-  assert.equal(f.requests.at(-1).coupon,'BLACKFRIDAY15');
+  input.value=' blackfriday10 ';apply.click();await tick();
+  assert.equal(f.requests.at(-1).coupon,'BLACKFRIDAY10');
   assert.equal(f.requests.at(-1).items[0].qty,2);
-  assert.equal(f.w.localStorage.getItem('ap-checkout-coupon'),'BLACKFRIDAY15');
-  assert.equal(f.w.localStorage.getItem('ap-cart-coupon'),'BLACKFRIDAY15');
+  assert.equal(f.w.localStorage.getItem('ap-checkout-coupon'),'BLACKFRIDAY10');
+  assert.equal(f.w.localStorage.getItem('ap-cart-coupon'),'BLACKFRIDAY10');
   assert.equal(remove.hidden,false);
-  assert.match(f.root.textContent,/BLACKFRIDAY15 applied/);
-  assert.match(f.root.textContent,/\$24\.00/);
-  assert.match(f.root.textContent,surface==='cart'?/\$152\.95/:/\$148\.95/);
-  if(surface==='cart')assert.match(f.root.querySelector('[data-nlc-unlock-copy]').textContent,/\$14\.00/);
+  assert.match(f.root.textContent,/BLACKFRIDAY10 applied/);
+  assert.match(f.root.textContent,/\$16\.00/);
+  assert.match(f.root.textContent,surface==='cart'?/\$160\.95/:/\$156\.95/);
+  if(surface==='cart')assert.match(f.root.querySelector('[data-nlc-unlock-copy]').textContent,/\$6\.00/);
   input.value='BOGO';apply.click();await tick();await tick();
-  assert.equal(f.w.localStorage.getItem('ap-checkout-coupon'),'BLACKFRIDAY15','Rejected code cannot replace the applied coupon');
-  assert.match(f.root.textContent,surface==='cart'?/\$152\.95/:/\$148\.95/);
+  assert.equal(f.w.localStorage.getItem('ap-checkout-coupon'),'BLACKFRIDAY10','Rejected code cannot replace the applied coupon');
+  assert.match(f.root.textContent,surface==='cart'?/\$160\.95/:/\$156\.95/);
   assert.doesNotMatch(f.root.textContent,/BOGO applied/);
   remove.click();await tick();
   assert.equal(f.requests.at(-1).coupon,'');
@@ -75,14 +75,14 @@ test('checkout Card order quotes and places the same purchased quantity and conf
  const f=fixture('checkout');
  try{
   await f.w.DirectCheckout.checkout(f.root,f.auth,f.user);await tick();
-  f.root.querySelector('[name=sidebar_coupon]').value='BLACKFRIDAY15';f.root.querySelector('[data-nlx-coupon]').click();await tick();
+  f.root.querySelector('[name=sidebar_coupon]').value='BLACKFRIDAY10';f.root.querySelector('[data-nlx-coupon]').click();await tick();
   f.root.querySelector('[data-nlx-next]').click();f.root.querySelector('[data-nlx-next]').click();await tick();
   const cardChoice=f.root.querySelector('[name=payment_choice][value=card]');cardChoice.checked=true;cardChoice.dispatchEvent(new f.w.Event('change',{bubbles:true}));await tick();
   for(const name of ['ruo','responsibility']){const input=f.root.querySelector('[name='+name+']');input.checked=true;input.dispatchEvent(new f.w.Event('change',{bubbles:true}));}
   const place=f.root.querySelector('[data-nlx-place]');assert.equal(place.disabled,false);place.click();await tick();
   assert.equal(f.orderRequests.length,2);
   assert.equal(f.orderRequests[0].action,'quote');assert.equal(f.orderRequests[1].action,'place');
-  for(const body of f.orderRequests){assert.equal(body.items[0].qty,2);assert.equal(body.coupon,'BLACKFRIDAY15');assert.equal(body.kind,'goods');assert.equal(body.method_id,card.id);assert.equal(body.checkout_version,config.version);assert.equal(body.plan,undefined);assert.equal(body.research_builder,undefined);}
+  for(const body of f.orderRequests){assert.equal(body.items[0].qty,2);assert.equal(body.coupon,'BLACKFRIDAY10');assert.equal(body.kind,'goods');assert.equal(body.method_id,card.id);assert.equal(body.checkout_version,config.version);assert.equal(body.plan,undefined);assert.equal(body.research_builder,undefined);}
   assert.equal(f.orderRequests[1].quote,'fixture-signed-quote');
  }finally{f.dom.window.close();}
 });

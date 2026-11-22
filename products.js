@@ -4,6 +4,7 @@ const PRICE_MARKUP_FACTOR = 3;
 const CATALOG = [
   {
     id: "retatrutide",
+    display_code: "PU-1 RT",
     name: "Retatrutide",
     category: "injectables",
     group: "GLP-1 & Metabolic",
@@ -19,12 +20,13 @@ const CATALOG = [
   },
   {
     id: "tirzepatide",
+    display_code: "PU-2 TZ",
     name: "Tirzepatide",
     category: "injectables",
     group: "GLP-1 & Metabolic",
     blurb: "Dual incretin-receptor research peptide in lyophilized vials.",
     variants: [
-      ["10mg", 20],
+      ["10mg", 13],
       ["20mg", 24],
       ["30mg", 27],
       ["40mg", 30],
@@ -33,6 +35,7 @@ const CATALOG = [
   },
   {
     id: "semaglutide",
+    display_code: "PU-8",
     name: "Semaglutide",
     category: "injectables",
     group: "GLP-1 & Metabolic",
@@ -45,17 +48,19 @@ const CATALOG = [
   },
   {
     id: "5-amino-1mq",
+    display_code: "PU-9",
     name: "5-Amino-1MQ",
     category: "injectables",
     group: "GLP-1 & Metabolic",
     blurb: "Small-molecule NNMT inhibitor supplied for metabolic research.",
     variants: [
-      ["10mg", 20],
+      ["10mg", 10],
       ["50mg", 24],
     ],
   },
   {
     id: "aod-9604",
+    display_code: "PU-10",
     name: "AOD-9604",
     category: "injectables",
     group: "GLP-1 & Metabolic",
@@ -67,61 +72,69 @@ const CATALOG = [
   },
   {
     id: "cagrilintide",
+    display_code: "PU-11",
     name: "Cagrilintide",
     category: "injectables",
     group: "GLP-1 & Metabolic",
     blurb: "Long-acting amylin analog for metabolic research.",
     variants: [
-      ["5mg", 26],
+      ["5mg", 20],
       ["10mg", 29],
     ],
   },
   {
     id: "bpc-157",
+    display_code: "PU-4 BP",
     name: "BPC-157",
     category: "injectables",
     group: "Healing & Recovery",
     blurb: "Synthetic gastric pentadecapeptide fragment for tissue research.",
     variants: [
-      ["5mg", 17],
+      ["5mg", 10],
       ["10mg", 20],
     ],
   },
   {
     id: "tb-500",
+    display_code: "PU-5 TB",
     name: "TB-500",
     category: "injectables",
     group: "Healing & Recovery",
     blurb: "Thymosin beta-4 fragment supplied as a lyophilized research vial.",
     variants: [
-      ["5mg", 21],
+      ["5mg", 14],
       ["10mg", 27],
     ],
   },
   {
     id: "bpc-tb-500",
-    name: "BPC/TB-500",
+    display_code: "PU-14",
+    name: "Wolverine",
+    premixed_blend: true,
     category: "injectables",
     group: "Healing & Recovery",
     blurb: "Premixed BPC-157 and TB-500 research blend. Mass is listed per component.",
     variants: [
+      ["5mg/5mg", 22],
       ["10mg/10mg", 24],
       ["15mg/15mg", 30],
     ],
   },
   {
     id: "kpv",
+    display_code: "PU-15",
     name: "KPV",
     category: "injectables",
     group: "Healing & Recovery",
     blurb: "Alpha-MSH tripeptide fragment for inflammatory-pathway research.",
     variants: [
-      ["5mg", 18],
+      ["5mg", 9],
       ["10mg", 21],
     ],
   },
   {
     id: "ara-290",
+    display_code: "PU-16",
     name: "ARA-290",
     category: "injectables",
     group: "Healing & Recovery",
@@ -130,6 +143,7 @@ const CATALOG = [
   },
   {
     id: "ll-37",
+    display_code: "PU-17",
     name: "LL-37",
     category: "injectables",
     group: "Healing & Recovery",
@@ -141,6 +155,7 @@ const CATALOG = [
   },
   {
     id: "thymosin-alpha-1",
+    display_code: "PU-18",
     name: "Thymosin Alpha-1",
     category: "injectables",
     group: "Healing & Recovery",
@@ -149,17 +164,19 @@ const CATALOG = [
   },
   {
     id: "ghk-cu",
+    display_code: "PU-3 GHK",
     name: "GHK-Cu",
     category: "injectables",
     group: "Cosmetic & Skin",
     blurb: "Copper-binding tripeptide for extracellular-matrix research.",
     variants: [
-      ["50mg", 16],
+      ["50mg", 11],
       ["100mg", 18],
     ],
   },
   {
     id: "ahk-cu",
+    display_code: "PU-20",
     name: "AHK-Cu",
     category: "injectables",
     group: "Cosmetic & Skin",
@@ -171,7 +188,9 @@ const CATALOG = [
   },
   {
     id: "glow",
+    display_code: "PU-21",
     name: "Glow",
+    premixed_blend: true,
     category: "injectables",
     group: "Cosmetic & Skin",
     blurb: "Three-component research blend supplied as a single 70mg vial.",
@@ -179,14 +198,17 @@ const CATALOG = [
   },
   {
     id: "klow",
+    display_code: "PU-22",
     name: "KLOW",
+    premixed_blend: true,
     category: "injectables",
     group: "Cosmetic & Skin",
     blurb: "Four-component research blend supplied as a single 80mg vial.",
-    variants: [["80mg", 35]],
+    variants: [["80mg", 39]],
   },
   {
     id: "snap8",
+    display_code: "PU-23",
     name: "Snap8",
     category: "injectables",
     group: "Cosmetic & Skin",
@@ -195,6 +217,7 @@ const CATALOG = [
   },
   {
     id: "cjc-1295-no-dac",
+    display_code: "PU-24",
     name: "CJC-1295 No DAC",
     category: "injectables",
     group: "Growth Hormone",
@@ -206,6 +229,7 @@ const CATALOG = [
   },
   {
     id: "cjc-1295-dac",
+    display_code: "PU-25",
     name: "CJC-1295 W/DAC",
     category: "injectables",
     group: "Growth Hormone",
@@ -217,14 +241,16 @@ const CATALOG = [
   },
   {
     id: "cjc-ipamorelin",
+    display_code: "PU-26",
     name: "CJC/Ipamorelin",
     category: "injectables",
     group: "Growth Hormone",
     blurb: "Premixed GHRH analog and Ipamorelin. Mass is listed per component.",
-    variants: [["10mg/10mg", 24]],
+    variants: [["10mg/10mg", 23]],
   },
   {
     id: "ipamorelin",
+    display_code: "PU-27",
     name: "Ipamorelin",
     category: "injectables",
     group: "Growth Hormone",
@@ -236,6 +262,7 @@ const CATALOG = [
   },
   {
     id: "sermorelin",
+    display_code: "PU-28",
     name: "Sermorelin",
     category: "injectables",
     group: "Growth Hormone",
@@ -247,17 +274,19 @@ const CATALOG = [
   },
   {
     id: "tesamorelin",
+    display_code: "PU-29",
     name: "Tesamorelin",
     category: "injectables",
     group: "Growth Hormone",
     blurb: "Stabilized GHRH analog supplied as a lyophilized vial.",
     variants: [
-      ["10mg", 26],
+      ["10mg", 34],
       ["20mg", 38],
     ],
   },
   {
     id: "tesa-ipa",
+    display_code: "PU-30",
     name: "Tesa/IPA",
     category: "injectables",
     group: "Growth Hormone",
@@ -266,6 +295,7 @@ const CATALOG = [
   },
   {
     id: "semax",
+    display_code: "PU-31",
     name: "Semax",
     category: "injectables",
     group: "Cognitive & Nootropic",
@@ -277,6 +307,7 @@ const CATALOG = [
   },
   {
     id: "selank",
+    display_code: "PU-32",
     name: "Selank",
     category: "injectables",
     group: "Cognitive & Nootropic",
@@ -288,6 +319,7 @@ const CATALOG = [
   },
   {
     id: "semax-selank",
+    display_code: "PU-33",
     name: "Semax/Selank",
     category: "injectables",
     group: "Cognitive & Nootropic",
@@ -296,6 +328,7 @@ const CATALOG = [
   },
   {
     id: "adamax",
+    display_code: "PU-34",
     name: "Adamax",
     category: "injectables",
     group: "Cognitive & Nootropic",
@@ -304,6 +337,7 @@ const CATALOG = [
   },
   {
     id: "pinealon",
+    display_code: "PU-35",
     name: "Pinealon",
     category: "injectables",
     group: "Cognitive & Nootropic",
@@ -312,6 +346,7 @@ const CATALOG = [
   },
   {
     id: "dsip",
+    display_code: "PU-36",
     name: "DSIP",
     category: "injectables",
     group: "Cognitive & Nootropic",
@@ -323,17 +358,19 @@ const CATALOG = [
   },
   {
     id: "nad",
+    display_code: "PU-37",
     name: "NAD+",
     category: "injectables",
     group: "Longevity",
     blurb: "Nicotinamide adenine dinucleotide for redox research.",
     variants: [
-      ["500mg", 22],
+      ["500mg", 14],
       ["1000mg", 27],
     ],
   },
   {
     id: "epithalon",
+    display_code: "PU-38",
     name: "Epithalon",
     category: "injectables",
     group: "Longevity",
@@ -345,6 +382,7 @@ const CATALOG = [
   },
   {
     id: "glutathione",
+    display_code: "PU-39",
     name: "Glutathione",
     category: "injectables",
     group: "Longevity",
@@ -356,17 +394,19 @@ const CATALOG = [
   },
   {
     id: "ss-31",
+    display_code: "PU-40",
     name: "SS-31",
     category: "injectables",
     group: "Longevity",
     blurb: "Mitochondria-targeted tetrapeptide for organelle research.",
     variants: [
-      ["10mg", 23],
+      ["10mg", 18],
       ["50mg", 41],
     ],
   },
   {
     id: "mots-c",
+    display_code: "PU-41",
     name: "MOTS-C",
     category: "injectables",
     group: "Longevity",
@@ -379,6 +419,7 @@ const CATALOG = [
   },
   {
     id: "b-12",
+    display_code: "PU-42",
     name: "B-12",
     category: "injectables",
     group: "Longevity",
@@ -387,14 +428,16 @@ const CATALOG = [
   },
   {
     id: "melanotan-ii",
+    display_code: "PU-43",
     name: "Melanotan II",
     category: "injectables",
     group: "Sexual & Hormonal",
     blurb: "Cyclic melanocortin analog for receptor research.",
-    variants: [["10mg", 19]],
+    variants: [["10mg", 12]],
   },
   {
     id: "melanotan-1",
+    display_code: "PU-44",
     name: "Melanotan 1",
     category: "injectables",
     group: "Sexual & Hormonal",
@@ -403,6 +446,7 @@ const CATALOG = [
   },
   {
     id: "pt-141",
+    display_code: "PU-45",
     name: "PT-141",
     category: "injectables",
     group: "Sexual & Hormonal",
@@ -411,6 +455,7 @@ const CATALOG = [
   },
   {
     id: "kisspeptin",
+    display_code: "PU-46",
     name: "Kisspeptin",
     category: "injectables",
     group: "Sexual & Hormonal",
@@ -422,6 +467,7 @@ const CATALOG = [
   },
   {
     id: "oxytocin",
+    display_code: "PU-47",
     name: "Oxytocin",
     category: "injectables",
     group: "Sexual & Hormonal",
@@ -433,6 +479,7 @@ const CATALOG = [
   },
   {
     id: "vip",
+    display_code: "PU-48",
     name: "VIP",
     category: "injectables",
     group: "Sexual & Hormonal",

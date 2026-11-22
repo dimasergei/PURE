@@ -89,7 +89,7 @@
       "title": "Catalog pricing, member discounts and explicit coupon",
       "state": "implemented",
       "owner": "Owner / Engineering",
-      "next": "Regular catalog prices apply at every quantity. Checkout uses the better of the paid member discount (WHITE 5%, BLACK 10%) or entered BLACKFRIDAY15 (15%), followed by an eligible direct Crypto saving of 5% on remaining merchandise. Membership fees, shipping, tax and fees receive no merchandise discount. No volume, bank or customer-referral discount or free purchased units is added.",
+      "next": "Regular catalog prices apply at every quantity. Checkout uses the better of the paid member discount (WHITE 5%, BLACK 10%) or entered BLACKFRIDAY10 (10%), followed by an eligible direct Crypto saving of 5% on remaining merchandise. Membership fees, shipping, tax and fees receive no merchandise discount. No volume, bank or customer-referral discount or free purchased units is added.",
       "done_when": "Cart quotes and persisted checkout totals agree; member/coupon and Crypto savings are shown correctly, fee purchases remain full price, and stale quotes fail closed."
     },
     {

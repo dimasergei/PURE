@@ -11,16 +11,16 @@ vm.createContext(sandbox);
 vm.runInContext(`${source}; globalThis.catalog = CATALOG; globalThis.groups = GROUPS;`, sandbox);
 const { catalog, groups } = sandbox;
 
-test("original catalog, descriptions, sizes and pricing are byte-identical", () => {
+test("catalog matches the approved product source snapshot", () => {
   assert.equal(
     createHash("sha256").update(source).digest("hex"),
-    "683c78e7a39e1c75d20a32bba52ce27f9a372d9a8a89eba9b2ebd97f024b7f50"
+    "3943eb8da11e5f70054d87949311ceb1cb4fc3f6470a84c06c0aaa47ac3dd14d"
   );
 });
 
 test("current products and variants remain unique and valid", () => {
   assert.equal(catalog.length, 46);
-  assert.equal(catalog.reduce((sum, product) => sum + product.variants.length, 0), 84);
+  assert.equal(catalog.reduce((sum, product) => sum + product.variants.length, 0), 85);
   assert.equal(new Set(catalog.map((product) => product.id)).size, 46);
   for (const product of catalog) {
     assert.ok(groups.includes(product.group), product.name);
@@ -31,8 +31,8 @@ test("current products and variants remain unique and valid", () => {
   }
 });
 
-test("featured and spotlight entries keep their original minimum prices", () => {
-  for (const [id, expected] of [["retatrutide", 66], ["tirzepatide", 60], ["semaglutide", 63], ["bpc-157", 51]]) {
+test("featured and spotlight entries show the configured minimum prices", () => {
+  for (const [id, expected] of [["retatrutide", 66], ["tirzepatide", 39], ["semaglutide", 63], ["bpc-157", 30]]) {
     const product = catalog.find((item) => item.id === id);
     assert.equal(Math.min(...product.variants.map((variant) => variant.price)), expected);
   }
@@ -81,6 +81,6 @@ test("category cards keep the PURE neutral palette and variants resolve to their
     }
   }
   assert.equal(brandedPhotos, 83);
-  assert.deepEqual(fallbacks, [["needles", "10pk"]], "Only the product without a matching supplied photograph retains its existing fallback.");
+  assert.deepEqual(fallbacks, [["bpc-tb-500", "5mg/5mg"], ["needles", "10pk"]], "Variants without a branded image use the supplied fallback.");
   assert.match(readFileSync(resolve(__dirname, "../assets/pure-brand-label.svg"), "utf8"), /<title[^>]*>PURE<\/title>/);
 });

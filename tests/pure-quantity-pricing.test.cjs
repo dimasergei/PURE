@@ -26,9 +26,9 @@ test('only total BULK unit count unlocks 20% at ten and 50% at fifty',()=>{
  assert.throws(()=>tiers.bulkRate(-1),/Invalid/);
 });
 test('normal coupon and membership savings still apply, without quantity tiers',()=>{
- const c=quote([line(2,'a'),line(5,'b'),line(10,'c')],'BLACKFRIDAY15');
- assert.equal(c.discount_cents,Math.round(17*5000*.15));
- assert.ok(c.lines.every(x=>x.discount_reason==='coupon_blackfriday15'));
+ const c=quote([line(2,'a'),line(5,'b'),line(10,'c')],'BLACKFRIDAY10');
+ assert.equal(c.discount_cents,Math.round(17*5000*.10));
+ assert.ok(c.lines.every(x=>x.discount_reason==='coupon_blackfriday10'));
  const black=quote([line(2,'a'),line(5,'b'),line(10,'c')],'',{plan:'elite'});
  assert.equal(black.discount_cents,17*500);
  assert.ok(black.lines.every(x=>x.discount_reason==='membership_elite'));

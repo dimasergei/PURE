@@ -3,9 +3,11 @@
 const fs = require('node:fs');
 const { partner, free_shipping_threshold_cents } = require('../config/conversion.json');
 
+const { promotions } = require('../config/checkout.json');
+
 const offers = [
-  { name: 'PURE draft', shipping: free_shipping_threshold_cents, bac: 25000, keychain: 30000 },
-  { name: 'Higher thresholds', shipping: 25000, bac: 30000, keychain: 30000 },
+  { name: 'Regular checkout', shipping: free_shipping_threshold_cents, bac: 25000, bogo: false },
+  { name: 'BOGO campaign', shipping: 25000, bac: 25000, bogo: true },
 ];
 const affiliateMinimum = 10000;
 
@@ -17,7 +19,7 @@ function integer(value, name, min = 0, max = 100000000) {
 }
 
 function evaluate(cart, route, offer, commissionBps) {
-  const affiliateDiscountBps = integer(cart.affiliateDiscountBps, 'Affiliate discount basis points', 0, 10000);
+  if (typeof cart.applyBlackFridayCode !== 'boolean') throw new Error('Specify whether BLACKFRIDAY10 is applied');
   if (!['none', 'first', 'repeat'].includes(cart.referral)) throw new Error('Invalid referral type');
   if (!Array.isArray(cart.items) || !cart.items.length || cart.items.length > 100) {
     throw new Error('Provide 1–100 cart lines');
@@ -26,26 +28,28 @@ function evaluate(cart, route, offer, commissionBps) {
     if (typeof sku !== 'string' || !sku.trim()) throw new Error('SKU required');
     if (typeof bogoEligible !== 'boolean') throw new Error('Specify BOGO eligibility for ' + sku);
     const quantity = integer(paid, 'Paid quantity', 1, 10000);
-    const free = bogoEligible ? quantity : 0;
+    const free = offer.bogo && bogoEligible ? quantity : 0;
     return { sku, quantity, free, subtotal: quantity * integer(priceCents, 'Unit price', 1, 1000000) };
   });
   const subtotal = integer(rows.reduce((sum, row) => sum + row.subtotal, 0), 'Cart subtotal');
-  const codeEligible = cart.referral === 'first' && subtotal >= affiliateMinimum;
-  const merchandise = subtotal - (codeEligible ? Math.round(subtotal * affiliateDiscountBps / 10000) : 0);
-  const gifts = Object.entries({ bac: offer.bac, keychain: offer.keychain })
+  const discount = cart.applyBlackFridayCode ? Math.round(subtotal * promotions.coupon_discount_bps / 10000) : 0;
+  const merchandise = subtotal - discount;
+  const codeEligible = cart.referral === 'first' && merchandise >= affiliateMinimum && !cart.applyBlackFridayCode;
+  const freeUnits = rows.reduce((sum, row) => sum + row.free, 0);
+  const gifts = Object.entries({ bac: offer.bac })
     .filter(([, threshold]) => merchandise >= threshold).map(([gift]) => gift);
   const missing = rows.filter(({ sku }) => !Object.hasOwn(route.unitCostCents, sku)).map(({ sku }) => sku);
   missing.push(...gifts.filter(gift => !Object.hasOwn(route.giftCostCents, gift)));
   if (missing.length || route.confirmed !== true) {
-    return { subtotal, merchandise, gifts, codeEligible, status: 'blocked', missing, routeConfirmed: route.confirmed === true };
+    return { subtotal, merchandise, discount, freeUnits, gifts, codeEligible, status: 'blocked', missing, routeConfirmed: route.confirmed === true };
   }
   const unitCost = rows.reduce((sum, row) => sum + (row.quantity + row.free) *
     integer(route.unitCostCents[row.sku], row.sku + ' unit cost'), 0);
   const giftCost = gifts.reduce((sum, gift) => sum + integer(route.giftCostCents[gift], gift + ' cost'), 0);
-  const shippingCollected = merchandise >= offer.shipping ? 0 : integer(route.shippingChargedCents, 'Shipping charged');
+  const shippingCollected = merchandise >= (freeUnits ? offer.shipping : free_shipping_threshold_cents) ? 0 : integer(route.shippingChargedCents, 'Shipping charged');
   const shippingCost = integer(route.shippingCostCents, 'Shipping cost');
   const payoutRate = cart.referral === 'none' ? 0 : cart.referral === 'repeat' ? partner.repeat_order_bps : commissionBps;
-  const commission = Math.round(merchandise * payoutRate / 10000);
+  const commission = Math.floor(merchandise * payoutRate / 10000);
   const fees = integer(route.paymentFixedCents, 'Fixed payment fee') +
     Math.round((merchandise + shippingCollected) * integer(route.paymentBps, 'Payment fee basis points', 0, 10000) / 10000);
   const reserve = integer(route.refundReserveCents, 'Refund reserve');
@@ -53,7 +57,7 @@ function evaluate(cart, route, offer, commissionBps) {
   const contribution = merchandise + shippingCollected - unitCost - giftCost - shippingCost - commission - fees - reserve - pickPack;
   const marginFloor = integer(cart.minimumMarginBps, 'Minimum margin basis points', 0, 10000);
   const requiredContribution = Math.ceil(merchandise * marginFloor / 10000);
-  return { subtotal, merchandise, codeEligible, gifts, shippingCollected, shippingCost, unitCost, giftCost,
+  return { subtotal, merchandise, discount, freeUnits, codeEligible, gifts, shippingCollected, shippingCost, unitCost, giftCost,
     commission, fees, reserve, pickPack, contribution, requiredContribution,
     status: contribution >= requiredContribution && merchandise > 0 ? 'passes_margin' : 'below_margin' };
 }
@@ -61,10 +65,10 @@ function evaluate(cart, route, offer, commissionBps) {
 function compare(input) {
   if (!input.carts?.length || !input.routes?.length) throw new Error('Provide carts and confirmed single-supplier routes');
   return input.routes.flatMap(route => input.carts.flatMap(cart => offers.flatMap(offer =>
-    [partner.first_order_bps, 4000].map(commissionBps => ({
-      route: route.name, cart: cart.name, offer: offer.name, firstOrderCommissionBps: commissionBps,
-      ...evaluate(cart, route, offer, commissionBps),
-    })),
+    [{
+      route: route.name, cart: cart.name, offer: offer.name, firstOrderCommissionBps: partner.first_order_bps,
+      ...evaluate(cart, route, offer, partner.first_order_bps),
+    }],
   )));
 }
 

@@ -33,7 +33,7 @@ test('PURE memberships execute verified fees and goods benefits atomically in di
  const member=async customer=>(await db.query('select * from commerce_internal.active_paid_membership($1,now())',[customer])).rows[0];
  const count=async(table,id)=>(await db.query('select count(*)::int n from '+table+(id?' where invoice_id=$1':''),id?[id]:[])).rows[0].n;
  let methods={};
- async function make({kind='goods',plan='vip',period='monthly',customer=randomUUID(),route='card',coupon='',points=0,credit=0,shipping='standard',extras=[],country=route==='interac'?'CA':'US',items,cat=catalog,rate=1375000,builder=false,bulk=false,membershipAddon=null}={}){
+ async function make({kind='goods',plan='vip',period='monthly',customer=randomUUID(),route='card',coupon='',points=0,credit=0,shipping='standard',extras=[],country=route==='interac'?'CA':'US',items,cat=catalog,rate=1375000,builder=false,bulk=false,membershipAddon=null,referral=null,campaign}={}){
   const method=methods[route],user={id:customer,email:'membership-fixture@example.test'};
   const body={id:randomUUID(),kind,plan:kind==='membership'?plan:undefined,billing_period:kind==='membership'?period:undefined,
    method_id:method.id,checkout_version:config.version,consent:true,research_use:true,name:'Isolated researcher',
@@ -49,7 +49,7 @@ test('PURE memberships execute verified fees and goods benefits atomically in di
   }
   const membership=await member(customer);
   const balance=(await db.query('select points,credit_cents from commerce_balance_accounts where customer_id=$1',[customer])).rows[0]||{points:0,credit_cents:0};
-  const result=checkout.price(record,method,membership?.invoice_id?membership:null,balance,null,delivery.defaults,route==='interac'?fxQuote(rate):null);
+  const result=checkout.price(record,method,membership?.invoice_id?membership:null,balance,referral,delivery.defaults,route==='interac'?fxQuote(rate):null,campaign);
   return {...record,...result,checkout_version:route==='interac'?checkout.INTERAC_VERSION:config.version};
  }
  const place=p=>rpc(p.currency==='CAD'?'commerce_place_interac_checkout':'commerce_place_checkout',[p]);
@@ -67,7 +67,7 @@ test('PURE memberships execute verified fees and goods benefits atomically in di
   await db.exec('create role anon;create role authenticated;create role service_role bypassrls;create schema auth;create table auth.users(id uuid primary key);create schema commerce_internal;');
   for(const file of [
    '20261110040926_manual_invoice_commerce.sql','20261110074742_payment_provider_options.sql','20261110164316_native_gateway_checkout.sql',
-   '20261111013606_peptidepay_invoice_sessions.sql','20261111025932_direct_checkout_balances.sql','20261111163930_conversion_memberships_partners.sql',
+   '20261111013606_peptidepay_invoice_sessions.sql','20261110061306_invoice_notification_outbox.sql','20261111025932_direct_checkout_balances.sql','20261111163930_conversion_memberships_partners.sql',
    '20261111174353_partner_settings_supplier_queue.sql','20261111195957_unified_supplier_fulfillment.sql','20261111210000_single_supplier_per_order.sql',
    '20261112211215_rampex_order_payment_mapping.sql','20261112221052_rampex_multi_hosted.sql','20261113003946_rampex_stripe_only.sql','20261113030240_safe_checkout_cancellation.sql',
    '20261114211235_platinum_membership_benefits.sql','20261115090000_research_subscriptions.sql','20261116140000_unified_order_management.sql',
@@ -106,11 +106,136 @@ test('PURE memberships execute verified fees and goods benefits atomically in di
   for(const file of ['20261120103000_economy_shipping_lower_rates.sql',
      '20261120115000_combined_member_checkout_validation.sql',
      '20261120115500_combined_membership_lifecycle_part1.sql',
-     '20261120120000_combined_membership_lifecycle_part2.sql']){
+     '20261120120000_combined_membership_lifecycle_part2.sql',
+     '20261122000100_campaign_bac_fulfillment.sql',
+     '20261122000200_partner_commission_rates.sql',
+     '20261122000300_partner_chargebacks.sql',
+     '20261122000400_storefront_reviews.sql','20261122000500_review_credit.sql',
+     '20261122000700_bogo_fulfillment.sql','20261122000800_blackfriday10_checkout.sql']){
    try{await db.exec(read(file));}catch(error){error.message=file+': '+error.message;throw error;}
   }
   for(const route of Object.keys(ids))methods[route]=(await db.query('select * from commerce_payment_methods where id=$1',[ids[route]])).rows[0];
 
+  await t.test('paid domestic and international orders retain their destination in the manual queue',async()=>{
+   await db.query("update commerce_gateway_accounts set countries=array['US','CA','GB'] where method_id=$1",[ids.card]);
+   try{
+    const items=[{id:'fixture-a',size:'5mg',qty:3}];
+    const campaign={ends_at:new Date(Date.now()+600000).toISOString(),eligible_variants:['fixture-a:5mg']};
+    for(const [country,route,shipping] of [['US','card','standard'],['CA','interac','standard'],['GB','card','standard']]){
+     const p=await make({items,campaign,country,route,shipping});
+     await place(p);await pay(p);
+     const order=await load(p.id);
+     assert.equal(order.request_data.address.country,country);
+     assert.equal(order.status,'paid');
+     const rows=(await db.query('select variant_key,route,item from commerce_fulfillment_items where invoice_id=$1 order by variant_key',[p.id])).rows;
+     assert.deepEqual(rows.map(({variant_key,route,item})=>[variant_key,route,item.qty]),
+      [['fixture-a|5mg','manual',6],['gift-bac-3|3 mL','manual',1]]);
+     assert.equal(rows[0].item.bogo_free_qty,3);
+     assert.equal(await count('commerce_supplier_jobs',p.id),0);
+    }
+   }finally{
+    await db.query("update commerce_gateway_accounts set countries=array['US','CA'] where method_id=$1",[ids.card]);
+   }
+  });
+  await t.test('BOGO sends one free unit per paid unit and preserves paid shipping and blend exclusion',async()=>{
+   const cat=[{...catalog[0],variants:[{size:'5mg',price:40}]},
+     {id:'klow',name:'KLOW',variants:[{size:'80mg',price:117}]}];
+   const campaign={ends_at:new Date(Date.now()+600000).toISOString(),eligible_variants:['fixture-a:5mg']};
+   const onlyPaid=[{id:'fixture-a',size:'5mg',qty:1}];
+   const small=await make({cat,campaign,items:onlyPaid});
+   assert.equal(small.subtotal_cents,4000);
+   assert.ok(small.shipping_cents>0);
+   const refundSafe=await make({cat,campaign:{...campaign,ends_at:'2000-01-01T00:00:00Z'},items:onlyPaid});
+   await assert.rejects(place(refundSafe),/offer changed/);
+   const p=await make({cat,campaign});
+   assert.deepEqual(p.pricing.bogo_campaign.free_units,[{id:'fixture-a',size:'5mg',qty:1}]);
+   assert.equal(p.subtotal_cents,15700);
+   assert.ok(p.shipping_cents>0);
+   for(const cents of [24999,25000,25001]){
+    const thresholdCatalog=[{...cat[0],variants:[{size:'5mg',price:cents/100}]}];
+    const thresholdOrder=await make({cat:thresholdCatalog,campaign});
+    assert.equal(thresholdOrder.shipping_cents===0,cents>=25000);
+    await place(thresholdOrder);
+   }
+   await place(p);await pay(p);
+   const rows=(await db.query('select item from commerce_fulfillment_items where invoice_id=$1 order by variant_key',[p.id])).rows;
+   assert.deepEqual(rows.map(({item})=>[item.id,item.qty,item.bogo_free_qty||0]),[['fixture-a',2,1],['klow',1,0]]);
+   const confirmation=(await db.query("select * from commerce_notifications where invoice_id=$1 and audience='customer' and event_action='payment_recorded'",[p.id])).rows;
+   assert.equal(confirmation.length,1);
+   const message=require('../lib/invoice-notifications').envelope({...confirmation[0],detail:await load(p.id)},
+     {ORDER_CONFIRMATION_FROM:'PURE <orders@getpurelabs.com>'});
+   assert.match(message.text,/Fixture A — complimentary/);
+   assert.match(message.html,/Fixture A — complimentary/);
+   assert.match(message.text,new RegExp((p.total_cents/100).toFixed(2).replace('.', '\\.')));
+  });
+  await t.test('review invitation waits seven days and earns one redeemable US$50 credit per customer',async()=>{
+   const customer=randomUUID();
+   async function deliver(){
+    const order=await make({customer});await place(order);await pay(order);
+    await db.query("update commerce_fulfillment_items set status='delivered' where invoice_id=$1",[order.id]);
+    await db.query("update commerce_invoices set status='delivered' where id=$1",[order.id]);
+    const notification=(await db.query("select *, extract(epoch from (next_attempt_at-created_at))::int delay from commerce_notifications where invoice_id=$1 and event_action='review_invitation'",[order.id])).rows[0];
+    assert.equal(notification.delay,604800);
+    const email=require('../lib/invoice-notifications').envelope(notification,{ORDER_CONFIRMATION_FROM:'PURE <orders@getpurelabs.com>'});
+    assert.match(email.text,/regardless of rating/);
+    await assert.rejects(rpc('commerce_submit_review',[customer,order.id,1]),/unavailable/);
+    await db.query("update commerce_review_invitations set due_at=now()-interval '1 second' where invoice_id=$1",[order.id]);
+    return order;
+   }
+   const first=await deliver();
+   await assert.rejects(rpc('commerce_submit_review',[randomUUID(),first.id,5]),/unavailable/);
+   const reward=await rpc('commerce_submit_review',[customer,first.id,1]);
+   assert.ok(reward.code);
+   assert.equal((await rpc('commerce_redeem_review_credit',[customer,reward.code])).credited_cents,5000);
+   await assert.rejects(rpc('commerce_redeem_review_credit',[customer,reward.code]),/already redeemed/);
+   const second=await deliver();
+   assert.equal((await rpc('commerce_submit_review',[customer,second.id,5])).code,null);
+   assert.deepEqual(await rpc('commerce_storefront_review_summary',[]),{count:2,rating:3});
+  });
+  await t.test('three premixed blends checkout and allocate exactly one vial per SKU',async()=>{
+   const variants={'bpc-tb-500':'5mg/5mg',glow:'70mg',klow:'80mg'};
+   const source=fs.readFileSync(path.join(__dirname,'../products.js'),'utf8');
+   const cat=require('node:vm').runInNewContext(source+'; CATALOG');
+   const items=Object.entries(variants).map(([id,size])=>({id,size,qty:1}));
+   const p=await make({cat,items});
+   assert.equal(p.subtotal_cents,27900);
+   assert.equal(p.pricing.campaign_bac,true);
+   await place(p);await pay(p);
+   const allocations=(await db.query("select item from commerce_fulfillment_items where invoice_id=$1 and variant_key<>'gift-bac-3|3 mL'",[p.id])).rows;
+   assert.deepEqual(allocations.map(({item})=>[item.id,item.qty]).sort(),Object.keys(variants).sort().map(id=>[id,1]));
+  });
+  await t.test('paid partner orders accrue 40% first and 10% repeat, and refunds reverse commissions',async()=>{
+   const customer=randomUUID(), partner=randomUUID(), code='FIXTUREPARTNER';
+   await rpc('commerce_join_partner',[partner,code,'partner-2026-11-v1']);
+   const first=await make({customer,coupon:code,referral:{customer_id:partner,code,first_order:true}});
+   await place(first);await pay(first);
+   const ledger=async id=>(await db.query('select rate_bps,amount_cents,status from commerce_partner_commissions where invoice_id=$1',[id])).rows;
+   assert.deepEqual(await ledger(first.id),[{rate_bps:4000,amount_cents:8000,status:'pending'}]);
+   const secondCodeAttempt=await make({customer,coupon:code,referral:{customer_id:partner,code,first_order:true}});
+   await assert.rejects(place(secondCodeAttempt),/already used/);
+   const repeat=await make({customer});await place(repeat);await pay(repeat);
+   assert.deepEqual(await ledger(repeat.id),[{rate_bps:1000,amount_cents:2000,status:'pending'}]);
+   for(let i=0;i<2;i++) await rpc('commerce_reverse_partner_chargeback',[repeat.id,'FIXTURE-CHARGEBACK-1']);
+   assert.deepEqual(await ledger(repeat.id),[{rate_bps:1000,amount_cents:2000,status:'reversed'}]);
+   await assert.rejects(rpc('commerce_reverse_partner_chargeback',[repeat.id,'FIXTURE-CHARGEBACK-2']),/already recorded/);
+   await refund(first);
+   assert.deepEqual(await ledger(first.id),[{rate_bps:4000,amount_cents:8000,status:'reversed'}]);
+  });
+  await t.test('the discounted BAC threshold survives payment and seeds exactly one free item',async()=>{
+   for(const route of ['card','interac']){
+    for(const cents of [24999,25000,25001]){
+     const cat=[{...catalog[0],variants:[{size:'5mg',price:cents/100}]}];
+     const p=await make({cat,route});
+     const eligible=cents>=25000;
+     assert.equal(Boolean(p.pricing.campaign_bac),eligible);
+     await place(p);await pay(p);
+     await db.query('select commerce_internal.fulfillment_seed($1)',[p.id]);
+     const gifts=(await db.query("select item from commerce_fulfillment_items where invoice_id=$1 and variant_key='gift-bac-3|3 mL'",[p.id])).rows;
+     assert.equal(gifts.length,eligible?1:0);
+     if(eligible)assert.deepEqual([gifts[0].item.qty,gifts[0].item.unit_price_usd_cents],[1,0]);
+    }
+   }
+  });
   await t.test('migration preserves history, retired recurring guards, and inactive/old Stripe receiving routes',async()=>{
    assert.deepEqual((await db.query('select to_jsonb(m) row from commerce_memberships m where invoice_id=$1',[expiredInvoice])).rows[0].row,historyBefore);
    const after=await load(historicalOrder);delete after.membership_invoice_id;delete after.priority_fulfillment;assert.deepEqual(after,historicalBefore);
@@ -123,9 +248,9 @@ test('PURE memberships execute verified fees and goods benefits atomically in di
 
   await t.test('deployed v7 USD and v1 CAD goods still place and settle after migration without opening legacy programs',async()=>{
    const legacy=async route=>{
-    const p=await make({route,coupon:'BLACKFRIDAY15'}),cad=p.currency==='CAD';
+    const p=await make({route}),cad=p.currency==='CAD';
     p.checkout_version=p.pricing.checkout_version=cad?'checkout-interac-cad-2026-11-v1':'checkout-2026-11-v7';
-    p.request.checkout.version='checkout-2026-11-v7';p.pricing.conversion_version='conversion-2026-11-v2';
+    p.pricing.promotion_version='blackfriday15-2026-11-v1';p.request.checkout.version='checkout-2026-11-v7';p.pricing.conversion_version='conversion-2026-11-v2';
     for(const key of ['membership_plan','membership_name','membership_discount_bps','membership_discount_cents','membership_benefits','usd_earned_points_basis_cents'])delete p.pricing[key];
     for(const line of p.pricing.lines)delete line.membership_discount_cents;
     delete p.pricing.delivery.membership_shipping;
@@ -216,7 +341,7 @@ test('PURE memberships execute verified fees and goods benefits atomically in di
    const changes=[p=>p.plan='admin',p=>p.plan='elite',p=>p.request.billing_period='weekly',p=>p.request.items[0].unit_price_usd_cents=1,
     p=>p.pricing.automatic_renewal=true,p=>p.pricing.billing_mode='recurring',p=>p.request.automatic_renewal=true,
     p=>p.total_cents--,p=>p.pricing.lines[0].line_total_cents--,p=>p.discount_cents=1,p=>p.points_redeemed=100,p=>p.earned_points=1,
-    p=>p.request.checkout.coupon='BLACKFRIDAY15',p=>p.pricing.crypto_discount_cents=1,p=>p.membership_invoice_id=expiredInvoice,
+    p=>p.request.checkout.coupon='BLACKFRIDAY10',p=>p.pricing.crypto_discount_cents=1,p=>p.membership_invoice_id=expiredInvoice,
     p=>p.checkout_version='checkout-2026-11-v7',p=>p.method_version--,p=>p.request.subscription=true];
    for(const change of changes){const p=await make({kind:'membership'});change(p);await assert.rejects(place(p));assert.equal(await load(p.id),undefined);}
    const cad=await make({kind:'membership',route:'interac'});cad.pricing.fx.expires_at='2020-01-01T00:00:00Z';await assert.rejects(place(cad),/expired/);
@@ -234,7 +359,7 @@ test('PURE memberships execute verified fees and goods benefits atomically in di
 
   await t.test('best member/coupon savings, additional Crypto savings and delivery match server prices across rounding boundaries',async()=>{
    const white=await enroll({plan:'vip'}),black=await enroll({plan:'elite'});
-   for(const customer of [randomUUID(),white.customer_id,black.customer_id])for(const route of ['card','crypto','interac'])for(const coupon of ['','BLACKFRIDAY15'])for(const cents of [1,9,19,21,1999]){
+   for(const customer of [randomUUID(),white.customer_id,black.customer_id])for(const route of ['card','crypto','interac'])for(const coupon of ['','BLACKFRIDAY10'])for(const cents of [1,9,19,21,1999]){
     const cat=catalog.slice(0,2).map(x=>({...x,variants:[{...x.variants[0],price:cents/100}]}));
     const p=await make({customer,route,coupon,cat,shipping:'express',extras:['protection']});
     await db.query('select commerce_internal.validate_membership_checkout($1::jsonb)',[JSON.stringify(p)]);
@@ -271,7 +396,7 @@ test('PURE memberships execute verified fees and goods benefits atomically in di
    const black=await enroll({plan:'elite'});
    const changes=[p=>p.membership_invoice_id=randomUUID(),p=>p.pricing.membership_plan='vip',p=>p.pricing.membership_discount_bps=500,
     p=>p.pricing.membership_benefits.free_bac_water_3ml=false,p=>p.pricing.membership_discount_cents++,p=>p.pricing.lines[0].membership_discount_cents++,
-    p=>p.pricing.lines[0].crypto_discount_cents++,p=>p.pricing.lines[0].discount_reason='coupon_blackfriday15',p=>p.pricing.usd_earned_points_basis_cents++,
+    p=>p.pricing.lines[0].crypto_discount_cents++,p=>p.pricing.lines[0].discount_reason='coupon_blackfriday10',p=>p.pricing.usd_earned_points_basis_cents++,
     p=>p.earned_points++,p=>p.pricing.delivery.membership_shipping=false,p=>p.pricing.delivery.extras[0].amount_cents=100];
    for(const change of changes){const p=await make({customer:black.customer_id,route:'crypto',shipping:'express',extras:['priority']});change(p);await assert.rejects(place(p));assert.equal(await load(p.id),undefined);}
    assert.deepEqual((await db.query('select points,credit_cents from commerce_balance_accounts where customer_id=$1',[black.customer_id])).rows[0],{points:0,credit_cents:0});
@@ -366,10 +491,10 @@ test('PURE memberships execute verified fees and goods benefits atomically in di
      ['vip','monthly',1999,500],['vip','annual',19190,500],
      ['elite','monthly',9999,1000],['elite','annual',95990,1000]]){
     const customer=randomUUID(),addon={plan,period};
-    const order=await make({customer,items:[{id:'fixture-a',size:'5mg',qty:1}],coupon:'BLACKFRIDAY15',membershipAddon:addon});
+    const order=await make({customer,items:[{id:'fixture-a',size:'5mg',qty:1}],coupon:'BLACKFRIDAY10',membershipAddon:addon});
     assert.equal(order.pricing.membership_addon.fee_cents,fee);
     assert.equal(order.pricing.membership_discount_bps,rate);
-    assert.equal(order.pricing.coupon_discount_cents,1500);
+    assert.equal(order.pricing.coupon_discount_cents,1000);
     assert.equal(order.subtotal_cents,order.pricing.subtotal_cents+fee);
     assert.equal(order.membership_invoice_id,null);
     const forged=structuredClone(order);forged.pricing.membership_addon.fee_cents--;

@@ -29,7 +29,7 @@
  const terms2='Purchaser Responsibility & Research Use Only. By purchasing, I accept full responsibility for safe, lawful, research-only use and acknowledge that PURE bears no liability for misuse. I agree to indemnify and hold harmless PURE from any claim. I also attest that I am a qualified researcher and will only use these products for their intended use. I also acknowledge and accept the Research Use Only Agreement and Terms & Conditions.';
  const standardCheckout=window.DirectCheckout?.checkout;
  const saveCoupon=value=>['ap-checkout-coupon','ap-cart-coupon'].forEach(key=>value?localStorage.setItem(key,value):localStorage.removeItem(key));
- const initialCoupon=()=>{const value=(localStorage.getItem('ap-checkout-coupon')||localStorage.getItem('ap-cart-coupon')||'').trim().toUpperCase();const code=value==='BLACKFRIDAY15'?value:'';saveCoupon(code);return code;};
+ const initialCoupon=()=>{const value=(localStorage.getItem('ap-checkout-coupon')||localStorage.getItem('ap-cart-coupon')||'').trim().toUpperCase();const code=/^[A-Z0-9][A-Z0-9_-]{2,23}$/.test(value)&&value!=='BOGO'?value:'';saveCoupon(code);return code;};
  async function checkout(root,auth,user,options={}){
   const params=new URLSearchParams(location.search);
   if(params.has('plan')||params.has('period'))return window.PureMembershipCheckout.checkout(root,auth,user);
@@ -75,7 +75,7 @@
     +'<section class="nlx-left"><nav class="nlx-progress" aria-label="Checkout steps">'+stepTitles.map((s,i)=>'<button type="button" data-nlx-step="'+i+'"><span>'+(i+1)+'</span>'+s+'</button>').join('')+'</nav><form id="nlx-form" novalidate></form></section>'
     +'<aside class="nlx-right" aria-label="Order summary"><div class="nlx-summary"><div class="nlx-summary-head"><h2>Order Summary</h2><span data-nlx-item-count></span></div>'
     +'<div class="nlx-protect" data-nlx-protection></div><div class="nlx-products" data-nlx-products></div>'
-    +'<p class="nlx-coupon-help">Use <strong>BLACKFRIDAY15</strong> for 15% off merchandise.</p><div class="nlx-coupon"><input aria-label="Coupon code" name="sidebar_coupon" placeholder="BLACKFRIDAY15" maxlength="40"><button type="button" data-nlx-coupon>APPLY</button><button type="button" data-nlx-remove-coupon hidden>REMOVE</button></div><p data-nlx-coupon-status role="status" aria-live="polite"></p>'
+    +'<p class="nlx-coupon-help">Use <strong>BLACKFRIDAY10</strong> for 10% off merchandise.</p><div class="nlx-coupon"><input aria-label="Coupon code" name="sidebar_coupon" placeholder="BLACKFRIDAY10" maxlength="40"><button type="button" data-nlx-coupon>APPLY</button><button type="button" data-nlx-remove-coupon hidden>REMOVE</button></div><p data-nlx-coupon-status role="status" aria-live="polite"></p>'
     +'<div class="nlx-total-rows" data-nlx-totals></div><div class="nlx-points" data-nlx-points></div><p class="nlx-quote-note" data-nlx-quote-note></p><div data-pure-membership-offer></div></div></aside></div>';
   const form=view('#nlx-form',div),detail=view('.nlx-summary',div),columns=view('.nlx-columns',div);
   const mobileLayout=window.matchMedia?.('(max-width: 770px)');
@@ -170,7 +170,7 @@
    if(!res.ok||!Number.isSafeInteger(result?.total_cents))throw Error(result?.error||'Could not calculate final total.');
    if(result.currency!==paymentCurrency()||result.request_only===true||state.paymentKind==='interac'&&(!result.fx_quote||!Number.isSafeInteger(result.pricing?.fx_ppm)||result.pricing.fx_ppm<=0))throw Error('The payment currency could not be verified. Refresh your order total.');
    if(state.paymentKind==='interac')state.fxQuote=result.fx_quote;
-   state.coupon=result.pricing?.coupon_code==='BLACKFRIDAY15'?'BLACKFRIDAY15':'';saveCoupon(state.coupon);
+   state.coupon=result.pricing?.affiliate_code||result.pricing?.coupon_code||'';saveCoupon(state.coupon);
    currentPreview=result;return result;
   }
   function moneyLines(){
@@ -182,7 +182,7 @@
    const fees=delivery.extras||[];
    const counts=[['Subtotal',subtotal]];
    if(p?.pricing?.membership_discount_cents>0)counts.push([(p.pricing.membership_name||'Membership')+' savings',-p.pricing.membership_discount_cents]);
-   if(savings)counts.push(['BLACKFRIDAY15 (15%)',-savings]);
+   if(savings)counts.push(['BLACKFRIDAY10 (10%)',-savings]);
     if(p?.pricing?.quantity_discount_cents>0)counts.push(['Quantity savings',-p.pricing.quantity_discount_cents]);
    if(cryptoSavings)counts.push(['Crypto discount (5%)',-cryptoSavings]);
    if(p?.pricing?.membership_addon)counts.push([p.pricing.membership_addon.name+' — '+(p.pricing.membership_addon.period==='monthly'?'first month':'annual'),p.pricing.membership_addon.fee_cents]);
@@ -222,6 +222,13 @@
     const amount=currentPreview?.currency===paymentCurrency()&&Number.isSafeInteger(line?.gross_cents)?currentMoney(line.gross_cents):paymentCurrency()==='USD'?usd(Math.round(x.price*100)*x.qty):'Calculating…';
     return '<div class="nlx-product"><button type="button" class="nlx-remove" data-nlx-remove="'+esc(x.key)+'" aria-label="Remove '+esc(x.name)+'">×</button><img src="'+esc(image)+'" alt=""><div class="nlx-product-name"><strong>'+esc(x.name)+'</strong><div class="nlx-size-line"><small>'+esc(x.size)+'</small>'+'</div><div class="nlx-qty"><button data-nlx-qty="-1" data-key="'+esc(x.key)+'" aria-label="Decrease quantity">−</button><span>'+x.qty+'</span><button data-nlx-qty="1" data-key="'+esc(x.key)+'" aria-label="Increase quantity">+</button></div></div><strong class="nlx-product-price">'+amount+'</strong></div>';
    }).join('');
+   for(const free of currentPreview?.pricing?.bogo_campaign?.free_units||[]){
+     const item=items.find(item=>item.id===free.id&&item.size===free.size);
+     if(item)view('[data-nlx-products]',detail).insertAdjacentHTML('beforeend','<div class="nlx-product"><div class="nlx-product-name"><strong>'+esc(item.name)+'</strong><small>'+esc(item.size)+' × '+free.qty+' free</small></div><strong class="nlx-product-price">'+currentMoney(0)+'</strong></div>');
+   }
+   for(const gift of currentPreview?.pricing?.bundled_items||[]){
+     view('[data-nlx-products]',detail).insertAdjacentHTML('beforeend','<div class="nlx-product"><div class="nlx-product-name"><strong>'+esc(gift.name)+'</strong><small>'+esc(gift.size)+'</small></div><strong class="nlx-product-price">'+currentMoney(0)+'</strong></div>');
+   }
    if(currentPreview?.pricing?.membership_addon){
      const member=currentPreview.pricing.membership_addon;
      view('[data-nlx-products]',detail).insertAdjacentHTML('beforeend','<div class="nlx-product nlx-membership-line"><button type="button" class="nlx-remove" data-nlx-remove-membership aria-label="Remove membership">×</button><div class="nlx-product-name"><strong>'+esc(member.name)+'</strong><span class="nlx-membership-period">'+esc(member.period==='monthly'?'First month':'Annual')+'</span></div><strong class="nlx-product-price">'+currentMoney(member.fee_cents)+'</strong></div>');
@@ -274,7 +281,7 @@
     const q=await fetchPreview(candidate);
     if(q){
      renderSummary();
-     message.textContent=state.coupon?'BLACKFRIDAY15 applied — 15% off merchandise.':action==='remove'?(q.pricing?.crypto_discount_cents?'Coupon removed. The 5% crypto discount applies.':'Coupon removed. Regular prices restored.'):'';
+     message.textContent=state.coupon?(state.coupon==='BLACKFRIDAY10'?'BLACKFRIDAY10 applied — 10% off merchandise.':'Affiliate code applied.'):action==='remove'?(q.pricing?.crypto_discount_cents?'Coupon removed. The 5% crypto discount applies.':'Coupon removed. Regular prices restored.'):'';
      syncCurrencyDisplays();
      if(stage===2)updatePayment();
     }

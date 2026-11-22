@@ -44,36 +44,36 @@ test('existing points and store credit remain payment value without changing reg
  const over=await checkout.normalize({},user,{...body,points:10001},catalog);
  assert.throws(()=>checkout.price(over,method,null,{points:20000,credit_cents:0}),/merchandise only/);
 });
-test('BLACKFRIDAY15 is normalized and cart, quote and persisted order have identical canonical prices',async()=>{
+test('BLACKFRIDAY10 is normalized and cart, quote and persisted order have identical canonical prices',async()=>{
  const cat=[{id:'a',name:'A',variants:[{size:'5mg',price:19.99}]},{id:'b',name:'B',variants:[{size:'10mg',price:30.01}]}];
- const b={...body,coupon:' blackFriday15 ',items:[{id:'a',size:'5mg',qty:2,price:0},{id:'b',size:'10mg',qty:1,price:0}],total_cents:1,pricing:{discount_cents:999999}};
+ const b={...body,coupon:' blackFriday10 ',items:[{id:'a',size:'5mg',qty:2,price:0},{id:'b',size:'10mg',qty:1,price:0}],total_cents:1,pricing:{discount_cents:999999}};
  const {res:quoted,db}=await call({...b,action:'quote'},{cat});assert.equal(quoted.code,200);
- assert.equal(quoted.body.subtotal_cents,6999);assert.equal(quoted.body.discount_cents,1050);assert.equal(quoted.body.total_cents,6744);
- assert.deepEqual(quoted.body.pricing.lines.map(x=>x.coupon_discount_cents),[600,450]);
+ assert.equal(quoted.body.subtotal_cents,6999);assert.equal(quoted.body.discount_cents,700);assert.equal(quoted.body.total_cents,7094);
+ assert.deepEqual(quoted.body.pricing.lines.map(x=>x.coupon_discount_cents),[400,300]);
  const {res:cart}=await call({...b,country:'US'},{db,cat,params:'checkout=cart',headers:{authorization:''}});
  assert.equal(cart.code,200);assert.deepEqual(cart.body.pricing,quoted.body.pricing);assert.equal(db.calls.length,0);
  const {res:placed}=await call({...b,action:'place',quote:quoted.body.quote},{db,cat});assert.equal(placed.code,201);assert.equal(db.calls.length,1);
  const saved=db.calls[0].args.p_data;assert.equal(db.calls[0].name,'commerce_place_checkout');
  assert.deepEqual(saved.pricing,quoted.body.pricing);assert.equal(saved.total_cents,quoted.body.total_cents);
- assert.equal(saved.request.checkout.coupon,'BLACKFRIDAY15');assert.deepEqual(saved.request.items.map(x=>x.qty),[2,1]);
+ assert.equal(saved.request.checkout.coupon,'BLACKFRIDAY10');assert.deepEqual(saved.request.items.map(x=>x.qty),[2,1]);
  assert.equal(saved.checkout_version,config.version);assert.equal(saved.earned_points,0);
 });
 test('removing the explicit coupon restores regular price and invalidates the prior quote',async()=>{
- const b={...body,coupon:'BLACKFRIDAY15',items:[{...body.items[0],qty:2}]};
- const {res:q,db}=await call({...b,action:'quote'});assert.equal(q.body.discount_cents,3000);assert.equal(q.body.total_cents,17000);
+ const b={...body,coupon:'BLACKFRIDAY10',items:[{...body.items[0],qty:2}]};
+ const {res:q,db}=await call({...b,action:'quote'});assert.equal(q.body.discount_cents,2000);assert.equal(q.body.total_cents,18000);
  const {res:r}=await call({...b,coupon:'',action:'quote'},{db});assert.equal(r.body.discount_cents,0);assert.equal(r.body.total_cents,20000);
  const {res:stale}=await call({...b,coupon:'',action:'place',quote:q.body.quote},{db});assert.equal(stale.code,409);assert.equal(db.calls.length,0);
 });
 test('US standard shipping threshold uses discounted merchandise before account balances',async()=>{
- for(const [cents,coupon,shipping] of [[14999,'',795],[15000,'',0],[17646,'BLACKFRIDAY15',795],[17647,'BLACKFRIDAY15',0]]){
+ for(const [cents,coupon,shipping] of [[14999,'',795],[15000,'',0],[16666,'BLACKFRIDAY10',795],[16667,'BLACKFRIDAY10',0]]){
   const cat=[{...catalog[0],variants:[{size:'5mg',price:cents/100}]}];
   const r=await checkout.normalize({},user,{...body,coupon,points:500,credit_cents:1000},cat),q=checkout.price(r,method,null,{points:1000,credit_cents:2000});
-  assert.equal(q.shipping_cents,shipping,'subtotal '+cents+' '+coupon);assert.equal(q.total_cents,cents-Math.round(cents*(coupon?0.15:0))+shipping-1500);
+  assert.equal(q.shipping_cents,shipping,'subtotal '+cents+' '+coupon);assert.equal(q.total_cents,cents-Math.round(cents*(coupon?0.10:0))+shipping-1500);
  }
 });
 test('coupon does not make express, international shipping, priority or protection free',async()=>{
  for(const [country,shipping,extras,expected] of [['US','standard',['protection'],500],['US','express',['protection'],3495],['US','next_day',['priority','protection'],7494],['CA','standard',[],0],['CA','next_day',[],6495],['CA','next_day',['protection'],6995],['GB','express',[],7995]]){
-  const r=await checkout.normalize({},user,{...body,coupon:'BLACKFRIDAY15',items:[{...body.items[0],qty:2}],address:{...body.address,country},delivery:{shipping,extras}},catalog);
+  const r=await checkout.normalize({},user,{...body,coupon:'BLACKFRIDAY10',items:[{...body.items[0],qty:2}],address:{...body.address,country},delivery:{shipping,extras}},catalog);
   assert.equal(checkout.price(r,method,null,{points:0,credit_cents:0}).shipping_cents,expected);
  }
  for(const country of ['ZZ','RU','GB']){
@@ -105,9 +105,9 @@ test('Bulk Orders save 20% on 10-49 total units and 50% on 50+; no small-order q
    assert.equal(q.body.pricing.bulk_unit_count,qty);
    assert.equal(q.body.pricing.lines[0].discount_bps,qty>=50?5000:2000);
   }else assert.equal(q.body.pricing.quantity_discount_version,undefined);
-  const {res:p}=await call({...b,coupon:'BLACKFRIDAY15',points:100,credit_cents:500,action:'quote'},{db});
+  const {res:p}=await call({...b,coupon:'BLACKFRIDAY10',points:100,credit_cents:500,action:'quote'},{db});
   assert.equal(p.code,200);
-  const expected=qty*10000*(qty>=10?tier:.15);
+  const expected=qty*10000*(qty>=10?tier:.10);
   assert.equal(p.body.discount_cents,expected);
   assert.equal(p.body.total_cents,qty*10000-expected+2995-600);
   assert.equal(db.calls.length,0);
@@ -133,7 +133,7 @@ test('mixed-strength bulk totals unlock tiers on combined units, without extra C
 });
 test('modified totals, quantities, delivery, prices and old version quotes fail before placement',async()=>{
  const {res:q,db}=await call({...body,action:'quote'});
- const changes=[{body:{items:[{...body.items[0],qty:2}]}},{body:{coupon:'BLACKFRIDAY15'}},{body:{delivery:{shipping:'express',extras:[]}}},{body:{quote:'0'.repeat(64)}},{cat:[{...catalog[0],variants:[{size:'5mg',price:101}]}]}];
+ const changes=[{body:{items:[{...body.items[0],qty:2}]}},{body:{coupon:'BLACKFRIDAY10'}},{body:{delivery:{shipping:'express',extras:[]}}},{body:{quote:'0'.repeat(64)}},{cat:[{...catalog[0],variants:[{size:'5mg',price:101}]}]}];
  for(const change of changes){const {res}=await call({...body,action:'place',quote:q.body.quote,...change.body},{db,cat:change.cat||catalog});assert.equal(res.code,409);}
  for(const version of ['checkout-2026-11-v1','checkout-2026-11-v2','checkout-2026-11-v3','checkout-2026-11-v4','checkout-2026-11-v5','checkout-2026-11-v6']){
   const {res}=await call({...body,action:'place',quote:q.body.quote,checkout_version:version},{db});assert.equal(res.code,400);
@@ -166,13 +166,13 @@ test('signed partner attribution and existing commissions do not add a customer 
  const partners=require('../lib/partner-program');
  const partner={customer_id:'c0000000-0000-4000-8000-000000000004',code:'AP-ABCDEFGH2345',status:'active'};
  const cookie='ap_ref='+partners.cookieToken(partner.code,env.CHECKOUT_RATE_LIMIT_SECRET);
- for(const extra of [{},{coupon:'BLACKFRIDAY15'}]){
+ for(const extra of [{},{coupon:'BLACKFRIDAY10'}]){
   const db=dbMock({partner}),{res}=await call({...body,action:'quote',...extra},{db,headers:{cookie}});
   assert.equal(res.code,200);assert.deepEqual(res.body.pricing.referral,{partner_id:partner.customer_id,code:partner.code,first_order:true});
-  assert.equal(res.body.discount_cents,extra.coupon?1500:0);assert.equal(res.body.total_cents,extra.coupon?9295:10795);
+  assert.equal(res.body.discount_cents,extra.coupon?1000:0);assert.equal(res.body.total_cents,extra.coupon?9795:10795);
  }
  const {res}=await call({...body,action:'quote'},{db:dbMock({partner}),headers:{cookie:cookie+'forged'}});
  assert.equal(res.code,200);assert.equal(res.body.pricing.referral,undefined);assert.equal(res.body.discount_cents,0);
- assert.equal(require('../config/conversion.json').partner.first_order_bps,2000);assert.equal(require('../config/conversion.json').partner.repeat_order_bps,1000);
+ assert.equal(require('../config/conversion.json').partner.first_order_bps,4000);assert.equal(require('../config/conversion.json').partner.repeat_order_bps,1000);
  assert.equal(require('../config/conversion.json').partner.customer_discount_bps,0);
 });

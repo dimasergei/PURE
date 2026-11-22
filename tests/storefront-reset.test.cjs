@@ -35,7 +35,7 @@ test('homepage keeps the announcement, five-vial hero and product links without 
  const f=await fixture('/');
  try{
   const {d,w}=f,hero=d.querySelector('.nl-hero');
-  assert.equal(d.querySelector('.ap-announcement').textContent.trim(),'Enjoy 15% off with code BLACKFRIDAY15 at checkout.');
+  assert.equal(d.querySelector('.ap-announcement').textContent.trim(),'Enjoy 10% off with code BLACKFRIDAY10 at checkout.');
   assert.equal(d.querySelectorAll('.ap-announcement a,.ap-announcement svg').length,0);
   assert.equal([...hero.querySelector('h1').childNodes].map(n=>n.nodeName==='BR'?'\n':n.textContent).join(''),'CUTTING EDGE\nPURITY');
   assert.equal(hero.querySelector('.nl-hero-description').textContent,'Research compounds, product documentation, and straightforward ordering for laboratories and research teams.');
