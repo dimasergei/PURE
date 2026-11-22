@@ -17,12 +17,12 @@ test('regular product quantities 1, 2, 5, 10 and 50 never receive automatic quan
  }
 });
 
-test('only total BULK unit count unlocks 20% at ten and 50% at fifty',()=>{
- for(const [units,rate] of [[0,0],[1,0],[9,0],[10,2000],[12,2000],[49,2000],[50,5000],[60,5000],[100,5000]]){
+test('compound units unlock 50% at ten and 60% at fifty',()=>{
+ for(const [units,rate] of [[0,0],[1,0],[9,0],[10,5000],[12,5000],[49,5000],[50,6000],[60,6000],[100,6000]]){
   assert.equal(tiers.bulkRate(units),rate);
   assert.equal(tiers.bulkDiscountCents(20001,units),Math.round(20001*rate/10000));
  }
- assert.equal(tiers.VERSION,'pure-bulk-2026-11-v1');
+ assert.equal(tiers.VERSION,'pure-bulk-2026-11-v2');
  assert.throws(()=>tiers.bulkRate(-1),/Invalid/);
 });
 test('normal coupon and membership savings still apply, without quantity tiers',()=>{

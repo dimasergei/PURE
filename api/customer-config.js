@@ -7,6 +7,10 @@ module.exports=async(req,res)=>{
  if(url.searchParams.has('inventory'))return require('../lib/standalone-inventory').handle(req,res);
  if(url.searchParams.has('research_builder'))return require('../lib/research-builder-handler')(req,res);
  if(url.searchParams.has('lotus'))return require('../lib/lotus-admin').handle(req,res,url.searchParams);
+ if(url.searchParams.has('dispatch')){
+  if(req.method!=='GET')return res.status(405).json({error:'Method not allowed.'});
+  return res.status(200).json({cutoff:require('../lib/dispatch-cutoff').dispatchCutoff()});
+ }
  if(url.searchParams.has('campaign')){
   if(req.method==='POST'&&url.searchParams.get('campaign')==='signup')return require('../lib/campaign-signup').handle(req,res);
   if(req.method!=='GET')return res.status(405).json({error:'Method not allowed.'});

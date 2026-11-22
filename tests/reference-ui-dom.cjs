@@ -36,7 +36,7 @@ async function setup(route){const errors=[];const console=new VirtualConsole();c
   const memberships=d.querySelector('[data-mx-membership-home]');assert.ok(d.querySelector('.nl-editorial').nextElementSibling===memberships,'membership comparison follows documentation');assert.equal(memberships.querySelectorAll('.mx-card').length,3);assert.ok(memberships.nextElementSibling===bulk,'bulk ordering follows membership comparison');
   assert.equal(bulk.nextElementSibling.id,'faq');
   assert.equal(bulk.querySelector('a').getAttribute('href'),'/bulk-orders');
-  assert.match(bulk.textContent,/Save 20% with 10\+ total units or 50% with 50\+/);
+  assert.match(bulk.textContent,/Save 50% at 10 units or 60% at 50 units per compound/);
   assert.doesNotMatch(bulk.textContent,/BOGO|monthly auto.?billing/i);
   const examples=[...bulk.querySelectorAll('tbody tr')];
   assert.equal(examples.length,2);
@@ -88,7 +88,7 @@ async function setup(route){const errors=[];const console=new VirtualConsole();c
   assert.equal(paths.length,2);
   assert.equal(paths[0].getAttribute('href'),'/memberships');
   assert.match(paths[0].textContent,/SUBSCRIBE & SAVE/);
-  assert.match(paths[1].textContent,/Save up to 50%/);
+  assert.match(paths[1].textContent,/Save up to 60%/);
   assert.match(paths[1].getAttribute('href'),/^\/bulk-orders\?product=/);
   assert.equal(d.querySelectorAll('[data-bundle-quantity]').length,0);
   assert.equal(d.querySelector('#ap-detail-quantity').value,'1');d.querySelector('[data-action="detail-add"]').click();assert.equal(w.AltaStore.cart[0].qty,1);const options=d.querySelectorAll('[data-action="detail-size"]');options[1].click();assert.ok(d.querySelector('h1').textContent.includes(options[1].dataset.size));dom.window.close();}
@@ -99,7 +99,7 @@ async function setup(route){const errors=[];const console=new VirtualConsole();c
   assert.deepEqual(benefits.map(benefit=>benefit.querySelector('.nl-bulk-benefit-copy').textContent),['10+ units','50+ units','Review before payment','Product documentation']);
   assert.equal(d.querySelector('.nl-bulk-benefit-shipping'),null);
   assert.equal(benefits[3].getAttribute('href'),'/coas');
-  assert.match(d.querySelector('.nl-bulk-hero p').textContent,/10–49 total units to save 20%/);
+  assert.match(d.querySelector('.nl-bulk-hero p').textContent,/Save 50% at 10 units/);
   assert.deepEqual([...d.querySelectorAll('[data-action="bulk-category"]')].map(button=>button.textContent),['All Products','Peptides','Mist Applicators','Supplies','Equipment']);
   const category=d.querySelector('[data-action="bulk-category"][data-group="Supplies"]');category.click();
   assert.equal(category.getAttribute('aria-pressed'),'true');
@@ -113,11 +113,11 @@ async function setup(route){const errors=[];const console=new VirtualConsole();c
   assert.equal(d.querySelector('[data-action="bulk-checkout"]').disabled,true);
   qty.value='1';qty.dispatchEvent(new w.Event('input',{bubbles:true}));
   assert.equal(subtotal(),money(variant.price));
-  assert.equal(d.querySelector('[data-action="bulk-checkout"]').disabled,false,'one purchased unit can check out');
+  assert.equal(d.querySelector('[data-action="bulk-checkout"]').disabled,true,'one unit is below the bulk minimum');
   qty.value='10';qty.dispatchEvent(new w.Event('input',{bubbles:true}));
   assert.equal(subtotal(),money(variant.price*10),'larger quantities retain the same catalog unit price');
   assert.equal(w.AltaStore.read('ap-bulk-draft-v2',[])[0].qty,10,'the draft contains exactly the selected units');
-  assert.equal(d.querySelector('[data-action="bulk-checkout"]').textContent,'Checkout · '+money(variant.price*8));
+  assert.equal(d.querySelector('[data-action="bulk-checkout"]').textContent,'Checkout · '+money(variant.price*5));
   assert.equal(w.AltaStore.cart.length,0);
   assertCurrentView(d,'/bulk-orders after quantity changes');
   dom.window.close();

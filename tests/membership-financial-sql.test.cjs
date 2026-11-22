@@ -103,6 +103,8 @@ test('PURE memberships execute verified fees and goods benefits atomically in di
   await db.exec(read('20261119213000_pure_membership_only_stack.sql'));
   await db.exec(read('20261119221500_pure_member_stack_tier_benefits.sql'));
   await db.exec(read('20261119231000_pure_bulk_order_volume_tiers.sql'));
+  await db.exec('create table if not exists public.suppliers (id uuid primary key, name text not null)');
+  await db.exec(read('20261109225035_enterprise_inventory_quality_foundation.sql'));
   for(const file of ['20261120103000_economy_shipping_lower_rates.sql',
      '20261120115000_combined_member_checkout_validation.sql',
      '20261120115500_combined_membership_lifecycle_part1.sql',
@@ -111,7 +113,7 @@ test('PURE memberships execute verified fees and goods benefits atomically in di
      '20261122000200_partner_commission_rates.sql',
      '20261122000300_partner_chargebacks.sql',
      '20261122000400_storefront_reviews.sql','20261122000500_review_credit.sql',
-     '20261122000700_bogo_fulfillment.sql','20261122000800_blackfriday10_checkout.sql','20261122001000_partner_first_order_discount.sql','20261122001100_bogo_shipping_threshold.sql','20261122001200_commerce_order_numbers.sql']){
+     '20261122000700_bogo_fulfillment.sql','20261122000800_blackfriday10_checkout.sql','20261122001000_partner_first_order_discount.sql','20261122001100_bogo_shipping_threshold.sql','20261122001200_commerce_order_numbers.sql','20261122001300_compound_bulk_checkout.sql','20261122001400_order_lot_coas.sql']){
    try{await db.exec(read(file));}catch(error){error.message=file+': '+error.message;throw error;}
   }
   for(const route of Object.keys(ids))methods[route]=(await db.query('select * from commerce_payment_methods where id=$1',[ids[route]])).rows[0];
@@ -464,16 +466,16 @@ test('PURE memberships execute verified fees and goods benefits atomically in di
    assert.equal((await db.query("select count(*)::int n from public.commerce_invoices where request_data->>'research_builder_mode'='monthly_invoice'")).rows[0].n,0);
   });
 
-  await t.test('10 and 50 combined bulk units get 20% and 50%; tampered totals cannot place',async()=>{
+  await t.test('10 and 50 units per compound get 50% and 60%; tampered totals cannot place',async()=>{
    const mixed=(a,b)=>[
     {id:catalog[0].id,size:catalog[0].variants[0].size,qty:a},
     {id:catalog[1].id,size:catalog[1].variants[0].size,qty:b}
    ];
-   for(const [a,b,rate] of [[6,4,2000],[25,25,5000]]){
+   for(const [a,b,rate] of [[10,10,5000],[50,50,6000]]){
     const order=await make({bulk:true,items:mixed(a,b)});
-    assert.equal(order.pricing.quantity_discount_version,'pure-bulk-2026-11-v1');
+    assert.equal(order.pricing.quantity_discount_version,'pure-bulk-2026-11-v2');
     assert.equal(order.pricing.bulk_unit_count,a+b);
-    assert.ok(order.pricing.lines.every(line=>line.discount_bps===rate&&line.discount_reason==='bulk_'+(rate===5000?'50':'10')));
+    assert.ok(order.pricing.lines.every(line=>line.discount_bps===rate&&line.discount_reason==='bulk_'+(rate===6000?'50':'10')));
     const forged={...order,discount_cents:order.discount_cents-1};
     await assert.rejects(place(forged),/totals|discount|Checkout|amount|changed/i);
     await place(order);
@@ -483,9 +485,29 @@ test('PURE memberships execute verified fees and goods benefits atomically in di
    assert.equal(crypto.pricing.crypto_discount_cents,0);
    assert.equal(crypto.pricing.crypto_discount_eligible,false);
    await place(crypto);
-   const cad=await make({bulk:true,route:'interac',country:'CA',items:mixed(6,4)});
-   assert.equal(cad.pricing.quantity_discount_version,'pure-bulk-2026-11-v1');
+   const cad=await make({bulk:true,route:'interac',country:'CA',items:mixed(10,10)});
+   assert.equal(cad.pricing.quantity_discount_version,'pure-bulk-2026-11-v2');
    await place(cad);
+  });
+
+  await t.test('packed COAs match the fulfilled strength and are visible only to the owner after shipment',async()=>{
+   const customer=randomUUID(), supplier=randomUUID(), lot=randomUUID();
+   await db.query("insert into suppliers(id,name) values($1,'Fixture supplier')",[supplier]);
+   await db.query("insert into enterprise_inventory_lots(id,supplier_id,sku_key,lot_number,fulfillment_site,status,evidence_reference,reviewed_by,reviewed_at) values($1,$2,'fixture-a-5mg','LOT-123','US','released','intake-1','reviewer',now())",[lot,supplier]);
+   await db.query("insert into enterprise_quality_documents(lot_id,report_id,lab_name,storage_object_key,verification_url,status,publication_approved,reviewer,reviewed_at) values($1,'CERT-123','Fixture Lab','fixture.pdf','https://example.test/report','verified',true,'reviewer',now())",[lot]);
+   const order=await make({customer,items:[{id:'fixture-a',size:'5mg',qty:1}]});
+   await place(order);await pay(order);
+   const assign=(variant,remove=false)=>db.query("select commerce_record_packed_lot($1,$2,'LOT-123',$3) as saved",[order.id,variant,remove]);
+   const reports=(owner)=>db.query("select * from commerce_order_coas($1,array[$2::uuid])",[owner,order.id]);
+   assert.equal((await assign('fixture-a|10mg')).rows[0].saved,false);
+   assert.equal((await assign('fixture-a|5mg')).rows[0].saved,true);
+   assert.equal((await reports(customer)).rows.length,0);
+   await db.query("update commerce_fulfillment_items set status='shipped' where invoice_id=$1",[order.id]);
+   await db.query("update commerce_invoices set status='shipped' where id=$1",[order.id]);
+   assert.equal((await reports(customer)).rows[0].report_id,'CERT-123');
+   assert.equal((await reports(randomUUID())).rows.length,0);
+   await assign('fixture-a|5mg',true);
+   assert.equal((await reports(customer)).rows.length,0);
   });
 
   await t.test('one merchandise invoice includes membership fee, activates on verified paid receipt',async()=>{

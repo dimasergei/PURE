@@ -89,48 +89,22 @@ test('removed coupons, unsupported membership routes and forged program flags ar
   const {res,db}=await call({...body,action:'quote',coupon},{params});assert.equal(res.code,400);assert.equal(db.calls.length,0);
  }
 });
-test('Bulk Orders save 20% on 10-49 total units and 50% on 50+; no small-order quantity tier',async()=>{
- for(const qty of [1,9,10,49,50]){
-  const b={...body,bulk_order:true,items:[{...body.items[0],qty}],delivery:{shipping:'express',extras:[]}};
-  const {res:q,db}=await call({...b,action:'quote'});
-  assert.equal(q.code,200);
-  const tier=qty>=50?.5:qty>=10?.2:0;
-  const discount=Math.round(qty*10000*tier);
-  assert.equal(q.body.discount_cents,discount);
-  assert.equal(q.body.shipping_cents,2995);
-  assert.equal(q.body.total_cents,qty*10000-discount+2995);
-  assert.equal(q.body.pricing.lines[0].qty,qty);
-  if(qty>=10){
-   assert.equal(q.body.pricing.quantity_discount_version,'pure-bulk-2026-11-v1');
-   assert.equal(q.body.pricing.bulk_unit_count,qty);
-   assert.equal(q.body.pricing.lines[0].discount_bps,qty>=50?5000:2000);
-  }else assert.equal(q.body.pricing.quantity_discount_version,undefined);
-  const {res:p}=await call({...b,coupon:'BLACKFRIDAY10',points:100,credit_cents:500,action:'quote'},{db});
-  assert.equal(p.code,200);
-  const expected=qty*10000*(qty>=10?tier:.10);
-  assert.equal(p.body.discount_cents,expected);
-  assert.equal(p.body.total_cents,qty*10000-expected+2995-600);
-  assert.equal(db.calls.length,0);
- }
-});
-test('mixed-strength bulk totals unlock tiers on combined units, without extra Crypto stack',async()=>{
- const cat=[catalog[0],{id:'fixture-two',name:'Second compound',variants:[{size:'10mg',price:80}]}];
- for(const [a,b,rate] of [[6,4,2000],[35,15,5000]]){
-  const list=[{id:cat[0].id,size:'5mg',qty:a},{id:cat[1].id,size:'10mg',qty:b}];
-  const order={...body,bulk_order:true,items:list,delivery:{shipping:'express',extras:[]}};
-  const rec=await checkout.normalize({},user,order,cat);
+test('Bulk checkout groups strengths by compound and includes US express',async()=>{
+ const cat=[{...catalog[0],variants:[...catalog[0].variants,{size:'20mg',price:80}]},
+  {id:'fixture-two',name:'Second compound',variants:[{size:'10mg',price:80}]}];
+ const lines=(a,b,id=cat[0].id)=>[{id:cat[0].id,size:'5mg',qty:a},{id,size:id===cat[0].id?'20mg':'10mg',qty:b}];
+ for(const [a,b,rate] of [[6,4,5000],[35,15,6000]]){
+  const rec=await checkout.normalize({},user,{...body,bulk_order:true,items:lines(a,b)},cat);
   const q=checkout.price(rec,method,null,{points:0,credit_cents:0});
-  const gross=[10000*a,8000*b];
-  const savings=gross.reduce((n,x)=>n+Math.round(x*rate/10000),0);
-  assert.equal(q.discount_cents,savings);
-  assert.deepEqual(q.pricing.lines.map(x=>x.discount_bps),[rate,rate]);
+  assert.equal(q.shipping_cents,0);
+  assert.equal(q.pricing.delivery.selection.shipping,'express');
+  assert.deepEqual(q.pricing.lines.map(line=>line.discount_bps),[rate,rate]);
   assert.equal(q.pricing.bulk_unit_count,a+b);
-  const crypto=checkout.price(rec,{...method,native_provider:'polygon_usdc',rampex_provider:null},null,{points:0,credit_cents:0});
-  assert.equal(crypto.discount_cents,savings);
-  assert.equal(crypto.pricing.crypto_discount_cents,0);
-  assert.equal(crypto.pricing.crypto_discount_eligible,false);
  }
+ const rec=await checkout.normalize({},user,{...body,bulk_order:true,items:lines(6,4,cat[1].id)},cat);
+ assert.throws(()=>checkout.price(rec,method,null,{points:0,credit_cents:0}),/10 units of each compound/);
 });
+
 test('modified totals, quantities, delivery, prices and old version quotes fail before placement',async()=>{
  const {res:q,db}=await call({...body,action:'quote'});
  const changes=[{body:{items:[{...body.items[0],qty:2}]}},{body:{coupon:'BLACKFRIDAY10'}},{body:{delivery:{shipping:'express',extras:[]}}},{body:{quote:'0'.repeat(64)}},{cat:[{...catalog[0],variants:[{size:'5mg',price:101}]}]}];

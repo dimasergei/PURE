@@ -84,7 +84,18 @@
    }
   }catch{root.hidden=true;}
  }
- window.PureCampaign={mountCountdown};
+ let dispatchRequest;
+ async function mountDispatch(root){
+  if(!root)return;
+  try {
+   dispatchRequest ||= request('dispatch=1').catch(()=>null);
+   const cutoff=(await dispatchRequest)?.cutoff;
+   if(!cutoff)return;
+   root.textContent='Same-day US dispatch for eligible paid orders before '+cutoff.time+' ('+cutoff.time_zone+'), Monday to Friday.';
+   root.hidden=false;
+  }catch{}
+ }
+ window.PureCampaign={mountCountdown,mountDispatch};
  if(/^\/(?:$|shop(?:\/|$)|product\/)/.test(location.pathname)){
   document.addEventListener('mouseout',function exitOffer(event){
    if(event.relatedTarget||event.clientY>0||document.querySelector('dialog[open]'))return;

@@ -89,6 +89,11 @@
    form.elements.country.innerHTML=countries.map(code=>({code,label:countryNames.of(code)||code})).sort((a,b)=>a.label.localeCompare(b.label)).map(({code,label})=>'<option value="'+esc(code)+'">'+esc(label)+'</option>').join('');
    const savedCountry=address.country||localStorage.getItem('ap-shipping-country');
    form.elements.country.value=stack?'US':countries.includes(savedCountry)?savedCountry:'US';if(stack){form.elements.country.innerHTML='<option value="US">United States</option>';form.querySelector('.dc-coupon').hidden=true;form.querySelector('.dc-rewards').hidden=true;}
+   if(bulk){
+    form.querySelector('.dc-coupon').hidden=true;
+    const deliveryCopy=form.querySelector('.dc-section p');
+    deliveryCopy.textContent='US bulk orders include two-day express shipping after dispatch. Other destinations show available rates at checkout.';
+   }
    const preferred=options.method||new URLSearchParams(location.search).get('method');
    function syncBalances(){
     const interac=paymentKind(methods.find(m=>m.id===form.querySelector('[name=method_id]:checked')?.value))==='interac';
@@ -240,6 +245,16 @@
      if(Number.isSafeInteger(x.line_total_cents))item.append(node('strong',money(x.line_total_cents,r.currency)));
      items.append(item);
     }if(items.childElementCount)card.append(items);
+    if(r.coas?.length){
+     const certificates=node('section');certificates.append(node('h3','Certificates for this shipment'));
+     const list=node('ul');
+     for(const coa of r.coas){
+      const url=String(coa.verification_url||'');
+      if(!url.startsWith('https://'))continue;
+      const row=node('li');row.append(link('Lot '+coa.lot_number+' · '+coa.report_id,url));list.append(row);
+     }
+     if(list.childElementCount){certificates.append(list);card.append(certificates);}
+    }
     const detail=node('div');detail.className='dc-clean-meta';detail.append(node('span','Payment: '+orderState(r)));
     if(r.tracking_number)detail.append(node('span','Tracking: '+r.tracking_carrier+' '+r.tracking_number));
     if(r.status==='accepted'&&!r.cancellation_status)detail.append(node('span','Payment required before fulfillment'));

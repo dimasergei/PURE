@@ -112,6 +112,18 @@ function commerceActions(host,row,data){const o=data.order,id=o.id,allocations=d
   exportSection(host,row,o);
   const shipment=el('section',undefined,'uc-shipment');shipment.append(el('h3','Shipping and delivery'));
   const manual=allocations.length>0&&allocations.every(a=>a.route==='manual'),remote=!!(job?.supplier_id||job?.has_payload||['working','submitted','shipped'].includes(job?.status)),unresolved=remote&&!(job?.status==='cancelled'&&job?.provider_status==='cancelled');
+  if(allocations.length&&['paid','processing','shipped','delivered'].includes(o.status)){
+   const f=form('Packed lot certificates',shipment);
+   for(const packed of data.packed_lots||[]){
+    const allocation=allocations.find(a=>a.variant_key===packed.variant_key);
+    const lotNumber=packed.enterprise_inventory_lots?.lot_number;
+    if(allocation&&lotNumber)f.append(el('p',allocation.item.name+' · '+allocation.item.size+' — Lot '+lotNumber));
+   }
+   const variant=select(f,'Fulfilled item','packed_variant',allocations.map(a=>[a.variant_key,a.item.name+' · '+a.item.size]));
+   const lot=input(f,'Packed lot number','lot_number','',true);lot.maxLength=120;
+   submit(f,'Link packed lot',async()=>{await write({action:'record_packed_lot',id,variant_key:variant.value,lot_number:lot.value});await reload(row);msg('Packed lot linked. Verified reports appear in the customer account after shipping.');});
+   f.append(btn('Remove packed lot link',async()=>{if(!lot.value.trim())throw Error('Enter the exact lot number to remove.');await write({action:'record_packed_lot',id,variant_key:variant.value,lot_number:lot.value,remove:true});await reload(row);msg('Packed lot link removed.');}));
+  }
   const options=[];if(o.status==='paid')options.push(['processing','Processing']);
   if(manual&&!unresolved&&['paid','processing'].includes(o.status))options.push(['shipped','Shipped']);
   if(o.status==='shipped')options.push(['delivered','Delivered']);
