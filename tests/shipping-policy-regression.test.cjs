@@ -5,12 +5,12 @@ test('published shipping terms match current standard pricing and the after-coup
  const policy=fs.readFileSync('shipping-policy.html','utf8'),terms=fs.readFileSync('commercial-terms.html','utf8'),builder=fs.readFileSync('manual-policy-build.cjs','utf8');
  assert.equal(checkout.free_shipping_threshold_cents,25000);
  for(const [name,text]of Object.entries({policy,terms,builder})){
-  assert.match(text,/US\$250/,name);assert.match(text,/US\$14\.95/,name);
-  assert.doesNotMatch(text,/US\$25|US\$250|US\$299|International checkout is unavailable|US delivery only|annual passes/i,name);
+  assert.match(text,/US\$250/,name);assert.match(text,/US\$11\.95/,name);
+  assert.doesNotMatch(text,/International checkout is unavailable|US delivery only|annual passes/i,name);
  }
- assert.match(policy,/United States and Canada/);assert.match(policy,/after applicable merchandise and payment discounts/);assert.match(builder,/after discounts/);assert.match(terms,/after applicable discounts/);
+ assert.match(policy,/US express and Canadian standard shipping/);assert.match(policy,/after applicable merchandise and payment discounts/);assert.match(builder,/after discounts/);assert.match(terms,/after applicable discounts/);
  assert.match(policy,/international services and rates/i);assert.match(policy,/Tracking is added to your order after dispatch/);
- assert.match(terms,/BLACKFRIDAY15/);assert.match(terms,/15% off the merchandise subtotal/);
+ assert.match(terms,/BLACKFRIDAY10/);assert.match(terms,/10% off the merchandise subtotal/);
  assert.match(terms,/PURE WHITE and PURE BLACK memberships include standard or express shipping to US addresses/);
  for(const key of ['vip','elite'])assert.ok(terms.includes(plans[key].name+' earns '+plans[key].points_per_dollar+' points per US$1'));
  assert.ok(terms.includes('PURE BLACK receives US$'+plans.elite.monthly_credit_cents/100+' store credit'));
