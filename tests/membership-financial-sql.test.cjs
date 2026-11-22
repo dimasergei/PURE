@@ -111,7 +111,7 @@ test('PURE memberships execute verified fees and goods benefits atomically in di
      '20261122000200_partner_commission_rates.sql',
      '20261122000300_partner_chargebacks.sql',
      '20261122000400_storefront_reviews.sql','20261122000500_review_credit.sql',
-     '20261122000700_bogo_fulfillment.sql','20261122000800_blackfriday10_checkout.sql','20261122001000_partner_first_order_discount.sql','20261122001100_bogo_shipping_threshold.sql']){
+     '20261122000700_bogo_fulfillment.sql','20261122000800_blackfriday10_checkout.sql','20261122001000_partner_first_order_discount.sql','20261122001100_bogo_shipping_threshold.sql','20261122001200_commerce_order_numbers.sql']){
    try{await db.exec(read(file));}catch(error){error.message=file+': '+error.message;throw error;}
   }
   for(const route of Object.keys(ids))methods[route]=(await db.query('select * from commerce_payment_methods where id=$1',[ids[route]])).rows[0];
@@ -240,7 +240,7 @@ test('PURE memberships execute verified fees and goods benefits atomically in di
   });
   await t.test('migration preserves history, retired recurring guards, and inactive/old Stripe receiving routes',async()=>{
    assert.deepEqual((await db.query('select to_jsonb(m) row from commerce_memberships m where invoice_id=$1',[expiredInvoice])).rows[0].row,historyBefore);
-   const after=await load(historicalOrder);delete after.membership_invoice_id;delete after.priority_fulfillment;assert.deepEqual(after,historicalBefore);
+   const after=await load(historicalOrder);delete after.membership_invoice_id;delete after.priority_fulfillment;assert.equal(after.public_order_number,null);delete after.public_order_number;assert.deepEqual(after,historicalBefore);
    for(const route of ['card','crypto','interac'])assert.equal(methods[route].sale_scope,'both');
    assert.equal(methods.inactive.active,false);assert.equal(methods.inactive.sale_scope,'goods');assert.equal(methods.inactive.version,1);
    assert.equal(methods.stripe.sale_scope,'goods');assert.equal(methods.stripe.version,1);

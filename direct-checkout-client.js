@@ -231,7 +231,7 @@
    for(const r of invoices){
     const card=node('article');card.className='ap-panel dc-clean-order';
     const head=node('div');head.className='dc-clean-order-head';
-    const left=node('div');left.append(node('h2','Order '+compact(r.id)),node('small',new Date(r.created_at).toLocaleString()));
+    const left=node('div');left.append(node('h2','Order '+(r.public_order_number||compact(r.id))),node('small',new Date(r.created_at).toLocaleString()));
     const right=node('div');right.className='dc-clean-order-right';right.append(node('strong',isInterac(r)&&!Number.isSafeInteger(r.total_cents)?r.status==='requested'?'CAD total pending':'CAD total unavailable':money(r.total_cents,r.currency)),node('span',orderState(r)));
     head.append(left,right);card.append(head);
     const items=node('div');items.className='dc-clean-items';
@@ -256,7 +256,7 @@
     if(r.checkout_version&&r.status==='accepted'&&r.cancellation_status!=='review'){
      const cancel=node('button',r.cancellation_status==='pending'?'Check cancellation':'Cancel order'),out=node('p');cancel.type='button';cancel.className='ap-button ap-button-secondary';out.setAttribute('role','status');out.className='dc-cancel-feedback';
      cancel.onclick=async()=>{
-      if(!r.cancellation_status&&!window.confirm('Cancel '+compact(r.id)+'? Only continue if you have not paid. Any issued payment link may remain valid; do not use it after cancellation.'))return;
+      if(!r.cancellation_status&&!window.confirm('Cancel '+(r.public_order_number||compact(r.id))+'? Only continue if you have not paid. Any issued payment link may remain valid; do not use it after cancellation.'))return;
       cancel.disabled=true;try{const response=await api(auth,{action:'cancel',id:r.id,no_payment_sent:true});if(response.status!=='void'&&!['pending','review'].includes(response.cancellation_status))throw Error('Cancellation not confirmed.');await orders(root,auth,user,options);}catch(e){out.textContent=e.message;cancel.disabled=false;}
      };actions.append(cancel,out);
     }

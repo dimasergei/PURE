@@ -13,7 +13,7 @@ async function load(){
   const list=e('div',undefined,'uc-notice-list');root.append(list);
   for(const item of result.notifications||[]){
    const row=e('article',undefined,'uc-notification');
-   row.append(e('strong',ref(item.invoice_id)+' · '+String(item.event_action||'').replace(/_/g,' ')),e('span',item.snapshot?.customer_email||''),e('small',item.state),e('small',new Date(item.created_at).toLocaleString()));
+   row.append(e('strong',(item.snapshot?.public_order_number||ref(item.invoice_id))+' · '+String(item.event_action||'').replace(/_/g,' ')),e('span',item.snapshot?.customer_email||''),e('small',item.state),e('small',new Date(item.created_at).toLocaleString()));
    if(item.state==='failed'){
     const retry=e('button','Retry email','ghost');
     retry.onclick=async()=>{retry.disabled=true;try{await api(route('write'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'retry_notification',id:item.id})});await load()}catch(err){note.textContent=err.message;retry.disabled=false}};
