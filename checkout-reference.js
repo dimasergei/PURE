@@ -182,7 +182,7 @@
    const fees=delivery.extras||[];
    const counts=[['Subtotal',subtotal]];
    if(p?.pricing?.membership_discount_cents>0)counts.push([(p.pricing.membership_name||'Membership')+' savings',-p.pricing.membership_discount_cents]);
-   if(savings)counts.push(['BLACKFRIDAY10 (10%)',-savings]);
+   if(savings)counts.push([p?.pricing?.affiliate_code?'Partner offer (20%)':'BLACKFRIDAY10 (10%)',-savings]);
     if(p?.pricing?.quantity_discount_cents>0)counts.push(['Quantity savings',-p.pricing.quantity_discount_cents]);
    if(cryptoSavings)counts.push(['Crypto discount (5%)',-cryptoSavings]);
    if(p?.pricing?.membership_addon)counts.push([p.pricing.membership_addon.name+' — '+(p.pricing.membership_addon.period==='monthly'?'first month':'annual'),p.pricing.membership_addon.fee_cents]);
@@ -281,7 +281,7 @@
     const q=await fetchPreview(candidate);
     if(q){
      renderSummary();
-     message.textContent=state.coupon?(state.coupon==='BLACKFRIDAY10'?'BLACKFRIDAY10 applied — 10% off merchandise.':'Affiliate code applied.'):action==='remove'?(q.pricing?.crypto_discount_cents?'Coupon removed. The 5% crypto discount applies.':'Coupon removed. Regular prices restored.'):'';
+     message.textContent=state.coupon?(state.coupon==='BLACKFRIDAY10'?'BLACKFRIDAY10 applied — 10% off merchandise.':'Partner code applied — 20% off your first eligible order.'):action==='remove'?(q.pricing?.crypto_discount_cents?'Coupon removed. The 5% crypto discount applies.':'Coupon removed. Regular prices restored.'):'';
      syncCurrencyDisplays();
      if(stage===2)updatePayment();
     }

@@ -84,12 +84,12 @@
     if(!request.ok||!Number.isSafeInteger(data?.total_cents))throw Error(data?.error||'Could not calculate your order total.');
     appliedCoupon=data.pricing?.affiliate_code||data.pricing?.coupon_code||'';
     saveCoupon(appliedCoupon);input.value=appliedCoupon;remove.hidden=!appliedCoupon;
-    couponStatus.textContent=appliedCoupon?(appliedCoupon==='BLACKFRIDAY10'?'BLACKFRIDAY10 applied — 10% off merchandise.':'Affiliate code applied.'):action==='remove'?'Coupon removed. Regular prices restored.':'';
+    couponStatus.textContent=appliedCoupon?(appliedCoupon==='BLACKFRIDAY10'?'BLACKFRIDAY10 applied — 10% off merchandise.':'Partner code applied — 20% off your first eligible order.'):action==='remove'?'Coupon removed. Regular prices restored.':'';
     const shipping=data.pricing?.delivery?.shipping_cents||0;
     const features=data.pricing?.delivery?.extras||[];
     const nodes=[['Subtotal',data.subtotal_cents]];
     const discount=appliedCoupon?data.pricing?.coupon_discount_cents||0:0;
-    if(discount>0)nodes.push(['BLACKFRIDAY10 (10%)',-discount]);
+    if(discount>0)nodes.push([data.pricing?.affiliate_code?'Partner offer (20%)':'BLACKFRIDAY10 (10%)',-discount]);
      if(data.pricing?.quantity_discount_cents>0)nodes.push(['Quantity savings',-data.pricing.quantity_discount_cents]);
     for(const free of data.pricing?.bogo_campaign?.free_units||[]){
      const item=items.find(item=>item.id===free.id&&item.size===free.size);

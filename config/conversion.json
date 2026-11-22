@@ -51,8 +51,8 @@
     "version": "partner-2026-11-v1",
     "first_order_bps": 4000,
     "repeat_order_bps": 1000,
-    "customer_discount_bps": 0,
-    "cookie_days": 60,
+    "customer_discount_bps": 2000,
+    "cookie_days": 30,
     "minimum_payout_cents": 10000
   },
   "memberships_enabled": true,

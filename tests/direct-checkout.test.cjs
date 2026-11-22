@@ -174,5 +174,5 @@ test('signed partner attribution and existing commissions do not add a customer 
  const {res}=await call({...body,action:'quote'},{db:dbMock({partner}),headers:{cookie:cookie+'forged'}});
  assert.equal(res.code,200);assert.equal(res.body.pricing.referral,undefined);assert.equal(res.body.discount_cents,0);
  assert.equal(require('../config/conversion.json').partner.first_order_bps,4000);assert.equal(require('../config/conversion.json').partner.repeat_order_bps,1000);
- assert.equal(require('../config/conversion.json').partner.customer_discount_bps,0);
+ assert.equal(require('../config/conversion.json').partner.customer_discount_bps,2000);
 });

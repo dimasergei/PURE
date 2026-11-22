@@ -111,7 +111,7 @@ test('PURE memberships execute verified fees and goods benefits atomically in di
      '20261122000200_partner_commission_rates.sql',
      '20261122000300_partner_chargebacks.sql',
      '20261122000400_storefront_reviews.sql','20261122000500_review_credit.sql',
-     '20261122000700_bogo_fulfillment.sql','20261122000800_blackfriday10_checkout.sql']){
+     '20261122000700_bogo_fulfillment.sql','20261122000800_blackfriday10_checkout.sql','20261122001000_partner_first_order_discount.sql']){
    try{await db.exec(read(file));}catch(error){error.message=file+': '+error.message;throw error;}
   }
   for(const route of Object.keys(ids))methods[route]=(await db.query('select * from commerce_payment_methods where id=$1',[ids[route]])).rows[0];
@@ -208,9 +208,10 @@ test('PURE memberships execute verified fees and goods benefits atomically in di
    const customer=randomUUID(), partner=randomUUID(), code='FIXTUREPARTNER';
    await rpc('commerce_join_partner',[partner,code,'partner-2026-11-v1']);
    const first=await make({customer,coupon:code,referral:{customer_id:partner,code,first_order:true}});
+   assert.equal(first.pricing.coupon_discount_cents,4000);
    await place(first);await pay(first);
    const ledger=async id=>(await db.query('select rate_bps,amount_cents,status from commerce_partner_commissions where invoice_id=$1',[id])).rows;
-   assert.deepEqual(await ledger(first.id),[{rate_bps:4000,amount_cents:8000,status:'pending'}]);
+   assert.deepEqual(await ledger(first.id),[{rate_bps:4000,amount_cents:6400,status:'pending'}]);
    const secondCodeAttempt=await make({customer,coupon:code,referral:{customer_id:partner,code,first_order:true}});
    await assert.rejects(place(secondCodeAttempt),/already used/);
    const repeat=await make({customer});await place(repeat);await pay(repeat);
@@ -219,7 +220,7 @@ test('PURE memberships execute verified fees and goods benefits atomically in di
    assert.deepEqual(await ledger(repeat.id),[{rate_bps:1000,amount_cents:2000,status:'reversed'}]);
    await assert.rejects(rpc('commerce_reverse_partner_chargeback',[repeat.id,'FIXTURE-CHARGEBACK-2']),/already recorded/);
    await refund(first);
-   assert.deepEqual(await ledger(first.id),[{rate_bps:4000,amount_cents:8000,status:'reversed'}]);
+   assert.deepEqual(await ledger(first.id),[{rate_bps:4000,amount_cents:6400,status:'reversed'}]);
   });
   await t.test('the discounted BAC threshold survives payment and seeds exactly one free item',async()=>{
    for(const route of ['card','interac']){
