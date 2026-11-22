@@ -81,6 +81,9 @@ async function setup(route){const errors=[];const console=new VirtualConsole();c
   dom.window.close();
  }
  {const{dom,d,w}=await setup('/product/retatrutide');
+  assert.match(d.querySelector('h1').textContent,/PU-1 RT/);
+  assert.match(d.querySelector('table').textContent,/IdentityRetatrutide/);
+  assert.equal(d.querySelector('[data-pure-campaign-countdown]').dataset.campaignProduct,'retatrutide:10mg');
   const paths=[...d.querySelectorAll('.nl-product-saving-card')];
   assert.equal(paths.length,2);
   assert.equal(paths[0].getAttribute('href'),'/memberships');
