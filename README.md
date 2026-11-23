@@ -1,4 +1,4 @@
-# AltaPure Labs — Storefront and operations
+# PURE — Storefront and operations
 
 ## Current checkout status (November 2026)
 
