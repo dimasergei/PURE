@@ -62,7 +62,7 @@ async function submit(env,id,values){
  await form.onsubmit({preventDefault(){},currentTarget:form});
 }
 
-for(const route of ['/account/membership','/account/subscriptions','/account/partner'])test(route+' keeps its destination through password login and the stored sign-in callback',async()=>{
+for(const route of ['/account/membership','/account/partner'])test(route+' keeps its destination through password login and the stored sign-in callback',async()=>{
  const destination=route+'?view=details';
  const guest=await page(destination);
  let login,signed,callback;
@@ -94,6 +94,16 @@ test('account aliases preserve a safe canonical program destination',async()=>{
  const env=await page('/my-account/membership/?view=benefits');
  try{assert.equal(new URL(env.assigned[0],'https://pure.example').searchParams.get('returnTo'),'/account/membership?view=benefits');}
  finally{env.dom.window.close();}
+});
+
+test('the legacy subscriptions link reaches the canonical membership sign-in',async()=>{
+ const alias=await page('/account/subscriptions');
+ let canonical;
+ try{
+  assert.deepEqual(alias.assigned,['/account/membership']);
+  canonical=await page(alias.assigned[0]);
+  assertDestination(canonical.assigned[0],'/account/login','/account/membership');
+ }finally{alias.dom.window.close();canonical?.dom.window.close();}
 });
 
 test('auth cross-links retain partner enrollment and membership checkout in fresh page contexts and through password reset feedback',async()=>{
@@ -167,6 +177,43 @@ test('Google sign-in precedes the alternative divider and email form on both aut
    const callback=new URL(env.oauth[0].options.redirectTo);
    assert.equal(callback.pathname,'/account');assert.equal(callback.search,'','OAuth callback URL remains query-free');
   }finally{env.dom.window.close();}
+ }
+});
+
+test('new partners complete Google or email signup on this store and return to enrollment across tabs',async()=>{
+ const destination='/account/partner';
+ const signup=await page('/account/signup?returnTo='+encodeURIComponent(destination+'?source=publisher'));
+ const pages=[signup];
+ try{
+  await signup.w.document.getElementById('google-signin').onclick();
+  await submit(signup,'signup',{name:'Fixture Researcher',email:user.email,password:'Fixture-only-password1!',confirm:'Fixture-only-password1!',research:true});
+  const callback=new URL(signup.oauth[0].options.redirectTo);
+  assertDestination(callback.href,'/account',destination);
+  assert.equal(signup.signups[0].options.emailRedirectTo,callback.href);
+  assert.equal(callback.searchParams.size,1,'only the fixed partner route travels to the provider');
+  const address=callback.pathname+callback.search+'&code=fixture-code';
+  for(const storedReturn of [null,'/account/membership']){
+   const arrived=await page(address,{signedIn:true,storedReturn});pages.push(arrived);
+   assert.deepEqual(arrived.assigned,[destination]);
+   assert.equal(arrived.w.sessionStorage.getItem('ap-account-return'),null);
+  }
+  const unsigned=await page(address);pages.push(unsigned);
+  assertDestination(unsigned.assigned[0],'/account/login',destination);
+  assert.deepEqual(unsigned.panels,[]);
+  const enrolled=await page(destination,{signedIn:true});pages.push(enrolled);
+  assert.deepEqual(enrolled.panels,[destination]);
+ }finally{for(const env of pages)env.dom.window.close();}
+});
+
+test('OAuth and email callbacks ignore untrusted partner-like destinations',async()=>{
+ for(const destination of ['//outside.example/account/partner','/account/partner/../profile','/admin','/account/partner%3Fbad']){
+  const signup=await page('/account/signup?returnTo='+encodeURIComponent(destination));
+  try{
+   await signup.w.document.getElementById('google-signin').onclick();
+   await submit(signup,'signup',{name:'Fixture Researcher',email:user.email,password:'Fixture-only-password1!',confirm:'Fixture-only-password1!',research:true});
+   assert.equal(signup.oauth[0].options.redirectTo,'https://pure.example/account');
+   assert.equal(signup.signups[0].options.emailRedirectTo,'https://pure.example/account');
+  }finally{signup.dom.window.close();}
  }
 });
 

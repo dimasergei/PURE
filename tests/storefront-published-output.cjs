@@ -2,6 +2,29 @@
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const {JSDOM}=require('jsdom');
 const out='public-build';
+const catalog = JSON.parse(fs.readFileSync('lib/catalog.json', 'utf8'));
+const feed = JSON.parse(fs.readFileSync(path.join(out, 'feeds', 'catalog.json'), 'utf8'));
+const byId = new Map(feed.map(row => [row.variant_id, row]));
+assert.equal(byId.size, feed.length, 'Partner feed variant identifiers must be unique');
+assert.equal(feed.length, catalog.reduce((count, p) => count + p.variants.length, 0));
+for (const product of catalog) {
+  for (const variant of product.variants) {
+    const variantId = product.id + ':' + variant.size;
+    const row = byId.get(variantId);
+    assert.ok(row, 'Missing public feed variant ' + variantId);
+    const page = new URL(row.product_url);
+    assert.equal(page.origin, 'https://getpurelabs.com');
+    assert.equal(page.pathname, '/product/' + product.id);
+    assert.deepEqual([...page.searchParams], [['size', variant.size]]);
+    assert.ok(fs.existsSync(path.join(out, 'product', product.id + '.html')));
+    assert.deepEqual(row, {
+      variant_id: variantId, brand: 'PURE', product_name: product.name,
+      strength_or_pack: variant.size, list_price_usd: variant.price,
+      product_url: page.href,
+      testing_page_url: 'https://getpurelabs.com/coas?product=' + encodeURIComponent(product.id) + '&size=' + encodeURIComponent(variant.size)
+    }, 'Feed must contain only approved public data for ' + variantId);
+  }
+}
 const retired=['offers.html','data/storefront-programs.json'];
 for(const file of retired)assert.equal(fs.existsSync(path.join(out,file)),false,'Retired artifact: '+file);
 for(const file of ['memberships.html','research-builder.html','membership-terms.html','membership-experience.js','membership-checkout.js','research-builder-client.js'])assert.ok(fs.existsSync(path.join(out,file)),'Restored program artifact: '+file);

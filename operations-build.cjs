@@ -55,6 +55,17 @@ for(const [url,[title,description]] of Object.entries(routes)){const body='<sect
 fs.mkdirSync(path.join(out,'product'),{recursive:true});
 for(const p of catalog){const sizes=p.variants.map(v=>esc(v.size)).join(', '),url='/product/'+p.id;const main='<section class="ap-container ap-page-intro"><p>'+esc(p.group)+'</p><h1>'+esc(p.name)+'</h1><p>'+esc(p.blurb)+'</p><p>Listed sizes: '+sizes+'.</p><p>For controlled laboratory research only. Review the product and select your quantity to order.</p><a href="/coas?product='+encodeURIComponent(p.id)+'">Product documentation</a></section>';fs.writeFileSync(path.join(out,'product',p.id+'.html'),page(shell,url,p.name+' | PURE',p.blurb+' Sizes: '+p.variants.map(v=>v.size).join(', ')+'.',main,{'@context':'https://schema.org','@type':'Product',name:p.name,description:p.blurb,sku:p.id,brand:{'@type':'Brand',name:'PURE'},url:base+url}));}
 const urls=['/',...Object.keys(routes).filter(url=>!['/research-checkout','/research-builder'].includes(url)),...catalog.map(p=>'/product/'+p.id)];
+const feed = catalog.flatMap(product => product.variants.map(variant => ({
+  variant_id: product.id + ':' + variant.size,
+  brand: 'PURE',
+  product_name: product.name,
+  strength_or_pack: variant.size,
+  list_price_usd: variant.price,
+  product_url: base + '/product/' + encodeURIComponent(product.id) + '?size=' + encodeURIComponent(variant.size),
+  testing_page_url: base + '/coas?product=' + encodeURIComponent(product.id) + '&size=' + encodeURIComponent(variant.size)
+})));
+fs.mkdirSync(path.join(out, 'feeds'), {recursive: true});
+fs.writeFileSync(path.join(out, 'feeds', 'catalog.json'), JSON.stringify(feed, null, 2) + '\n');
 fs.writeFileSync(path.join(out,'sitemap.xml'),'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'+urls.map(url=>'<url><loc>'+base+url+'</loc></url>').join('')+'</urlset>');
 fs.writeFileSync(path.join(out,'robots.txt'),'User-agent: *\nDisallow: /admin-\nDisallow: /account\nDisallow: /my-account\nDisallow: /api/\nSitemap: '+base+'/sitemap.xml\n');
 fs.writeFileSync(path.join(out,'404.html'),'<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta name="robots" content="noindex"><title>Page not found | PURE</title><link rel="stylesheet" href="/storefront-v2.css"></head><body class="ap-site"><main class="ap-container ap-page-intro"><h1>That page is not here.</h1><p>Browse the current catalog or contact our team.</p><a class="ap-button" href="/shop">Open the catalog</a> <a href="/contact">Contact support</a></main></body></html>');
