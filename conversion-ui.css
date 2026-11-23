@@ -311,6 +311,9 @@ html:root body.ap-site .nl-hero .nl-trust {
   font-size: .8rem;
   font-weight: 650;
 }
+.rd-referral-fields label[hidden] {
+  display: none;
+}
 .rd-referral-fields select,
 .rd-referral [data-referral-url],
 .rd-referral [data-referral-caption] {

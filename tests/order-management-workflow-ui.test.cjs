@@ -13,7 +13,7 @@ async function setup(t,{row,detail},writeImpl){
  w.HTMLDialogElement.prototype.showModal=function(){this.open=true};w.HTMLDialogElement.prototype.close=function(){this.open=false};w.confirm=()=>true;
  w.URL.createObjectURL=blob=>{objectURLs.push(blob);return'blob:fixture-'+objectURLs.length};w.URL.revokeObjectURL=()=>{};
  w.HTMLAnchorElement.prototype.click=function(){downloads.push({name:this.download,href:this.href})};
- w.eval(source);w.AltaFulfillment.mount(async(url,options)=>{calls.push({url,options});if(options?.body)return writeImpl?writeImpl(JSON.parse(options.body),calls):{saved:true};if(options?.responseType==='blob')return new w.Blob(['fixture document']);if(url.includes('view=manual_pilot')){if(detail.pilotResult instanceof Error)throw detail.pilotResult;return detail.pilotResult}if(url.includes('view=detail'))return detail;return{orders:[row],pagination:{page:1,total:1}}});
+ w.eval(source);w.AltaFulfillment.mount(async(url,options)=>{calls.push({url,options});if(options?.body)return writeImpl?writeImpl(JSON.parse(options.body),calls):{saved:true};if(options?.responseType==='blob')return new w.Blob(['fixture document']);if(url.includes('view=fulfillment_quote'))return detail.quoteBasis;if(url.includes('view=manual_pilot')){if(detail.pilotResult instanceof Error)throw detail.pilotResult;return detail.pilotResult}if(url.includes('view=detail'))return detail;return{orders:[row],pagination:{page:1,total:1}}});
  t.after(()=>{w.AltaFulfillment.clear();w.close()});await tick();await w.AltaFulfillment.manage(row);
  return{w,calls,downloads,objectURLs,form:title=>[...w.document.querySelectorAll('dialog form')].find(f=>f.querySelector('h4')?.textContent===title),button:title=>[...w.document.querySelectorAll('dialog button')].find(b=>b.textContent===title),writes:()=>calls.filter(c=>c.options?.body).map(c=>JSON.parse(c.options.body))};
 }
@@ -156,4 +156,23 @@ test('other orders use the existing packed lots path without requesting pilot de
  const ctx=await setup(t,fixture('paid',{allocations:manual()}));
  assert.ok(ctx.form('Packed lot certificates'));assert.equal(ctx.w.document.querySelector('.uc-pilot'),null);
  assert.equal(ctx.calls.filter(c=>c.url.includes('view=manual_pilot')).length,0);
+});
+
+test('a paid order opens one private quote check with explicit costs, a whole-cent margin limit and no writes',async t=>{
+ const ctx=await setup(t,fixture('paid',{quoteBasis:{available:true,currency:'CAD',receipts_cents:10001,commission_cents:4000,commission_usd_cents:2857,paid_units:2,free_units:3}}));
+ const box=[...ctx.w.document.querySelectorAll('dialog details')].find(d=>d.querySelector('summary')?.textContent==='Check fulfillment quote');
+ assert.ok(box);assert.equal(box.open,false);assert.ok(!ctx.calls.some(c=>c.url.includes('view=fulfillment_quote')));
+ box.open=true;box.dispatchEvent(new ctx.w.Event('toggle'));await tick();
+ const set=(name,value)=>{const input=box.querySelector('[name="'+name+'"]');input.value=value;input.dispatchEvent(new ctx.w.Event('input',{bubbles:true}))};
+ assert.match(box.textContent,/2 paid \+ 3 free/);assert.match(box.textContent,/USD at the invoice rate/);assert.match(box.textContent,/Enter all three costs/);
+ set('processing','0');set('overhead','10.00');set('reserve','0');
+ assert.match(box.textContent,/Maximum delivered quote for 15%CA\$35.00/);
+ set('delivered','35.00');assert.match(box.textContent,/Meets 15% targetCA\$15.01/);
+ set('delivered','35.01');assert.match(box.textContent,/Below 15% targetCA\$15.00/);
+ set('delivered','50.01');assert.match(box.textContent,/Below 15% targetCA\$0.00/);
+ set('delivered','50.02');assert.match(box.textContent,/Loss at this quote-CA\$0.01/);
+ set('overhead','80.00');assert.match(box.textContent,/No qualifying quote/);assert.match(box.textContent,/Already below break-even/);
+ set('reserve','');assert.doesNotMatch(box.textContent,/projected profit|No qualifying quote/);
+ assert.equal(ctx.writes().length,0);
+ const unpaid=await setup(t,fixture('accepted'));assert.doesNotMatch(unpaid.w.document.querySelector('dialog').textContent,/Check fulfillment quote/);
 });

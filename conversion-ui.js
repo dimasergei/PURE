@@ -3,7 +3,7 @@
  'use strict';
  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const money=n=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(n/100);
- async function request(path,body,auth){const headers={'Content-Type':'application/json'};if(auth){const {data}=await auth.auth.getSession();if(data.session)headers.Authorization='Bearer '+data.session.access_token;}const r=await fetch('/api/customer-config?'+path,{method:body?'POST':'GET',cache:'no-store',credentials:'same-origin',headers,...(body?{body:JSON.stringify(body)}:{})});const data=await r.json();if(!r.ok)throw Error(data.error||'Please try again.');return data;}
+ async function request(path,body,auth){const headers={'Content-Type':'application/json'};if(auth){const {data}=await auth.auth.getSession();if(data.session)headers.Authorization='Bearer '+data.session.access_token;}const r=await fetch('/api/customer-config?'+path,{method:body?'POST':'GET',cache:'no-store',credentials:'same-origin',keepalive:path==='partner=visit',headers,...(body?{body:JSON.stringify(body)}:{})});const data=await r.json();if(!r.ok)throw Error(data.error||'Please try again.');return data;}
  async function cart(root){return window.AltaCartNmi?.offer?.(root);}
  function dateLabel(value){const date=new Date(value);return value&&Number.isFinite(date.getTime())?new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',year:'numeric'}).format(date):null;}
  function membershipCards(config,period='monthly',active=null){return window.PureMemberships?.renderCards(config,period,{active,context:'account'})||'';}
@@ -55,16 +55,24 @@
    return `<section class="ae-panel rd-referral"><small>PARTNER DASHBOARD · ${esc(partner.status)}</small><h2>Referral sharing is paused</h2><p>Contact <a href="mailto:support@getpurelabs.com">support@getpurelabs.com</a> about your partner account.</p></section>`;
   }
   const products = [...(window.AltaStore?.catalog || [])].sort((a, b) => a.name.localeCompare(b.name));
-  const productOptions = products.flatMap(product => product.variants.map(variant => {
-   const path = '/product/' + encodeURIComponent(product.id) + '?size=' + encodeURIComponent(variant.size);
-   return `<option value="${esc(path)}">${esc(product.name)} · ${esc(variant.size)}</option>`;
-  })).join('');
+  function variantOptions(list, bulk = false) {
+   return list.flatMap(product => product.variants.map(variant => {
+    const params = new URLSearchParams();
+    if (bulk) params.set('product', product.id);
+    params.set('size', variant.size);
+    const path = (bulk ? '/bulk-orders' : '/product/' + encodeURIComponent(product.id)) + '?' + params;
+    return `<option value="${esc(path)}">${esc(product.name)} · ${esc(variant.size)}</option>`;
+   })).join('');
+  }
+  const productOptions = variantOptions(products);
+  const bulkOptions = variantOptions([...(window.AltaWorkspace?.bulkCatalog || [])].sort((a, b) => a.name.localeCompare(b.name)), true);
   return `<section class="ae-panel rd-referral" data-partner-links>
    <small>PARTNER DASHBOARD · ${esc(partner.status)}</small>
    <h2>Your referral link</h2>
    <p>Choose the page your research audience will see. Copy a caption to include your commission disclosure.</p>
    <div class="rd-referral-fields">
-    <label>Destination<select data-link-destination><option value="/">PURE homepage</option><option value="/shop">Full catalog</option>${productOptions ? '<optgroup label="Products">'+productOptions+'</optgroup>' : ''}</select></label>
+    <label>Destination<select data-link-destination><option value="/">PURE homepage</option><option value="/shop">Full catalog</option><option value="/bulk-orders">Bulk order builder</option>${productOptions ? '<optgroup label="Products">'+productOptions+'</optgroup>' : ''}</select></label>
+    ${bulkOptions ? `<label data-bulk-link-field hidden>Product and strength<select data-bulk-link-variant><option value="/bulk-orders">All bulk products</option>${bulkOptions}</select></label>` : ''}
     ${codes.length > 1 ? `<label>Referral code<select data-link-code>${codes.map(c => `<option${c.code === partner.code ? ' selected' : ''}>${esc(c.code)}</option>`).join('')}</select></label>` : ''}
    </div>
    <input data-referral-url readonly aria-label="Your referral link">
@@ -84,20 +92,30 @@
   const panel = root.querySelector('[data-partner-links]');
   if (!panel) return;
   const destination = panel.querySelector('[data-link-destination]');
+  const bulkField = panel.querySelector('[data-bulk-link-field]');
+  const bulkVariant = panel.querySelector('[data-bulk-link-variant]');
   const code = panel.querySelector('[data-link-code]');
   const link = panel.querySelector('[data-referral-url]');
   const caption = panel.querySelector('[data-referral-caption]');
   const message = panel.querySelector('[data-referral-message]');
+  let disclosure = partnerDisclosure;
 
   function update() {
-   const page = destination.selectedOptions[0];
+   const bulk = destination.value === '/bulk-orders';
+   disclosure = bulk ? 'I earn a commission on qualifying purchases made through this PURE link.' : partnerDisclosure;
+   if (bulkField) bulkField.hidden = !bulk;
+   const page = bulk && bulkVariant ? bulkVariant.selectedOptions[0] : destination.selectedOptions[0];
    const url = new URL(page.value, location.origin);
    url.searchParams.set('ref', code?.value || primaryCode);
    link.value = url.href;
-   const intro = page.parentElement.tagName === 'OPTGROUP'
-    ? 'Product information for ' + page.textContent + ' at PURE.'
-    : 'Browse the PURE research catalog.';
-   caption.value = partnerDisclosure + '\n\n' + intro + ' For laboratory research use only.\n' + url.href;
+   let intro = 'Browse the PURE research catalog.';
+   if (bulk) {
+    const subject = url.searchParams.has('product') ? ' for ' + page.textContent : '';
+    intro = 'Explore PURE bulk pricing' + subject + '. Save 50% at 10 units or 60% at 50 units of the same compound. Strengths can be combined.';
+   } else if (page.parentElement.tagName === 'OPTGROUP') {
+    intro = 'Product information for ' + page.textContent + ' at PURE.';
+   }
+   caption.value = disclosure + '\n\n' + intro + ' For laboratory research use only.\n' + url.href;
    message.textContent = '';
   }
   async function copy(field, label, text = field.value) {
@@ -113,10 +131,11 @@
    }
   }
   destination.addEventListener('change', update);
+  bulkVariant?.addEventListener('change', update);
   code?.addEventListener('change', update);
   panel.querySelector('[data-copy-link]').onclick = () => copy(link, 'Link');
   panel.querySelector('[data-copy-caption]').onclick = () => copy(caption, 'Caption');
-  panel.querySelector('[data-copy-disclosure]').onclick = () => copy(caption, 'Disclosure', partnerDisclosure);
+  panel.querySelector('[data-copy-disclosure]').onclick = () => copy(caption, 'Disclosure', disclosure);
   update();
  }
 

@@ -131,6 +131,7 @@ test('bulk preview, checkout quote and saved invoice use only the volume price d
   assert.equal(priced.pricing.bogo_campaign,undefined);
   assert.equal(priced.pricing.affiliate_code,undefined);assert.equal(priced.pricing.coupon_discount_cents,0);
   assert.equal(priced.automatic_partner_offer,undefined);
+  assert.deepEqual(priced.pricing.referral,{partner_id:partner.customer_id,code:partner.code,first_order:true});
   assert.equal(priced.pricing.bundled_items.length,1);assert.equal(priced.pricing.bundled_items[0].qty,1);
  }
  assert.equal(preview.body.membership_offer,null);

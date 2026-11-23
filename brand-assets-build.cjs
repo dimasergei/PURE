@@ -27,7 +27,7 @@ for(const file of fs.readdirSync(out,{recursive:true}).filter(f=>f.endsWith('.ht
   html=html.replace(/<link\b[^>]*\brel=["'](?:(?:shortcut )?icon|apple-touch-icon)["'][^>]*>/gi,'');
   html=html.replace(/<meta\b[^>]*\bname=["'](?:theme-color|altapure-promo-end)["'][^>]*>/gi,'');
   if(path.basename(file).startsWith('admin-')){
-    html=html.replace(/src="\/admin-fulfillment\.js(?:\?[^"]*)?"/g,'src="/admin-fulfillment.js?v=20261122-packing-record"');
+    html=html.replace(/src="\/admin-fulfillment\.js(?:\?[^"]*)?"/g,'src="/admin-fulfillment.js?v=20261123-quote-check"');
     html=html.replace(/href="\/admin-fulfillment\.css(?:\?[^"]*)?"/g,'href="/admin-fulfillment.css?v=20261122-packing-record"');
     html=html.replace(/<link\b[^>]*href=["']\/admin-violet\.css[^"']*["'][^>]*>/gi,'');
     html=html.replace(/href="\/(admin-dashboard|operations)\.css(?:\?[^"]*)?"/g,'href="/$1.css?v=20261117b"');
@@ -57,9 +57,9 @@ for(const file of fs.readdirSync(out,{recursive:true}).filter(f=>f.endsWith('.ht
   html=html.replace(/href="\/(pure-currency|pure-bulk-layout|reference-ui|cart-reference|membership-experience|research-builder-parity|research-checkout)\.css(?:\?[^"]*)?"/g,'href="/$1.css?v=20261118-local-currency"');
   // Price quotes and reward markers share one contract across the drawer and checkout.
   html=html.replace(/\b(src|href)="\/(cart-reference\.(?:js|css)|checkout-reference\.js|storefront-v2\.js)(?:\?[^"]*)?"/g,'$1="/$2?v=20261122-catalog-rewards"');
-  html=html.replace(/src="\/workspace-v2\.js(?:\?[^"]*)?"/g,'src="/workspace-v2.js?v=20261122-partner-pilot"');
+  html=html.replace(/src="\/workspace-v2\.js(?:\?[^"]*)?"/g,'src="/workspace-v2.js?v=20261123-bulk-links"');
   html=html.replace(/\b(src|href)="\/(checkout-reference\.(?:js|css))(?:\?[^"]*)?"/g,'$1="/$2?v=20261122-summary-gifts"');
-  html=html.replace(/src="\/(workspace-v2|readiness-ui|direct-checkout-client)\.js(?:\?[^"]*)?"/g,'src="/$1.js?v=20261122-bulk-savings"');
+  html=html.replace(/src="\/(readiness-ui|direct-checkout-client)\.js(?:\?[^"]*)?"/g,'src="/$1.js?v=20261122-bulk-savings"');
   fs.writeFileSync(target,html);
   count++;
 }

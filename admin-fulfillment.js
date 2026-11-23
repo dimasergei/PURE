@@ -213,6 +213,52 @@ function pilotReconciliation(host,row,data){
   await write(body);await reload(row);msg('Packing record saved.');
  });
 }
+function fulfillmentQuote(host,id){
+ const box=el('details',undefined,'uc-history'),content=el('div');
+ box.append(el('summary','Check fulfillment quote'),content);host.append(box);
+ let loading=false;
+ box.addEventListener('toggle',async()=>{
+  if(!box.open||loading)return;
+  loading=true;
+  content.replaceChildren(el('p','Reading payment and commission records…','uc-hint'));
+  let basis;
+  try{basis=await api(lotus('fulfillment_quote','&id='+encodeURIComponent(id)))}
+  catch{loading=false;content.replaceChildren(el('p','Records unavailable. Reopen to retry.','uc-hint'));return}
+  if(!basis.available){loading=false;content.replaceChildren(el('p',basis.reason||'No confirmed quote budget.','uc-hint'));return}
+  const money=n=>cash(n,basis.currency),info=el('div',undefined,'uc-pilot-result');
+  info.append(field('Net receipts',money(basis.receipts_cents)),field('Partner commission',money(basis.commission_cents)));
+  const fx=basis.currency==='CAD'&&basis.commission_usd_cents>0?' Commission converted from '+cash(basis.commission_usd_cents,'USD')+' USD at the invoice rate.':'';
+  const terms=el('p',basis.paid_units+' paid + '+basis.free_units+' free units (including gifts). Net receipts exclude tax, optional delivery services and membership fees.'+fx,'uc-hint');
+  const grid=el('div',undefined,'uc-pilot-inputs'),inputs=[];
+  for(const [name,title] of [['processing','Payment fees'],['overhead','Allocated overhead'],['reserve','Loss allowance'],['delivered','Delivered quote']]){
+   const control=input(grid,title+' ('+basis.currency+')',name);
+   control.type='text';control.inputMode='decimal';control.placeholder='0.00';control.maxLength=12;inputs.push(control);
+  }
+  const result=el('div',undefined,'uc-pilot-result');result.setAttribute('aria-live','polite');
+  const note=el('p','Include all units, gifts, labeling, packing, postage and duties in one delivered quote. Enter shared costs once. This comparison uses a 15% margin target.','uc-hint');
+  const read=control=>{
+   const value=control.value.trim();
+   if(!/^\d{1,8}(?:\.\d{1,2})?$/.test(value))return null;
+   const [major,minor='']=value.split('.');
+   return Number(major)*100+Number(minor.padEnd(2,'0'));
+  };
+  function calculate(){
+   const [fees,overhead,reserve,quote]=inputs.map(read);result.replaceChildren();
+   if([fees,overhead,reserve].includes(null)){result.append(el('p','Enter all three costs to see the spending limit. Enter 0 for a confirmed zero cost.','uc-hint'));return}
+   const available=basis.receipts_cents-basis.commission_cents-fees-overhead-reserve;
+   const limit=available-Math.ceil(basis.receipts_cents*15/100);
+   if(limit<0)result.append(field('15% spending limit','No qualifying quote'));
+   else result.append(field('Maximum delivered quote for 15%',money(limit)));
+   result.append(field('Break-even delivered quote',available<0?'Already below break-even':money(available)));
+   if(quote===null)return;
+   const profit=available-quote;
+   const decision=quote<=limit?'Meets 15% target':profit<0?'Loss at this quote':'Below 15% target';
+   result.append(field(decision,money(profit)+' projected profit'));
+  }
+  grid.addEventListener('input',calculate);calculate();
+  content.replaceChildren(info,terms,grid,note,result);
+ });
+}
 function commerceActions(host,row,data){const o=data.order,id=o.id,allocations=data.allocations||[],job=data.jobs?.[0];
  const pay=el('section',undefined,'uc-payment');pay.append(el('h3','Payment'));
  if(interacRequest(o)){
@@ -235,6 +281,7 @@ function commerceActions(host,row,data){const o=data.order,id=o.id,allocations=d
   exportSection(host,row,o);
   const shipment=el('section',undefined,'uc-shipment');shipment.append(el('h3','Shipping and delivery'));
   const manual=allocations.length>0&&allocations.every(a=>a.route==='manual'),remote=!!(job?.supplier_id||job?.has_payload||['working','submitted','shipped'].includes(job?.status)),unresolved=remote&&!(job?.status==='cancelled'&&job?.provider_status==='cancelled');
+  if(['paid','processing','shipped','delivered'].includes(o.status)&&!o.cancellation_status)fulfillmentQuote(shipment,id);
   if(data.manual_pilot_eligible&&(data.manual_pilot?.eligible||!['refunded','void'].includes(o.status)))pilotReconciliation(shipment,row,data);
   if(!data.manual_pilot_eligible&&allocations.length&&['paid','processing','shipped','delivered'].includes(o.status)){
    const f=form('Packed lot certificates',shipment);

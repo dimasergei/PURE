@@ -5,9 +5,10 @@
  let contactPage,partnerPage;
  const {$,$$,esc,t,money,product,image,heading}=A;
  const priceMarkup=(value,options={})=>A.priceMarkup?A.priceMarkup(value,options):esc(money(value));
+ const bulkCatalog=A.catalog.filter(p=>!/\bneedles?\b/i.test(p.name));
  const bulkKey='ap-bulk-draft-v2';
- let bulk=A.normalizeLines(A.read(bulkKey,[])).filter(x=>!/\bneedles?\b/i.test(product(x.id)?.name||''));
- let bulkQuery='',bulkGroup='All',initialized=false;
+ let bulk=A.normalizeLines(A.read(bulkKey,[])).filter(x=>bulkCatalog.some(p=>p.id===x.id));
+ let bulkQuery='',bulkGroup='All',initialized=false,linkedVariant;
  const bulkSizeKey='ap-bulk-size-selections-v2';let bulkSizes=A.read(bulkSizeKey,{});if(!bulkSizes||typeof bulkSizes!=='object'||Array.isArray(bulkSizes))bulkSizes={};
  let authPromise;
  function supplierReferences(){
@@ -37,9 +38,12 @@
  function setBulkQuantity(id,size,value){const p=product(id),v=p?.variants.find(x=>x.size===size),qty=Math.max(0,Math.min(100,Math.trunc(Number(value)||0)));if(!p||!v)return;bulk=bulk.filter(x=>!(x.id===id&&x.size===size));if(qty)bulk=A.normalizeLines([...bulk,{id,size,qty}]);A.write(bulkKey,simpleLines(bulk));bulkUpdateCard(id,size);bulkSummary();}
  function bulkResults(){
   const root=$('#ap-bulk-rows');if(!root)return;
-  const list=A.catalog.filter(p=>!/\bneedles?\b/i.test(p.name)&&(bulkGroup==='All'||A.categoryOf(p)===bulkGroup)&&(p.name+' '+p.group+' '+A.categoryOf(p)).toLowerCase().includes(bulkQuery.toLowerCase()));
+  const list=bulkCatalog.filter(p=>(bulkGroup==='All'||A.categoryOf(p)===bulkGroup)&&(p.name+' '+p.group+' '+A.categoryOf(p)).toLowerCase().includes(bulkQuery.toLowerCase()));
   root.innerHTML=list.map(p=>{
-   const existing=bulk.filter(x=>x.id===p.id),saved=bulkSizes[p.id],size=(p.variants.some(x=>x.size===saved)?saved:existing[0]?.size)||p.variants[0].size,v=p.variants.find(x=>x.size===size)||p.variants[0],qty=existing.find(x=>x.size===v.size)?.qty||0;
+   const existing=bulk.filter(x=>x.id===p.id);
+   const saved=bulkSizes[p.id],hint=linkedVariant?.id===p.id?linkedVariant.size:undefined;
+   const size=(p.variants.some(x=>x.size===saved)?saved:existing[0]?.size)||hint;
+   const v=p.variants.find(x=>x.size===size)||p.variants[0],qty=existing.find(x=>x.size===v.size)?.qty||0;
    return `<article class="nl-bulk-product" data-bulk-product="${esc(p.id)}" data-selected="${qty>0}">
     <a class="nl-bulk-image" href="/product/${encodeURIComponent(p.id)}?size=${encodeURIComponent(v.size)}"><img src="${esc(image(p,v.size))}" alt="${esc(p.name+' '+v.size)}" loading="lazy"></a>
     <div class="nl-bulk-product-body"><span class="ap-eyebrow">${esc(p.group)}</span><h3><a href="/product/${encodeURIComponent(p.id)}?size=${encodeURIComponent(v.size)}">${esc(p.name)}</a></h3>
@@ -84,8 +88,17 @@
    '/about':pageFallback('About PURE','Research compounds and product documentation for laboratory teams.','/shop','Explore the catalog'),
    '/track-order':pageFallback('Track your order','Sign in to view order status and available tracking information.','/account/purchases','View my orders')
   };
+  if(path==='/bulk-orders'&&!initialized){
+   initialized=true;
+   const params=new URLSearchParams(location.search),p=bulkCatalog.find(item=>item.id===params.get('product'));
+   if(p){
+    bulkQuery=p.name;
+    const variant=p.variants.find(item=>item.size===params.get('size'));
+    if(variant)linkedVariant={id:p.id,size:variant.size};
+   }
+  }
   const renderPage=routes[path];root.innerHTML=renderPage?renderPage():heading('PURE','This page could not be found.','Explore the current catalog.');
-  if(path==='/bulk-orders'){if(!initialized){initialized=true;const p=product(new URLSearchParams(location.search).get('product'));if(p)bulkQuery=p.name;}bulkResults();bulkSummary();}
+  if(path==='/bulk-orders'){bulkResults();bulkSummary();}
   if(path==='/coas')supplierReferences();
   document.title=({'/bulk-orders':'Bulk Orders','/rewards':'Points & Credit','/coas':'COA Library','/contact':'Contact','/about':'About','/partner-program':'Partner Program','/track-order':'Track Your Order'}[path]||'PURE')+' | PURE';
  }
@@ -94,7 +107,7 @@
   if(path==='/account/partner'){root.innerHTML=`<div class="ap-panel"><span class="ap-eyebrow">PARTNER WORKSPACE</span><h3>${data.partner?.status==='approved'?'Partner record available':'Start a partnership conversation.'}</h3><p>${data.partner?.status==='approved'?'Your account has an approved partner status. Refer to your written agreement for terms.':'No approved partner enrollment is recorded here. Send an inquiry to discuss your organization and proposed collaboration.'}</p><a class="ap-button" href="/partner-program">Open partner program ↗</a></div>`;return;}
   root.innerHTML=empty('Workspace information unavailable','Try reloading your account.');
  }
- document.addEventListener('click',event=>{const button=event.target.closest('[data-action]');if(!button)return;const action=button.dataset.action;
+ document.addEventListener('click',async event=>{const button=event.target.closest('[data-action]');if(!button)return;const action=button.dataset.action;
   if(action==='bulk-add-products'){const query=$('#ap-bulk-query');if(query){query.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});query.focus({preventScroll:true});}return;}
   if(action==='bulk-qty'){const current=bulk.find(x=>x.id===button.dataset.id&&x.size===button.dataset.size)?.qty||0;setBulkQuantity(button.dataset.id,button.dataset.size,current+Number(button.dataset.delta));}
   if(action==='bulk-size'){const p=product(button.dataset.id),v=p?.variants.find(x=>x.size===button.dataset.size);if(p&&v){bulkSizes[p.id]=v.size;A.write(bulkSizeKey,bulkSizes);bulkResults();}}
@@ -102,7 +115,19 @@
   if(action==='bulk-export')A.exportLines(bulk,'PURE-bulk-request.csv');
   if(action==='bulk-cart'){try{A.addItems(simpleLines(bulk));}catch(e){A.toast(e.message);}}
   if(action==='bulk-clear'){bulk=[];A.write(bulkKey,bulk);bulkResults();bulkSummary();}
-  if(action==='bulk-checkout'){if(!bulk.length||bulk.some(x=>bulkUnits(x.id)<10)){A.toast('Select at least 10 units per compound.');return;}A.write(bulkKey,simpleLines(bulk));location.assign('/checkout?bulk=1');}
+  if(action==='bulk-checkout'){
+   if(!bulk.length||bulk.some(x=>bulkUnits(x.id)<10)){A.toast('Select at least 10 units per compound.');return;}
+   if(button.disabled)return;
+   button.disabled=true;
+   if(window.PurePartnerVisit){
+    let timer;
+    const grace=new Promise(resolve=>{timer=setTimeout(resolve,1500);});
+    await Promise.race([window.PurePartnerVisit,grace]).catch(()=>{});
+    clearTimeout(timer);
+   }
+   A.write(bulkKey,simpleLines(bulk));
+   location.assign('/checkout?bulk=1');
+  }
   if(action==='bulk-inquiry'){const panel=$('#ap-bulk-inquiry');panel.hidden=false;panel.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});$('input[name="name"]',panel).focus({preventScroll:true});}
  });
  document.addEventListener('input',event=>{const el=event.target;
@@ -112,6 +137,6 @@
  });
  document.addEventListener('change',event=>{const el=event.target;if(el.id==='ap-bulk-group'){bulkGroup=el.value;bulkResults();}});
  document.addEventListener('submit',async event=>{const form=event.target;if(!form.matches('.ap-inquiry-form'))return;event.preventDefault();if(!form.reportValidity())return;const data=new FormData(form),type=form.dataset.inquiryType,button=$('button[type="submit"]',form),out=$('.ap-form-status',form);if(type==='bulk'&&!bulk.length){out.textContent='Choose products and quantities first.';return;}button.disabled=true;out.textContent='Sending your request…';if(!form.dataset.requestId)form.dataset.requestId=crypto.randomUUID();try{const result=await A.inquiry({type,request_id:form.dataset.requestId,name:data.get('name'),email:data.get('email'),organization:data.get('organization'),country:data.get('country'),topic:data.get('topic'),message:data.get('message'),website:data.get('website'),consent:data.get('consent')==='on',items:type==='bulk'?simpleLines(bulk):[]});out.textContent='Request saved. Reference: '+result.reference+'. Team notification: '+(result.notification||'queued')+'. View account responses under My account → Requests. No order was placed.';form.reset();delete form.dataset.requestId;}catch(e){out.textContent=e.message;}finally{button.disabled=false;}});
- window.AltaWorkspace={render,renderAccountPanel,authClient};
+ window.AltaWorkspace={render,renderAccountPanel,authClient,bulkCatalog};
  if($('#ap-main')&&!['/','/index','/shop'].includes(A.route())&&!A.route().startsWith('/product/'))render(A.route(),$('#ap-main'));
 })();

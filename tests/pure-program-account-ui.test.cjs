@@ -2,7 +2,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
-const {JSDOM} = require('jsdom');
+const {JSDOM,VirtualConsole} = require('jsdom');
 const config = require('../config/conversion.json');
 const auth = {auth:{getSession:async()=>({data:{session:{access_token:'fixture_account_token_123456'}}})}};
 function setup(payload,{ok=true}={}) {
@@ -148,7 +148,7 @@ test('partner links open the selected catalog variant and record the chosen refe
   const code = env.root.querySelector('[data-link-code]');
   const link = env.root.querySelector('[data-referral-url]');
   const variants = env.w.AltaStore.catalog.flatMap(product => product.variants);
-  assert.equal(select.options.length, variants.length + 2);
+  assert.equal(select.options.length, variants.length + 3);
   assert.equal(link.value, 'https://pure.example/?ref=LABTEAM');
   select.value = '/shop';
   select.dispatchEvent(new env.w.Event('change'));
@@ -182,6 +182,115 @@ test('partner links open the selected catalog variant and record the chosen refe
  } finally {
   visitor?.window.close();
   env.dom.window.close();
+ }
+});
+
+test('bulk referral links open the builder with the selected strength and partner disclosure', async () => {
+ const env = setup({partner:{code:'LABTEAM',status:'active'},codes:[{code:'OTHER'},{code:'LABTEAM'}],events:[]});
+ const storefront = fs.readFileSync('products.js','utf8') + '\n' + fs.readFileSync('storefront-v2.js','utf8');
+ const workspace = fs.readFileSync('workspace-v2.js','utf8');
+ const visitors = [];
+ try {
+  env.w.eval(storefront);
+  env.w.eval(workspace);
+  await env.w.ConversionUI.partner(env.root, auth);
+  const field = env.root.querySelector('[data-bulk-link-field]');
+  const variant = field.querySelector('select');
+  const link = env.root.querySelector('[data-referral-url]');
+  const caption = env.root.querySelector('[data-referral-caption]');
+  function choose(element, value) {
+   element.value = value;
+   element.dispatchEvent(new env.w.Event('change'));
+  }
+  assert.equal(field.hidden, true);
+  choose(env.root.querySelector('[data-link-destination]'), '/bulk-orders');
+  assert.equal(field.hidden, false);
+  assert.equal(link.value, 'https://pure.example/bulk-orders?ref=LABTEAM');
+  assert.equal([...variant.options].some(o => o.value.includes('needles')), false);
+  choose(variant, '/bulk-orders?product=bpc-157&size=10mg');
+  choose(env.root.querySelector('[data-link-code]'), 'OTHER');
+  assert.equal(link.value, 'https://pure.example/bulk-orders?product=bpc-157&size=10mg&ref=OTHER');
+  assert.match(caption.value, /^I earn a commission/);
+  assert.match(caption.value, /bulk pricing for BPC-157 · 10mg/i);
+  assert.match(caption.value, /50% at 10 units or 60% at 50 units of the same compound/);
+  assert.doesNotMatch(caption.value, /BOGO|coupon|code|20%/i);
+  assert.ok(caption.value.endsWith(link.value));
+
+  const regularCart = [{id:'bpc-157', size:'5mg', qty:2}];
+  for (const saved of [false, true]) {
+   const dom = new JSDOM('<main id="ap-main"></main><dialog id="ap-age-dialog"></dialog>', {url:link.value,runScripts:'outside-only'});
+   visitors.push(dom);
+   const w = dom.window, visits = [];
+   w.HTMLDialogElement.prototype.showModal = function(){this.open = true;};
+   w.fetch = async (url, options) => {
+    if (url.includes('partner=visit')) {
+     assert.equal(options.keepalive,true);
+     visits.push(JSON.parse(options.body).code);
+    }
+    return {ok:true,json:async()=>[]};
+   };
+   w.localStorage.setItem('pp-cart', JSON.stringify(regularCart));
+   if (saved) {
+    w.localStorage.setItem('ap-bulk-size-selections-v2', '{"bpc-157":"5mg"}');
+    w.localStorage.setItem('ap-bulk-draft-v2', JSON.stringify(regularCart));
+   }
+   w.eval(fs.readFileSync('conversion-ui.js','utf8'));
+   w.eval(storefront);
+   w.eval(workspace);
+   await w.PurePartnerVisit;
+   await new Promise(resolve=>setImmediate(resolve));
+   assert.deepEqual(visits,['OTHER']);
+   assert.equal(w.document.querySelector('#ap-age-dialog').open,true);
+   assert.equal(w.document.querySelector('#ap-bulk-query').value,'BPC-157');
+   const size = w.document.querySelector('[data-bulk-product="bpc-157"] [aria-pressed="true"]');
+   assert.equal(size.dataset.size,saved?'5mg':'10mg');
+   assert.deepEqual(JSON.parse(w.localStorage.getItem('pp-cart')).map(({id,size,qty})=>({id,size,qty})),regularCart);
+   assert.deepEqual(JSON.parse(w.localStorage.getItem('ap-bulk-draft-v2')),saved?regularCart:null);
+   assert.deepEqual(JSON.parse(w.localStorage.getItem('ap-bulk-size-selections-v2')),saved?{'bpc-157':'5mg'}:null);
+  }
+  choose(env.root.querySelector('[data-link-destination]'),'/shop');
+  assert.equal(field.hidden,true);
+  assert.equal(link.value,'https://pure.example/shop?ref=OTHER');
+ } finally {
+  visitors.forEach(dom=>dom.window.close());
+  env.dom.window.close();
+ }
+});
+
+test('bulk checkout proceeds after a short grace period even when referral tracking hangs', async () => {
+ const storefront = fs.readFileSync('products.js','utf8') + '\n' + fs.readFileSync('storefront-v2.js','utf8');
+ const workspace = fs.readFileSync('workspace-v2.js','utf8');
+ for (const tracking of ['none','settles','hangs','rejects']) {
+  const attempts = [], console = new VirtualConsole();
+  console.on('jsdomError',error=>attempts.push(error.message));
+  const dom = new JSDOM('<main id="ap-main"></main>',{url:'https://pure.example/bulk-orders',runScripts:'outside-only',virtualConsole:console});
+  const w = dom.window;
+  try {
+   w.fetch = async()=>({ok:true,json:async()=>[]});
+   w.localStorage.setItem('ap-bulk-draft-v2','[{"id":"bpc-157","size":"5mg","qty":10}]');
+   w.eval(storefront);
+   w.eval(workspace);
+   await new Promise(resolve=>setImmediate(resolve));
+   let finish, fail, deadline, cleared = false;
+   if(tracking!=='none')w.PurePartnerVisit = new Promise((resolve,reject)=>{finish=resolve;fail=reject;});
+   w.setTimeout = (callback,ms) => {assert.equal(ms,1500);deadline=callback;return 42;};
+   w.clearTimeout = id => {assert.equal(id,42);cleared=true;};
+   const checkout = w.document.querySelector('[data-action="bulk-checkout"]');
+   checkout.click();
+   if(tracking==='none'){
+    assert.equal(deadline,undefined);
+   }else{
+    assert.equal(attempts.length,0);
+    assert.equal(checkout.disabled,true);
+    if(tracking==='hangs')deadline();
+    if(tracking==='settles')finish();
+    if(tracking==='rejects')fail(Error('offline'));
+    await new Promise(resolve=>setImmediate(resolve));
+    assert.equal(cleared,true);
+   }
+   assert.equal(attempts.length,1);
+   assert.match(attempts[0],/navigation/i);
+  }finally{dom.window.close();}
  }
 });
 
