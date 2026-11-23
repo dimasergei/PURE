@@ -1,55 +1,4 @@
-/** Source prices receive a 200% markup (3× total); shipping is not included. */
-const PRICE_MARKUP_FACTOR = 3;
-
-// Verified NeuroLabs public USD merchandise prices before its checkout code,
-// observed November 22, 2026. The key matches the exact PURE product and strength.
-const MATCHED_USD_PRICES = new Map([
-  ["retatrutide:10mg", 79.05],
-  ["retatrutide:20mg", 129.89],
-  ["retatrutide:30mg", 163.79],
-  ["retatrutide:40mg", 208.99],
-  ["tirzepatide:10mg", 79.04],
-  ["tirzepatide:40mg", 192.04],
-  ["5-amino-1mq:10mg", 55.94],
-  ["aod-9604:5mg", 67.80],
-  ["aod-9604:10mg", 90.34],
-  ["cagrilintide:5mg", 123.69],
-  ["bpc-157:10mg", 67.52],
-  ["tb-500:10mg", 54.17],
-  ["bpc-tb-500:5mg/5mg", 96.05],
-  ["kpv:10mg", 62.47],
-  ["ara-290:10mg", 110.57],
-  ["ghk-cu:50mg", 45.14],
-  ["ghk-cu:100mg", 50.79],
-  ["ahk-cu:100mg", 87.01],
-  ["glow:70mg", 75.34],
-  ["klow:80mg", 90.02],
-  ["cjc-1295-dac:5mg", 67.80],
-  ["ipamorelin:5mg", 50.85],
-  ["ipamorelin:10mg", 73.45],
-  ["tesamorelin:10mg", 107.35],
-  ["tesamorelin:20mg", 135.60],
-  ["semax:10mg", 36.49],
-  ["selank:10mg", 43.78],
-  ["adamax:10mg", 121.97],
-  ["pinealon:10mg", 67.73],
-  ["dsip:5mg", 52.13],
-  ["nad:500mg", 84.75],
-  ["nad:1000mg", 107.29],
-  ["epithalon:10mg", 63.35],
-  ["glutathione:600mg", 45.14],
-  ["glutathione:1500mg", 74.52],
-  ["ss-31:10mg", 67.12],
-  ["mots-c:10mg", 50.79],
-  ["mots-c:40mg", 203.40],
-  ["melanotan-ii:10mg", 54.33],
-  ["melanotan-1:10mg", 43.71],
-  ["pt-141:10mg", 111.15],
-  ["kisspeptin:10mg", 56.87],
-  ["bac-3:3 mL", 14.95],
-  ["bac-10:10 mL", 21.95],
-]);
-
+// Each variant has an explicit USD list price before discounts and shipping.
 const CATALOG = [
   {
     id: "retatrutide",
@@ -59,12 +8,12 @@ const CATALOG = [
     group: "GLP-1 & Metabolic",
     blurb: "Triple-agonist research peptide supplied as a lyophilized vial.",
     variants: [
-      ["10mg", 22],
-      ["15mg", 26],
-      ["20mg", 31],
-      ["30mg", 33],
-      ["40mg", 40],
-      ["60mg", 50],
+      ["10mg", 78.95],
+      ["15mg", 88.95],
+      ["20mg", 129.95],
+      ["30mg", 163.95],
+      ["40mg", 174.95],
+      ["60mg", 184.95],
     ],
   },
   {
@@ -75,11 +24,11 @@ const CATALOG = [
     group: "GLP-1 & Metabolic",
     blurb: "Dual incretin-receptor research peptide in lyophilized vials.",
     variants: [
-      ["10mg", 13],
-      ["20mg", 24],
-      ["30mg", 27],
-      ["40mg", 30],
-      ["60mg", 40],
+      ["10mg", 74.95],
+      ["20mg", 79.95],
+      ["30mg", 84.95],
+      ["40mg", 149.95],
+      ["60mg", 159.95],
     ],
   },
   {
@@ -90,9 +39,9 @@ const CATALOG = [
     group: "GLP-1 & Metabolic",
     blurb: "GLP-1 receptor agonist analog for laboratory research.",
     variants: [
-      ["10mg", 21],
-      ["20mg", 23],
-      ["30mg", 26],
+      ["10mg", 62.95],
+      ["20mg", 68.95],
+      ["30mg", 77.95],
     ],
   },
   {
@@ -103,8 +52,8 @@ const CATALOG = [
     group: "GLP-1 & Metabolic",
     blurb: "Small-molecule NNMT inhibitor supplied for metabolic research.",
     variants: [
-      ["10mg", 10],
-      ["50mg", 24],
+      ["10mg", 55.95],
+      ["50mg", 71.95],
     ],
   },
   {
@@ -115,8 +64,8 @@ const CATALOG = [
     group: "GLP-1 & Metabolic",
     blurb: "Modified hGH fragment 176–191 for lipolysis research.",
     variants: [
-      ["5mg", 24],
-      ["10mg", 31],
+      ["5mg", 67.95],
+      ["10mg", 89.95],
     ],
   },
   {
@@ -127,8 +76,8 @@ const CATALOG = [
     group: "GLP-1 & Metabolic",
     blurb: "Long-acting amylin analog for metabolic research.",
     variants: [
-      ["5mg", 20],
-      ["10mg", 29],
+      ["5mg", 99.95],
+      ["10mg", 109.95],
     ],
   },
   {
@@ -139,8 +88,8 @@ const CATALOG = [
     group: "Healing & Recovery",
     blurb: "Synthetic gastric pentadecapeptide fragment for tissue research.",
     variants: [
-      ["5mg", 10],
-      ["10mg", 20],
+      ["5mg", 29.95],
+      ["10mg", 67.95],
     ],
   },
   {
@@ -151,8 +100,8 @@ const CATALOG = [
     group: "Healing & Recovery",
     blurb: "Thymosin beta-4 fragment supplied as a lyophilized research vial.",
     variants: [
-      ["5mg", 14],
-      ["10mg", 27],
+      ["5mg", 41.95],
+      ["10mg", 53.95],
     ],
   },
   {
@@ -164,9 +113,9 @@ const CATALOG = [
     group: "Healing & Recovery",
     blurb: "Premixed BPC-157 and TB-500 research blend. Mass is listed per component.",
     variants: [
-      ["5mg/5mg", 22],
-      ["10mg/10mg", 24],
-      ["15mg/15mg", 30],
+      ["5mg/5mg", 79.95],
+      ["10mg/10mg", 84.95],
+      ["15mg/15mg", 89.95],
     ],
   },
   {
@@ -177,8 +126,8 @@ const CATALOG = [
     group: "Healing & Recovery",
     blurb: "Alpha-MSH tripeptide fragment for inflammatory-pathway research.",
     variants: [
-      ["5mg", 9],
-      ["10mg", 21],
+      ["5mg", 26.95],
+      ["10mg", 62.95],
     ],
   },
   {
@@ -188,7 +137,7 @@ const CATALOG = [
     category: "injectables",
     group: "Healing & Recovery",
     blurb: "Innate repair receptor peptide for laboratory research.",
-    variants: [["10mg", 24]],
+    variants: [["10mg", 110.95]],
   },
   {
     id: "ll-37",
@@ -198,8 +147,8 @@ const CATALOG = [
     group: "Healing & Recovery",
     blurb: "Human cathelicidin-derived peptide for innate-immunity research.",
     variants: [
-      ["5mg", 24],
-      ["10mg", 29],
+      ["5mg", 71.95],
+      ["10mg", 86.95],
     ],
   },
   {
@@ -209,7 +158,7 @@ const CATALOG = [
     category: "injectables",
     group: "Healing & Recovery",
     blurb: "28-residue thymic peptide for immune-signaling research.",
-    variants: [["10mg", 29]],
+    variants: [["10mg", 86.95]],
   },
   {
     id: "ghk-cu",
@@ -219,8 +168,8 @@ const CATALOG = [
     group: "Cosmetic & Skin",
     blurb: "Copper-binding tripeptide for extracellular-matrix research.",
     variants: [
-      ["50mg", 11],
-      ["100mg", 18],
+      ["50mg", 44.95],
+      ["100mg", 50.95],
     ],
   },
   {
@@ -231,8 +180,8 @@ const CATALOG = [
     group: "Cosmetic & Skin",
     blurb: "Copper tripeptide analog differing from GHK-Cu at one residue.",
     variants: [
-      ["50mg", 18],
-      ["100mg", 20],
+      ["50mg", 53.95],
+      ["100mg", 86.95],
     ],
   },
   {
@@ -243,7 +192,7 @@ const CATALOG = [
     category: "injectables",
     group: "Cosmetic & Skin",
     blurb: "Three-component research blend supplied as a single 70mg vial.",
-    variants: [["70mg", 32]],
+    variants: [["70mg", 74.95]],
   },
   {
     id: "klow",
@@ -253,7 +202,7 @@ const CATALOG = [
     category: "injectables",
     group: "Cosmetic & Skin",
     blurb: "Four-component research blend supplied as a single 80mg vial.",
-    variants: [["80mg", 39]],
+    variants: [["80mg", 89.95]],
   },
   {
     id: "snap8",
@@ -262,7 +211,7 @@ const CATALOG = [
     category: "injectables",
     group: "Cosmetic & Skin",
     blurb: "Acetyl octapeptide-3 for SNARE-complex research.",
-    variants: [["10mg", 19]],
+    variants: [["10mg", 56.95]],
   },
   {
     id: "cjc-1295-no-dac",
@@ -272,8 +221,8 @@ const CATALOG = [
     group: "Growth Hormone",
     blurb: "Short-acting GHRH analog without drug-affinity complex.",
     variants: [
-      ["5mg", 22],
-      ["10mg", 26],
+      ["5mg", 65.95],
+      ["10mg", 77.95],
     ],
   },
   {
@@ -284,8 +233,8 @@ const CATALOG = [
     group: "Growth Hormone",
     blurb: "GHRH analog formulated with drug-affinity complex.",
     variants: [
-      ["5mg", 29],
-      ["10mg", 31],
+      ["5mg", 67.95],
+      ["10mg", 92.95],
     ],
   },
   {
@@ -295,7 +244,7 @@ const CATALOG = [
     category: "injectables",
     group: "Growth Hormone",
     blurb: "Premixed GHRH analog and Ipamorelin. Mass is listed per component.",
-    variants: [["10mg/10mg", 23]],
+    variants: [["10mg/10mg", 68.95]],
   },
   {
     id: "ipamorelin",
@@ -305,8 +254,8 @@ const CATALOG = [
     group: "Growth Hormone",
     blurb: "Selective ghrelin-receptor agonist for secretagogue research.",
     variants: [
-      ["5mg", 18],
-      ["10mg", 20],
+      ["5mg", 50.95],
+      ["10mg", 73.95],
     ],
   },
   {
@@ -317,8 +266,8 @@ const CATALOG = [
     group: "Growth Hormone",
     blurb: "GHRH (1–29) sequence for receptor-agonist research.",
     variants: [
-      ["5mg", 20],
-      ["10mg", 23],
+      ["5mg", 59.95],
+      ["10mg", 68.95],
     ],
   },
   {
@@ -329,8 +278,8 @@ const CATALOG = [
     group: "Growth Hormone",
     blurb: "Stabilized GHRH analog supplied as a lyophilized vial.",
     variants: [
-      ["10mg", 34],
-      ["20mg", 38],
+      ["10mg", 106.95],
+      ["20mg", 135.95],
     ],
   },
   {
@@ -340,7 +289,7 @@ const CATALOG = [
     category: "injectables",
     group: "Growth Hormone",
     blurb: "Premixed Tesamorelin and Ipamorelin. Mass is listed per component.",
-    variants: [["5mg/5mg", 30]],
+    variants: [["5mg/5mg", 89.95]],
   },
   {
     id: "semax",
@@ -350,8 +299,8 @@ const CATALOG = [
     group: "Cognitive & Nootropic",
     blurb: "ACTH(4–10) analog for neuropeptide research.",
     variants: [
-      ["5mg", 17],
-      ["10mg", 20],
+      ["5mg", 45.95],
+      ["10mg", 50.95],
     ],
   },
   {
@@ -362,8 +311,8 @@ const CATALOG = [
     group: "Cognitive & Nootropic",
     blurb: "Tuftsin analog for neuropeptide research.",
     variants: [
-      ["5mg", 17],
-      ["10mg", 21],
+      ["5mg", 45.95],
+      ["10mg", 50.95],
     ],
   },
   {
@@ -373,7 +322,7 @@ const CATALOG = [
     category: "injectables",
     group: "Cognitive & Nootropic",
     blurb: "Premixed Semax and Selank. Mass is listed per component.",
-    variants: [["10mg/10mg", 23]],
+    variants: [["10mg/10mg", 68.95]],
   },
   {
     id: "adamax",
@@ -382,7 +331,7 @@ const CATALOG = [
     category: "injectables",
     group: "Cognitive & Nootropic",
     blurb: "N-acetyl Semax analog modified with adamantane.",
-    variants: [["10mg", 26]],
+    variants: [["10mg", 121.95]],
   },
   {
     id: "pinealon",
@@ -391,7 +340,7 @@ const CATALOG = [
     category: "injectables",
     group: "Cognitive & Nootropic",
     blurb: "Short bioregulator tripeptide for neuroresearch.",
-    variants: [["10mg", 23]],
+    variants: [["10mg", 67.95]],
   },
   {
     id: "dsip",
@@ -401,8 +350,8 @@ const CATALOG = [
     group: "Cognitive & Nootropic",
     blurb: "Delta sleep-inducing peptide for neuropeptide research.",
     variants: [
-      ["5mg", 18],
-      ["10mg", 21],
+      ["5mg", 51.95],
+      ["10mg", 62.95],
     ],
   },
   {
@@ -413,8 +362,8 @@ const CATALOG = [
     group: "Longevity",
     blurb: "Nicotinamide adenine dinucleotide for redox research.",
     variants: [
-      ["500mg", 14],
-      ["1000mg", 27],
+      ["500mg", 84.95],
+      ["1000mg", 106.95],
     ],
   },
   {
@@ -425,8 +374,8 @@ const CATALOG = [
     group: "Longevity",
     blurb: "Synthetic tetrapeptide studied in telomerase research.",
     variants: [
-      ["10mg", 18],
-      ["50mg", 33],
+      ["10mg", 62.95],
+      ["50mg", 98.95],
     ],
   },
   {
@@ -437,8 +386,8 @@ const CATALOG = [
     group: "Longevity",
     blurb: "Endogenous thiol tripeptide for redox-buffer research.",
     variants: [
-      ["600mg", 19],
-      ["1500mg", 22],
+      ["600mg", 44.95],
+      ["1500mg", 74.95],
     ],
   },
   {
@@ -449,8 +398,8 @@ const CATALOG = [
     group: "Longevity",
     blurb: "Mitochondria-targeted tetrapeptide for organelle research.",
     variants: [
-      ["10mg", 18],
-      ["50mg", 41],
+      ["10mg", 66.95],
+      ["50mg", 122.95],
     ],
   },
   {
@@ -461,9 +410,9 @@ const CATALOG = [
     group: "Longevity",
     blurb: "Mitochondrial open-reading-frame peptide for metabolic research.",
     variants: [
-      ["10mg", 19],
-      ["20mg", 26],
-      ["40mg", 36],
+      ["10mg", 50.95],
+      ["20mg", 77.95],
+      ["40mg", 202.95],
     ],
   },
   {
@@ -473,7 +422,7 @@ const CATALOG = [
     category: "injectables",
     group: "Longevity",
     blurb: "Vitamin B12 research vial.",
-    variants: [["10mg", 18]],
+    variants: [["10mg", 53.95]],
   },
   {
     id: "melanotan-ii",
@@ -482,7 +431,7 @@ const CATALOG = [
     category: "injectables",
     group: "Sexual & Hormonal",
     blurb: "Cyclic melanocortin analog for receptor research.",
-    variants: [["10mg", 12]],
+    variants: [["10mg", 53.95]],
   },
   {
     id: "melanotan-1",
@@ -491,7 +440,7 @@ const CATALOG = [
     category: "injectables",
     group: "Sexual & Hormonal",
     blurb: "Linear alpha-MSH analog for melanocortin research.",
-    variants: [["10mg", 21]],
+    variants: [["10mg", 43.95]],
   },
   {
     id: "pt-141",
@@ -500,7 +449,7 @@ const CATALOG = [
     category: "injectables",
     group: "Sexual & Hormonal",
     blurb: "Bremelanotide, a melanocortin receptor agonist analog.",
-    variants: [["10mg", 19]],
+    variants: [["10mg", 110.95]],
   },
   {
     id: "kisspeptin",
@@ -510,8 +459,8 @@ const CATALOG = [
     group: "Sexual & Hormonal",
     blurb: "Kisspeptin-10 for reproductive-axis research.",
     variants: [
-      ["5mg", 21],
-      ["10mg", 24],
+      ["5mg", 57.95],
+      ["10mg", 62.95],
     ],
   },
   {
@@ -522,8 +471,8 @@ const CATALOG = [
     group: "Sexual & Hormonal",
     blurb: "Synthetic nonapeptide for receptor research.",
     variants: [
-      ["5mg", 20],
-      ["10mg", 22],
+      ["5mg", 59.95],
+      ["10mg", 65.95],
     ],
   },
   {
@@ -534,8 +483,8 @@ const CATALOG = [
     group: "Sexual & Hormonal",
     blurb: "Vasoactive intestinal peptide for signaling research.",
     variants: [
-      ["5mg", 24],
-      ["10mg", 27],
+      ["5mg", 71.95],
+      ["10mg", 80.95],
     ],
   },
   {
@@ -545,7 +494,7 @@ const CATALOG = [
     group: "BAC Water & Supplies",
     form: "supply",
     blurb: "Bacteriostatic water for laboratory reconstitution. Shipping is not included.",
-    variants: [["3 mL", 5]],
+    variants: [["3 mL", 14.95]],
   },
   {
     id: "bac-10",
@@ -554,7 +503,7 @@ const CATALOG = [
     group: "BAC Water & Supplies",
     form: "supply",
     blurb: "Bacteriostatic water for laboratory reconstitution. Shipping is not included.",
-    variants: [["10 mL", 6]],
+    variants: [["10 mL", 21.95]],
   },
   {
     id: "needles",
@@ -563,11 +512,11 @@ const CATALOG = [
     group: "BAC Water & Supplies",
     form: "supply",
     blurb: "Laboratory needles, 31 gauge, 5/16 inch. Sold as a 10-pack.",
-    variants: [["10pk", 4]],
+    variants: [["10pk", 11.95]],
   },
 ].map((product) => ({
   ...product,
-  variants: product.variants.map(([size, price]) => ({ size, price: MATCHED_USD_PRICES.get(product.id + ":" + size) ?? price * PRICE_MARKUP_FACTOR })),
+  variants: product.variants.map(([size, price]) => ({ size, price })),
 }));
 
 const GROUPS = [

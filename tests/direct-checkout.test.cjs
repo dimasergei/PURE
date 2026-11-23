@@ -105,7 +105,7 @@ test('Bulk checkout groups strengths by compound and includes US express',async(
  assert.throws(()=>checkout.price(rec,method,null,{points:0,credit_cents:0}),/10 units of each compound/);
 });
 
-test('bulk preview, checkout quote and saved invoice use only the volume price during a live BOGO',async()=>{
+test('bulk preview, checkout quote and saved invoice use only the volume price despite old campaign settings',async()=>{
  const partner={customer_id:'c0000000-0000-4000-8000-000000000008',code:'BULKLAB',status:'active'};
  const db=dbMock({partner});
  const headers={cookie:'ap_ref='+require('../lib/partner-program').cookieToken(partner.code,env.CHECKOUT_RATE_LIMIT_SECRET)};
@@ -132,7 +132,7 @@ test('bulk preview, checkout quote and saved invoice use only the volume price d
   assert.equal(priced.pricing.affiliate_code,undefined);assert.equal(priced.pricing.coupon_discount_cents,0);
   assert.equal(priced.automatic_partner_offer,undefined);
   assert.deepEqual(priced.pricing.referral,{partner_id:partner.customer_id,code:partner.code,first_order:true});
-  assert.equal(priced.pricing.bundled_items.length,1);assert.equal(priced.pricing.bundled_items[0].qty,1);
+  assert.equal(priced.pricing.bundled_items,undefined);
  }
  assert.equal(preview.body.membership_offer,null);
  const {res:placed}=await call({...basket,action:'place',quote:quoted.body.quote},options);
@@ -142,7 +142,7 @@ test('bulk preview, checkout quote and saved invoice use only the volume price d
  const {res:regular}=await call({...basket,bulk_order:false,country:'US'},{...options,params:'checkout=cart'});
  assert.equal(regular.code,200);
  assert.equal(regular.body.pricing.quantity_discount_cents,undefined);
- assert.deepEqual(regular.body.pricing.bogo_campaign.free_units.map(item=>item.qty),[4,6]);
+ assert.equal(regular.body.pricing.bogo_campaign,undefined);
  assert.equal(regular.body.pricing.coupon_discount_cents,12800);
 });
 
@@ -253,7 +253,9 @@ test('signed first touch qualifies only a verified new buyer and reaches the sto
  assert.equal(placed.code,201);assert.equal(db.calls[0].args.p_data.request.checkout.affiliate_code,partner.code);
  assert.equal(db.calls[0].args.p_data.total_cents,q.body.total_cents);
  const explicit=await call({...data,coupon:'BLACKFRIDAY10',action:'quote'},{cat,db,headers:{cookie}});
- assert.equal(explicit.res.body.discount_cents,1250);assert.equal(explicit.res.body.automatic_partner_offer,undefined);
+ assert.equal(explicit.res.body.discount_cents,2500);assert.equal(explicit.res.body.automatic_partner_offer,true);
+ assert.equal(explicit.res.body.requested_coupon,'BLACKFRIDAY10');
+ assert.equal(explicit.res.body.pricing.merchandise_offer,'affiliate');
  assert.equal(explicit.res.body.pricing.referral.code,partner.code);
  const otherPartner={...partner,customer_id:'c0000000-0000-4000-8000-000000000005',code:'OTHER20'};
  const conflictDb=dbMock({partner});

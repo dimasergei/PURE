@@ -165,63 +165,47 @@
  }
  let campaignRequest;
  function readCampaign(){
-  campaignRequest ||= request('campaign=window').then(data=>({...data,clockOffset:Date.parse(data.server_time)-Date.now()})).catch(error=>{campaignRequest=null;throw error;});
+  campaignRequest ||= request('campaign=window').catch(error=>{campaignRequest=null;throw error;});
   return campaignRequest;
  }
- let eligibleVariants=new Set(),campaignStatus='loading';
- function publishCampaign(status,variants=[]){
+ let eligibleVariants=new Set(),campaignStatus='loading',discountPercent=0;
+ function publishCampaign(status,variants=[],percent=0){
   eligibleVariants=new Set(variants);
   campaignStatus=status;
+  discountPercent=percent;
   window.dispatchEvent(new Event('pure:campaign'));
+ }
+ function secondUnitOffer(campaign){
+  const offer=campaign?.second_unit;
+  if(!offer?.eligible_variants?.length||!Number.isInteger(offer.discount_bps)||
+     offer.discount_bps<=0||offer.discount_bps>=10000)return null;
+  return offer;
  }
  async function mountCampaignStrip(){
   const announcement=document.querySelector('.ap-announcement');
   const fallback=announcement?.querySelector('#ap-announcement-text');
   let campaign;
   try{campaign=await readCampaign();}catch{publishCampaign('unavailable');return;}
-  const timeLeft=()=>Date.parse(campaign.ends_at)-Date.now()-campaign.clockOffset;
-  if(!(timeLeft()>0)||!campaign.eligible_variants?.length){publishCampaign('inactive');return;}
-  publishCampaign('active',campaign.eligible_variants);
+  const offer=secondUnitOffer(campaign);
+  if(!offer){publishCampaign('inactive');return;}
+  const percent=offer.discount_bps/100;
+  publishCampaign('active',offer.eligible_variants,percent);
+  if(!fallback)return;
 
   const trigger=document.createElement('a');
-  trigger.href='/shop?offer=bogo';
+  trigger.href='/shop?offer=second-unit';
   trigger.className='pure-offer-trigger';
-  trigger.setAttribute('aria-label','Buy one, get one free. Shop eligible products.');
-  trigger.innerHTML='<span class="pure-offer-buy">Buy 1</span><strong class="pure-offer-free"><span>Get 1 free</span></strong><span class="pure-offer-action">Shop eligible vials</span>';
-  if(fallback){
-   announcement.classList.add('pure-offer-active');
-   fallback.replaceWith(trigger);
-  }
-  function expire(){
-   const remaining=timeLeft();
-   if(remaining>0){setTimeout(expire,Math.min(remaining,2147483647));return;}
-   publishCampaign('inactive');
-   if(fallback){trigger.replaceWith(fallback);announcement.classList.remove('pure-offer-active');}
-  }
-  expire();
+  trigger.textContent=percent+'% off the second unit on eligible pairs';
+  announcement.classList.add('pure-offer-active');
+  fallback.replaceWith(trigger);
  }
  async function mountCountdown(root){
   if(!root)return;
   try{
-   const campaign=await readCampaign();
-   if(!campaign.ends_at||!root.isConnected)return;
-   if(root.dataset.campaignProduct&&!campaign.eligible_variants?.includes(root.dataset.campaignProduct))return;
-   const deadline=Date.parse(campaign.ends_at),clockOffset=campaign.clockOffset;
-   const offer=document.createElement('strong'),clock=document.createElement('span');
-   offer.textContent='Buy 1, get 1 free';
-   root.replaceChildren(offer,clock);
-   const update=()=>{
-    const left=Math.ceil((deadline-Date.now()-clockOffset)/1000);
-    root.hidden=!(left>0);
-    if(!root.hidden){
-     const hours=Math.floor(left/3600),minutes=Math.floor(left%3600/60),seconds=left%60;
-     clock.textContent='Ends in '+hours+'h '+minutes+'m '+seconds+'s';
-    }
-    return !root.hidden&&root.isConnected;
-   };
-   if(update()){
-    const timer=setInterval(()=>{if(!update())clearInterval(timer);},1000);
-   }
+   const offer=secondUnitOffer(await readCampaign());
+   if(!root.isConnected||!offer?.eligible_variants.includes(root.dataset.campaignProduct))return;
+   root.textContent='Buy two of this strength and get '+offer.discount_bps/100+'% off the second unit.';
+   root.hidden=false;
   }catch{root.hidden=true;}
  }
  let dispatchRequest;
@@ -235,7 +219,7 @@
    root.hidden=false;
   }catch{}
  }
- window.PureCampaign={mountCountdown,mountDispatch,eligible:(id,size)=>eligibleVariants.has(id+':'+size),get status(){return campaignStatus;}};
+ window.PureCampaign={mountCountdown,mountDispatch,eligible:(id,size)=>eligibleVariants.has(id+':'+size),get status(){return campaignStatus;},get discountPercent(){return discountPercent;}};
  if(/^\/(?:$|index(?:\.html)?$|shop(?:\.html)?\/?$|product\/)/.test(location.pathname)){
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mountCampaignStrip,{once:true});
   else mountCampaignStrip();

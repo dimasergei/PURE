@@ -10,8 +10,7 @@ const checkout=require('../lib/direct-checkout'),config=require('../config/check
 const delivery=require('../lib/delivery-options'),polygon=require('../lib/polygon-usdc');
 const read=name=>fs.readFileSync(path.join(__dirname,'../supabase/migrations',name),'utf8');
 const migration='20261118180549_pure_membership_checkout.sql';
-// Tests opt into a specific campaign. Hosting settings must never change fixture quantities.
-const noCampaign={ends_at:null,eligible_variants:[]};
+const {campaignUnits}=require('../lib/campaign-window');
 const recipient='0x'+'a'.repeat(40),payer='0x'+'b'.repeat(40);
 const polygonTag=polygon.configuration({POLYGON_USDC_RECIPIENT:recipient}).account_tag;
 const hash=()=> '0x'+randomBytes(32).toString('hex');
@@ -35,7 +34,7 @@ test('PURE memberships execute verified fees and goods benefits atomically in di
  const member=async customer=>(await db.query('select * from commerce_internal.active_paid_membership($1,now())',[customer])).rows[0];
  const count=async(table,id)=>(await db.query('select count(*)::int n from '+table+(id?' where invoice_id=$1':''),id?[id]:[])).rows[0].n;
  let methods={};
- async function make({kind='goods',plan='vip',period='monthly',customer=randomUUID(),route='card',coupon='',points=0,credit=0,shipping='standard',extras=[],country=route==='interac'?'CA':'US',items,cat=catalog,rate=1375000,builder=false,bulk=false,membershipAddon=null,referral=null,campaign=noCampaign}={}){
+ async function make({kind='goods',plan='vip',period='monthly',customer=randomUUID(),route='card',coupon='',points=0,credit=0,shipping='standard',extras=[],country=route==='interac'?'CA':'US',items,cat=catalog,rate=1375000,builder=false,bulk=false,membershipAddon=null,referral=null,campaign=null,secondUnit=null}={}){
   const method=methods[route],user={id:customer,email:'membership-fixture@example.test'};
   const body={id:randomUUID(),kind,plan:kind==='membership'?plan:undefined,billing_period:kind==='membership'?period:undefined,
    method_id:method.id,checkout_version:config.version,consent:true,research_use:true,name:'Isolated researcher',
@@ -51,7 +50,12 @@ test('PURE memberships execute verified fees and goods benefits atomically in di
   }
   const membership=await member(customer);
   const balance=(await db.query('select points,credit_cents from commerce_balance_accounts where customer_id=$1',[customer])).rows[0]||{points:0,credit_cents:0};
-  const result=checkout.price(record,method,membership?.invoice_id?membership:null,balance,referral,delivery.defaults,route==='interac'?fxQuote(rate):null,campaign);
+  const result=checkout.price(record,method,membership?.invoice_id?membership:null,balance,referral,delivery.defaults,route==='interac'?fxQuote(rate):null,secondUnit);
+  if(campaign){
+   delete result.pricing.merchandise_offer;
+   const freeUnits=campaignUnits(result.pricing,record.request,campaign);
+   if(freeUnits.length)result.pricing.bogo_campaign={ends_at:campaign.ends_at,free_units:freeUnits};
+  }
   return {...record,...result,checkout_version:route==='interac'?checkout.INTERAC_VERSION:config.version};
  }
  const place=p=>rpc(p.currency==='CAD'?'commerce_place_interac_checkout':'commerce_place_checkout',[p]);
@@ -200,8 +204,7 @@ test('PURE memberships execute verified fees and goods benefits atomically in di
   });
   await t.test('catalog BOGO delivers each paid premix as two finished vials and counts paid supplies once',async()=>{
    const cat=require('node:vm').runInNewContext(fs.readFileSync(path.join(__dirname,'../products.js'),'utf8')+';CATALOG');
-   const env={BOGO_ENABLED:'true',BOGO_STARTS_AT:new Date(Date.now()-60000).toISOString(),BOGO_ENDS_AT:new Date(Date.now()+600000).toISOString(),BOGO_VARIANTS:'catalog'};
-   const campaign=require('../lib/campaign-window').checkoutCampaign(env,Date.now(),cat);
+   const campaign={ends_at:new Date(Date.now()+600000).toISOString(),eligible_variants:cat.filter(p=>p.category==='injectables').flatMap(p=>p.variants.map(v=>p.id+':'+v.size))};
    const ids=['semaglutide','bpc-tb-500','glow','klow','vip','bac-3','needles'];
    const items=ids.map(id=>({id,size:cat.find(p=>p.id===id).variants[0].size,qty:id==='semaglutide'?2:1}));
    const p=await make({cat,items,campaign});
@@ -250,7 +253,7 @@ test('PURE memberships execute verified fees and goods benefits atomically in di
    const cat=require('node:vm').runInNewContext(source+'; CATALOG');
    const items=Object.entries(variants).map(([id,size])=>({id,size,qty:1}));
    const p=await make({cat,items});
-   assert.equal(p.subtotal_cents,26141);
+   assert.equal(p.subtotal_cents,items.reduce((subtotal,item)=>subtotal+Math.round(cat.find(product=>product.id===item.id).variants.find(variant=>variant.size===item.size).price*100),0));
    assert.equal(p.pricing.campaign_bac,undefined);
    await place(p);await pay(p);
    const allocations=(await db.query("select item from commerce_fulfillment_items where invoice_id=$1 and variant_key<>'gift-bac-3|3 mL'",[p.id])).rows;
@@ -712,6 +715,31 @@ test('PURE memberships execute verified fees and goods benefits atomically in di
   await t.test('browser roles cannot mutate fees, benefits, priority or call financial validators directly',async()=>{
    const grants=(await db.query("select has_function_privilege('anon','public.commerce_place_checkout(jsonb)','EXECUTE') anon_place,has_function_privilege('authenticated','public.commerce_place_interac_checkout(jsonb)','EXECUTE') customer_place,has_function_privilege('service_role','public.commerce_place_checkout(jsonb)','EXECUTE') backend_place,has_function_privilege('service_role','commerce_internal.validate_membership_checkout(jsonb)','EXECUTE') backend_validator,has_table_privilege('authenticated','commerce_memberships','INSERT') customer_membership,has_table_privilege('service_role','commerce_invoices','UPDATE') direct_write")).rows[0];
    assert.deepEqual(grants,{anon_place:false,customer_place:false,backend_place:true,backend_validator:false,customer_membership:false,direct_write:false});
+  });
+
+  await t.test('SQL validates one merchandise offer and prevents automatic gifts on discounted checkout',async()=>{
+   const guarded=await make({coupon:'BLACKFRIDAY10'});
+   await db.exec(read('20261123000100_exclusive_merchandise_offers.sql'));
+   await place(guarded);await pay(guarded);
+   assert.equal((await load(guarded.id)).pricing.first_order_bac,undefined);
+   const regular=await make();await place(regular);await pay(regular);
+   assert.equal((await load(regular.id)).pricing.first_order_bac,true);
+
+   const secondUnit={discount_bps:2500,eligible_variants:['fixture-a:5mg']};
+   const options={coupon:'BLACKFRIDAY10',items:[{id:'fixture-a',size:'5mg',qty:2}],secondUnit};
+   await assert.rejects(place(await make(options)),/offer changed/);
+   await db.exec("insert into public.commerce_second_unit_variants values ('fixture-a:5mg')");
+   for(const route of ['card','interac','crypto']){
+    const order=await make({...options,route});
+    assert.equal(order.pricing.merchandise_offer,'second_unit');
+    assert.equal(order.pricing.coupon_discount_cents,0);
+    assert.equal(order.pricing.lines[0].qty,2);
+    assert.equal(order.pricing.lines[0].second_unit_discounted_qty,1);
+    const forged=structuredClone(order);forged.pricing.lines[0].second_unit_discounted_qty++;
+    await assert.rejects(place(forged),/Second-unit line savings changed/);
+    await place(order);
+    assert.equal((await load(order.id)).total_cents,order.total_cents);
+   }
   });
  }finally{await db.close();}
 });

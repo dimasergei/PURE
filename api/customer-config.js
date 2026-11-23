@@ -14,7 +14,10 @@ module.exports=async(req,res)=>{
  if(url.searchParams.has('campaign')){
   if(req.method==='POST'&&url.searchParams.get('campaign')==='signup')return require('../lib/campaign-signup').handle(req,res);
   if(req.method!=='GET')return res.status(405).json({error:'Method not allowed.'});
-  return res.status(200).json(require('../lib/campaign-window').checkoutCampaign());
+  try {
+   return res.status(200).json({...require('../lib/campaign-window').checkoutCampaign(),
+    second_unit:await require('../lib/second-unit-offer').available()});
+  } catch {return res.status(503).json({error:'Offers are temporarily unavailable.'});}
  }
  if(url.searchParams.has('reviews')){
   if(req.method==='POST')return require('../lib/review-credit').handle(req,res);

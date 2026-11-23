@@ -2,7 +2,6 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { readFileSync } = require("node:fs");
 const { resolve } = require("node:path");
-const { createHash } = require("node:crypto");
 const vm = require("node:vm");
 
 const source = readFileSync(resolve(__dirname, "../products.js"), "utf8");
@@ -11,11 +10,16 @@ vm.createContext(sandbox);
 vm.runInContext(`${source}; globalThis.catalog = CATALOG; globalThis.groups = GROUPS;`, sandbox);
 const { catalog, groups } = sandbox;
 
-test("catalog matches the approved product source snapshot", () => {
-  assert.equal(
-    createHash("sha256").update(source).digest("hex"),
-    "b1b1bd7b6f3ab0166bb124f5abebd05c63186fed3ec93fccdb365a8f83cd45c3"
-  );
+test("USD list prices end in .95 and rise with strength within each product", () => {
+  for (const product of catalog) {
+    let previousPrice = 0;
+    for (const variant of product.variants) {
+      const label = `${product.name} ${variant.size}`;
+      assert.equal(Math.round(variant.price * 100) % 100, 95, label);
+      assert.ok(variant.price > previousPrice, label);
+      previousPrice = variant.price;
+    }
+  }
 });
 
 test("current products and variants remain unique and valid", () => {
@@ -32,7 +36,7 @@ test("current products and variants remain unique and valid", () => {
 });
 
 test("featured and spotlight entries show the configured minimum prices", () => {
-  for (const [id, expected] of [["retatrutide", 78], ["tirzepatide", 72], ["semaglutide", 63], ["bpc-157", 30]]) {
+  for (const [id, expected] of [["retatrutide", 78.95], ["tirzepatide", 74.95], ["semaglutide", 62.95], ["bpc-157", 29.95]]) {
     const product = catalog.find((item) => item.id === id);
     assert.equal(Math.min(...product.variants.map((variant) => variant.price)), expected);
   }

@@ -35,7 +35,7 @@ const markup = `<section class="nl-wide-hero nl-partner-hero"><div class="ap-con
 </section>
 <section class="ap-container nl-partner-details">
   <div><span class="ap-eyebrow">COMMISSION BASIS</span><h2>What earns commission?</h2><p>Commission is calculated on paid merchandise after discounts, points and store credit. Shipping, tax, membership fees and self-referrals are excluded. Refunds, voids and recorded chargebacks reverse the associated commission.</p><a class="ap-text-link" href="/partner-terms.html">Review the full partner terms</a></div>
-  <div class="nl-partner-callout"><strong>${customerRate} off</strong><span>Your customer’s first qualifying order</span><p>New customers can follow your link or enter your code. The offer applies to eligible first orders of at least ${codeMinimum} USD in merchandise after discounts. Partner codes cannot be combined with another code or bulk pricing.</p></div>
+  <div class="nl-partner-callout"><strong>${customerRate} off</strong><span>Your customer’s first qualifying order</span><p>New customers can follow your link or enter your code. The offer applies to eligible first orders of at least ${codeMinimum} USD in merchandise after discounts. Checkout applies one merchandise offer. Eligible Crypto savings can apply after that offer.</p></div>
 </section>`;
 
 // The same program markup is embedded in the HTML response and installed in

@@ -255,7 +255,11 @@
   "tax_cents": 0,
   "promotions": {
     "version": "blackfriday10-2026-11-v1",
-    "bogo": true,
+    "bogo": false,
+    "second_unit": {
+      "enabled": false,
+      "discount_bps": 2500
+    },
     "coupon": "BLACKFRIDAY10",
     "coupon_discount_bps": 1000
   },

@@ -40,8 +40,8 @@ test('homepage keeps the announcement, five-vial hero and product links without 
   assert.equal([...hero.querySelector('h1').childNodes].map(n=>n.nodeName==='BR'?'\n':n.textContent).join(''),'CUTTING EDGE\nPURITY');
   assert.equal(hero.querySelector('.nl-hero-description').textContent,'Research compounds, product documentation, and straightforward ordering for laboratories and research teams.');
   assert.deepEqual([...hero.querySelectorAll('.ap-actions a')].map(a=>[a.textContent,a.getAttribute('href')]),[['SHOP NOW','/shop']]);
-  assert.deepEqual([...hero.querySelectorAll('.nl-trust>div>span')].map(n=>n.textContent),['Free priority shipping at $250','Free recon solution on your first order']);
-  assert.equal(hero.querySelectorAll('.nl-trust-check').length,2);
+  assert.deepEqual([...hero.querySelectorAll('.nl-trust>div>span')].map(n=>n.textContent),['Free US shipping from $250 after discounts']);
+  assert.equal(hero.querySelectorAll('.nl-trust-check').length,1);
   assert.equal(hero.querySelectorAll('.nl-vial').length,5);
   const featured=[...d.querySelectorAll('#nl-featured .ap-product-card')];
   assert.equal(featured.length,10);
@@ -85,7 +85,7 @@ test('homepage adds verified ratings with the incentive disclosure only when at 
   try{
    const row=f.d.querySelector('.nl-trust');
    assert.doesNotMatch(row.textContent,/99%/);
-   assert.equal(row.children.length,expected?3:2);
+   assert.equal(row.children.length,expected?2:1);
    if(expected){
     assert.ok(row.lastElementChild.textContent.includes(expected));
     assert.equal(row.querySelector('small').textContent,'Review credit offered');
@@ -93,7 +93,7 @@ test('homepage adds verified ratings with the incentive disclosure only when at 
   }finally{await f.close();}
  }
 });
-test('catalog photo cards preserve product navigation, integer prices, search, filters, sorting and pagination',async()=>{
+test('catalog photo cards preserve product navigation, exact USD prices, search, filters, sorting and pagination',async()=>{
  const f=await fixture('/shop');
  try{
   const {d,w}=f;

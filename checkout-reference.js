@@ -168,7 +168,7 @@
    if(!res.ok||!Number.isSafeInteger(result?.total_cents))throw Object.assign(Error(result?.error||'Could not calculate final total.'),{status:res.status});
    if(result.currency!==paymentCurrency()||result.request_only===true||state.paymentKind==='interac'&&(!result.fx_quote||!Number.isSafeInteger(result.pricing?.fx_ppm)||result.pricing.fx_ppm<=0))throw Error('The payment currency could not be verified. Refresh your order total.');
    if(state.paymentKind==='interac')state.fxQuote=result.fx_quote;
-   state.coupon=result.automatic_partner_offer?'':result.pricing?.affiliate_code||result.pricing?.coupon_code||'';saveCoupon(state.coupon);
+   state.coupon=result.requested_coupon||(result.automatic_partner_offer?'':result.pricing?.affiliate_code||result.pricing?.coupon_code||'');saveCoupon(state.coupon);
    currentPreview=result;return result;
   }
   function moneyLines(){
@@ -180,7 +180,8 @@
    const fees=delivery.extras||[];
    const counts=[['Subtotal',subtotal]];
    if(p?.pricing?.membership_discount_cents>0)counts.push([(p.pricing.membership_name||'Membership')+' savings',-p.pricing.membership_discount_cents]);
-   if(savings)counts.push([p?.pricing?.affiliate_code?'Partner offer (20%)':'BLACKFRIDAY10 (10%)',-savings]);
+   if(savings)counts.push([p?.pricing?.affiliate_code?'Partner savings':'Coupon savings',-savings]);
+   if(p?.pricing?.second_unit_discount_cents>0)counts.push(['Second-unit savings',-p.pricing.second_unit_discount_cents]);
     if(p?.pricing?.quantity_discount_cents>0)counts.push(['Quantity savings',-p.pricing.quantity_discount_cents]);
    if(cryptoSavings)counts.push(['Crypto discount (5%)',-cryptoSavings]);
    if(p?.pricing?.membership_addon)counts.push([p.pricing.membership_addon.name+' — '+(p.pricing.membership_addon.period==='monthly'?'first month':'annual'),p.pricing.membership_addon.fee_cents]);
@@ -297,7 +298,11 @@
     }
     loadingPreview=false;renderSummary();
     let feedback=rejection;
-    if(!feedback&&state.coupon)feedback=state.coupon==='BLACKFRIDAY10'?'BLACKFRIDAY10 applied — 10% off merchandise.':'Partner code applied — 20% off your first eligible order.';
+    if(!feedback&&state.coupon){
+     const applied=currentPreview.pricing;
+     const winningCode=applied?.coupon_discount_cents>0?(applied.affiliate_code||applied.coupon_code):'';
+     feedback=winningCode===state.coupon?state.coupon+' applied.':'A better eligible offer was applied. Your code is saved.';
+    }
     if(!feedback&&currentPreview.automatic_partner_offer)feedback='First-order partner savings applied.';
     if(!feedback&&action==='remove')feedback=currentPreview.pricing?.crypto_discount_cents?'Coupon removed. The 5% crypto discount applies.':'Coupon removed. Regular prices restored.';
     message.textContent=feedback;

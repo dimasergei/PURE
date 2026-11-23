@@ -197,26 +197,28 @@ test('an obsolete failed response cannot erase a newer checkout total',async()=>
 });
 
 
-test('checkout keeps quoted free units with their paid variant and counts physical gifts once',async()=>{
- const campaign={ends_at:'2099-01-01T00:00:00Z',eligible_variants:['fixture:5mg']};
+test('checkout shows second-unit savings without adding physical items',async()=>{
+ const campaign={discount_bps:2500,eligible_variants:['fixture:5mg']};
  const f=fixture('checkout',{campaign});
  const summary=f.root;
- function check(paid,gifts){
+ function check(paid,pairs){
   const rows=summary.querySelectorAll('.nlx-product');
-  assert.equal(rows.length,1+gifts);
-  assert.equal(rows[0].querySelector('.nlx-promo-free').textContent,'+'+paid+' FREE');
+  assert.equal(rows.length,1);
+  assert.equal(rows[0].querySelector('.nlx-promo-free'),null);
   assert.equal(rows[0].querySelector('.nlx-qty span').textContent,String(paid));
   assert.equal(rows[0].querySelector('.nlx-product-price').textContent,'$'+(paid*80).toFixed(2));
-  assert.equal(summary.querySelector('[data-nlx-item-count]').textContent,(2*paid+gifts)+' items');
-  if(gifts)assert.match(rows[1].textContent,/BAC Water.*3 mL.*\$0\.00/);
+  assert.equal(summary.querySelector('[data-nlx-item-count]').textContent,paid+(paid===1?' item':' items'));
+  const savings=[...summary.querySelector('[data-nlx-totals]').children].find(row=>row.textContent.includes('Second-unit savings'));
+  if(pairs)assert.match(savings.textContent,new RegExp(String(pairs*20)));
+  else assert.equal(savings,undefined);
  }
  try{
   await f.w.DirectCheckout.checkout(f.root,f.auth,f.user);await tick();
-  check(2,0);
+  check(2,1);
   summary.querySelector('[data-nlx-qty="-1"]').click();await tick();check(1,0);
   for(let i=2;i<=4;i++){
-   summary.querySelector('[data-nlx-qty="1"]').click();await tick();check(i,i===4?1:0);
+   summary.querySelector('[data-nlx-qty="1"]').click();await tick();check(i,Math.floor(i/2));
   }
-  summary.querySelector('[data-nlx-qty="-1"]').click();await tick();check(3,0);
+  summary.querySelector('[data-nlx-qty="-1"]').click();await tick();check(3,1);
  }finally{f.dom.window.close();}
 });

@@ -140,10 +140,12 @@
      rejectedCode=candidate;
     }
     if(id!==seq||!input.isConnected)return;
-    appliedCoupon=data.automatic_partner_offer?'':data.pricing?.affiliate_code||data.pricing?.coupon_code||'';
+    const quotedCode=data.pricing?.affiliate_code||data.pricing?.coupon_code||'';
+    const winningCode=data.pricing?.coupon_discount_cents>0?quotedCode:'';
+    appliedCoupon=data.requested_coupon||(data.automatic_partner_offer?'':quotedCode);
     saveCoupon(appliedCoupon);input.value=appliedCoupon;remove.hidden=!appliedCoupon;
     root.querySelector('[data-nlc-coupon-label]').textContent=appliedCoupon?'Coupon · '+appliedCoupon:data.partner_offer_pending?'Partner link saved · Add coupon':'Add coupon code';
-    couponStatus.textContent=data.partner_offer_pending?'First-order eligibility is confirmed when you sign in.':appliedCoupon?appliedCoupon+' applied.':action==='remove'?'Coupon removed.':'';
+    couponStatus.textContent=data.partner_offer_pending?'First-order eligibility is confirmed when you sign in.':appliedCoupon&&winningCode!==appliedCoupon?'A better eligible offer was applied. Your code is saved.':appliedCoupon?appliedCoupon+' applied.':action==='remove'?'Coupon removed.':'';
     if(rejectedCode)couponStatus.textContent=rejectedCode+' no longer applies.';
     const shipping=data.pricing?.delivery?.shipping_cents||0;
     const features=data.pricing?.delivery?.extras||[];
@@ -151,6 +153,7 @@
     const discount=data.pricing?.coupon_discount_cents||0;
     if(discount>0)nodes.push([data.pricing?.affiliate_code?(data.partner_offer_pending?'Estimated partner savings':'Partner savings'):'Coupon savings',-discount]);
     if(data.pricing?.membership_discount_cents>0)nodes.push(['Member savings',-data.pricing.membership_discount_cents]);
+    if(data.pricing?.second_unit_discount_cents>0)nodes.push(['Second-unit savings',-data.pricing.second_unit_discount_cents]);
     if(data.pricing?.quantity_discount_cents>0)nodes.push(['Quantity savings',-data.pricing.quantity_discount_cents]);
     const bonuses=data.pricing?.bogo_campaign?.free_units||[];
     for(const badge of root.querySelectorAll('[data-bonus-product]')){
