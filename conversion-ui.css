@@ -281,7 +281,7 @@ body.ap-site .nl-detail [data-campaign-product]:not([hidden]) {
   font-size: .875rem;
 }
 .nl-trust small { display: block; color: #d6d6d6; font-size: .78em; font-weight: 500; }
-.nl-trust a { color: inherit; font-weight: 700; text-underline-offset: .18em; }
+.nl-trust a { color: inherit; font-weight: inherit; text-underline-offset: .18em; }
 
 .rd-referral .pure-partner-disclosure {
   margin-top: .75rem;

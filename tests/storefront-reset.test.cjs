@@ -44,9 +44,8 @@ test('homepage keeps the announcement, five-vial hero and product links without 
   assert.equal(hero.querySelector('.nl-hero-description').textContent,'Research compounds, product documentation, and straightforward ordering for laboratories and research teams.');
   assert.deepEqual([...hero.querySelectorAll('.ap-actions a')].map(a=>[a.textContent,a.getAttribute('href')]),[['SHOP NOW','/shop']]);
   const highlights=hero.querySelectorAll('.nl-trust > div > span');
-  assert.deepEqual([...highlights].map(node=>node.firstElementChild.textContent),['Free shipping over $250','99%+ Purity','Verified Lab Testing']);
-  assert.match(highlights[0].textContent,/Eligible US and Canadian orders after discounts/);
-  assert.match(highlights[1].textContent,/On select supplier samples/);
+  assert.deepEqual([...highlights].map(node=>node.textContent),['Free shipping over $250','99%+ Purity','Verified Lab Testing']);
+  assert.equal(highlights[1].querySelector('a').getAttribute('href'),'/coas?product=5-amino-1mq&size=50mg');
   assert.equal(highlights[2].querySelector('a').getAttribute('href'),'/coas');
   assert.equal(hero.querySelectorAll('.nl-trust-check').length,3);
   assert.equal(hero.querySelectorAll('.nl-vial').length,5);

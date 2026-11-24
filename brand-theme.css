@@ -401,7 +401,16 @@ body.ap-site {
   border-top: 1px solid #ffffff24;
 }
 .ap-site .nl-hero .nl-trust > div { display: flex; align-items: center; justify-content: center; gap: 10px; min-width: 0; padding: 0; border: 0; }
-.ap-site .nl-hero .nl-trust > div > span { margin: 0; color: #fff; font-size: 14px; font-weight: 600; line-height: 1.4; letter-spacing: 0; }
+.ap-site .nl-hero .nl-trust > div > span {
+  margin: 0;
+  color: #fff;
+  font-family: 'Archivo', Arial, sans-serif;
+  font-size: clamp(13px, 1.15vw, 16px);
+  font-weight: 900;
+  line-height: 1.25;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
 .ap-site .nl-hero .nl-trust .nl-trust-check { display: block; flex: 0 0 23px; width: 23px; height: 23px; fill: none; stroke: #fff; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
 @keyframes pure-vial-float { 0%,100% { transform: translate3d(0,0,0); } 50% { transform: translate3d(0,-11px,0); } }
 /* Account for the 36px announcement, header content, and its 1px border. */
