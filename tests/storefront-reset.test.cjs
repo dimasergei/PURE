@@ -35,13 +35,20 @@ test('homepage keeps the announcement, five-vial hero and product links without 
  const f=await fixture('/');
  try{
   const {d,w}=f,hero=d.querySelector('.nl-hero');
-  assert.equal(d.querySelector('.ap-announcement').textContent.trim(),'Enjoy 10% off with code BLACKFRIDAY10 at checkout.');
-  assert.equal(d.querySelectorAll('.ap-announcement a,.ap-announcement svg').length,0);
+  const offer=d.querySelector('.ap-announcement.pure-offer-active .pure-offer-trigger');
+  assert.equal(offer.getAttribute('href'),'/shop');
+  assert.equal(offer.querySelector('.pure-offer-buy').textContent,'10% off');
+  assert.equal(offer.querySelector('.pure-offer-free').textContent,'BLACKFRIDAY10');
+  assert.equal(offer.querySelector('.pure-offer-action').textContent,'Shop now');
   assert.equal([...hero.querySelector('h1').childNodes].map(n=>n.nodeName==='BR'?'\n':n.textContent).join(''),'CUTTING EDGE\nPURITY');
   assert.equal(hero.querySelector('.nl-hero-description').textContent,'Research compounds, product documentation, and straightforward ordering for laboratories and research teams.');
   assert.deepEqual([...hero.querySelectorAll('.ap-actions a')].map(a=>[a.textContent,a.getAttribute('href')]),[['SHOP NOW','/shop']]);
-  assert.deepEqual([...hero.querySelectorAll('.nl-trust>div>span')].map(n=>n.textContent),['Free US shipping from $250 after discounts']);
-  assert.equal(hero.querySelectorAll('.nl-trust-check').length,1);
+  const highlights=hero.querySelectorAll('.nl-trust > div > span');
+  assert.deepEqual([...highlights].map(node=>node.firstElementChild.textContent),['Free shipping over $250','99%+ Purity','Verified Lab Testing']);
+  assert.match(highlights[0].textContent,/Eligible US and Canadian orders after discounts/);
+  assert.match(highlights[1].textContent,/On select supplier samples/);
+  assert.equal(highlights[2].querySelector('a').getAttribute('href'),'/coas');
+  assert.equal(hero.querySelectorAll('.nl-trust-check').length,3);
   assert.equal(hero.querySelectorAll('.nl-vial').length,5);
   const featured=[...d.querySelectorAll('#nl-featured .ap-product-card')];
   assert.equal(featured.length,10);
@@ -84,12 +91,12 @@ test('homepage adds verified ratings with the incentive disclosure only when at 
   const f=await fixture('/',{reviews});
   try{
    const row=f.d.querySelector('.nl-trust');
-   assert.doesNotMatch(row.textContent,/99%/);
-   assert.equal(row.children.length,expected?2:1);
+   assert.equal(row.querySelectorAll('.nl-trust-check').length,3);
+   const rating=row.querySelector('.nl-trust-rating');
    if(expected){
-    assert.ok(row.lastElementChild.textContent.includes(expected));
-    assert.equal(row.querySelector('small').textContent,'Review credit offered');
-   }else assert.equal(row.querySelector('small'),null);
+    assert.ok(rating.textContent.includes(expected));
+    assert.equal(rating.querySelector('small').textContent,'Review credit offered');
+   }else assert.equal(rating,null);
   }finally{await f.close();}
  }
 });

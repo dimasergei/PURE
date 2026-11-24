@@ -64,12 +64,13 @@
  const featureLinks=()=>'';
  function homeHighlights(){
   const check='<svg class="nl-trust-check" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>';
-  const highlights=['Free US shipping from '+priceMarkup(250,{trimWhole:true})+' after discounts'];
-  if(reviewSummary){
-   const count=reviewSummary.count;
-   highlights.push(reviewSummary.rating.toFixed(1)+'/5 · '+count+' '+(count===1?'review':'reviews')+'<small>Review credit offered</small>');
-  }
-  return '<div class="nl-trust" aria-label="PURE product and delivery highlights">'+highlights.map(label=>'<div>'+check+'<span>'+label+'</span></div>').join('')+'</div>';
+  const highlights=[
+   '<strong>Free shipping over '+priceMarkup(250,{trimWhole:true})+'</strong><small>Eligible US and Canadian orders after discounts</small>',
+   '<a href="/coas?product=5-amino-1mq&amp;size=50mg">99%+ Purity</a><small>On select supplier samples</small>',
+   '<a href="/coas">Verified Lab Testing</a><small>View original lab reports</small>'
+  ];
+  const rating=reviewSummary?'<p class="nl-trust-rating">'+reviewSummary.rating.toFixed(1)+'/5 · '+reviewSummary.count+' '+(reviewSummary.count===1?'review':'reviews')+'<small>Review credit offered</small></p>':'';
+  return '<div class="nl-trust" aria-label="PURE product and delivery highlights">'+highlights.map(label=>'<div>'+check+'<span>'+label+'</span></div>').join('')+rating+'</div>';
  }
  function home() {
  const featured=['retatrutide','bpc-157','ghk-cu','nad'].map(product).filter(Boolean);

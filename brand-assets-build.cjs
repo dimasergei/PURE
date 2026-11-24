@@ -58,6 +58,7 @@ for(const file of fs.readdirSync(out,{recursive:true}).filter(f=>f.endsWith('.ht
   // Price quotes and reward markers share one contract across the drawer and checkout.
   html=html.replace(/\b(src|href)="\/(cart-reference\.(?:js|css)|checkout-reference\.js|storefront-v2\.js)(?:\?[^"]*)?"/g,'$1="/$2?v=20261123-catalog-pricing"');
   html=html.replace(/src="\/(products|conversion-ui)\.js(?:\?[^"]*)?"/g,'src="/$1.js?v=20261123-catalog-pricing"');
+  html=html.replace(/\b(src|href)="\/(conversion-ui\.(?:js|css)|storefront-v2\.js)(?:\?[^"]*)?"/g,'$1="/$2?v=20261123-pure-home"');
   html=html.replace(/src="\/workspace-v2\.js(?:\?[^"]*)?"/g,'src="/workspace-v2.js?v=20261123-bulk-links"');
   html=html.replace(/\b(src|href)="\/(checkout-reference\.(?:js|css))(?:\?[^"]*)?"/g,'$1="/$2?v=20261122-summary-gifts"');
   html=html.replace(/src="\/(readiness-ui|direct-checkout-client)\.js(?:\?[^"]*)?"/g,'src="/$1.js?v=20261122-bulk-savings"');

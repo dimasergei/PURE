@@ -45,14 +45,15 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
  {
   const legacy={ends_at:new Date(now+60000).toISOString(),eligible_variants:['bpc-157:10mg']};
   const {dom,d}=await setup('/shop?offer=bogo',legacy);
-  assert.equal(d.querySelector('.pure-offer-trigger,.pure-card-sale'),null);
+  assert.equal(d.querySelector('.pure-offer-trigger:not([data-default-offer]),.pure-card-sale'),null);
   assert.ok(d.querySelector('#ap-catalog-grid article'),'legacy links open the regular catalog');
   assert.match(d.querySelector('.ap-announcement').textContent,/BLACKFRIDAY10/);
   dom.window.close();
  }
  {const{dom,d,w}=await setup('/');
-  assert.equal(d.querySelector('.pure-offer-trigger'),null);
-  assert.match(d.querySelector('.ap-announcement').textContent,/BLACKFRIDAY10/);
+  const ribbon=d.querySelector('.ap-announcement .pure-offer-trigger[data-default-offer]');
+  assert.equal(ribbon.getAttribute('href'),'/shop');
+  assert.equal(ribbon.querySelector('.pure-offer-free').textContent,'BLACKFRIDAY10');
   assert.match(d.querySelector('h1').textContent,/CUTTING EDGEPURITY/);
    // Desktop navigation and mobile side menu share this single route/link.
    const testingLink=d.querySelector('#ap-nav a[href="/coas"]');

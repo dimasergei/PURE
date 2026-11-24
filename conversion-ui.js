@@ -183,7 +183,7 @@
  }
  async function mountCampaignStrip(){
   const announcement=document.querySelector('.ap-announcement');
-  const fallback=announcement?.querySelector('#ap-announcement-text');
+  const fallback=announcement?.querySelector('[data-default-offer]');
   let campaign;
   try{campaign=await readCampaign();}catch{publishCampaign('unavailable');return;}
   const offer=secondUnitOffer(campaign);

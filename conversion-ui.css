@@ -272,13 +272,16 @@ body.ap-site .nl-detail [data-campaign-product]:not([hidden]) {
 }
 .nl-detail [data-campaign-product] span { color: #555; font-size: .82rem; font-variant-numeric: tabular-nums; }
 
-/* Two delivery benefits expand evenly until a verified review summary is available. */
-html:root body.ap-site .nl-hero .nl-trust {
-  grid-template-columns: none;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(0, 1fr);
+/* Keep three highlights even when there is a review summary. */
+.nl-trust .nl-trust-rating {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #fff;
+  text-align: center;
+  font-size: .875rem;
 }
-.nl-trust small { display: block; color: #d6d6d6; font-size: .8rem; font-weight: 500; }
+.nl-trust small { display: block; color: #d6d6d6; font-size: .78em; font-weight: 500; }
+.nl-trust a { color: inherit; font-weight: 700; text-underline-offset: .18em; }
 
 .rd-referral .pure-partner-disclosure {
   margin-top: .75rem;
