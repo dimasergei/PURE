@@ -1,21 +1,20 @@
-# PURE Labs — Storefront and operations
+# PURE — Storefront and operations
 
 ## Current checkout status (November 2026)
 
-**New online payments are paused while a replacement merchant processor is underwritten.**
-The legacy `/api/checkout` responds with HTTP 503 for all POST requests, and `/api/checkout-status` reports `{ "enabled": false }` even if an old `CHECKOUT_ENABLED=true` environment variable remains. The browser presents a paused-checkout notice.
+The production storefront is [getpurelabs.com](https://getpurelabs.com/). Current checkout exposes hosted card checkout in the U.S. and Canada, native USDC on Polygon where eligible, and Interac e-Transfer in CAD for Canadian customers. The public payment and delivery configuration is available at `/api/customer-config?checkout=public`. Paid memberships use prepaid terms.
 
-The existing signed `/api/stripe-webhook` handler is **retained for reconciliation and existing payment obligations**. Do not delete its credential or disable the endpoint until historical Stripe events, refunds, disputes and settlement obligations are accounted for. The old checkout implementation is preserved in Git history; it should not be restored to accept new transactions.
+The legacy Stripe checkout creation route remains closed. Its signed webhook at `/api/stripe-webhook` remains in service for historical Stripe transactions and outstanding reconciliation, refund, dispute and settlement obligations.
 
 Payment activation requires a provider and acquiring-bank approval for the *actual catalog*, plus approved product/destination shipping lanes, signed webhooks, idempotent order handling, and sandbox checkout tests. See [payment provider underwriting](compliance/payment-provider-underwriting-matrix.md) and [commerce integration plan](docs/commerce-eligibility-integration-plan.md).
 
 ## What exists in the repository
 
-- Catalog and product dosage variants: `products.js`, `product-images.js`
-- Currency display and English/French/Spanish controls: `locale.js` (USD checkout remains the historical settlement currency; converted catalog amounts are estimates)
+- Catalog and product strength variants: `products.js`, `product-images.js`
+- Currency display and English/French/Spanish controls: `locale.js` (the catalog uses USD base list prices, and checkout quotes the payment currency)
 - Customer accounts and Google OAuth: `account.html`, `account.js`
 - Admin orders, suppliers, batches, notifications, and inventory tools: `admin-*.html`, `api/admin-*.js`
-- COA library and pending/withdrawn review logic: `coas.html`, `lib/coa-*.js`; no COAs are published as verified in `data/verified-coas.json`
+- Testing library and lot-specific report review: `coas.html`, `data/supplier-coas.json`, `lib/coa-*.js`
 - Default-deny shipping and payment decision prototypes: `lib/commerce-eligibility.js`. **Not integrated into live checkout.**
 - Country, product, origin, service and underwriting diligence templates under `compliance/`
 
@@ -33,6 +32,6 @@ The `build-test.yml` GitHub Actions workflow additionally runs disposable Postgr
 
 ## Deployment and security
 
-`vercel.json` currently has Git deployments disabled. Before any production change, verify the exact project/commit, CI and isolated browser checks, product eligibility and merchant approval, and get the appropriate release authorization. Do not weaken Vercel deployment protection or expose server-side Supabase/Stripe credentials.
+`vercel.json` has automatic Git deployments disabled. Check the commit currently assigned to `getpurelabs.com` in the Vercel `pure` project before preparing a release. Check the exact candidate commit in CI and in an isolated browser session before assigning production traffic.
 
-For the operational cutover checklist see [Stripe retirement handoff](docs/stripe-retirement-handoff.md).
+See [PURE admin and payments](docs/pure-admin-payments.md) for current operations, [order management](docs/pure-order-management.md) for fulfillment workflows, and the [Stripe retirement handoff](docs/stripe-retirement-handoff.md) for legacy reconciliation.

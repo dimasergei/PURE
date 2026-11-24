@@ -61,7 +61,7 @@ test('unified detail exposes guarded payment controls and true supplier readines
  values.commerce_supplier_settings.enabled=true;await handle(req,res,params,{db,env:{...env,LOTUS_PARTNER_API_KEY:''}});assert.equal(payload.supplier_enabled,false);
 });
 test('disabled Lotus rejects every remote admin action before network, mutation or supplier reads',async()=>{
- const password='fixture-admin-password-'+'x'.repeat(32),env={ADMIN_ORDERS_PASSWORD:password,SITE_URL:'https://altapurelabs.com',LOTUS_FULFILLMENT_ENABLED:'false'};
+ const password='fixture-admin-password-'+'x'.repeat(32),env={ADMIN_ORDERS_PASSWORD:password,SITE_URL:'https://getpurelabs.com',LOTUS_FULFILLMENT_ENABLED:'false'};
  const req={method:'POST',headers:{'x-admin-password':password,origin:env.SITE_URL,'content-type':'application/json'}};
  const db={from(){throw Error('Unexpected supplier read')},rpc(){throw Error('Unexpected supplier mutation')}};
  for(const action of ['preview_lotus_order','label','catalog','run','save_mapping','retry','takeover','assign']){
@@ -71,14 +71,14 @@ test('disabled Lotus rejects every remote admin action before network, mutation 
  }
 });
 test('database kill switch blocks Lotus even with a live API key and enabled environment',async()=>{
- const password='fixture-admin-password-'+'x'.repeat(32),env={ADMIN_ORDERS_PASSWORD:password,SITE_URL:'https://altapurelabs.com',LOTUS_FULFILLMENT_ENABLED:'true',LOTUS_PARTNER_API_KEY:'ptr_live_'+'A'.repeat(43)};
+ const password='fixture-admin-password-'+'x'.repeat(32),env={ADMIN_ORDERS_PASSWORD:password,SITE_URL:'https://getpurelabs.com',LOTUS_FULFILLMENT_ENABLED:'true',LOTUS_PARTNER_API_KEY:'ptr_live_'+'A'.repeat(43)};
  const db={from(table){assert.equal(table,'commerce_supplier_settings');return{select(){return this},eq(){return this},single(){return{data:{enabled:false,verified_at:'2026-11-16',max_order_cents:50000}}}}}};
  let code;const res={setHeader(){},status(n){code=n;return this},json(x){return x}};
  await handle({method:'POST',headers:{'x-admin-password':password,origin:env.SITE_URL,'content-type':'application/json'},body:{action:'preview_lotus_order',id}},res,new URLSearchParams(),{db,env,fetchImpl:async()=>{throw Error('Unexpected network call')}});
  assert.equal(code,409);
 });
 test('manual assignment uses PURE’s manual route with Lotus disabled and ignores client-supplied provider names',async()=>{
- const password='fixture-admin-password-'+'x'.repeat(32),env={ADMIN_ORDERS_PASSWORD:password,SITE_URL:'https://altapurelabs.com',LOTUS_FULFILLMENT_ENABLED:'false'};
+ const password='fixture-admin-password-'+'x'.repeat(32),env={ADMIN_ORDERS_PASSWORD:password,SITE_URL:'https://getpurelabs.com',LOTUS_FULFILLMENT_ENABLED:'false'};
  const recorded=[];
  const db={rpc:async(name,args)=>{assert.equal(name,'commerce_fulfillment_admin');recorded.push(args.p_data);return{data:true}}};
  for(const suppliedName of ['99Purity Peptides','Lotus']){

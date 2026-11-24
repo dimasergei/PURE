@@ -15,10 +15,10 @@ function dbMock({balance={points:1000,credit_cents:5000},membership=null,existin
 const request=(b,headers={})=>({method:'POST',headers:{origin:env.SITE_URL,'content-type':'application/json',authorization:'Bearer fixture-auth-token-long-enough',...headers},body:b});
 async function call(b,{db=dbMock(),cat=catalog,params='',headers={},deps={}}={}){const res=response();await checkout.handle(request(b,headers),res,new URLSearchParams(params),{env,db,catalog:cat,rateLimit:async()=>{},...deps});return{res,db};}
 
-test('checkout quotes work on both verified domains without placing orders',async()=>{
+test('checkout quotes require the canonical production origin and never place orders',async()=>{
  for(const configured of ['https://getpurelabs.com','https://altapurelabs.com'])for(const origin of ['https://getpurelabs.com','https://altapurelabs.com']){
   const db=dbMock(),res=response();await checkout.handle(request({...body,action:'quote'},{origin}),res,new URLSearchParams(),{env:{...env,SITE_URL:configured},db,catalog,rateLimit:async()=>{}});
-  assert.equal(res.code,200);assert.equal(db.calls.length,0);
+  assert.equal(res.code,origin==='https://getpurelabs.com'?200:403);assert.equal(db.calls.length,0);
  }
 });
 test('authoritative catalog ignores client prices and retired volume/referral discounts while applying verified BLACK benefits',async()=>{

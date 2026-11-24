@@ -21,7 +21,7 @@ test('empty registry publishes no fabricated COAs',()=>{
 });
 test('only individually reviewed and verified batch reports may be published',()=>{
  assert.equal(validateReport(record),true);
- assert.equal(validateReport({...record,document_url:'https://altapurelabs.com/verified-coas/report-001.pdf'}),true);
+ assert.equal(validateReport({...record,document_url:'https://altapurelabs.com/verified-coas/report-001.pdf'}),false);
  for(const change of [
   {status:'pending'}, {publication_approved:false},{lot:''},
   {report_date:'2026-02-30'}, {reviewer:''},{evidence_reference:''},

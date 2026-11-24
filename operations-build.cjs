@@ -25,9 +25,7 @@ for(const file of ['admin-operations-overview.html']){let html=fs.readFileSync(f
 fs.rmSync(out,{recursive:true,force:true});fs.mkdirSync(out,{recursive:true});
 const retiredFiles=new Set(['offers.html']);
 for(const entry of fs.readdirSync(root,{withFileTypes:true}))if(entry.isFile()&&!retiredFiles.has(entry.name)&&/\.(html|css|js)$/.test(entry.name))fs.copyFileSync(entry.name,path.join(out,entry.name));
-// Keep source artwork available in Git while publishing the current brand assets.
-const retiredArtwork=new Set(['assets/products','assets/brand-label.webp','assets/research-vials.webp','assets/hero-lab.webp','assets/capsules.webp']);
-function copyImages(dir){if(!fs.existsSync(dir))return;for(const entry of fs.readdirSync(dir,{withFileTypes:true})){const src=path.join(dir,entry.name);if(retiredArtwork.has(src))continue;if(entry.isDirectory())copyImages(src);else if(/\.(png|jpe?g|webp|svg|gif|ico)$/i.test(entry.name)){fs.mkdirSync(path.dirname(path.join(out,src)),{recursive:true});fs.copyFileSync(src,path.join(out,src));}}}
+function copyImages(dir){if(!fs.existsSync(dir))return;for(const entry of fs.readdirSync(dir,{withFileTypes:true})){const src=path.join(dir,entry.name);if(entry.isDirectory())copyImages(src);else if(/\.(png|jpe?g|webp|svg|gif|ico)$/i.test(entry.name)){fs.mkdirSync(path.dirname(path.join(out,src)),{recursive:true});fs.copyFileSync(src,path.join(out,src));}}}
 copyImages('assets');
 fs.cpSync(path.join(root,'assets','fonts'),path.join(out,'assets','fonts'),{recursive:true});
 fs.mkdirSync(path.join(out,'data'),{recursive:true});for(const file of ['verified-coas.json','coa-demo-samples.json','supplier-references.json','supplier-coas.json'])if(fs.existsSync('data/'+file))fs.copyFileSync('data/'+file,path.join(out,'data',file));

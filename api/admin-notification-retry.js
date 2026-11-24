@@ -1,6 +1,6 @@
 const { requireAdmin } = require('../lib/admin-auth');
 const { clients, checked } = require('../lib/backend');
-const { emailSender } = require('../lib/brand-display');
+const { emailSender, ORDER_SENDER } = require('../lib/brand-display');
 const { buildStatusEmail } = require('../lib/customer-order-email');
 
 const {
@@ -150,7 +150,7 @@ module.exports = async (req, res) => {
       });
       const result = await sendEmail({
         to: order.customer_email || notification.customer_email,
-        from: emailSender(process.env.ORDER_CONFIRMATION_FROM || 'PURE <orders@altapurelabs.com>'),
+        from: emailSender(process.env.ORDER_CONFIRMATION_FROM || ORDER_SENDER),
         replyTo: 'support@getpurelabs.com',
         subject: email.subject,
         html: email.html,

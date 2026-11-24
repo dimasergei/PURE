@@ -34,7 +34,11 @@ test('repeatable public build publishes restored program routes and assets while
  const retiredPages=['offers.html'];
  const programPages=['research-builder.html','memberships.html','research-checkout.html'];
  const programAssets=['membership-experience.js','membership-experience.css','membership-checkout.js','membership-checkout.css','research-builder-client.js','research-builder-parity.css','research-checkout-client.js','research-checkout.css'];
- const retiredArtwork=['assets/products/legacy.webp','assets/brand-label.webp','assets/research-vials.webp','assets/hero-lab.webp','assets/capsules.webp'];
+ const retiredArtwork=[
+  'AltaPureLabs Images','ALTA_83_curved_label_photos','hero.svg','assets/products',
+  'assets/brand-label.webp','assets/research-vials.webp','assets/hero-lab.webp','assets/capsules.webp',
+  'assets/altapure-favicon-48.png','assets/altapure-favicon.ico','assets/altapure-logo-mark.png','assets/altapure-touch-icon.png'
+ ];
  try{
   for(const name of fs.readdirSync(root)){const src=path.join(root,name);if(fs.statSync(src).isFile()&&/\.(js|cjs|html|css|json)$/.test(name))fs.copyFileSync(src,path.join(tmp,name));}
   fs.mkdirSync(path.join(tmp,'config'),{recursive:true});
@@ -43,8 +47,8 @@ test('repeatable public build publishes restored program routes and assets while
   for(const name of ['verified-coas.json','storefront-programs.json','coa-demo-samples.json'])if(fs.existsSync(path.join(root,'data',name)))fs.copyFileSync(path.join(root,'data',name),path.join(tmp,'data',name));
   fs.cpSync(path.join(root,'assets','fonts'),path.join(tmp,'assets','fonts'),{recursive:true});
   fs.copyFileSync(path.join(root,'assets','pure-wordmark.svg'),path.join(tmp,'assets','pure-wordmark.svg'));
-  // Seed retired files so exclusion is tested even after their source files are removed.
-  for(const name of [...retiredPages,...retiredArtwork]){fs.mkdirSync(path.dirname(path.join(tmp,name)),{recursive:true});fs.writeFileSync(path.join(tmp,name),'retired-fixture');}
+  for(const name of retiredPages)fs.writeFileSync(path.join(tmp,name),'retired-fixture');
+  for(const name of retiredArtwork)assert.equal(fs.existsSync(path.join(root,name)),false,name+' was retired from source');
   for(let run=0;run<2;run++)for(const script of ['install-store.cjs','site-build.cjs','operations-build.cjs']){
    const result=spawnSync(process.execPath,[script],{cwd:tmp,encoding:'utf8'});assert.equal(result.status,0,script+': '+result.stderr);
   }
@@ -60,18 +64,18 @@ test('repeatable public build publishes restored program routes and assets while
   for(const name of programAssets)assert.deepEqual(fs.readFileSync(path.join(output,name)),fs.readFileSync(path.join(root,name)),name+' is copied intact');
   for(const name of ['assets/fonts/archivo-latin-variable.woff','assets/fonts/OFL.txt','assets/pure-wordmark.svg'])assert.deepEqual(fs.readFileSync(path.join(output,name)),fs.readFileSync(path.join(root,name)),name+' is copied intact');
   const catalog=JSON.parse(fs.readFileSync(path.join(tmp,'lib','catalog.json'),'utf8'));
-  const retained=['/','/shop','/bulk-orders','/rewards','/coas','/about','/contact','/partner-program','/track-order','/memberships','/research-builder'];
+  const retained=['/','/shop','/bulk-orders','/rewards','/coas','/about','/contact','/partner-program','/track-order','/memberships'];
   const expected=[...retained,...catalog.map(p=>'/product/'+p.id)].map(url=>'https://getpurelabs.com'+url).sort();
   const sitemap=fs.readFileSync(path.join(output,'sitemap.xml'),'utf8');
   const actual=[...sitemap.matchAll(/<loc>(.*?)<\/loc>/g)].map(m=>m[1]);
   assert.deepEqual(actual.sort(),expected);assert.equal(new Set(actual).size,actual.length);
-  assert.ok(!actual.includes('https://getpurelabs.com/research-checkout'),'The transactional research review is excluded from the sitemap.');
+  for(const route of ['/research-builder','/research-checkout'])assert.ok(!actual.includes('https://getpurelabs.com'+route),route+' is excluded from the sitemap');
   for(const route of retained)assert.ok(fs.existsSync(path.join(output,route==='/'?'index.html':route.slice(1)+'.html')),route+' is published');
   const account=fs.readFileSync(path.join(output,'account.js'),'utf8');
   assert.match(account,/AltaOperationsUI.renderRequests/);assert.equal((account.match(/\['Requests','\/account\/requests'\]/g)||[]).length,1);
   const accountHtml=fs.readFileSync(path.join(output,'account.html'),'utf8');
   assert.equal((accountHtml.match(/src="\/operations-client.js"/g)||[]).length,1);
-  for(const href of ['/research-builder','/memberships','/account/membership','/account/subscriptions'])assert.ok(accountHtml.includes('href="'+href+'"'),href+' is present in shared account navigation');
+  for(const route of ['/account/membership','/account/subscriptions'])assert.ok(account.includes("'"+route+"'"),route+' is handled by account navigation');
   assert.doesNotMatch(accountHtml,/href="\/offers(?:["?#/])|\bBOGO\b/);
  }finally{fs.rmSync(tmp,{recursive:true,force:true});}
 });

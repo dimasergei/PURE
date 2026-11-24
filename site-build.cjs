@@ -47,7 +47,7 @@ let js=fs.readFileSync('account.js','utf8');
 js=js.replace("if(['/account/membership','/account/subscriptions'].includes(p))return go('/account');",'')
  .replace("if(p==='/research-checkout'||p==='/research-builder'||p==='/research-subscriptions')return go('/shop');",'')
  .replace("['/account/points','/account/store-credit','/account/partner'].includes(p)","['/account/points','/account/store-credit','/account/partner','/account/membership'].includes(p)")
- .replace("['/account/points','/account/store-credit','/account/partner','/account/membership'].includes(p)){if(!user)return go('/account/login');", "['/account/points','/account/store-credit','/account/partner','/account/membership'].includes(p)){if(!user)return go('/account/login?returnTo='+encodeURIComponent(p+location.search));");
+ .replace("['/account/points','/account/store-credit','/account/partner','/account/membership'].includes(p)){if(!user)return go('/account/login');", "['/account/points','/account/store-credit','/account/partner','/account/membership'].includes(p)){if(!user)return go('/account/login?returnTo='+encodeURIComponent(accountReturnDestination(p)));");
 
 js=js.replace("const p=location.pathname.replace(/\\/$/,'')||'/account';","const p=location.pathname.replace(/^\\/my-account(?=\\/|$)/,'/account').replace(/\\/$/,'')||'/account';if(p==='/account/stack'||p==='/account/subscriptions')return go('/account/membership');");
 const start=js.indexOf('function placeholder('),end=js.indexOf('async function orders()',start);

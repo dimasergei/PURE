@@ -25,7 +25,7 @@ patch('account.js',s=>{
  s=replace(s,"root.innerHTML=accountNav(p)+'<section id=\"direct-checkout-root\"></section>';document.getElementById('logout').onclick=logout;","document.body.classList.add('ap-checkout-page');root.innerHTML='<section id=\"direct-checkout-root\"></section>';");
  s=replace(s,"window.DirectCheckout.orders(document.getElementById('direct-orders-root'),auth,user)","window.AccountExperience.orders(document.getElementById('direct-orders-root'),auth,user,api,card)");
  s=replace(s,"window.DirectCheckout.balance(document.getElementById('direct-balance-root'),auth,p)","window.AccountExperience.rewards(document.getElementById('direct-balance-root'),auth,p)");
- s=replace(s,"return profile();","root.innerHTML=head('Profile')+accountNav(p)+'<section id=\"ae-profile-root\"></section>';document.getElementById('logout').onclick=logout;window.AccountExperience.profile(document.getElementById('ae-profile-root'),auth,user);return;");
+ s=replace(s,"return profile();","root.innerHTML=head('Profile')+accountNav(p)+'<section id=\"ae-profile-root\"></section>';document.getElementById('logout').onclick=logout;window.AccountExperience.profile(document.getElementById('ae-profile-root'),auth,user,authCallbackUrl);return;");
  s=replace(s,"if(p==='/account/tracking'){","if(p==='/account/orders')return go('/account/purchases?view=history');if(p==='/account/tracking')return go('/account/purchases?view=tracking');if(p==='/account/tracking'){");
  s=s.replaceAll("href=\"/account/orders\"","href=\"/account/purchases?view=history\"");
  s=s.replace("head('Your requests')","head('Support requests')");

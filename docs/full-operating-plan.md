@@ -1,6 +1,8 @@
-# AltaPure Labs — complete operating plan and acceptance contract
+# Historical operating plan and acceptance contract
 
 Review: November 9, 2026 local / November 10 UTC. Baseline: main `0de17a0afad65b0f52195af589c810c2b6556bb0` (storefront overhaul). This is one implementation backlog and release contract, not a series of cosmetic phases.
+
+This records the November 9 baseline and the acceptance criteria discussed at that time. See the [PURE repository overview](../README.md) for current checkout and deployment instructions.
 
 ## 1. Definition of fully operational
 

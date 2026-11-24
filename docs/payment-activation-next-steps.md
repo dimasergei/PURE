@@ -1,6 +1,6 @@
-# Payment activation: current checkpoint
+# Historical payment activation checkpoint
 
-Reviewed 11 November 2026. This replaces the earlier manual-invoice-only intake. Recheck provider and production state before a later activation.
+Reviewed 11 November 2026. This records provider application and test history from that date. See [PURE admin and payments](pure-admin-payments.md) for the current checkout.
 
 ## Deployed and verified
 

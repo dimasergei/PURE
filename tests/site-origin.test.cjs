@@ -5,11 +5,12 @@ const {configuredOrigin, isAllowedOrigin} = require('../lib/checkout-security');
 const current = 'https://getpurelabs.com';
 const legacy = 'https://altapurelabs.com';
 
-test('either verified production configuration accepts current and legacy storefront origins', () => {
+test('either production configuration accepts only the canonical storefront origin', () => {
   for (const configured of [current, legacy]) {
-    for (const origin of [current, legacy]) assert.equal(isAllowedOrigin(origin, configured), true);
+    assert.equal(configuredOrigin(configured), current);
+    assert.equal(isAllowedOrigin(current, configured), true);
     for (const origin of [undefined, null, 'null', 'http://getpurelabs.com',
-      current+'/', current+':444', current+'.evil.test', 'https://evil.test',
+      legacy, current+'/', current+':444', current+'.evil.test', 'https://evil.test',
       'https://preview.vercel.app', 'https://www.getpurelabs.com']) {
       assert.equal(isAllowedOrigin(origin, configured), false, String(origin));
     }

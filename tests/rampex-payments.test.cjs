@@ -32,6 +32,22 @@ test('Rampex is disabled by default and has no fake sandbox',()=>{
  assert.equal(cfg.ready,true);assert.equal(cfg.currencies.join(','),'USD');assert.equal(cfg.wallets.apple,false);
  assert.notEqual(r.configuration({...env,RAMPEX_API_KEY:'other-fixture'}).account_tag,cfg.account_tag);
 });
+test('merchant origin configuration cannot change stored account binding or authorize an invalid origin', async()=>{
+ const configured={...env,RAMPEX_MERCHANT_ORIGIN:'https://altapurelabs.com'};
+ assert.equal(r.configuration(configured).account_tag,cfg.account_tag);
+ await r.create(attempt,user.email,configured,async(_url,options)=>{
+  const payload=JSON.parse(options.body);
+  assert.equal(payload.woo_store_url,'https://altapurelabs.com');
+  assert.equal(payload.payment_url,'https://getpurelabs.com/pay.html?invoice='+iid);
+  return response({link_id:'fixture-123',status:'active',amount:49,currency:'USD',customer_email:user.email,redirect_url:'https://checkout.rampex.io/pay/fixture-123'});
+ });
+ assert.equal(r.createBody(attempt,user.email,env).woo_store_url,'https://getpurelabs.com');
+ const invalid={...env,RAMPEX_MERCHANT_ORIGIN:'https://getpurelabs.com/cart'};
+ assert.deepEqual(r.configuration(invalid).missing,['valid RAMPEX_MERCHANT_ORIGIN']);
+ let calls=0;
+ await assert.rejects(()=>r.create(attempt,user.email,invalid,async()=>{calls++;}),{status:503});
+ assert.equal(calls,0);
+});
 test('only supported explicit routes or hosted and safe checkout URLs are accepted',()=>{
  for(const rail of ['meld','creditcard','unknown'])assert.throws(()=>r.assertRail(rail));
  assert.equal(r.checkoutUrl('https://checkout.rampex.io/pay/test?provider=rampnetwork','rampnetwork'),'https://checkout.rampex.io/pay/test?provider=rampnetwork');
@@ -54,7 +70,7 @@ test('provider reads allow 15 seconds while payment-link creation keeps its one-
 test('creation sends the stored amount/reference once and never follows redirects',async()=>{
  let calls=0;
  const result=await r.create(attempt,user.email,env,async(url,opts)=>{calls++;assert.equal(url,'https://api.rampex.io/api-create-payment-link');assert.equal(opts.headers['X-API-Key'],env.RAMPEX_API_KEY);assert.equal(opts.redirect,'error');
- const sent=JSON.parse(opts.body);assert.equal(sent.amount,49);assert.equal(sent.provider,'rampnetwork');assert.equal(sent.woo_order_id,id);assert.equal(sent.woo_store_url,'https://altapurelabs.com');assert.equal(sent.payment_url,'https://getpurelabs.com/pay.html?invoice='+iid);
+ const sent=JSON.parse(opts.body);assert.equal(sent.amount,49);assert.equal(sent.provider,'rampnetwork');assert.equal(sent.woo_order_id,id);assert.equal(sent.woo_store_url,'https://getpurelabs.com');assert.equal(sent.payment_url,'https://getpurelabs.com/pay.html?invoice='+iid);
  return response({link_id:'fixture-123',status:'active',amount:49,currency:'USD',customer_email:user.email,redirect_url:'https://checkout.rampex.io/pay/fixture-123'});
  });assert.equal(calls,1);assert.equal(result.id,'fixture-123');
  await assert.rejects(()=>r.create(attempt,user.email,env,async()=>{calls++;throw Error('fixture network failure')}));assert.equal(calls,2);

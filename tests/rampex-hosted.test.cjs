@@ -33,7 +33,7 @@ test('hosted payment creation refuses a substituted single-provider redirect',()
  assert.throws(()=>r.checkoutUrl('https://checkout.rampex.io/pay/x?provider=stripe','hosted'));assert.throws(()=>r.checkoutUrl('https://bad.invalid/pay','hosted'));
 });
 test('hosted request helper accepts the authorized route but preserves server return URL validation',()=>{
- const result=protocol.buildPaymentRequest({amount_cents:4900,currency:'USD',email:'customer@example.invalid',order_id:'invoice_123',provider:'hosted',provider_status:{id:'hosted',status:'active',minimum_currency:'USD',minimum_amount:2},return_url:'https://altapurelabs.com/invoice.html?id=invoice_123'});assert.equal(result.body.provider,'hosted');
+ const result=protocol.buildPaymentRequest({amount_cents:4900,currency:'USD',email:'customer@example.invalid',order_id:'invoice_123',provider:'hosted',provider_status:{id:'hosted',status:'active',minimum_currency:'USD',minimum_amount:2},return_url:'https://getpurelabs.com/invoice.html?id=invoice_123'});assert.equal(result.body.provider,'hosted');
 });
 test('wallet copy is provider-conditional and existing native wallet flags are not fabricated',()=>{
  const page=fs.readFileSync('native-pay.js','utf8');assert.match(page,/card-to-crypto checkout through Rampex/);assert.match(page,/g\.provider==='nmi'/);assert.deepEqual(r.configuration(env).wallets,{apple:false,google:false});

@@ -7,13 +7,13 @@
 <p><a href="https://guide.nmi.com/app/magic-login?mode=signup" target="_blank" rel="noopener noreferrer">Open NMI sandbox signup</a> to prepare provider testing. A sandbox account cannot accept real payments.</p>
 <p>Supply the merchant API, tokenization and webhook keys plus merchant ID through protected hosting settings. Keep sandbox credentials and test data in an isolated preview environment. Enable live cards only after account testing.</p>
 <p>Apple Pay also needs the account's domain verification file and approved domain. Test wallets and 3-D Secure before enabling their flags.</p>
-<details><summary>NMI production callback</summary><p style="overflow-wrap:anywhere"><code>https://altapurelabs.com/api/checkout?native=nmi-webhook</code></p><p>Register sale success/failure/unknown, refund success and void success events in the approved account. A preview uses its own callback domain.</p></details>
+<details><summary>NMI webhook settings</summary><p>For a new approved account, use the PURE production endpoint <code>https://getpurelabs.com/api/checkout?native=nmi-webhook</code>. Register sale, refund and void events. Retain existing registrations for outstanding transactions until the provider confirms a callback migration.</p></details>
 </article>
 <article class="ops-card"><h3>2. Crypto</h3>
 <p><a href="https://dash.payerurl.com/register" target="_blank" rel="noopener noreferrer">Open PayerURL account setup</a>. The account owner chooses and verifies the receiving arrangement, network and fees.</p>
 <p>Confirm the account's Node/form API protocol, callback amount unit and checkout hostname. Store its public/secret API pair in protected server settings, then test signed paid, underpaid, canceled and repeated callbacks.</p>
 <p>Crypto acceptance does not establish card-acquiring approval. Never enter wallet recovery phrases or private keys here.</p>
-<details><summary>PayerURL production notification URL</summary><p style="overflow-wrap:anywhere"><code>https://altapurelabs.com/api/checkout?native=payerurl-webhook</code></p></details>
+<details><summary>Historical PayerURL notifications</summary><p>Use the account’s registered notification URL to reconcile existing transactions. Verify the provider configuration and test a signed callback before migrating it to PURE.</p></details>
 </article>
 <article class="ops-card"><h3>3. Interac and bank transfer</h3>
 <p>In <a href="/admin-payments.html">Invoices &amp; transfers</a>, save the real business receiving details: Interac email and exact registered payee, or bank-issued beneficiary, currency and incoming-transfer instructions.</p>

@@ -1,6 +1,8 @@
-# Rampex order integration — staged, collection disabled
+# Historical Rampex order integration
 
 ## Scope and state
+
+This records the initial staging and migration of the Rampex integration. See [PURE admin and payments](pure-admin-payments.md) for current hosted checkout behavior.
 
 Built on production commit 768b7b7ec566d2ceef6d14404aa731640ce0bdc0. The owner configured a MetaMask receiving address and saved the two Production Secrets. The preceding production connection check authenticated the API key successfully. This change does not establish catalog approval, a working card purchase, the exact fees, or receipt in the owner's wallet.
 

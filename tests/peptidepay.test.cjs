@@ -15,7 +15,7 @@ test('PeptidePay credentials alone never activate payments or substitute test ke
 });
 test('session creation is server-priced, idempotent and does not send customer identity',async()=>{
  let sent;const created=await pp.create(attempt,env,async(url,opts)=>{sent={url,opts,body:JSON.parse(opts.body)};return{ok:true,json:async()=>({...paid,status:'pending',url:'https://peptide-pay.com/session/'+paid.id,tracking_number:attempt.settlement_address})};});
- assert.equal(created.id,paid.id);assert.equal(sent.opts.headers['Idempotency-Key'],attempt.id);assert.equal(sent.body.amount_cents,4900);assert.equal(sent.body.currency,'USD');assert.equal(sent.body.metadata.order_id,attempt.id);assert.equal(sent.body.customer_email,undefined);assert.equal(sent.body.wallet,undefined);assert.match(sent.body.webhook_url,/native=peptidepay-webhook$/);assert.equal(sent.opts.redirect,'error');
+ assert.equal(created.id,paid.id);assert.equal(sent.opts.headers['Idempotency-Key'],attempt.id);assert.equal(sent.body.amount_cents,4900);assert.equal(sent.body.currency,'USD');assert.equal(sent.body.metadata.order_id,attempt.id);assert.equal(sent.body.customer_email,undefined);assert.equal(sent.body.wallet,undefined);assert.equal(sent.body.webhook_url,'https://getpurelabs.com/api/checkout?native=peptidepay-webhook');assert.equal(sent.opts.redirect,'error');
 });
 test('session mismatch or an untrusted redirect never escapes the server',async()=>{
  const good={...paid,status:'pending',url:'https://peptide-pay.com/session/'+paid.id,tracking_number:attempt.settlement_address};

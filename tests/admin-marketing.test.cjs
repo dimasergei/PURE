@@ -3,7 +3,7 @@ const test=require('node:test'),assert=require('node:assert/strict'),fs=require(
 const handle=require('../lib/admin-marketing');
 
 const goodPassword='a'.repeat(48);
-const env={ADMIN_ORDERS_PASSWORD:goodPassword,SITE_URL:'https://altapurelabs.com',OPENAI_API_KEY:'test-key',OPENAI_MARKETING_MODEL:'gpt-6-astra'};
+const env={ADMIN_ORDERS_PASSWORD:goodPassword,SITE_URL:'https://getpurelabs.com',OPENAI_API_KEY:'test-key',OPENAI_MARKETING_MODEL:'gpt-6-astra'};
 function response(){
   return {
     statusCode:200,headers:{},payload:null,
@@ -13,7 +13,7 @@ function response(){
   };
 }
 function req(method='GET',override={}){
-  return {method,headers:{'x-admin-password':goodPassword,'origin':'https://altapurelabs.com','content-type':'application/json'},...override};
+  return {method,headers:{'x-admin-password':goodPassword,origin:env.SITE_URL,'content-type':'application/json'},...override};
 }
 
 test('marketing endpoint refuses unauthenticated requests',async()=>{
@@ -35,16 +35,18 @@ test('marketing endpoint returns authenticated shared CRM and Instagram status',
   assert.deepEqual(res.payload.workspace.leads,[]);
   assert.equal(res.payload.instagram.connected,false);
   assert.equal(res.payload.instagram.credentials_configured,false);
-  assert.equal(res.payload.instagram.callback_url,'https://altapurelabs.com/api/instagram/callback');
+  assert.equal(res.payload.instagram.callback_url,'https://getpurelabs.com/api/instagram/callback');
   const current=response();
   await handle(req(),current,{env:{...env,SITE_URL:'https://getpurelabs.com',OPENAI_API_KEY:''},db});
   assert.equal(current.statusCode,200);
-  assert.equal(current.payload.instagram.callback_url,'https://altapurelabs.com/api/instagram/callback');
+  assert.equal(current.payload.instagram.callback_url,'https://getpurelabs.com/api/instagram/callback');
 });
 test('marketing drafting rejects cross-origin POST',async()=>{
-  const res=response();
-  await handle(req('POST',{headers:{'x-admin-password':goodPassword,origin:'https://attacker.example','content-type':'application/json'}}),res,{env});
-  assert.equal(res.statusCode,403);
+  for(const origin of ['https://attacker.example','https://altapurelabs.com']){
+    const res=response();
+    await handle(req('POST',{headers:{'x-admin-password':goodPassword,origin,'content-type':'application/json'}}),res,{env});
+    assert.equal(res.statusCode,403);
+  }
 });
 test('marketing drafting returns explicitly review-only text',async()=>{
   let called=0;
@@ -143,7 +145,7 @@ test('marketing Instagram connection uses Meta Unified Login and a one-time stat
   assert.equal(url.origin,'https://www.facebook.com');
   assert.equal(url.pathname,'/dialog/oauth');
   assert.equal(url.searchParams.get('config_id'),'1599102845567340');
-  assert.equal(url.searchParams.get('redirect_uri'),'https://altapurelabs.com/api/instagram/callback');
+  assert.equal(url.searchParams.get('redirect_uri'),'https://getpurelabs.com/api/instagram/callback');
   assert.equal(url.searchParams.get('response_type'),'code');
   assert.match(url.searchParams.get('state'),/^[a-f0-9]{64}$/);
   assert.equal(inserted.state_hash.length,64);
@@ -156,7 +158,7 @@ test('Instagram authorization retains the registered callback with either config
   const credentials={INSTAGRAM_APP_ID:'2526228261196996',INSTAGRAM_CONFIG_ID:'1599102845567340',INSTAGRAM_APP_SECRET:'unit-test-secret',INSTAGRAM_TOKEN_ENCRYPTION_KEY:'a'.repeat(64)};
   for(const site of [undefined,'https://altapurelabs.com','https://getpurelabs.com']){
     const auth=await platform.connectUrl(db,{...credentials,...(site?{SITE_URL:site}:{})});
-    assert.equal(new URL(auth.authorization_url).searchParams.get('redirect_uri'),'https://altapurelabs.com/api/instagram/callback');
+    assert.equal(new URL(auth.authorization_url).searchParams.get('redirect_uri'),'https://getpurelabs.com/api/instagram/callback');
   }
   await assert.rejects(()=>platform.connectUrl(db,{...credentials,SITE_URL:'https://untrusted.example'}),/site configuration mismatch/);
 });
@@ -174,7 +176,7 @@ test('Instagram token exchange preserves the registered redirect URI after a cal
   await platform.oauthCallback({url:'/api/instagram/callback?code=fixture-code&state='+'a'.repeat(64)},res,{env:callbackEnv,db,fetchImpl:async(url)=>{
     exchanged=new URL(url);return {ok:false,status:502};
   }});
-  assert.equal(exchanged.searchParams.get('redirect_uri'),'https://altapurelabs.com/api/instagram/callback');
+  assert.equal(exchanged.searchParams.get('redirect_uri'),'https://getpurelabs.com/api/instagram/callback');
   assert.equal(res.statusCode,302);
   assert.equal(res.headers.Location,'https://getpurelabs.com/admin-marketing.html?instagram=connection_failed');
 });

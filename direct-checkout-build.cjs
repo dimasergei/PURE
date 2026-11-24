@@ -15,7 +15,7 @@ patch('account.js',s=>{
   const partnerRequested=new URLSearchParams(location.search).get('returnTo')==='/account/partner';
   if(user){const next=consumeCheckoutReturn(partnerRequested?'/account/partner':null);if(next)return go(next);}
   else if(partnerRequested)return go('/account/login?returnTo=%2Faccount%2Fpartner');
- }`;
+ }if(p==='/account/partner'&&user&&safeCheckoutReturn(sessionStorage.getItem('ap-account-return'))?.split('?')[0]===p)sessionStorage.removeItem('ap-account-return');`;
  return s.replace(anchor,resume+route+anchor).replace("['Invoices','/account/invoices'],['Orders','/account/orders']","['Orders','/account/purchases'],['Historical orders','/account/orders']")
  .replace('if(user)return overview();',`if(user){root.innerHTML=head('Overview')+accountNav('/account')+'<section id="direct-overview-root"></section>';document.getElementById('logout').onclick=logout;window.DirectCheckout.overview(document.getElementById('direct-overview-root'),auth,user);return;}`)
  .replace('async function tracking(){',`async function tracking(){await legacyTracking();const recent=document.createElement('section');recent.className='ap-panel';root.append(recent);await window.DirectCheckout.orders(recent,auth,user);}\nasync function legacyTracking(){`);

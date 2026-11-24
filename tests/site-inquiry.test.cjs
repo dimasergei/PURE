@@ -3,7 +3,7 @@ const test=require('node:test'),assert=require('node:assert/strict');
 const {normalizeInquiry,handleInquiry}=require('../lib/site-inquiry');
 const catalog=[{id:'sample',name:'Sample research material',variants:[{size:'10mg',price:60}]}];
 const base={type:'contact',request_id:'10000000-0000-4000-8000-000000000001',name:'Researcher',email:'Researcher@example.test',message:'Please provide the exact lot documentation.',consent:true};
-const env={SITE_URL:'https://altapurelabs.com',CHECKOUT_RATE_LIMIT_SECRET:'fixture-key-with-more-than-32-characters'};
+const env={SITE_URL:'https://getpurelabs.com',CHECKOUT_RATE_LIMIT_SECRET:'fixture-key-with-more-than-32-characters'};
 function response(){return{code:200,body:null,status(n){this.code=n;return this;},json(b){this.body=b;return this;}};}
 function request(body=base){return{method:'POST',headers:{origin:env.SITE_URL,'content-type':'application/json','x-vercel-forwarded-for':'192.0.2.1'},body};}
 function deps(extra={}){return{env,catalog,db:{},rateLimit:async()=>{},storeRequest:async()=>({id:base.request_id,email_status:'queued'}),deliverRequest:async()=>({email_status:'accepted'}),...extra};}

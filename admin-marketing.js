@@ -315,7 +315,7 @@
     $('mk-ig-connect').disabled=!configured;
     $('mk-ig-sync').disabled=!connected;
     $('mk-ig-disconnect').disabled=!connected;
-    $('mk-ig-callback').textContent=instagram.callback_url||'https://altapurelabs.com/api/instagram/callback';
+    $('mk-ig-callback').textContent=instagram.callback_url||'Registered URL unavailable';
     $('mk-ig-webhook').textContent=instagram.webhook_url||'https://mqtitxfsdphqbsxhwdma.supabase.co/functions/v1/alta-instagram-webhook';
     const select=$('mk-ig-thread'),prior=select.value;
     const participants=[...new Set(igMessages.map(x=>x.participant_id).filter(Boolean))];

@@ -1,5 +1,5 @@
 const { clients, checked } = require('../lib/backend');
-const { emailSender } = require('../lib/brand-display');
+const { emailSender, ORDER_SENDER } = require('../lib/brand-display');
 const { emailLayout, orderSummary, researchNotice } = require('../lib/order-email-layout');
 const { orderTotalRows } = require('../lib/customer-order-email');
 const {
@@ -144,7 +144,7 @@ async function sendOrderEmails(db, orderId, session) {
   const items = itemsResponse.data || [];
   const customerEmail = order.customer_email;
   const adminEmail = process.env.ADMIN_ORDER_EMAIL;
-  const fromEmail = emailSender(process.env.ORDER_CONFIRMATION_FROM || 'PURE <orders@altapurelabs.com>');
+  const fromEmail = emailSender(process.env.ORDER_CONFIRMATION_FROM || ORDER_SENDER);
   if (!customerEmail) throw new Error('Customer email is missing.');
   let queued;
   try {

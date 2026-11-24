@@ -76,16 +76,24 @@ test('produces stable replay keys without pretending to persist deduplication', 
     r.validateCompletion({...completion, paid_at:'later'}, expected).event_key);
 });
 test('builds an exact-amount request without network calls or secrets', () => {
-  const made = r.buildPaymentRequest(request);
+  const made = r.buildPaymentRequest(request, {});
   assert.equal(made.url, 'https://api.rampex.io/api-create-payment-link');
   assert.equal(made.body.amount, 100.5); assert.equal(made.body.provider, 'rampnetwork');
   assert.equal(made.body.woo_order_id, 'invoice_123'); assert.equal(made.headers, undefined);
-  assert.equal(made.body.woo_store_url, 'https://altapurelabs.com');
+  assert.equal(made.body.woo_store_url, 'https://getpurelabs.com');
   assert.equal(made.body.payment_url, request.return_url);
 });
-test('retains legacy invoice return URLs during the verified domain migration', () => {
-  const return_url = 'https://altapurelabs.com/invoice.html?id=invoice_123';
-  assert.equal(r.buildPaymentRequest({...request, return_url}).body.payment_url, return_url);
+test('uses configured merchant identity independently of the PURE return URL', () => {
+  const env = { RAMPEX_MERCHANT_ORIGIN: 'https://merchant.example.test/' };
+  const body = r.buildPaymentRequest(request, env).body;
+  assert.equal(body.woo_store_url, 'https://merchant.example.test');
+  assert.equal(body.payment_url, request.return_url);
+  assert.throws(() => r.buildPaymentRequest({...request, return_url: 'https://merchant.example.test/invoice.html?id=invoice_123'}, env));
+  assert.throws(() => r.buildPaymentRequest({...request, return_url: 'https://altapurelabs.com/invoice.html?id=invoice_123'}, env));
+  for (const value of ['', 'https:merchant.example.test', 'http://merchant.example.test', 'https://user:pw@merchant.example.test', 'https://@merchant.example.test',
+    'https://merchant.example.test/shop', 'https://merchant.example.test?query=true', 'https://merchant.example.test#fragment']) {
+    assert.throws(() => r.buildPaymentRequest(request, { RAMPEX_MERCHANT_ORIGIN: value }), { status: 503 });
+  }
 });
 test('blocks unsupported direct routes and invented providers', () => {
   for (const provider of ['stripe','unknown','STRIPE']) {

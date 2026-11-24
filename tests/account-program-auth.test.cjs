@@ -20,8 +20,8 @@ function generatedAccount(){
 }
 const source=generatedAccount(),user={id:'fixture-member',email:'researcher@example.test',user_metadata:{full_name:'Fixture Researcher'}};
 const tick=()=>new Promise(resolve=>setTimeout(resolve,0));
-async function page(route,{signedIn=false,storedReturn=null}={}){
- const dom=new JSDOM('<body class="ap-site ap-account-site"><main class="account-page"><div class="account-shell"><section id="account-root" class="account-card"></section></div></main><span id="year"></span></body>',{url:'https://pure.example'+route});
+async function page(route,{signedIn=false,storedReturn=null,origin='https://pure.example'}={}){
+ const dom=new JSDOM('<body class="ap-site ap-account-site"><main class="account-page"><div class="account-shell"><section id="account-root" class="account-card"></section></div></main><span id="year"></span></body>',{url:origin+route});
  const w=dom.window,assigned=[],panels=[],signins=[],signups=[],oauth=[],resets=[],requests=[];
  if(storedReturn)w.sessionStorage.setItem('ap-account-return',storedReturn);
  let onState;
@@ -180,7 +180,7 @@ test('Google sign-in precedes the alternative divider and email form on both aut
  }
 });
 
-test('new partners complete Google or email signup on this store and return to enrollment across tabs',async()=>{
+test('partner Google and signup callbacks use one exact route and retain enrollment across tabs',async()=>{
  const destination='/account/partner';
  const signup=await page('/account/signup?returnTo='+encodeURIComponent(destination+'?source=publisher'));
  const pages=[signup];
@@ -188,21 +188,43 @@ test('new partners complete Google or email signup on this store and return to e
   await signup.w.document.getElementById('google-signin').onclick();
   await submit(signup,'signup',{name:'Fixture Researcher',email:user.email,password:'Fixture-only-password1!',confirm:'Fixture-only-password1!',research:true});
   const callback=new URL(signup.oauth[0].options.redirectTo);
-  assertDestination(callback.href,'/account',destination);
+  assertDestination(callback.href,destination,null);
   assert.equal(signup.signups[0].options.emailRedirectTo,callback.href);
-  assert.equal(callback.searchParams.size,1,'only the fixed partner route travels to the provider');
-  const address=callback.pathname+callback.search+'&code=fixture-code';
-  for(const storedReturn of [null,'/account/membership']){
-   const arrived=await page(address,{signedIn:true,storedReturn});pages.push(arrived);
-   assert.deepEqual(arrived.assigned,[destination]);
-   assert.equal(arrived.w.sessionStorage.getItem('ap-account-return'),null);
-  }
+  assert.equal(callback.search,'','only the fixed partner route travels to the provider');
+  const address=callback.pathname+'?code=fixture-code';
+  const arrived=await page(address,{signedIn:true,storedReturn:destination+'?source=publisher'});pages.push(arrived);
+  assert.deepEqual(arrived.assigned,[]);
+  assert.deepEqual(arrived.panels,[destination]);
+  assert.equal(arrived.w.sessionStorage.getItem('ap-account-return'),null);
   const unsigned=await page(address);pages.push(unsigned);
   assertDestination(unsigned.assigned[0],'/account/login',destination);
   assert.deepEqual(unsigned.panels,[]);
-  const enrolled=await page(destination,{signedIn:true});pages.push(enrolled);
-  assert.deepEqual(enrolled.panels,[destination]);
+  const priorCallback=await page('/account?returnTo=%2Faccount%2Fpartner&code=fixture-code',{signedIn:true,storedReturn:'/account/membership'});pages.push(priorCallback);
+  assert.deepEqual(priorCallback.assigned,[destination]);
+  assert.equal(priorCallback.w.sessionStorage.getItem('ap-account-return'),null);
  }finally{for(const env of pages)env.dom.window.close();}
+});
+
+test('production aliases reach the canonical browser origin before creating an auth session',async()=>{
+ const route='/account/login?returnTo=%2Faccount%2Fpartner';
+ for(const origin of ['https://altapurelabs.com','https://www.altapurelabs.com','https://www.getpurelabs.com','http://getpurelabs.com']){
+  const alias=await page(route,{origin});
+  try{
+   assert.deepEqual(alias.assigned,['https://getpurelabs.com'+route]);
+   assert.deepEqual(alias.requests,[]);
+  }finally{alias.dom.window.close();}
+ }
+ const canonical=await page(route,{origin:'https://getpurelabs.com'});
+ const reset=await page('/account/reset-password?returnTo=%2Faccount%2Fpartner',{origin:'https://getpurelabs.com'});
+ try{
+  await canonical.w.document.getElementById('google-signin').onclick();
+  assert.equal(canonical.oauth[0].options.redirectTo,'https://getpurelabs.com/account/partner');
+  await submit(reset,'forgot',{email:user.email});
+  assert.equal(reset.resets[0].options.redirectTo,'https://getpurelabs.com/account/reset-password');
+  reset.recovery();
+  await submit(reset,'newpw',{password:'Fixture-only-new-password2!',confirm:'Fixture-only-new-password2!'});
+  assert.equal(authLink(reset,'/account/login'),'/account/login?returnTo=%2Faccount%2Fpartner');
+ }finally{canonical.dom.window.close();reset.dom.window.close();}
 });
 
 test('OAuth and email callbacks ignore untrusted partner-like destinations',async()=>{
