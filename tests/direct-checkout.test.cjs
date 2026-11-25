@@ -8,8 +8,8 @@ const catalog=[{id:'fixture-product',name:'Fixture product',variants:[{size:'5mg
 const body={id,kind:'goods',method_id:mid,consent:true,checkout_version:config.version,items:[{id:'fixture-product',size:'5mg',qty:1,price:0.01}],name:'Customer',organization:'Lab',address:{line1:'123 Fixture Street',city:'Fixture City',region:'FL',postal_code:'34287',country:'US'},research_use:true};
 const env={POLYGON_USDC_ENABLED:'true',POLYGON_USDC_RECIPIENT:'0x1111111111111111111111111111111111111111',POLYGON_USDC_RPC_URL:'https://primary.fixture.test',POLYGON_USDC_SECONDARY_RPC_URL:'https://secondary.fixture.test',RAMPEX_API_KEY:'isolated-rampex-fixture',RAMPEX_WEBHOOK_SECRET:'isolated-rampex-webhook-secret',RAMPEX_ENABLED:'true',RAMPEX_MODE:'live',SITE_URL:'https://getpurelabs.com',ADMIN_ORDERS_PASSWORD:'x'.repeat(40),CHECKOUT_RATE_LIMIT_SECRET:'fixture-secret-with-at-least-32-characters'};
 function response(){return{code:200,setHeader(){},status(n){this.code=n;return this;},json(b){this.body=b;return this;}};}
-function dbMock({balance={points:1000,credit_cents:5000},membership=null,existing=null,partner=null,existingReferral=null,paymentMethods=[method]}={}){
- const calls=[];return{calls,auth:{getUser:async()=>({data:{user}})},from(table){const value=table==='commerce_gateway_accounts'?paymentMethods.filter(m=>m.native_provider).map(m=>({method_id:m.id,provider:m.native_provider,rampex_provider:m.rampex_provider,mode:'live',account_tag:require('../lib/gateway-config').configuration(m.native_provider,env).account_tag,countries:m.countries})):table==='commerce_delivery_options'?require('../config/delivery-options.json'):table==='commerce_partner_codes'?(partner?{partner_id:partner.customer_id}:null):table==='commerce_partners'?partner:table==='commerce_referrals'?existingReferral:table==='commerce_payment_methods'?paymentMethods:table==='commerce_memberships'?(membership?[membership]:[]):table==='commerce_balance_accounts'?balance:table==='commerce_invoices'?existing:[];
+function dbMock({balance={points:1000,credit_cents:5000},membership=null,existing=null,partner=null,existingReferral=null,paymentMethods=[method],environment=env,cardTestGrant=null}={}){
+ const calls=[];return{calls,auth:{getUser:async()=>({data:{user}})},from(table){const value=table==='commerce_gateway_accounts'?paymentMethods.filter(m=>m.native_provider).map(m=>({method_id:m.id,provider:m.native_provider,rampex_provider:m.rampex_provider,mode:'live',account_tag:require('../lib/gateway-config').configuration(m.native_provider,environment).account_tag,countries:m.countries})):table==='commerce_delivery_options'?require('../config/delivery-options.json'):table==='commerce_partner_codes'?(partner?{partner_id:partner.customer_id}:null):table==='commerce_partners'?partner:table==='commerce_referrals'?existingReferral:table==='commerce_payment_methods'?paymentMethods:table==='commerce_memberships'?(membership?[membership]:[]):table==='commerce_balance_accounts'?balance:table==='commerce_invoices'?existing:table==='commerce_card_test_entitlements'?cardTestGrant:[];
   const q={select(){return q;},eq(){return q;},in(){return q;},ilike(){return q;},is(){return q;},lte(){return q;},gt(){return q;},order(){return q;},limit(){return q;},maybeSingle(){return q;},then(resolve,reject){return Promise.resolve({data:value}).then(resolve,reject);}};return q;},rpc:async(name,args)=>{calls.push({name,args});return{data:{id,status:'accepted'}};}};
 }
 const request=(b,headers={})=>({method:'POST',headers:{origin:env.SITE_URL,'content-type':'application/json',authorization:'Bearer fixture-auth-token-long-enough',...headers},body:b});
@@ -63,6 +63,43 @@ test('removing the explicit coupon restores regular price and invalidates the pr
  const {res:q,db}=await call({...b,action:'quote'});assert.equal(q.body.discount_cents,2000);assert.equal(q.body.total_cents,18795);
  const {res:r}=await call({...b,coupon:'',action:'quote'},{db});assert.equal(r.body.discount_cents,0);assert.equal(r.body.total_cents,20795);
  const {res:stale}=await call({...b,coupon:'',action:'place',quote:q.body.quote},{db});assert.equal(stale.code,409);assert.equal(db.calls.length,0);
+});
+test('CARDTEST gives the approved account a one-item sandbox Card quote with a US$1 merchandise floor',async()=>{
+ const environment={...env,VERCEL_ENV:'preview',PURE_GATEWAY_ALLOW_TEST_PAYMENTS:'true',PURE_GATEWAY_ENABLED:'true',
+  PURE_GATEWAY_URL:'https://sandbox.fixture.test',PURE_GATEWAY_API_SECRET:'a'.repeat(40),
+  PURE_GATEWAY_WEBHOOK_SECRET:'b'.repeat(40),PURE_GATEWAY_CURRENCIES:'USD'};
+ const card={...method,native_provider:'pure_gateway'};
+ const grant={expires_at:new Date(Date.now()+60000).toISOString(),redeemed_invoice_id:null};
+ const cat=[{...catalog[0],variants:[{size:'5mg',price:30}]}];
+ const b={...body,coupon:' cardtest ',action:'quote'};
+ const paymentMethods=[card,{...method,id:'c0000000-0000-4000-8000-000000000004',native_provider:'polygon_usdc'}];
+ const opts={cat,db:dbMock({paymentMethods,environment,cardTestGrant:grant}),deps:{env:environment}};
+ const {res:cart}=await call({...b,method_id:null,country:'US'},{...opts,params:'checkout=cart'});
+ const {res:q}=await call(b,opts);
+ assert.equal(cart.code,200);
+ assert.equal(q.code,200);
+ assert.equal(q.body.pricing.coupon_code,'CARDTEST');
+ assert.equal(q.body.pricing.lines[0].discount_reason,'coupon_cardtest');
+ assert.equal(q.body.discount_cents,2900);
+ assert.equal(q.body.total_cents,100+q.body.shipping_cents);
+ assert.equal(q.body.earned_points,0);
+ assert.deepEqual(cart.body.pricing,q.body.pricing);
+ const {res:placed}=await call({...b,action:'place',quote:q.body.quote},opts);
+ assert.equal(placed.code,201);
+ assert.equal(opts.db.calls[0].args.p_data.total_cents,q.body.total_cents);
+ const denied=[
+  {...opts,params:'checkout=cart',headers:{authorization:''}},
+  {...opts,deps:{env:{...environment,PURE_GATEWAY_ALLOW_TEST_PAYMENTS:'false'}}},
+  {...opts,db:dbMock({paymentMethods,environment})},
+  {...opts,db:dbMock({paymentMethods,environment,cardTestGrant:{...grant,redeemed_invoice_id:id}})},
+  {...opts,db:dbMock({paymentMethods,environment,cardTestGrant:{...grant,expires_at:'2000-01-01T00:00:00Z'}})},
+ ];
+ for(const opt of denied)assert.equal((await call(b,opt)).res.code,400);
+ for(const change of [{credit_cents:100},{items:[{...body.items[0],qty:2}]},{bulk_order:true}])
+  assert.equal((await call({...b,...change},opts)).res.code,400);
+ const {res:alternative}=await call({...b,method_id:paymentMethods[1].id},opts);
+ assert.equal(alternative.code,400);
+ assert.equal(opts.db.calls.length,1);
 });
 test('US standard shipping threshold uses discounted merchandise before account balances',async()=>{
  for(const [cents,coupon,shipping] of [[24999,'',795],[25000,'',0],[27777,'BLACKFRIDAY10',795],[27778,'BLACKFRIDAY10',0]]){

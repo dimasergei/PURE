@@ -10,6 +10,7 @@ const checkout=require('../lib/direct-checkout'),config=require('../config/check
 const gw=require('../lib/pure-gateway');
 const read=name=>fs.readFileSync(path.join(__dirname,'../supabase/migrations',name),'utf8');
 const migration='20261125000100_pure_gateway_card_route.sql';
+const cardTestMigration='20261125222347_one_use_card_test_coupon.sql';
 const tag=gw.configuration({PURE_GATEWAY_URL:'https://pay.example.test'}).account_tag;
 const catalog=[
  {id:'fixture-a',name:'Fixture A',category:'injectables',variants:[{size:'5mg',price:99.99}]},
@@ -92,12 +93,12 @@ test('the pure_gateway card route is registered, priced and settled atomically i
    assert.deepEqual((await db.query('select countries from commerce_gateway_accounts where method_id=$1',[route.id])).rows[0].countries,['US','CA']);
   });
 
-  async function make({method=route.id,country='US',kind='goods'}={}){
-   const row=(await db.query('select * from commerce_payment_methods where id=$1',[method])).rows[0],customer=randomUUID(),user={id:customer,email:'gateway-fixture@example.test'};
+  async function make({method=route.id,country='US',kind='goods',customer=randomUUID(),products=catalog}={}){
+   const row=(await db.query('select * from commerce_payment_methods where id=$1',[method])).rows[0],user={id:customer,email:'gateway-fixture@example.test'};
    const body={id:randomUUID(),kind,plan:kind==='membership'?'vip':undefined,billing_period:kind==='membership'?'monthly':undefined,method_id:method,checkout_version:config.version,consent:true,research_use:true,name:'Isolated researcher',
-    coupon:'',points:0,credit_cents:0,items:catalog.map(x=>({id:x.id,size:x.variants[0].size,qty:1})),
+    coupon:'',points:0,credit_cents:0,items:products.map(x=>({id:x.id,size:x.variants[0].size,qty:1})),
     address:{line1:'123 Fixture Street',city:'Fixture City',region:'NY',postal_code:'10001',country},delivery:{shipping:'standard',extras:[]}};
-   const record=await checkout.normalize({},user,body,catalog);
+   const record=await checkout.normalize({},user,body,products);
    const quote=checkout.price(record,row,null,{points:0,credit_cents:0},null,delivery.defaults,null,null);
    return{...record,...quote,checkout_version:config.version,customer};
   }
@@ -193,6 +194,57 @@ test('the pure_gateway card route is registered, priced and settled atomically i
    assert.equal(canceled.state,'declined');
    const next=await begin(order);assert.equal(next.claimed,true);assert.notEqual(next.id,attempt.id);
    assert.equal((await db.query("select count(*)::int n from commerce_invoices where kind='membership' and method_id=$1",[route.id])).rows[0].n,0);
+  });
+  await t.test('CARDTEST validates its own price and route, expires, and redeems with the order exactly once',async()=>{
+   await db.exec(read(cardTestMigration));
+   const access=(await db.query(`select
+     has_table_privilege('anon','public.commerce_card_test_entitlements','select') as anon_read,
+     has_table_privilege('authenticated','public.commerce_card_test_entitlements','select') as signed_in_read,
+     has_table_privilege('service_role','public.commerce_card_test_entitlements','select') as service_read,
+     has_column_privilege('service_role','public.commerce_card_test_entitlements','redeemed_invoice_id','update') as service_can_reset`)).rows[0];
+   assert.deepEqual(access,{anon_read:false,signed_in_read:false,service_read:true,service_can_reset:false});
+
+   const tester=randomUUID();
+   await db.query('insert into auth.users(id) values ($1)',[tester]);
+   const item={...catalog[0],variants:[{...catalog[0].variants[0],price:24.99}]};
+   const makeTestOrder=async(method=route.id)=>{
+    const order=await make({method,customer:tester,products:[item]});
+    const discount=2399;
+    order.request.checkout.coupon='CARDTEST';
+    order.discount_cents=discount;
+    order.total_cents=100+order.shipping_cents;
+    order.earned_points=0;
+    Object.assign(order.pricing,{coupon_code:'CARDTEST',coupon_discount_cents:discount,discount_cents:discount,
+     discount_source:'coupon',merchandise_offer:'coupon',usd_earned_points_basis_cents:100});
+    Object.assign(order.pricing.lines[0],{discount_cents:discount,discount_bps:9800,discount_reason:'coupon_cardtest',
+     coupon_discount_cents:discount,line_total_cents:100});
+    return order;
+   };
+   const order=await makeTestOrder();
+   await assert.rejects(place(order),/CARDTEST is unavailable for this account/);
+   await db.query("insert into public.commerce_card_test_entitlements(customer_id,expires_at) values ($1,now()-interval '1 day')",[tester]);
+   await assert.rejects(place(order),/CARDTEST is unavailable for this account/);
+   await db.query("update public.commerce_card_test_entitlements set expires_at=now()+interval '1 day' where customer_id=$1",[tester]);
+   await assert.rejects(place(await makeTestOrder(hosted)),/CARDTEST requires one retail item and Credit\/Debit card/);
+   const stacked=structuredClone(order);
+   stacked.request.checkout.affiliate_code='PARTNER';
+   await assert.rejects(place(stacked),/CARDTEST requires one retail item and Credit\/Debit card/);
+   const largerCart=structuredClone(order);
+   largerCart.request.items[0].qty=2;
+   await assert.rejects(place(largerCart),/CARDTEST requires one retail item and Credit\/Debit card/);
+   const forgedPrice=structuredClone(order);
+   forgedPrice.pricing.lines[0].line_total_cents=99;
+   await assert.rejects(place(forgedPrice),/coupon or Crypto arithmetic changed/);
+   assert.equal((await db.query('select redeemed_invoice_id from public.commerce_card_test_entitlements where customer_id=$1',[tester])).rows[0].redeemed_invoice_id,null);
+
+   assert.equal((await place(order)).status,'accepted');
+   assert.equal((await db.query('select redeemed_invoice_id from public.commerce_card_test_entitlements where customer_id=$1',[tester])).rows[0].redeemed_invoice_id,order.id);
+   assert.equal((await place(order)).replayed,true);
+   await assert.rejects(place(await makeTestOrder()),/CARDTEST is unavailable for this account/);
+   const attempt=await begin(order);
+   assert.equal(attempt.amount_cents,100+order.shipping_cents);
+   assert.equal(attempt.currency,'USD');
+   assert.equal((await place(await make())).status,'accepted');
   });
  }finally{await db.close();}
 });
