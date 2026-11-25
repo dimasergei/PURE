@@ -174,6 +174,20 @@ const invoice={id:attempt.invoice_id,kind:'goods',status:'accepted',currency:'US
 const account={provider:'pure_gateway',mode:'live',account_tag:config.account_tag,countries:['US'],method:{active:true}};
 const body={attempt_id:attempt.id,confirm_amount_cents:12995,confirm_currency:'USD',consent:true,redirect_notice_ack:true};
 const created=async()=>({ok:true,status:200,json:async()=>({paymentIntentId:'pi_fixture123456',payUrl:'https://pay.example.test/pay?pi=pi_fixture123456'})});
+test('CARDTEST only redirects when the PaymentIntent matches the configured Stripe mode',async()=>{
+ const discounted={...invoice,pricing:{coupon_code:'CARDTEST'}};
+ for(const testMode of [true,false]){
+  const environment={...env,VERCEL_ENV:testMode?'preview':'production',PURE_GATEWAY_ALLOW_TEST_PAYMENTS:String(testMode)};
+  for(const livemode of [true,false]){
+   const orders=dbMock();
+   const fetchPayment=async url=>url.endsWith('/create')?created():reply({...paid,livemode,status:'requires_payment_method'})();
+   const out=await flow.start(orders,discounted,account,gw.configuration(environment),body,{id:'u1'},environment,fetchPayment,async()=>{});
+   const modeMatches=livemode!==testMode;
+   assert.equal(out.state,modeMatches?'redirected':'unknown');
+   assert.equal(out.redirect_url,modeMatches?attempt.redirect_url:null);
+  }
+ }
+});
 test('starting a payment needs the notice acknowledged, opens one PaymentIntent and binds it before redirecting',async()=>{
  const db=dbMock(),limited=[];
  await assert.rejects(flow.start(db,invoice,account,config,{...body,redirect_notice_ack:false},{id:'u1'},env,created,async()=>{}),e=>e.status===400);
