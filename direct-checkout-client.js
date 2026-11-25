@@ -11,7 +11,7 @@
  }
  function paymentKind(method){
   if(method?.kind==='interac'||method?.provider_key==='interac')return method.kind==='interac'&&method.currency==='CAD'&&!method.native_provider&&method.provider_key==='interac'?'interac':null;
-  return method?.native_provider==='rampex'&&method.rampex_provider==='hosted'?'card':method?.native_provider==='polygon_usdc'?'crypto':null;
+  return method?.native_provider==='rampex'&&method.rampex_provider==='hosted'||method?.native_provider==='pure_gateway'?'card':method?.native_provider==='polygon_usdc'?'crypto':null;
  }
  const paymentLabel=kind=>kind==='interac'?'Interac e-Transfer (CAD)':kind==='card'?'Card':'Crypto';
  const interacNote='Pay in Canadian dollars by Interac e-Transfer. Your final CAD total is shown before you place the order. Receiving details and your payment reference appear immediately afterward.';
@@ -27,13 +27,20 @@
    method:'POST',cache:'no-store',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},
    body:JSON.stringify({action:'pay',invoice_id:invoice,attempt_id:crypto.randomUUID(),
     confirm_amount_cents:amount,confirm_currency:currency,consent:true,
-    crypto_conversion_consent:kind==='card',billing})
+    crypto_conversion_consent:kind==='card'&&method.native_provider!=='pure_gateway',redirect_notice_ack:method.native_provider==='pure_gateway',billing})
   });
   let payment;try{payment=await response.json();}catch{throw Error('Payment status could not be verified. Do not create a second order.');}
   if(!response.ok)throw Error(payment.error||'The provider could not confirm a payment link. Check your saved order before retrying.');
   if(payment.state==='paid')return{paid:true};
   if(payment.state!=='redirected'||!payment.redirect_url)throw Error('The payment link needs review. No second payment link will be created automatically.');
   let url;try{url=new URL(payment.redirect_url);}catch{throw Error('The provider returned an invalid payment destination.');}
+  if(method.native_provider==='pure_gateway'){
+   // The card payment page is the one origin the server announced for this route, at exactly /pay?pi=<payment>.
+   const page=typeof method.gateway_origin==='string'?method.gateway_origin:'';
+   if(!page||url.origin!==page||url.pathname!=='/pay'||!/^[?]pi=pi_[A-Za-z0-9_]{6,120}$/.test(url.search)||url.username||url.password||url.hash||(url.protocol!=='https:'&&!/^(localhost|127[.]0[.]0[.]1)$/.test(url.hostname)))
+    throw Error('The provider returned an unexpected payment destination.');
+   return{url:url.href};
+  }
   const trusted=url.origin==='https://checkout.rampex.io';
   if(!trusted||url.protocol!=='https:'||url.username||url.password||url.port||url.hash||url.pathname==='/'
    ||kind==='card'&&(url.searchParams.getAll('provider').length>1||url.searchParams.has('provider')&&url.searchParams.get('provider')!=='hosted'))
