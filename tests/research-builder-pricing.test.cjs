@@ -3,7 +3,7 @@ const test=require('node:test'),assert=require('node:assert/strict');
 const builder=require('../lib/research-builder-pricing'),handler=require('../lib/research-builder-handler');
 
 const source=[40.01,70.02,90.03,100.04,120].map((price,index)=>({id:'compound-'+index,name:'Compound '+index,category:'injectables',group:'Research',supplier_secret:'private',variants:[{size:'5mg',price,cost:1},{size:'10mg',price:Math.round((price+25)*100)/100}]})).concat([
- {id:'bac-water',name:'BAC Water',category:'supplies',variants:[{size:'3mL',price:14.95}]},
+ {id:'bac-water',name:'Reconstitution Solution',category:'supplies',variants:[{size:'3mL',price:14.95}]},
  {id:'oral-fixture',name:'Oral fixture',category:'oral',variants:[{size:'30 capsules',price:40}]}
 ]);
 const items=source.slice(0,4).map(product=>({id:product.id,size:'5mg',qty:1}));

@@ -49,7 +49,7 @@ test('99Purity routing preserves paid quantities, membership gifts and manual or
   }
   const customerId=randomUUID(),membership=await makeOrder({kind:'membership',customerId,items:[]});await pay(membership);
   assert.equal((await allocations(membership)).length,0);assert.equal(await jobCount(membership),0);
-  const memberOrder=await makeOrder({customerId,items:[{id:'bac-3',name:'BAC Water',size:'3 mL',qty:2}]});await pay(memberOrder);
+  const memberOrder=await makeOrder({customerId,items:[{id:'bac-3',name:'Reconstitution Solution',size:'3 mL',qty:2}]});await pay(memberOrder);
   const memberItems=await allocations(memberOrder);assert.equal(memberItems.length,2);
   assert.ok(memberItems.every(x=>x.supplier_name==='99Purity Peptides'&&x.route==='manual'));
   const gift=memberItems.find(x=>x.variant_key==='gift-bac-3|3 mL');assert.equal(gift.item.qty,1);assert.equal(gift.item.membership_gift,true);

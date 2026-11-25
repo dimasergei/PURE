@@ -51,9 +51,9 @@ test('benefits are sourced from configuration, with credit qualification disclos
   assert.match(white.textContent,/5% off eligible merchandise/);
   assert.match(white.textContent,/5 points per eligible \$1 spent/);
   assert.match(white.textContent,/Free US 2-Day Express shipping/);
-  assert.doesNotMatch(white.textContent,/monthly credit|BAC Water 3mL with each eligible product order/);
-  assert.match(white.textContent,/Member Stack: choose four compounds with 20% off, included BAC Water and US standard shipping/);
-  assert.match(black.textContent,/Member Stack: choose four compounds with 40% off, included BAC Water and US express shipping/);
+  assert.doesNotMatch(white.textContent,/monthly credit|Reconstitution Solution 3mL with each eligible product order/);
+  assert.match(white.textContent,/Member Stack: choose four compounds with 20% off, included Reconstitution Solution and US standard shipping/);
+  assert.match(black.textContent,/Member Stack: choose four compounds with 40% off, included Reconstitution Solution and US express shipping/);
   assert.match(black.textContent,/\$50 monthly credit after a qualifying \$150\+ order/);
   assert.doesNotMatch(black.textContent,/Issued once per UTC calendar month|threshold uses eligible merchandise|before points or store credit/);
   const creditTerms=black.querySelector('.mx-benefit-footnote');
@@ -61,7 +61,7 @@ test('benefits are sourced from configuration, with credit qualification disclos
   assert.equal(creditTerms.getAttribute('href'),'/membership-terms.html#pure-black-credit');
   assert.equal(creditTerms.getAttribute('aria-label'),'Read the PURE BLACK monthly credit terms');
   assert.equal(white.querySelector('.mx-benefit-footnote'),null);
-  assert.match(black.textContent,/BAC Water 3mL with each eligible product order/);
+  assert.match(black.textContent,/Reconstitution Solution 3mL with each eligible product order/);
   dom.window.close();
 });
 test('disabled enrollment never creates a paid membership checkout link',() => {

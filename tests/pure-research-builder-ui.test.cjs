@@ -8,7 +8,7 @@ const checkoutSource = fs.readFileSync('research-checkout-client.js','utf8');
 const localeSource = fs.readFileSync('locale.js','utf8');
 const displayLocaleResponse = require('./display-locale-fixture.cjs');
 const pricing = require('../lib/research-builder-pricing');
-const catalog = Array.from({length:5},(_,index) => ({id:'compound-'+index,name:'Compound '+index,category:'injectables',group:index%2 ? 'Category B' : 'Category A',variants:[{size:'5 mg',price:100.03 + index},{size:'10 mg',price:180.02 + index}]})).concat({id:'bac-3',name:'BAC Water',category:'supplies',group:'Supplies',variants:[{size:'3 mL',price:14.95}]});
+const catalog = Array.from({length:5},(_,index) => ({id:'compound-'+index,name:'Compound '+index,category:'injectables',group:index%2 ? 'Category B' : 'Category A',variants:[{size:'5 mg',price:100.03 + index},{size:'10 mg',price:180.02 + index}]})).concat({id:'bac-3',name:'Reconstitution Solution',category:'supplies',group:'Supplies',variants:[{size:'3 mL',price:14.95}]});
 const items = catalog.slice(0,4).map(product => ({id:product.id,size:product.variants[0].size,qty:1}));
 const settle = () => new Promise(resolve => setTimeout(resolve,0));
 function quote(body) {

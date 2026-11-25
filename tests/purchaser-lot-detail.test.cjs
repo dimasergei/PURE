@@ -9,7 +9,7 @@ test('purchase reports identify the exact shipped line and separate lots from to
  const w=dom.window, root=w.document.querySelector('main');
  const order={id:'00000000-0000-4000-8000-000000000001',status:'delivered',created_at:'2026-11-22',total_cents:1234,currency:'USD',
    shipments:[{variant_key:'tirzepatide|40mg',name:'Tirzepatide',size:'40mg',qty:2,bogo_free_qty:1},
-    {variant_key:'gift-bac-3|3 mL',name:'Complimentary BAC Water',size:'3 mL',qty:1}],
+    {variant_key:'gift-bac-3|3 mL',name:'Complimentary Reconstitution Solution',size:'3 mL',qty:1}],
    coas:[{variant_key:'tirzepatide|40mg',lot_number:'A',report_id:'REP-A',verification_url:'https://example.test/a'},
     {variant_key:'tirzepatide|40mg',lot_number:'B',report_id:'REP-B',verification_url:'https://example.test/b'},
     {variant_key:'gift-bac-3|3 mL',lot_number:'C',report_id:'REP-C',verification_url:'https://example.test/c'},
@@ -23,7 +23,7 @@ test('purchase reports identify the exact shipped line and separate lots from to
   assert.equal(groups.length,2);
   assert.match(groups[0].textContent,/Tirzepatide · 40mg2 shipped \(1 free\)/);
   assert.equal(groups[0].querySelectorAll('a').length,2);
-  assert.match(groups[1].textContent,/Complimentary BAC Water · 3 mL1 shipped/);
+  assert.match(groups[1].textContent,/Complimentary Reconstitution Solution · 3 mL1 shipped/);
   assert.equal(groups[1].querySelector('a').href,'https://example.test/c');
   assert.doesNotMatch(root.textContent,/BLOCKED/);
   order.status='processing';

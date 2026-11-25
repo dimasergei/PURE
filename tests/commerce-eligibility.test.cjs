@@ -116,7 +116,7 @@ test('shipping denies incomplete, pending, expired and duplicate lane records', 
   assert.equal(evaluateShipping(shippingRequest(), [shippingLane(), shippingLane()], NOW).allowed, false);
 });
 
-test('one unapproved line denies the whole cart, including BAC Water or needles', () => {
+test('one unapproved line denies the whole cart, including Reconstitution Solution or needles', () => {
   const cart = [CART[0], OTHER];
   assert.equal(evaluateShipping(shippingRequest(cart), [shippingLane()], NOW).allowed, false);
   assert.equal(evaluateShipping(shippingRequest(cart), [

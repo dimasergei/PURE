@@ -103,7 +103,7 @@
       "supplier_id": "99puritypeptides",
       "supplier": "99PurityPeptides",
       "supplier_sku": null,
-      "sample_name": "BAC WATER 10ML",
+      "sample_name": "RECONSTITUTION SOLUTION 10ML",
       "lot": "FLL-0629",
       "report_date": "2026-07-14",
       "report_id": "ATL-37551",
@@ -117,7 +117,7 @@
       "match_note": "Product and nominal strength match the report sample. Supplier source and report client are shown separately; current fulfillment lot is not assigned.",
       "product_id": "bac-10",
       "size": "10 mL",
-      "product": "BAC Water",
+      "product": "Reconstitution Solution",
       "scope": "supplier_reference",
       "reviewed_at": "2026-11-10",
       "inventory_lot_linked": false
@@ -2772,14 +2772,14 @@
     },
     {
       "product_id": "bac-3",
-      "product": "BAC Water",
+      "product": "Reconstitution Solution",
       "size": "3 mL",
       "report_ids": [],
       "status": "exact_report_needed"
     },
     {
       "product_id": "bac-10",
-      "product": "BAC Water",
+      "product": "Reconstitution Solution",
       "size": "10 mL",
       "report_ids": [
         "p99-atl-37551"

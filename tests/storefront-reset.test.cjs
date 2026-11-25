@@ -149,14 +149,14 @@ test('catalog photo cards preserve product navigation, exact USD prices, search,
   d.querySelector('[data-filter-group=Supplies]').click();
   assert.deepEqual(ids(),catalog.filter(p=>w.AltaStore.categoryOf(p)==='Supplies').map(p=>p.id));
   assert.equal(d.querySelector('[data-filter-group=Supplies]').getAttribute('aria-pressed'),'true');
-  search('BAC');assert.equal(cards().length,2,'search combines with the selected category');assertPhotoCards();
+  search('Reconstitution');assert.equal(cards().length,2,'search combines with the selected category');assertPhotoCards();
   search('retatrutide');assert.equal(cards().length,0,'search does not escape the selected category');
   assert.match(d.querySelector('#ap-catalog-grid').textContent,/No matching compounds/);
   d.querySelector('[data-action="clear-filters"]').click();
   assert.equal(d.querySelector('#ap-catalog-query').value,'');
   assert.equal(d.querySelector('[data-filter-group=All]').getAttribute('aria-pressed'),'true');
   assert.deepEqual(ids(),firstPage,'clearing filters restores the first catalog page');
-  d.querySelector('[data-filter-group=Equipment]').click();assert.deepEqual(ids(),['needles']);assertPhotoCards();
+  assert.equal(catalog.some(p=>p.id==='needles'),false);
   assert.equal(w.AltaStore.cart.length,0,'browsing the catalog never changes the cart');
   assert.doesNotMatch(d.querySelector('.nl-shop').textContent,retired);
  }finally{await f.close();}

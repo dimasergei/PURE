@@ -74,7 +74,7 @@ for (const product of sandbox.catalog) {
 <image x="0" y="0" width="1081" height="1455" xlink:href="${masters[tone]}"/>
 <g fill="#ffffff">
   <svg x="338" y="617" width="415" height="134" viewBox="${wordmarkViewBox}" preserveAspectRatio="none" aria-label="PURE">${wordmarkPaths}</svg>
-  ${outlinedText(product.name, { x: 333, y: 1015, size: 72, weight: 'bold', maxWidth: 316 })}
+  ${outlinedText(water ? 'Recon Solution' : product.name, { x: 333, y: 1015, size: 72, weight: 'bold', maxWidth: 316 })}
 ${compoundLabel ? '  ' + outlinedText(compoundLabel, { x: 334, y: 1052, size: 34, maxWidth: 283 }) + '\n' : ''}  <g transform="translate(698 949) scale(1.42)" aria-hidden="true">
     <path d="M8 12H16L8 44H0Z M21 1H29L16 54H8Z M31 8H38L29 47H22Z"/>
   </g>

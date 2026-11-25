@@ -18,7 +18,7 @@
       each:"each", decrease:"Decrease", increase:"Increase", quantity:"Quantity", selectedDosage:"Selected dosage", perUnit:"per unit", add:"Add",
       subtotal:"Subtotal", shippingNotIncluded:"Shipping not included.", All:"All", "GLP-1 & Metabolic":"GLP-1 & Metabolic",
       "Healing & Recovery":"Healing & Recovery", "Growth Hormone":"Growth Hormone", "Cognitive & Nootropic":"Cognitive & Nootropic",
-      Longevity:"Longevity", "Cosmetic & Skin":"Cosmetic & Skin", "Sexual & Hormonal":"Sexual & Hormonal", "BAC Water & Supplies":"BAC Water & Supplies"
+      Longevity:"Longevity", "Cosmetic & Skin":"Cosmetic & Skin", "Sexual & Hormonal":"Sexual & Hormonal", "Reconstitution Solution & Supplies":"Reconstitution Solution & Supplies"
     },
     fr: {
       announcement:"Réservé à la recherche. Préparation incluse. Frais d’expédition facturés séparément.", featured:"En vedette", catalog:"Catalogue", faq:"FAQ", account:"Compte", currency:"Devise", language:"Langue",
@@ -35,7 +35,7 @@
       each:"chacun", decrease:"Diminuer", increase:"Augmenter", quantity:"Quantité", selectedDosage:"Format sélectionné", perUnit:"par unité", add:"Ajouter",
       subtotal:"Sous-total", shippingNotIncluded:"Expédition non incluse.", All:"Tout", "GLP-1 & Metabolic":"GLP-1 et métabolisme",
       "Healing & Recovery":"Récupération", "Growth Hormone":"Hormone de croissance", "Cognitive & Nootropic":"Cognition et nootropiques",
-      Longevity:"Longévité", "Cosmetic & Skin":"Cosmétique et peau", "Sexual & Hormonal":"Sexuel et hormonal", "BAC Water & Supplies":"Eau bactériostatique et fournitures"
+      Longevity:"Longévité", "Cosmetic & Skin":"Cosmétique et peau", "Sexual & Hormonal":"Sexuel et hormonal", "Reconstitution Solution & Supplies":"Eau bactériostatique et fournitures"
     },
     es: {
       announcement:"Solo para investigación. Preparación incluida. Envío facturado por separado.", featured:"Destacados", catalog:"Catálogo", faq:"Preguntas frecuentes", account:"Cuenta", currency:"Moneda", language:"Idioma",
@@ -52,7 +52,7 @@
       each:"cada uno", decrease:"Disminuir", increase:"Aumentar", quantity:"Cantidad", selectedDosage:"Tamaño seleccionado", perUnit:"por unidad", add:"Añadir",
       subtotal:"Subtotal", shippingNotIncluded:"Envío no incluido.", All:"Todos", "GLP-1 & Metabolic":"GLP-1 y metabolismo",
       "Healing & Recovery":"Recuperación", "Growth Hormone":"Hormona de crecimiento", "Cognitive & Nootropic":"Cognición y nootrópicos",
-      Longevity:"Longevidad", "Cosmetic & Skin":"Cosmética y piel", "Sexual & Hormonal":"Sexual y hormonal", "BAC Water & Supplies":"Agua bacteriostática y suministros"
+      Longevity:"Longevidad", "Cosmetic & Skin":"Cosmética y piel", "Sexual & Hormonal":"Sexual y hormonal", "Reconstitution Solution & Supplies":"Agua bacteriostática y suministros"
     }
   };
   const extendedTranslations = {

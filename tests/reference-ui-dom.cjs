@@ -94,7 +94,7 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
   assert.equal(d.querySelector('h1').textContent,'ALL PRODUCTS.');
   assert.match(d.querySelector('.nl-shop-header p').textContent,/choose the precise strength/);
   assert.equal(d.querySelector('.nl-shop-sale'),null);assert.equal(d.querySelector('#ap-result-count'),null);
-  assert.deepEqual([...d.querySelectorAll('.nl-filter-pills button')].map(x=>x.textContent),['All Products','Peptides','Mist Applicators','Supplies','Equipment']);
+  assert.deepEqual([...d.querySelectorAll('.nl-filter-pills button')].map(x=>x.textContent),['All Products','Peptides','Mist Applicators','Supplies']);
   const cards=[...d.querySelectorAll('#ap-catalog-grid .ap-product-card')];assert.equal(cards.length,20);
   for(const card of cards){
    const p=w.AltaStore.product(card.dataset.product),photo=card.querySelector('a.ap-product-image'),url=new URL(photo.href);
@@ -116,7 +116,7 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
   const group=d.querySelectorAll('[data-filter-group]')[1];group.click();assert.equal(group.getAttribute('aria-pressed'),'true');
   input.value='';input.dispatchEvent(new w.Event('input',{bubbles:true}));
   d.querySelector('[data-filter-group=Supplies]').click();assert.equal(d.querySelectorAll('#ap-catalog-grid .ap-product-card').length,2);
-  d.querySelector('[data-filter-group=Equipment]').click();assert.deepEqual([...d.querySelectorAll('#ap-catalog-grid .ap-product-card')].map(card=>card.dataset.product),['needles']);
+  assert.equal(d.querySelector('[data-filter-group=Equipment]'),null);
   d.querySelector('[data-filter-group=Supplies]').click();sort.value='low';sort.dispatchEvent(new w.Event('change',{bubbles:true}));
   const prices=[...d.querySelectorAll('#ap-catalog-grid .ap-product-card')].map(card=>Math.min(...w.AltaStore.catalog.find(p=>p.id===card.dataset.product).variants.map(v=>v.price)));
   assert.deepEqual(prices,[...prices].sort((a,b)=>a-b));
@@ -143,7 +143,7 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
   assert.equal(d.querySelector('.nl-bulk-benefit-shipping'),null);
   assert.equal(benefits[3].getAttribute('href'),'/coas');
   assert.match(d.querySelector('.nl-bulk-hero p').textContent,/Save 50% at 10 units/);
-  assert.deepEqual([...d.querySelectorAll('[data-action="bulk-category"]')].map(button=>button.textContent),['All Products','Peptides','Mist Applicators','Supplies','Equipment']);
+  assert.deepEqual([...d.querySelectorAll('[data-action="bulk-category"]')].map(button=>button.textContent),['All Products','Peptides','Mist Applicators','Supplies']);
   const category=d.querySelector('[data-action="bulk-category"][data-group="Supplies"]');category.click();
   assert.equal(category.getAttribute('aria-pressed'),'true');
   const supplies=[...d.querySelectorAll('.nl-bulk-product')];assert.ok(supplies.length>0);
