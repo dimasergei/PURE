@@ -226,9 +226,9 @@ test('Card checkout recognises the route without changing the other routes',()=>
  const route={id:'m1',native_provider:'pure_gateway',kind:'hosted_link',provider_key:'custom',currency:'USD',countries:['US'],active:true,gateway_origin:'https://pay.example.test'};
  assert.equal(policy.kind(route),'card');
  const open=policy.publicMethod(route);
- assert.equal(open.label,'Credit/Debit');assert.equal(open.gateway,'pure_gateway');assert.equal(open.gateway_origin,'https://pay.example.test');assert.equal('rampex_provider' in open,false);
+ assert.equal(open.label,'Credit/Debit card');assert.equal(open.gateway,'pure_gateway');assert.equal(open.gateway_origin,'https://pay.example.test');assert.equal('rampex_provider' in open,false);
  const choice=policy.choices([route]).find(x=>x.key==='card');
- assert.equal(choice.status,'available');assert.equal(choice.name,'Credit/Debit');assert.equal(choice.description,'Pay securely by card on our encrypted payment page. Your order is confirmed once the payment clears.');
+ assert.equal(choice.status,'available');assert.equal(choice.name,'Credit/Debit card');assert.equal(choice.description,'Pay securely by card on our encrypted payment page. Your order is confirmed once the payment clears.');
  assert.equal(policy.kind({native_provider:'rampex',rampex_provider:'hosted'}),'card');
  assert.equal(policy.choices([{id:'m3',native_provider:'rampex',rampex_provider:'hosted',kind:'hosted_link',currency:'USD',countries:['US'],active:true}]).find(x=>x.key==='card').name,'Card','the existing Card route keeps its title');
  assert.equal(policy.publicMethod({id:'m2',native_provider:'rampex',rampex_provider:'hosted',kind:'hosted_link',currency:'USD',countries:['US']}).rampex_provider,'hosted');
