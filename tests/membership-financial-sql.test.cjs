@@ -205,7 +205,7 @@ test('PURE memberships execute verified fees and goods benefits atomically in di
   await t.test('catalog BOGO delivers each paid premix as two finished vials and counts paid supplies once',async()=>{
    const cat=require('node:vm').runInNewContext(fs.readFileSync(path.join(__dirname,'../products.js'),'utf8')+';CATALOG');
    const campaign={ends_at:new Date(Date.now()+600000).toISOString(),eligible_variants:cat.filter(p=>p.category==='injectables').flatMap(p=>p.variants.map(v=>p.id+':'+v.size))};
-   const ids=['semaglutide','bpc-tb-500','glow','klow','vip','bac-3','needles'];
+   const ids=['semaglutide','bpc-tb-500','glow','klow','vip','bac-3','bac-10'];
    const items=ids.map(id=>({id,size:cat.find(p=>p.id===id).variants[0].size,qty:id==='semaglutide'?2:1}));
    const p=await make({cat,items,campaign});
    assert.equal(p.pricing.coupon_discount_cents,0);
@@ -562,7 +562,7 @@ test('PURE memberships execute verified fees and goods benefits atomically in di
    assert.equal((await reports(customer)).rows.length,0);
 
    await db.exec(read('20261122002100_recon_gift_packed_lot.sql'));
-   await db.query("insert into commerce_fulfillment_items(invoice_id,variant_key,item,route,supplier_name) values($1,'gift-bac-3|3 mL',$2,'manual','') on conflict do nothing",[order.id,JSON.stringify({id:'gift-bac-3',size:'3 mL',name:'Complimentary BAC Water',qty:1})]);
+   await db.query("insert into commerce_fulfillment_items(invoice_id,variant_key,item,route,supplier_name) values($1,'gift-bac-3|3 mL',$2,'manual','') on conflict do nothing",[order.id,JSON.stringify({id:'gift-bac-3',size:'3 mL',name:'Complimentary Reconstitution Solution',qty:1})]);
    const giftLot=randomUUID();
    const addLot=(id,sku,code)=>db.query("insert into enterprise_inventory_lots(id,supplier_id,sku_key,lot_number,fulfillment_site,status,evidence_reference,reviewed_by,reviewed_at) values($1,$2,$3,$4,'US','released','intake-2','reviewer',now())",[id,supplier,sku,code]);
    const gift=(code,remove=false)=>db.query("select commerce_record_packed_lot($1,'gift-bac-3|3 mL',$2,$3) as saved",[order.id,code,remove]);

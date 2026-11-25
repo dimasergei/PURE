@@ -15,11 +15,11 @@
     if (plan.discount_bps > 0) rows.push({strong:true, text:`${plan.discount_bps / 100}% off eligible merchandise`});
     if (plan.points_per_dollar > 0) rows.push({text:`${plan.points_per_dollar} points per eligible $1 spent`});
     if (plan.free_shipping) rows.push({text:plan.shipping_label || config.membership_shipping_label || 'Free US shipping on eligible orders'});
-    if (['vip','elite'].includes(id)) rows.push({strong:true,text:id==='vip'?'Member Stack: choose four compounds with 20% off, included BAC Water and US standard shipping':'Member Stack: choose four compounds with 40% off, included BAC Water and US express shipping'});
+    if (['vip','elite'].includes(id)) rows.push({strong:true,text:id==='vip'?'Member Stack: choose four compounds with 20% off, included Reconstitution Solution and US standard shipping':'Member Stack: choose four compounds with 40% off, included Reconstitution Solution and US express shipping'});
     if (plan.early_access) rows.push({text:'Early access to eligible new releases'});
     if (plan.priority_fulfillment) rows.push({text:'Priority order fulfillment'});
     if (plan.monthly_credit_cents > 0) rows.push({text:`${money(plan.monthly_credit_cents).replace('.00','')} monthly credit after a qualifying $150+ order`, creditTerms:true});
-    if (plan.free_bac_water_3ml) rows.push({text:'BAC Water 3mL with each eligible product order'});
+    if (plan.free_bac_water_3ml) rows.push({text:'Reconstitution Solution 3mL with each eligible product order'});
     if (id === 'member') {
       rows.push({text:'Order history and shipment tracking'});
       rows.push({text:'Points and store credit in your account'});

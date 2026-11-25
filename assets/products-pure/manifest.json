@@ -657,7 +657,7 @@
   },
   {
     "product_id": "bac-3",
-    "name": "BAC Water",
+    "name": "Reconstitution Solution",
     "size": "3 mL",
     "file": "assets/products-pure/82_bac_water_3ml.svg",
     "label": "black",
@@ -665,7 +665,7 @@
   },
   {
     "product_id": "bac-10",
-    "name": "BAC Water",
+    "name": "Reconstitution Solution",
     "size": "10 mL",
     "file": "assets/products-pure/83_bac_water_10ml.svg",
     "label": "black",

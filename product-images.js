@@ -42,14 +42,12 @@ const PRODUCT_IMAGE_FALLBACKS = {
   "pt-141": IMAGE_BASE + "PT-141%2010mg.webp",
   "kisspeptin": IMAGE_BASE + "KISSPEPTIN%20%2010mg.webp",
   "vip": IMAGE_BASE + "VIP%2010mg.webp",
-  "bac-3": IMAGE_BASE + "BAC%20WATER%203ML.webp",
-  "bac-10": IMAGE_BASE + "BAC%20WATER%203ML.webp",
-  "needles": "https://99puritypeptides.com/_next/image?url=https%3A%2F%2Fpub-82f90d490a8048aa9629f0ae3ea6f567.r2.dev%2FProduct%20Images%2F10%20Needles-1.webp&w=3840&q=75"
+  "bac-3": "assets/products-pure/82_bac_water_3ml.svg",
+  "bac-10": "assets/products-pure/83_bac_water_10ml.svg",
 };
 
 
 // Per-dosage PURE assets use exact catalog text over the original photographic vial framing.
-// Needles 31G 5/16\" — 10pk has no matching uploaded photo and retains its existing fallback.
 const PRODUCT_IMAGES = {
   "retatrutide": {
     "10mg": "assets/products-pure/01_retatrutide_10mg.svg",

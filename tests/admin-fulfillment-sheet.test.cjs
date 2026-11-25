@@ -62,7 +62,7 @@ test('paid allocations export exact physical units while historical supplier evi
 test('bulk order preserves total units without promotional quantities and gift allocation is included', () => {
   const raw=order({status:'paid'}); raw.request_data.bulk_order=true; raw.request_data.items[0].qty=50;
   raw.pricing.lines[0].qty=50; delete raw.pricing.lines[0].bogo_free_units;
-  const gift={variant_key:'gift-bac-3|3 mL',item:{id:'gift-bac-3',name:'Complimentary BAC Water',size:'3 mL',qty:1,membership_gift:true},route:'manual',status:'pending'};
+  const gift={variant_key:'gift-bac-3|3 mL',item:{id:'gift-bac-3',name:'Complimentary Reconstitution Solution',size:'3 mL',qty:1,membership_gift:true},route:'manual',status:'pending'};
   const s=normalizeSheet({order:raw,source:'commerce',allocations:[allocation({item:{...raw.request_data.items[0]}}),gift]});
   assert.equal(s.order_type,'Bulk order'); assert.deepEqual(s.items.map(x=>[x.purchased,x.free,x.total]),[[50,0,50],[0,1,1]]);
   assert.equal(s.release.ready,true);

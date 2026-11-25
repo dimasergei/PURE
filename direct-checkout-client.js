@@ -115,7 +115,7 @@
       form.querySelectorAll('[name=shipping_speed]').forEach(input=>{input.checked=input.value===stackShipping;input.disabled=input.value!==stackShipping;input.closest('label')?.toggleAttribute('hidden',input.value!==stackShipping);});
       form.querySelectorAll('[name=delivery_extra]').forEach(input=>{input.checked=false;input.disabled=true;input.closest('label')?.setAttribute('hidden','');});
       form.querySelector('.rd-delivery-extras')?.setAttribute('hidden','');
-      form.querySelector('.rd-delivery-grid')?.insertAdjacentHTML('afterend','<p class="dc-note">US '+stackShipping+' shipping and BAC Water 3mL are included with your Member Stack.</p>');
+      form.querySelector('.rd-delivery-grid')?.insertAdjacentHTML('afterend','<p class="dc-note">US '+stackShipping+' shipping and Reconstitution Solution 3mL are included with your Member Stack.</p>');
     }
    let busy=false,body,nmiWidget=null,nmiLocked=false,lastFingerprint=sessionStorage.getItem('ap-checkout-fingerprint')||'',requestId=sessionStorage.getItem('ap-checkout-id')||crypto.randomUUID();sessionStorage.setItem('ap-checkout-id',requestId);
    const invalidateReview=()=>{if(!busy){nmiWidget?.destroy();nmiWidget=null;nmiLocked=false;review.replaceChildren();estimate.hidden=false;status.textContent='';}};

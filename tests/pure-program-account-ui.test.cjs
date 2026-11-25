@@ -38,7 +38,7 @@ test('active BLACK account discloses credit qualification, BAC gift and priority
   assert.equal(creditTerms.getAttribute('href'),'/membership-terms.html#pure-black-credit');
   assert.equal(creditTerms.getAttribute('aria-label'),'Read the PURE BLACK monthly credit terms');
   assert.equal(creditTerms.textContent,'†');
-  assert.match(card.textContent,/BAC Water 3mL with each eligible product order/);
+  assert.match(card.textContent,/Reconstitution Solution 3mL with each eligible product order/);
   assert.match(card.textContent,/Priority order fulfillment/);
   env.dom.window.close();
 });
@@ -52,7 +52,7 @@ test('pending membership is awaiting payment, suppresses duplicate purchase link
   assert.equal(env.root.querySelector('.cv-member-status h2').textContent,'MEMBER');
   assert.equal(env.root.querySelector('.cv-member-status .cv-program-badge').textContent,'FREE ACCOUNT');
   assert.equal(env.root.querySelectorAll('a[href^="/checkout?plan="]').length,0);
-  assert.doesNotMatch(env.root.querySelector('.cv-member-status').textContent,/10%|BAC Water|\$50 monthly credit/);
+  assert.doesNotMatch(env.root.querySelector('.cv-member-status').textContent,/10%|Reconstitution Solution|\$50 monthly credit/);
   env.dom.window.close();
 });
 test('expired or review-required pending membership stays blocked and directs the account to order review',async()=>{

@@ -85,6 +85,6 @@ test("category cards keep the PURE neutral palette and variants resolve to their
     }
   }
   assert.equal(brandedPhotos, 84);
-  assert.deepEqual(fallbacks, [["needles", "10pk"]], "Variants without a branded image use the supplied fallback.");
+  assert.deepEqual(fallbacks, [], "Variants without a branded image use the supplied fallback.");
   assert.match(readFileSync(resolve(__dirname, "../assets/pure-brand-label.svg"), "utf8"), /<title[^>]*>PURE<\/title>/);
 });

@@ -489,7 +489,7 @@ button { border: 0; }
 .card[data-group="Longevity"] { --card-bg: #e5e5e5; }
 .card[data-group="Cosmetic & Skin"] { --card-bg: #e5e5e5; }
 .card[data-group="Sexual & Hormonal"] { --card-bg: #e5e5e5; }
-.card[data-group="BAC Water & Supplies"] { --card-bg: #e5e5e5; }
+.card[data-group="Reconstitution Solution & Supplies"] { --card-bg: #e5e5e5; }
 
 /* Product image area */
 .shot {

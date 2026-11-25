@@ -40,8 +40,8 @@ test('manual routing and allocation mismatch cannot preview a partial order as f
 });
 test('paid Platinum gift allocations are included in full, even when the supplier coalesces the same SKU',async()=>{
  const f=fixture();f.order.status='paid';f.order.total_cents=30000;
- f.order.request_data.items=[{id:'bac-3',name:'BAC Water',size:'3 mL',qty:1}];
- const gift={id:'gift-bac-3',name:'Complimentary BAC Water 3mL',size:'3 mL',qty:1,membership_gift:true};
+ f.order.request_data.items=[{id:'bac-3',name:'Reconstitution Solution',size:'3 mL',qty:1}];
+ const gift={id:'gift-bac-3',name:'Complimentary Reconstitution Solution 3mL',size:'3 mL',qty:1,membership_gift:true};
  f.values.commerce_fulfillment_items=[
   {variant_key:'bac-3|3 mL',item:f.order.request_data.items[0],route:'lotus',product:45,vials:1},
   {variant_key:'gift-bac-3|3 mL',item:gift,route:'lotus',product:45,vials:1}
@@ -52,7 +52,7 @@ test('paid Platinum gift allocations are included in full, even when the supplie
 });
 test('manual gifts, mismatched gift keys and unexplained extra allocations remain blocked',async()=>{
  for(const alter of [gift=>gift.route='manual',gift=>gift.variant_key='wrong|3 mL',gift=>gift.item.membership_gift=false]){
-  const f=fixture();f.order.status='paid';const gift={variant_key:'gift-bac-3|3 mL',item:{id:'gift-bac-3',name:'Complimentary BAC Water',size:'3 mL',qty:1,membership_gift:true},route:'lotus',product:45,vials:1};
+  const f=fixture();f.order.status='paid';const gift={variant_key:'gift-bac-3|3 mL',item:{id:'gift-bac-3',name:'Complimentary Reconstitution Solution',size:'3 mL',qty:1,membership_gift:true},route:'lotus',product:45,vials:1};
   alter(gift);f.values.commerce_fulfillment_items=[{variant_key:'bpc-157|10mg',item:f.order.request_data.items[0],route:'lotus',product:41,vials:1},gift];
   const r=await f.preview();assert.equal(r.quote_available,false);assert.equal(r.ready,false);assert.equal(f.requests.length,0);assert.ok(r.issues.some(x=>x.severity==='error'));
  }

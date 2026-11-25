@@ -27,9 +27,9 @@
  const route=()=>location.pathname.replace(/\.html$/,'').replace(/\/$/,'')||'/';
  const initialParams=new URLSearchParams(location.search);
  const initialCategory=initialParams.get('offer')==='second-unit'?'Offers':initialParams.get('category')||'All';
- const shopCategories=['All','Peptides','Mist Applicators','Supplies','Equipment'];
- const categoryOf=p=>p.id==='needles'?'Equipment':p.category==='supplies'?'Supplies':'Peptides';
- const state={query:'',group:initialCategory==='BAC Water & Supplies'?'Supplies':groups.includes(initialCategory)&&initialCategory!=='All'?'Peptides':initialCategory,sort:'popular',limit:12,maxPrice:Math.ceil(Math.max(0,...catalog.flatMap(p=>p.variants.map(v=>v.price)))),savedOnly:false};
+ const shopCategories=['All','Peptides','Mist Applicators','Supplies'];
+ const categoryOf=p=>p.category==='supplies'?'Supplies':'Peptides';
+ const state={query:'',group:initialCategory==='Reconstitution Solution & Supplies'?'Supplies':groups.includes(initialCategory)&&initialCategory!=='All'?'Peptides':initialCategory,sort:'popular',limit:12,maxPrice:Math.ceil(Math.max(0,...catalog.flatMap(p=>p.variants.map(v=>v.price)))),savedOnly:false};
  let reports=[];
  let reviewSummary=null;
  let toastTimer;

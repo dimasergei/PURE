@@ -23,7 +23,7 @@ test('a paid month is priced from four exact SKU cents, with 40 percent per-item
  assert.equal(q.pricing.discount_source,'research_monthly');
  assert.deepEqual(q.pricing.lines.map(l=>l.discount_cents),discounts);
  assert.ok(q.pricing.lines.every(l=>l.discount_bps===4000&&l.discount_reason==='research_monthly'));
- assert.deepEqual(q.pricing.bundled_items,[{id:'gift-bac-3',name:'BAC Water',size:'3 mL',qty:1,unit_price_cents:0,line_total_cents:0}]);
+ assert.deepEqual(q.pricing.bundled_items,[{id:'gift-bac-3',name:'Reconstitution Solution',size:'3 mL',qty:1,unit_price_cents:0,line_total_cents:0}]);
  assert.equal(q.pricing.delivery.shipping_cents,0);
 });
 test('monthly invoice rejects a disallowed country, shipping, extras, discounts, items, and non-card non-crypto methods',()=>{
