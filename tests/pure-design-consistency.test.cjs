@@ -46,30 +46,26 @@ test('only the terms link remains below membership cards on both routes',()=>{
  assert.match(src,/class="mx-terms"><a href="\/membership-terms\.html">See full terms\.<\/a>/);
  assert.doesNotMatch(src,/class="mx-terms">\$\{esc\(terms\(config\)\)\}/);
 });
-test('rewards and credit links show balances on account overview, not separate tabs',()=>{
- const site=read('site-build.cjs'),nav=read('account-experience-build.cjs'),ui=read('readiness-ui.js');
- assert.match(site,/\['Rewards & Credit','\/account#rewards-and-credit'\]/);
- assert.match(site,/href="\/account#rewards-and-credit">Rewards & Credit/);
- assert.doesNotMatch(nav,/\['Points','\/account\/points'\],\['Store Credit'/);
- assert.match(nav,/includes\(location\.pathname\)\)return go\('\/account#rewards-and-credit'\)/);
+test('legacy rewards fragments route to the canonical points page and account overview still shows both balances',()=>{
+ const nav=read('account-experience-build.cjs'),ui=read('readiness-ui.js');
+ const client=read('account-experience.js');
+ assert.ok(client.includes("['#rewards','#rewards-and-credit'].includes(location.hash)"));
+ assert.ok(client.includes("history.replaceState(history.state,'','/my-account/points'+location.search)"));
+ assert.ok(nav.includes("['Rewards','/account/points']"));
  assert.match(ui,/id="rewards-and-credit"/);
  assert.match(ui,/rd-balance-pair/);
- assert.doesNotMatch(ui,/href="\/account\/points">View points/);
 });
-test('homepage FAQ and featured laboratory sample preserve the real Testing destination',()=>{
- const home=views.store.home.toString(),css=read('pure-brand.css');
- const reports=JSON.parse(read('data/supplier-coas.json')).reports;
- const sample=reports.find(report=>report.lot.endsWith('202607-PRO-005'));
- assert.ok(sample);
- assert.equal(sample.scope,'supplier_reference');
- assert.equal(sample.inventory_lot_linked,false);
- assert.match(home,/pure-faq-section/);
- assert.match(home,/pure-faq-list/);
- assert.match(home,/nl-doc-sheet/);
- assert.match(home,/LAB SAMPLE/);
- assert.ok(home.includes(sample.lab_name));
- assert.ok(home.includes(sample.size));
- assert.match(home,/href="\/coas"/);
- assert.match(css,/\.pure-faq-list details\[open\] summary::after/);
- assert.match(css,/\.nl-doc-sheet-row/);
+test('homepage FAQ and original sample link to the real testing archive',()=>{
+ const {JSDOM}=require('jsdom');
+ const {site}=require('../config/site.ts');
+ const {renderHomeDocument}=require('../scripts/home-shell.cjs');
+ const html=renderHomeDocument('<html><head></head><body><main></main></body></html>',site);
+ const d=new JSDOM(html).window.document;
+ const sample=JSON.parse(read('data/supplier-coas.json')).reports.find(r=>r.id==='p99-0285-opt-260727-r1');
+ assert.equal(sample.scope,'supplier_reference');assert.equal(sample.inventory_lot_linked,false);
+ const preview=d.querySelector('.ph-report');
+ assert.ok(preview.textContent.includes(sample.lot));assert.ok(preview.textContent.includes(sample.lab_name));assert.ok(preview.textContent.includes(sample.size));
+ assert.ok(preview.querySelector('a[download][href$=".pdf"]'));assert.ok(preview.querySelector('img[src$=".webp"]'));
+ assert.equal(d.querySelectorAll('#faq details').length,10);
+ assert.equal(d.querySelector('.ph-lab a[href="/coas"]').textContent.trim(),'Search all lab reports ↗');
 });

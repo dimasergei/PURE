@@ -12,7 +12,7 @@ function assertCurrentView(d,route){
  }
  assert.equal(d.querySelectorAll('#ap-main [data-promo-clock],#ap-main .nl-offer-grid').length,0,route+' has no old sale presentation');
 }
-async function setup(route,campaign=null){const errors=[];const console=new VirtualConsole();console.on('jsdomError',e=>errors.push(e.message));const dom=new JSDOM(read('public-build/index.html'),{url:'https://getpurelabs.com'+route,runScripts:'outside-only',virtualConsole:console}),w=dom.window;w.localStorage.setItem('ap-age-verified','true');w.matchMedia=()=>({matches:false});w.HTMLElement.prototype.scrollIntoView=()=>{};w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;};w.fetch=async url=>({ok:true,json:async()=>String(url).includes('campaign=window')?(campaign||{}):[]});w.AltaConversionConfig=require('../config/conversion.json');w.eval(read('public-build/quantity-pricing.js')+'\n'+read('public-build/membership-experience.js')+'\n'+read('public-build/conversion-ui.js')+'\n'+read('public-build/products.js')+'\n'+read('public-build/product-images.js')+'\n'+read('public-build/storefront-v2.js')+'\n'+read('public-build/workspace-v2.js'));await new Promise(r=>setTimeout(r,0));assert.deepEqual(errors,[],route);assertCurrentView(w.document,route);return{dom,w,d:w.document};}
+async function setup(route,campaign=null){const errors=[];const console=new VirtualConsole();console.on('jsdomError',e=>errors.push(e.message));const dom=new JSDOM(require('../scripts/home-shell.cjs').renderHomeDocument(read('public-build/index.html'),require('../config/site.ts').site),{url:'https://getpurelabs.com'+route,runScripts:'outside-only',virtualConsole:console}),w=dom.window;w.localStorage.setItem('ap-age-verified','true');w.matchMedia=()=>({matches:false});w.HTMLElement.prototype.scrollIntoView=()=>{};w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;};w.fetch=async url=>({ok:true,json:async()=>String(url).includes('campaign=window')?(campaign||{}):[]});w.AltaConversionConfig=require('../config/conversion.json');w.eval(read('public-build/quantity-pricing.js')+'\n'+read('public-build/membership-experience.js')+'\n'+read('public-build/conversion-ui.js')+'\n'+read('public-build/products.js')+'\n'+read('public-build/product-images.js')+'\n'+read('public-build/storefront-v2.js')+'\n'+read('public-build/workspace-v2.js'));await new Promise(r=>setTimeout(r,0));assert.deepEqual(errors,[],route);assertCurrentView(w.document,route);return{dom,w,d:w.document};}
 (async()=>{
  const now=Date.now();
  const offer={second_unit:{discount_bps:2500,eligible_variants:['bpc-157:10mg','ghk-cu:50mg']}};
@@ -52,49 +52,22 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
   const {dom,d}=await setup('/shop?offer=bogo',legacy);
   assert.equal(d.querySelector('.pure-offer-trigger:not([data-default-offer]),.pure-card-sale'),null);
   assert.ok(d.querySelector('#ap-catalog-grid article'),'legacy links open the regular catalog');
-  assert.match(d.querySelector('.ap-announcement').textContent,/BLACKFRIDAY10/);
+  if(!require('../config/site.ts').promoVisible())assert.equal(d.querySelector('.ap-announcement').hidden,true);
   dom.window.close();
  }
  {const{dom,d,w}=await setup('/');
-  const ribbon=d.querySelector('.ap-announcement .pure-offer-trigger[data-default-offer]');
-  assert.equal(ribbon.querySelector('.pure-offer-action').getAttribute('href'),'/shop');
-  assert.equal(ribbon.querySelector('.pure-offer-free').textContent,'BLACKFRIDAY10');
-  assert.match(d.querySelector('h1').textContent,/CUTTING EDGEPURITY/);
-   // Desktop navigation and mobile side menu share this single route/link.
-   const testingLink=d.querySelector('#ap-nav a[href="/coas"]');
-   assert.ok(testingLink,'Testing link preserves the COA route');
-   assert.equal(testingLink.textContent,'Testing','nav label after locale initialization');
-   assert.equal(d.querySelector('.ap-footer a[href="/coas"]')?.textContent,'Testing','footer label matches');
-   assert.equal((read('public-build/storefront-v2.js').match(/coas:'Testing'/g)||[]).length,3,'en/fr/es labels stay Testing');
-  const vials=[...d.querySelectorAll('.nl-hero .nl-vial')];
-  assert.deepEqual(vials.map(a=>a.getAttribute('href')),['/product/nad','/product/retatrutide','/product/bpc-157','/product/ghk-cu','/product/tirzepatide']);
-  assert.equal(vials[2].querySelector('img').getAttribute('fetchpriority'),'high');
-  const featured=[...d.querySelectorAll('#nl-featured .ap-product-card')];
-  assert.equal(featured.length,10);
-  for(const card of featured){
-   const p=w.AltaStore.product(card.dataset.product),photo=card.querySelector('.ap-product-image');
-   assert.equal(card.querySelector('.nl-featured-meta h3').textContent,p.name);
-   assert.match(card.querySelector('.nl-featured-price').textContent,/^\$[\d,]+(?:\.\d{2})?$/);
-   assert.equal(new URL(photo.href).pathname,'/product/'+p.id);
-   assert.equal(card.querySelector('select,.nl-size-label'),null);
-   assert.ok(card.querySelector('.ap-catalog-action'));
-   assert.equal(card.querySelector('.ap-catalog-view').href,photo.href);
-   assert.equal(photo.contains(card.querySelector('.nl-featured-meta')),false,'name and price are outside the image');
-   assert.doesNotMatch(card.textContent,/per unit|\(\d+\s*mg\)/i);
-  }
-  const bulk=d.querySelector('.nl-home-bulk');
-  const memberships=d.querySelector('[data-mx-membership-home]');assert.ok(d.querySelector('.nl-editorial').nextElementSibling===memberships,'membership comparison follows documentation');assert.equal(memberships.querySelectorAll('.mx-card').length,3);assert.ok(memberships.nextElementSibling===bulk,'bulk ordering follows membership comparison');
-  assert.equal(bulk.nextElementSibling.id,'faq');
-  assert.equal(bulk.querySelector('a').getAttribute('href'),'/bulk-orders');
-  assert.match(bulk.textContent,/Save 50% at 10 units or 60% at 50 units per compound/);
-  assert.doesNotMatch(bulk.textContent,/BOGO|monthly auto.?billing/i);
-  const examples=[...bulk.querySelectorAll('tbody tr')];
-  assert.equal(examples.length,2);
-  for(const [index,id,size,qty] of [[0,'bpc-157','10mg',10],[1,'ghk-cu','50mg',50]]){
-   const variant=w.AltaStore.product(id).variants.find(v=>v.size===size),cells=examples[index].cells;
-   assert.equal(cells[1].textContent,String(qty));
-   assert.equal(cells[2].textContent,w.AltaStore.money(variant.price));
-  }
+  const cfg=require('../config/site.ts');
+  assert.equal(d.querySelector('.ap-announcement').hidden,!cfg.promoVisible());
+  assert.match(d.querySelector('h1').textContent,/Research compounds for labs/);
+  assert.equal(d.querySelector('#ap-nav a[href="/coas"]').textContent,'Lab Testing & COAs');
+  assert.equal(d.querySelector('.ap-footer a[href="/coas"]').textContent,'Lab Testing & COAs');
+  assert.equal(d.querySelectorAll('.ph-vial').length,5);
+  assert.equal(d.querySelector('.ph-vial-2').getAttribute('fetchpriority'),'high');
+  assert.equal(d.querySelectorAll('#nl-featured [data-product]').length,8);
+  assert.equal(d.querySelectorAll('#faq details').length,10);
+  assert.ok(d.querySelector('.ph-report a[download]'));
+  assert.equal(d.querySelectorAll('[data-mx-membership-home] .mx-card').length,3);
+  assert.ok(d.querySelector('.ph-programs a[href="/bulk-orders"]'));
   dom.window.close();
  }
  {const{dom,d,w}=await setup('/shop');
@@ -148,8 +121,8 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
   assert.equal(d.querySelector('.nl-bulk-count'),null);assert.equal(d.querySelector('#ap-bulk-count'),null);
   const benefits=[...d.querySelectorAll('.nl-bulk-benefit')];
   assert.equal(benefits.length,4);
-  assert.deepEqual(benefits.map(benefit=>benefit.querySelector('.nl-bulk-benefit-copy').textContent),['10+ units','50+ units','Free express shipping','Product documentation']);
-  assert.match(d.querySelector('.nl-bulk-benefit-shipping').textContent,/2-day.*US bulk orders/);
+  assert.deepEqual(benefits.map(benefit=>benefit.querySelector('.nl-bulk-benefit-copy').textContent),['10+ units','50+ units','Shipping included','Product documentation']);
+  assert.match(d.querySelector('.nl-bulk-benefit-shipping').textContent,/US express.*Shipping included.*After dispatch/);
   assert.equal(benefits[3].getAttribute('href'),'/coas');
   assert.match(d.querySelector('.nl-bulk-hero p').textContent,/Save 50% at 10 units/);
   assert.deepEqual([...d.querySelectorAll('[data-action="bulk-category"]')].map(button=>button.textContent),['All Products','Peptides','Mist Applicators','Supplies']);

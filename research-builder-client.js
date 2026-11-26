@@ -37,8 +37,8 @@
   document.title='Member Stack | PURE';
   const feedback=msg=>{const el=root.querySelector('.nl-builder-feedback');if(el)el.textContent=msg;};
   function renderProducts(){
-   root.querySelector('.nl-builder-categories').innerHTML=groups.map(x=>'<button type="button" data-group="'+esc(x)+'" aria-pressed="'+String(x===group)+'">'+esc(x)+'</button>').join('');
-   const items=catalog.filter(p=>(group==='All'||p.group===group)&&(!filter||p.name.toLowerCase().includes(filter)||p.group?.toLowerCase().includes(filter)));
+   root.querySelector('.nl-builder-categories').innerHTML=groups.map(x=>'<button type="button" data-group="'+esc(x)+'" aria-pressed="'+String(x===group)+'">'+esc(window.AltaStore?.publicGroupLabel?.(x)||x)+'</button>').join('');
+   const items=catalog.filter(p=>(group==='All'||p.group===group)&&(!filter||p.name.toLowerCase().includes(filter)||(window.AltaStore?.publicGroupLabel?.(p.group)||p.group||'').toLowerCase().includes(filter)));
    root.querySelector('#pure-member-stack-count').textContent=items.length+' compounds';
    root.querySelector('#pure-member-stack-grid').innerHTML=items.map(p=>{
     const v=variant(p.id,sizes[p.id]),cents=Math.round(v.price*100),sale=cents-Math.floor(cents*benefit.discount_bps/10000),picked=lines.some(x=>x.id===p.id);

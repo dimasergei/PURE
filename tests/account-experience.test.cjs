@@ -1,6 +1,6 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
-const context={window:{}};vm.createContext(context);vm.runInContext(fs.readFileSync('account-experience.js','utf8'),context);
+const context={window:{},location:new URL('https://example.test/my-account')};vm.createContext(context);vm.runInContext(fs.readFileSync('account-experience.js','utf8'),context);
 const payload=values=>JSON.parse(JSON.stringify(context.window.AccountExperience.profilePayload(values)));
 test('profile saves bounded contact and addresses without writable payment privileges',()=>{
  const p=payload({full_name:' Research Lab ',phone:'+1 555 0100',organization:'Example',shipping_name:'Recipient',shipping_line1:'1 Main Street',shipping_country:'us',billing_same:'on',billing_line1:'wrong',membership:'elite',points:99999});

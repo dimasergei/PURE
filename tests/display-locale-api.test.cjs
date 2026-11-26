@@ -47,10 +47,10 @@ test('coarse country hints use the Vercel header and map current euro-area and d
   assert.equal((await call(undefined, {headers: {'x-vercel-ip-country': 'ca'}})).body.suggested_currency, 'CAD');
 });
 
-test('welcome age uses verified country rules and the storefront fallback', async () => {
-  for (const [country, minimum_age] of [['US',21],['CA',19],['GB',18],['AU',18],['DE',18],['JP',18],['KR',19],['NZ',20],['MX',21],['XX',21]]) {
+test('the global storefront age applies to all supported and unknown countries', async () => {
+  for (const country of ['US','CA','GB','AU','DE','JP','KR','NZ','MX','XX']) {
     const res = await call(undefined, {headers: {'x-vercel-ip-country': country}});
-    assert.deepEqual(res.body.welcome, {version:1, minimum_age});
+    assert.deepEqual(res.body.welcome, {version:2, minimum_age:21});
   }
 });
 

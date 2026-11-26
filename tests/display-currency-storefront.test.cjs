@@ -23,7 +23,9 @@ function referenceSource(file,scope,anchor){
 }
 async function fixture(route,{workspace=false,cart=[]}={}){
  const errors=[],requests=[],vc=new VirtualConsole();vc.on('jsdomError',error=>errors.push(error.message));
- const dom=new JSDOM(read('storefront-v2.html'),{url:'https://getpurelabs.com'+route,runScripts:'outside-only',virtualConsole:vc});
+ const template=read('storefront-v2.html');
+ const html=route==='/'?require('../scripts/home-shell.cjs').renderHomeDocument(template,require('../config/site.ts').site):template;
+ const dom=new JSDOM(html,{url:'https://getpurelabs.com'+route,runScripts:'outside-only',virtualConsole:vc});
  const w=dom.window,d=w.document;
  w.localStorage.setItem('ap-age-verified','true');
  if(cart.length)w.localStorage.setItem('pp-cart',JSON.stringify(cart));
@@ -116,13 +118,15 @@ test('cart display currency changes preserve the coupon and exact quote request 
 test('homepage free-shipping threshold follows display FX without changing the USD eligibility amount',async()=>{
  const f=await fixture('/');
  try{
-  const {w,d}=f,trust=d.querySelector('.nl-trust');
-  const usd=checkoutConfig.free_shipping_threshold_cents/100;
-  assert.ok(trust.textContent.includes('Free shipping over $'+usd));
+  const {w,d}=f,trust=d.querySelector('.ph-trust');
+  const cents=checkoutConfig.free_shipping_threshold_cents,price=trust.querySelector('[data-usd-cents]');
+  assert.equal(Number(price.dataset.usdCents),cents);
+  assert.ok(trust.textContent.includes('Free shipping from $'+(cents/100).toFixed(2)));
   await w.AltaLocale.setCurrency('CAD');await settle();
-  assert.ok(trust.textContent.includes('Free shipping over CA$'+(usd*1.4).toFixed(2)));
-  assert.doesNotMatch(trust.textContent,/≈|US shipping/);
+  assert.ok(trust.textContent.includes('Free shipping from CA$'+(cents/100*1.4).toFixed(2)));
+  assert.equal(Number(price.dataset.usdCents),cents);
+  assert.doesNotMatch(trust.textContent,/≈/);
   await w.AltaLocale.setCurrency('USD');await settle();
-  assert.ok(trust.textContent.includes('Free shipping over $'+usd));
+  assert.ok(trust.textContent.includes('Free shipping from $'+(cents/100).toFixed(2)));
  }finally{await f.close();}
 });

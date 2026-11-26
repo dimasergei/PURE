@@ -8,6 +8,7 @@ const js=fs.readFileSync('cart-reference.js','utf8');
 async function fixture(subtotal,discount=0,country='US'){
  const dom=new JSDOM('<main></main>',{url:'https://example.test/shop',runScripts:'outside-only'});
  const w=dom.window,root=w.document.querySelector('main');
+ w.PureSite=require('../config/site.ts').site;
  const item={id:'fixture',size:'5mg',name:'Item',key:'item:5mg',qty:1,price:subtotal/100};
  w.AltaStore={cart:[item],catalog:[],product:()=>item,image:()=>'/image.webp'};
  w.localStorage.setItem('ap-shipping-country',country);
@@ -21,13 +22,13 @@ async function fixture(subtotal,discount=0,country='US'){
 }
 test('the cart advances through both gifts using discounted merchandise cents',async()=>{
  for(const [merchandise,expected,shippingReached,reconReached] of [
-  [24999,'Add $0.01 for free priority shipping.',false,false],
+  [24999,'Add $0.01 for free express shipping.',false,false],
   [25000,'Add $49.00 for free recon solution.',true,false],
   [25001,'Add $48.99 for free recon solution.',true,false],
   [26970,'Add $29.30 for free recon solution.',true,false],
   [29899,'Add $0.01 for free recon solution.',true,false],
-  [29900,'Free priority shipping + recon solution unlocked.',true,true],
-  [29901,'Free priority shipping + recon solution unlocked.',true,true],
+  [29900,'Free express shipping + recon solution unlocked.',true,true],
+  [29901,'Free express shipping + recon solution unlocked.',true,true],
  ]){
   const f=await fixture(merchandise+1000,1000);
   try{
@@ -68,14 +69,14 @@ test('gift details open on hover, focus and tap and dismiss with Escape',async()
   assert.ok(tip(first).hidden&&tip(last).hidden);
   first.dispatchEvent(Object.assign(new f.w.Event('pointerenter'),{pointerType:'mouse'}));
   assert.equal(tip(first).hidden,false);
-  assert.match(tip(first).textContent,/250\.00.*Free priority shipping/);
+  assert.match(tip(first).textContent,/250\.00.*Free express shipping/);
   first.parentElement.dispatchEvent(Object.assign(new f.w.Event('pointerleave'),{pointerType:'mouse'}));
   assert.equal(tip(first).hidden,true);
   first.focus();
   assert.equal(first.getAttribute('aria-expanded'),'true');
   last.focus();
   assert.ok(tip(first).hidden&&!tip(last).hidden);
-  assert.match(tip(last).textContent,/299\.00.*Free priority shipping \+ recon solution/);
+  assert.match(tip(last).textContent,/299\.00.*Free express shipping \+ recon solution/);
   const escape=new f.w.KeyboardEvent('keydown',{key:'Escape',cancelable:true,bubbles:true});
   last.dispatchEvent(escape);
   assert.ok(escape.defaultPrevented&&tip(last).hidden);

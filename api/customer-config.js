@@ -2,6 +2,9 @@
 module.exports=async(req,res)=>{
  res.setHeader('Cache-Control','no-store');res.setHeader('X-Content-Type-Options','nosniff');
  const url=new URL(req.url||'/api/customer-config','https://account.internal');
+ if(['shop','coas'].includes(url.searchParams.get('catalog_view')))return require('../lib/public-catalog-view.cjs').handle(req,res,url.searchParams);
+ if(url.searchParams.has('commerce_form'))return require('../lib/commerce-form').handle(req,res,url.searchParams.get('commerce_form'));
+ if(url.searchParams.has('age_gate'))return require('../lib/age-consent').handle(req,res,url.searchParams);
  if(url.searchParams.has('gift_order'))return require('../lib/gift-orders').handle(req,res,url.searchParams.get('gift_order'));
  if(url.searchParams.get('gift_card')==='request')return require('../lib/gift-card-inquiry').handle(req,res);
  if(url.searchParams.has('repeat_orders'))return require('../lib/repeat-orders').handle(req,res);
@@ -16,6 +19,7 @@ module.exports=async(req,res)=>{
   if(req.method!=='GET')return res.status(405).json({error:'Method not allowed.'});
   return res.status(200).json({cutoff:require('../lib/dispatch-cutoff').dispatchCutoff()});
  }
+ if(url.searchParams.get('campaign')==='newsletter')return require('../lib/newsletter-form').handle(req,res);
  if(url.searchParams.has('campaign')){
   if(req.method==='POST'&&url.searchParams.get('campaign')==='signup')return require('../lib/campaign-signup').handle(req,res);
   if(req.method!=='GET')return res.status(405).json({error:'Method not allowed.'});

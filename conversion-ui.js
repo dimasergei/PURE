@@ -177,6 +177,7 @@
   trigger.className='pure-offer-trigger';
   trigger.textContent=percent+'% off the second unit on eligible pairs';
   announcement.classList.add('pure-offer-active');
+  announcement.hidden=false;
   fallback.replaceWith(trigger);
  }
  async function mountCountdown(root){
@@ -205,12 +206,27 @@
   else mountCampaignStrip();
  }
  if(/^\/(?:$|shop(?:\/|$)|product\/)/.test(location.pathname)){
-  document.addEventListener('mouseout',function exitOffer(event){
-   if(event.relatedTarget||event.clientY>0||document.querySelector('dialog[open]'))return;
-   try{
-    if(sessionStorage.getItem('pure-exit-offer-shown'))return;
-    sessionStorage.setItem('pure-exit-offer-shown','1');
-   }catch{}
+  const suppressionKey='pure-newsletter-next-offer';
+  let shown=false, pending=false;
+  function activePromo(){const p=window.PureSite?.promo;return p?.code&&Date.parse(p.endsAt)>Date.now()?p:null;}
+  function exitOffer(event){if(!event.relatedTarget && event.clientY<=0)showOffer();}
+  function suppress(){
+   shown=true;pending=false;
+   try{localStorage.setItem(suppressionKey,String(Date.now()+30*86400000));}catch{}
+  }
+  window.addEventListener('pure:newsletter-subscribed',suppress);
+  function retry(){if(pending)window.setTimeout(showOffer,0);}
+  document.addEventListener('mouseout',exitOffer);
+  document.addEventListener('close',retry,true);
+  document.addEventListener('visibilitychange',retry);
+  document.addEventListener('focusout',retry);
+  window.setTimeout(showOffer,15000);
+  function showOffer(){
+   if(shown)return;
+   if(document.visibilityState==='hidden'){pending=true;return;}
+   try{if(Number(localStorage.getItem(suppressionKey))>Date.now())return;}catch{}
+   if(document.querySelector('dialog[open]')||document.activeElement?.matches('input,textarea,select')){pending=true;return;}
+   suppress();
    document.removeEventListener('mouseout',exitOffer);
    const dialog=document.createElement('dialog');dialog.className='ap-dialog cv-discount-dialog';
    dialog.setAttribute('aria-labelledby','pure-discount-heading');
@@ -218,17 +234,19 @@
     <header class="cv-discount-hero">
      <span class="pure-wordmark" role="img" aria-label="PURE"></span>
      <button type="button" class="cv-discount-close" data-close aria-label="Close offer">×</button>
-     <h2 id="pure-discount-heading">GET <strong>10% OFF</strong></h2>
-     <p>Save on eligible items at checkout.</p>
+     <h2 id="pure-discount-heading">PURE email updates</h2>
+     <p>Get catalog updates and eligible offers by email.</p>
     </header>
     <div class="cv-discount-body">
      <form class="ap-form">
       <label>Email address<input name="email" type="email" autocomplete="email" placeholder="you@example.com" required maxlength="254"></label>
       <label class="ap-checkbox-label"><input name="consent" type="checkbox" required> I agree to receive PURE offers by email.</label>
-      <button class="ap-button">Unlock 10% off</button>
+      <button class="ap-button">Subscribe</button>
      </form>
      <p role="status"></p>
     </div>`;
+   const promo=activePromo();
+   if(promo)dialog.querySelector('h2').textContent='Get '+promo.percent+'% off eligible items';
    const form=dialog.querySelector('form'),status=dialog.querySelector('[role=status]');
    dialog.querySelector('[data-close]').onclick=()=>dialog.close();
    dialog.addEventListener('close',()=>dialog.remove(),{once:true});
@@ -238,21 +256,24 @@
     try{
      const result=await request('campaign=signup',{email:form.elements.email.value,consent:form.elements.consent.checked});
      form.hidden=true;
+     status.textContent='You’re subscribed to PURE email updates.';
+     const current=activePromo();
+     if(!current || result.code!==current.code)return;
      status.classList.add('cv-discount-code');
      const code=document.createElement('strong');code.textContent=result.code;
      status.replaceChildren('Your checkout code',code);
      try{
       const keys=['ap-checkout-coupon','ap-cart-coupon'];
       const existing=keys.map(key=>localStorage.getItem(key)).find(Boolean);
-      if(result.code==='BLACKFRIDAY10'&&(!existing||existing===result.code)){
+      if(!existing||existing===result.code){
        for(const key of keys)localStorage.setItem(key,result.code);
-       status.replaceChildren('10% off saved to your cart',code);
+       status.replaceChildren(current.percent+'% off saved to your cart',code);
       }
      }catch{}
     }catch(error){status.textContent=error.message;button.disabled=false;}
    };
    document.body.append(dialog);dialog.showModal();
-  });
+  }
  }
  const ref=new URLSearchParams(location.search).get('ref');if(ref&&/^[A-Z0-9][A-Z0-9_-]{2,23}$/i.test(ref)){
   const countStart=navigator.globalPrivacyControl!==true && navigator.doNotTrack!=='1' && window.doNotTrack!=='1' && navigator.webdriver!==true && !document.prerendering;

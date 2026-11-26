@@ -1,0 +1,27 @@
+.commerce-section {margin-block: clamp(2rem,5vw,4rem);color: #151515}
+.commerce-section p,.commerce-support,.commerce-timeline p {max-width: 70ch;line-height: 1.6}
+.commerce-section h2 {margin-block: 0 1rem}
+.commerce-section a,.commerce-links a,.pss-plan-note a,.commerce-quote-link,.commerce-timeline a {text-decoration: underline;text-underline-offset: .2em}
+.commerce-links {display:flex;flex-wrap:wrap;gap:.5rem 1rem;margin-block:1rem}
+.commerce-links a,.commerce-quote-link {display:inline-flex;align-items:center;min-height:44px}
+.commerce-table {overflow-x:auto;max-width:100%;margin-block:1rem 1.5rem}
+.commerce-table table {border-collapse:collapse;width:100%;font:inherit}
+.commerce-table caption {text-align:left;font-weight:700;padding-block:.5rem}
+.commerce-table td,.commerce-table th {border-block-end:1px solid #d1d1d1;text-align:left;padding:.7rem .5rem;overflow-wrap:anywhere}
+.commerce-section details {border-block-end:1px solid #d1d1d1;max-width:75ch}
+.commerce-section summary {cursor:pointer;padding-block:1rem;font-weight:650}
+.commerce-quote {display:grid;gap:1rem;grid-template-columns:repeat(2,minmax(0,1fr));max-width:54rem}
+.commerce-quote label:not(.ap-honeypot),.commerce-search label {display:grid;gap:.35rem;font-weight:600;font-size:1rem}
+.commerce-quote input:not([type=checkbox]),.commerce-quote select,.commerce-quote textarea,.commerce-search input {font:inherit;width:100%;min-width:0;min-height:44px;border:1px solid #777;border-radius:6px;background:#fff;color:#151515;padding:.65rem;box-sizing:border-box}
+.commerce-quote-wide,.commerce-quote .commerce-check {grid-column:1/-1}
+.commerce-quote label.commerce-check {display:flex;align-items:center;min-height:44px;font-weight:400}
+.commerce-check input {width:1.2rem;height:1.2rem}
+.commerce-product {padding:1rem;border:1px solid #d1d1d1;border-radius:8px}
+.commerce-product h3,.commerce-product p {margin:.25rem 0}
+.commerce-timeline {max-width:42rem;margin:2rem auto;text-align:left}
+.commerce-timeline ol {padding-inline-start:1.5rem;line-height:1.8}
+.commerce-search {display:grid;gap:.5rem;max-width:32rem}
+.commerce-response {font:1rem/1.6 system-ui,sans-serif;margin:12vh auto;max-width:42rem;padding-inline:1rem}
+.commerce-response a {color:inherit}
+@media(max-width:600px){.commerce-quote {grid-template-columns:minmax(0,1fr)}.commerce-timeline {padding-inline:1rem}.commerce-table td,.commerce-table th {font-size:.875rem}}
+.commerce-checkout-heading {margin:1.5rem auto .75rem;max-width:64rem}

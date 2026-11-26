@@ -11,9 +11,13 @@ function generatedAccount(){
   readFileSync(file){const name=key(file);if(files.has(name))return files.get(name);const source=path.join(root,name.replace(/^public-build\//,''));return fs.existsSync(source)?fs.readFileSync(source,'utf8'):'';},
   writeFileSync(file,value){files.set(key(file),String(value));},
   copyFileSync(from,to){files.set(key(to),fakeFs.readFileSync(from));},
+  existsSync(file){return key(file)==='public-build'||files.has(key(file));},
   readdirSync(){return [];}
  };
- const run=file=>vm.runInNewContext(read(file),{require:name=>name==='node:fs'?fakeFs:require(name),console:{log(){}}},{filename:file,timeout:1000});
+ const run=file=>{
+  const requireFromBuild=require('node:module').createRequire(path.join(root,file));
+  return vm.runInNewContext(read(file),{require:name=>name==='node:fs'?fakeFs:requireFromBuild(name),console:{log(){}}},{filename:file,timeout:1000});
+ };
  run('site-build.cjs');run('manual-commerce-build.cjs');
  fakeFs.copyFileSync('account.js','public-build/account.js');fakeFs.copyFileSync('account.html','public-build/account.html');
  run('direct-checkout-build.cjs');run('account-experience-build.cjs');
