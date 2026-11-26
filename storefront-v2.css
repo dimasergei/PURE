@@ -113,7 +113,7 @@ body.ap-site .pure-home-volume {
   color: #fff;
 }
 
-.pure-home-volume-copy .ap-eyebrow { color: #c8d3cc; }
+html:root body.ap-site .pure-home-volume-copy .ap-eyebrow { color: #c8d3cc; }
 
 body.ap-site .pure-home-volume h2 {
   max-width: 10ch;
@@ -135,7 +135,7 @@ body.ap-site .pure-home-volume h2 {
   line-height: 1.6;
 }
 
-body.ap-site .pure-home-volume .pure-home-volume-link {
+html:root body.ap-site .pure-home-volume .pure-home-volume-copy a.ap-button.pure-home-volume-link {
   display: inline-flex;
   justify-content: space-between;
   align-items: center;
@@ -143,15 +143,18 @@ body.ap-site .pure-home-volume .pure-home-volume-link {
   min-height: 48px;
   margin-top: 23px;
   padding: 10px 20px;
-  background: #fff;
-  color: #111;
-  border: 1px solid #fff;
+  background: #c1f5ce !important;
+  color: #14271a !important;
+  border: 1px solid #c1f5ce !important;
   border-radius: 999px;
   text-align: left;
   text-transform: none;
 }
 
-body.ap-site .pure-home-volume .pure-home-volume-link:hover { background: #c1f5ce; border-color: #c1f5ce; }
+html:root body.ap-site .pure-home-volume-copy a.ap-button.pure-home-volume-link:hover { background: #fff !important; border-color: #fff !important; }
+html:root body.ap-site .pure-home-volume-copy a.ap-button.pure-home-volume-link:focus-visible { outline: 2px solid #fff; outline-offset: 4px; }
+.pure-home-volume-link::after { content: '↗'; font-size: 1.15em; }
+.pure-home-volume-link span { display: none; }
 
 .pure-home-volume-tiers {
   display: grid;
