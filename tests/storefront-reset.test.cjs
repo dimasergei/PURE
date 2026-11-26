@@ -122,8 +122,10 @@ test('catalog photo cards preserve product navigation, exact USD prices, search,
     assert.equal(photo.contains(price),false,'price remains separate from the product photo');
     const action=card.querySelector('button.ap-catalog-action');
     assert.equal(action?.dataset.action,p.variants.length>1?'catalog-options':'add');
-    assert.equal(card.querySelectorAll('select,input,button').length,1,'the catalog card has one compact action');
-    assert.doesNotMatch(card.textContent,/per unit|View More/i);
+    assert.match(action.textContent,/^add to cart$/i);
+    assert.equal(card.querySelector('a.ap-catalog-view').getAttribute('href'),photo.getAttribute('href'));
+    assert.equal(card.querySelectorAll('select,input,button').length,1,'the catalog card has one purchase button');
+    assert.doesNotMatch(card.textContent,/per unit/i);
    }
   };
   assert.equal(d.querySelectorAll('.nl-badge,del,.ap-pair-offer').length,0);
@@ -174,16 +176,21 @@ test('catalog adds single variants directly and asks for an explicit choice on c
   d.querySelector('[data-id="fixture-single"][data-action="add"]').click();
   const cart=()=>Array.from(w.AltaStore.cart,x=>[x.id,x.size,x.qty]);
   assert.deepEqual(cart(),[['fixture-single','Small',1]]);
+  const drawer=d.querySelector('#ap-cart-dialog');
+  assert.ok(drawer.open,'adding a single variant opens the cart immediately');
+  drawer.close();
   const action=d.querySelector('[data-id="fixture-multiple"][data-action="catalog-options"]');
   action.click();
   const dialog=d.querySelector('.ap-catalog-options');
   assert.ok(dialog.open);
+  assert.equal(drawer.open,false,'the cart stays closed until a strength is chosen');
   assert.equal(dialog.querySelector('h2').textContent,'Fixture multiple');
   dialog.querySelector('[type=submit]').click();
   assert.deepEqual(cart(),[['fixture-single','Small',1]],'an unspecified option does not add an item');
   dialog.querySelector('select').value='Large';
   dialog.querySelector('[type=submit]').click();
   assert.equal(dialog.open,false);
+  assert.ok(drawer.open,'adding the chosen strength opens the cart');
   assert.deepEqual(cart(),[['fixture-single','Small',1],['fixture-multiple','Large',1]]);
  }finally{await f.close();}
 });

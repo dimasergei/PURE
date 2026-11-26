@@ -656,14 +656,23 @@ html[data-display-currency]:not([data-display-currency="USD"]) body.ap-site :is(
 }
 
 /* Catalog purchase actions and help results. */
-.ap-site .nl-shop .ap-catalog-action {
+.ap-site .nl-shop .ap-catalog-actions {
   grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 6px;
+}
+.ap-site .nl-shop .ap-catalog-actions .ap-button {
+  display: flex;
+  align-items: center;
   justify-content: center;
-  width: 100%;
+  min-width: 0;
   min-height: 44px;
-  padding: 10px 8px;
-  font-size: 12px;
+  padding: 6px 4px;
+  font-size: 11px;
+  line-height: 1.2;
   text-align: center;
+  white-space: normal;
 }
 .ap-site .ap-catalog-options { width: min(420px, calc(100% - 32px)); }
 .ap-site .ap-catalog-options .ap-dialog-head button { flex: 0 0 44px; width: 44px; height: 44px; }
@@ -746,7 +755,7 @@ html[data-display-currency]:not([data-display-currency="USD"]) body.ap-site :is(
     white-space: normal;
     overflow-wrap: break-word;
   }
-  .ap-site .nl-shop .ap-catalog-action { margin-top: 5px; }
+  .ap-site .nl-shop .ap-catalog-actions { margin-top: 5px; }
   .ap-site .nl-home-bulk { padding: 8px 0 28px; }
   .ap-site .nl-home-bulk .nl-home-bulk-card { padding: 27px 22px; border-radius: 20px; }
   .ap-site .nl-home-bulk-copy h2 { font-size: 34px; }

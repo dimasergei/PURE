@@ -94,7 +94,6 @@
   if(!items.length)return;
   let appliedCoupon=storedCoupon(),hasQuote=false;
   root.innerHTML='<div class="nlc-scrollable-items cart__body" data-testid="cart-product-scroll">'
-   +'<section class="nlc-rewards" aria-label="Cart rewards" hidden><p data-nlc-unlock-copy role="status"></p><div class="nlc-reward-rail"></div></section>'
    +'<section class="nlc-cart-lines">'+items.map(x=>
     '<div class="nlc-line"><img src="'+html(window.AltaStore.image(window.AltaStore.product(x.id),x.size))+'" alt="">'
     +'<div class="nlc-name"><div class="nlc-product-title"><strong>'+html(x.name)+'</strong><span class="nlc-size">– '+html(x.size)+'</span></div>'
@@ -104,10 +103,11 @@
     +'</div></div><div class="nlc-price"><strong>'+money(Math.round(x.price*100)*x.qty)+'</strong><button type="button" data-action="cart-remove" data-key="'+html(x.key)+'" aria-label="Remove '+html(x.name)+'">×</button></div></div>'
    ).join('')+'<div data-nlc-gifts></div></section>'
    +'<section class="nlc-recs" data-nlc-add-on hidden></section>'
-   +'</div><div class="nlc-cart-checkout cart__checkout" data-testid="cart-fixed-footer">'
-   +'<details class="nlc-coupon"><summary><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" aria-hidden="true"><path d="M20.5 13.5 13.5 20.5a1.7 1.7 0 0 1-2.4 0L3 12.4V3h9.4l8.1 8.1a1.7 1.7 0 0 1 0 2.4Z"/><circle cx="7.8" cy="7.8" r="1.15"/></svg><span data-nlc-coupon-label>Add coupon code</span><i aria-hidden="true"></i></summary>'
+   +'<div class="nlc-cart-options"><details class="nlc-coupon"><summary><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" aria-hidden="true"><path d="M20.5 13.5 13.5 20.5a1.7 1.7 0 0 1-2.4 0L3 12.4V3h9.4l8.1 8.1a1.7 1.7 0 0 1 0 2.4Z"/><circle cx="7.8" cy="7.8" r="1.15"/></svg><span data-nlc-coupon-label>Add coupon code</span><i aria-hidden="true"></i></summary>'
    +'<div class="nlc-coupon-fields"><input type="text" name="nlc_coupon" aria-label="Coupon code" aria-describedby="nlc-coupon-status" placeholder="Enter code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="24" value="'+html(appliedCoupon)+'"><button type="button" data-nlc-apply>Apply</button><button type="button" data-nlc-remove-coupon hidden>Remove</button></div><p id="nlc-coupon-status" data-nlc-coupon-status role="status"></p></details>'
-   +'<p class="nlc-partner-sign-in" data-nlc-partner-sign-in hidden><a href="/account/login?returnTo=%2Fcheckout">Sign in to check your partner offer</a></p>'
+   +'<p class="nlc-partner-sign-in" data-nlc-partner-sign-in hidden><a href="/account/login?returnTo=%2Fcheckout">Sign in to check your partner offer</a></p></div>'
+   +'<section class="nlc-rewards" aria-label="Cart rewards" hidden><p data-nlc-unlock-copy role="status"></p><div class="nlc-reward-rail"></div></section>'
+   +'</div><div class="nlc-cart-checkout cart__checkout" data-testid="cart-fixed-footer">'
    +'<div class="nlc-cart-totals" data-nlc-cart-totals><p role="status">Calculating your order total…</p></div>'
    +'<a class="nlc-proceed" href="/checkout">Proceed to Checkout</a>'
    +'<div class="nlc-wallet-area"><div class="nlc-express" hidden><div class="nlc-pay-divider">OR PAY WITH</div><div class="nlc-wallet-row" data-nlc-wallets>'

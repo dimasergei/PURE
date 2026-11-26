@@ -70,8 +70,9 @@ for(const file of fs.readdirSync(out,{recursive:true}).filter(f=>f.endsWith('.ht
   html=html.replace(/href="\/checkout-reference\.css(?:\?[^"]*)?"/g,'href="/checkout-reference.css?v=20261126-usdc-networks"');
   html=html.replace(/src="\/(checkout-reference|direct-checkout-client|native-pay|polygon-usdc-pay|guest-interac-pay)\.js(?:\?[^"]*)?"/g,'src="/$1.js?v=20261126-usdc-networks"');
   html=html.replace(/src="\/(locale|storefront-v2)\.js(?:\?[^"]*)?"/g,'src="/$1.js?v=20261125-welcome-age"');
-  html=html.replace(/src="\/(cart-reference|storefront-v2|workspace-v2)\.js(?:\?[^"]*)?"/g,'src="/$1.js?v=20261126-guest-order-help"');
-  html=html.replace(/href="\/cart-reference\.css(?:\?[^"]*)?"/g,'href="/cart-reference.css?v=20261126-guest-order-help"');
+  html=html.replace(/src="\/workspace-v2\.js(?:\?[^"]*)?"/g,'src="/workspace-v2.js?v=20261126-guest-order-help"');
+  html=html.replace(/src="\/(cart-reference|storefront-v2)\.js(?:\?[^"]*)?"/g,'src="/$1.js?v=20261126-quick-cart"');
+  html=html.replace(/href="\/(cart-reference|reference-ui)\.css(?:\?[^"]*)?"/g,'href="/$1.css?v=20261126-quick-cart"');
   fs.writeFileSync(target,html);
   count++;
 }

@@ -25,7 +25,11 @@ test('cart has editable rows, coupon, protection and wallet shortcuts to reviewe
   assert.match(f.cart.textContent,/Optional add-on/);
   assert.ok(f.cart.querySelector('[data-action="add"][data-id="bac-3"]'));
   assert.ok(f.cart.querySelector('[data-action="cart-quantity"]'));
-  assert.ok(f.cart.querySelector('[name=nlc_coupon]'));
+  const scrollArea=f.cart.querySelector('[data-testid=cart-product-scroll]');
+  const fixedFooter=f.cart.querySelector('[data-testid=cart-fixed-footer]');
+  assert.equal(scrollArea.firstElementChild.className,'nlc-cart-lines','the items are shown first');
+  assert.ok(scrollArea.querySelector('[name=nlc_coupon]'),'coupons scroll with the cart extras');
+  assert.ok(fixedFooter.querySelector('a.nlc-proceed[href="/checkout"]'),'checkout remains in the fixed footer');
   assert.equal(f.cart.querySelector('[name=nlc_protection]'),null,'No shipping protection checkbox or removal action');
   assert.ok(f.cart.querySelector('.nlc-protection-static'),'Shipping protection must appear as a fixed line item');
   assert.doesNotMatch(f.cart.textContent,/OR PAY INSTANTLY/);
