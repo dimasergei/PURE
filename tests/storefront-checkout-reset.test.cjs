@@ -170,7 +170,14 @@ test('a temporarily unavailable quote keeps the saved coupon and allows retrying
 test('cart destination changes update the economy estimate beside the payable total',async()=>{
  const f=fixture('cart');
  try{
+  f.w.localStorage.setItem('ap-currency-mode','manual');
+  f.w.localStorage.setItem('ap-currency','USD');
+  f.w.eval(fs.readFileSync('locale.js','utf8'));
+  await f.w.AltaLocale.ready;
   await f.w.AltaCartNmi.offer(f.root);
+  const button=f.root.querySelector('.nlc-proceed');
+  assert.equal(button.querySelector('.pure-price-value').textContent,'$172.95');
+  assert.doesNotMatch(button.textContent,/<span/i);
   const destination=f.root.querySelector('[data-nlc-country]');
   assert.equal(destination.value,'US');
   assert.equal(f.requests[0].delivery.shipping,'economy');
@@ -179,6 +186,7 @@ test('cart destination changes update the economy estimate beside the payable to
   await tick();
   assert.equal(f.requests.at(-1).country,'CA');
   assert.equal(f.w.sessionStorage.getItem('pure-cart-destination'),'CA');
+  assert.equal(button.querySelector('[data-usd-cents]').dataset.usdCents,'17995');
   assert.match(f.root.querySelector('[data-nlc-cart-totals]').textContent,/Economy shipping estimate\$14\.95/);
   assert.match(f.root.querySelector('.nlc-proceed').textContent,/\$179\.95/);
  }finally{f.dom.window.close();}

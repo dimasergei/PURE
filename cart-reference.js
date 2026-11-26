@@ -181,7 +181,7 @@
     if(data.tax_cents>0)nodes.push(['Tax',data.tax_cents]);
     track.innerHTML=nodes.map(([label,price],index)=>'<div class="'+(index===0?'nlc-first-subtotal':label==='Shipping Protection'?'nlc-protection-static':'')+'"><span>'+html(label)+'</span><strong>'+(price<0?'−'+money(-price):label===shippingLabel&&price===0?'FREE':money(price))+'</strong></div>').join('');
     renderRewards(root,data,country);
-    proceed.textContent='Proceed to Checkout ('+money(data.total_cents)+')';
+    proceed.innerHTML='Proceed to Checkout ('+money(data.total_cents)+')';
     const hostedCard=(settings.methods||[]).find(method=>method.native_provider==='rampex'&&method.rampex_provider==='hosted'&&method.active!==false&&method.countries?.includes(country));
     root.querySelector('.nlc-express').hidden=!hostedCard;
     root.querySelectorAll('[data-nlc-wallet]').forEach(link=>{
