@@ -630,3 +630,8 @@ html:root body.ap-site .nl-bulk-menu-product-head:has(.nl-bulk-rate-badge) {
   html:root body.ap-site .nl-bulk-product-foot .nl-bulk-quantity-controls { justify-content: center; }
   html:root body.ap-site .nl-bulk-product .nl-bulk-progress { text-align: center; }
 }
+
+html:root body.ap-site .nl-bulk-tier-key [data-tier-active="true"],
+html:root body.ap-site .nl-bulk-benefit[data-tier-active="true"] { background:#151515!important; color:#fff!important; border-color:#151515 }
+html:root body.ap-site .nl-bulk-benefit[data-tier-active="true"] :is(strong,span,small) {color:inherit!important}
+.nl-bulk-product .nl-bulk-tier-key {display:flex;flex-wrap:wrap;justify-content:center;gap:5px;margin-block:8px}

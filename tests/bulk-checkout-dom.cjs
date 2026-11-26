@@ -6,7 +6,7 @@ const config=require('../config/checkout.json'),delivery=require('../config/deli
 const tick=()=>new Promise(resolve=>setTimeout(resolve,20));
 (async()=>{
  const errors=[],console=new VirtualConsole();console.on('jsdomError',error=>{if(!/Not implemented: navigation/.test(error.message))errors.push(error.message);});
- const dom=new JSDOM('<main id="root"></main>',{url:'https://pure.example.test/checkout?bulk=1',runScripts:'outside-only',virtualConsole:console}),w=dom.window,root=w.document.querySelector('main');
+ const dom=new JSDOM('<main id="root"></main>',{url:'https://pure.example.test/bulk-orders/checkout',runScripts:'outside-only',virtualConsole:console}),w=dom.window,root=w.document.querySelector('main');
  Object.defineProperty(w,'crypto',{value:webcrypto});w.TextEncoder=TextEncoder;w.HTMLElement.prototype.scrollIntoView=()=>{};
  const bulk=[{id:'bulk-compound',name:'Bulk compound',size:'10mg',qty:10,price:100}],regular=[{id:'regular-compound',name:'Regular compound',size:'5mg',qty:2,price:25}],regularSnapshot=JSON.stringify(regular);
  w.localStorage.setItem('pp-cart',regularSnapshot);w.localStorage.setItem('ap-bulk-draft-v2',JSON.stringify(bulk));
@@ -52,14 +52,15 @@ const tick=()=>new Promise(resolve=>setTimeout(resolve,20));
  const form=root.querySelector('form');
  assert.equal(form.elements.coupon,undefined);
  assert.equal(form.querySelector('[data-dc-apply-coupon]'),null);
- form.querySelector('[data-step-next="0"]').click();
- form.querySelector('[data-step-next="1"]').click();
+ assert.equal(root.querySelector('.dc-step-nav'),null);
+ assert.equal(form.querySelectorAll('.dc-section').length,3);
+ assert.ok([...form.querySelectorAll('.dc-section')].every(section=>!section.hidden));
  form.elements.research_use.checked=true;
  form.elements.consent.checked=true;
  await form.onsubmit({preventDefault(){}});
  const final=root.querySelector('.dc-review-summary').textContent;
  assert.match(final,/Bulk savings/i);assert.match(final,/\$505\.00/);
- const place=root.querySelector('.dc-summary button');assert.ok(place);await place.onclick();
+ const place=root.querySelector('.dc-review-summary + button');assert.ok(place);await place.onclick();
  const priced=calls.filter(call=>call.url.endsWith('checkout=cart')||['quote','place'].includes(call.body?.action));
  assert.ok(priced.some(call=>call.body.action==='quote'));
  assert.ok(priced.some(call=>call.body.action==='place'&&call.body.quote==='verified-bulk-quote'));

@@ -3,6 +3,7 @@
   const root = document.getElementById('monthly-content');
   const status = document.getElementById('monthly-status');
   const params = new URLSearchParams(location.search);
+  const builderRoute=location.pathname.replace(/\/$/,'')==='/subscribe-and-save/checkout'||params.has('builder');
   const esc = value => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const money = cents => new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(cents/100);
   const when = value => new Date(value).toLocaleDateString(undefined,{dateStyle:'medium'});
@@ -10,22 +11,35 @@
   const link = (href,label) => '<a class="button" href="'+esc(href)+'">'+esc(label)+'</a>';
   const field = (label,name,value,autocomplete,required=true) => '<label>'+esc(label)+'<input name="'+name+'" autocomplete="'+autocomplete+'" value="'+esc(value)+'" '+(required?'required':'')+'></label>';
   let auth, overview, catalog, user;
-  const api = async body => {
+  const api = async (body,publicView=false) => {
     const session = (await auth.auth.getSession()).data.session;
-    if (!session) throw Error('Your session expired. Sign in and return to this page.');
-    const response = await fetch('/api/customer-config?repeat_orders=1',{method:body?'POST':'GET',cache:'no-store',
-      headers:{Authorization:'Bearer '+session.access_token,...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});
+    if (!publicView && !session) throw Error('Sign in to continue.');
+    const response = await fetch('/api/customer-config?repeat_orders='+(publicView?'checkout':'1'),{method:body?'POST':'GET',cache:'no-store',
+      headers:{...(session?{Authorization:'Bearer '+session.access_token}:{}),...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});
     const data = await response.json();
     if (!response.ok) throw Error(data.error || 'Monthly orders are temporarily unavailable.');
     return data;
   };
   const line = (name,value,cls='') => '<div class="line '+cls+'"><span>'+esc(name)+'</span><span>'+esc(value)+'</span></div>';
-  function summary(pricing,total) {
-    return '<div class="summary"><h2>Monthly invoice</h2>'+pricing.lines.map(row=>line(row.qty+' × '+row.name+' '+row.size,money(row.line_total_cents))).join('')+
-      (pricing.bundled_items||[]).map(row=>line(row.qty+' × '+row.name+' '+row.size,'Included')).join('')+
-      line('Retail subtotal',money(pricing.subtotal_cents))+line('Monthly savings','−'+money(pricing.discount_cents))+
-      line(pricing.delivery.selection.shipping==='express'?'Express shipping':'Economy shipping',money(pricing.delivery.shipping_cents))+
-      line('Monthly total (USD)',money(total),'total')+'</div>';
+  const methodLabel=m=>[m.label,m.network_label].filter(Boolean).join(' · ');
+  const paymentOptions=(methods,selected)=>methods.map((m,i)=>'<label class="payment-option"><input type="radio" name="method" required value="'+esc(m.id)+'" '+((selected?m.id===selected:i===0)?'checked':'')+'>'+esc(methodLabel(m))+'</label>').join('');
+  function renderPayment(data) {
+    document.querySelector('main h1').textContent='Monthly invoice';
+    root.innerHTML='<h2>'+esc(data.reference||'Invoice')+'</h2>'+line('Invoice total (USD)',money(data.total_cents),'total');
+    if(data.closed) {root.insertAdjacentHTML('beforeend',link('/account/purchases?id='+encodeURIComponent(data.id),'View order'));return;}
+    if(data.transfer){
+      const t=data.transfer;
+      root.insertAdjacentHTML('beforeend','<h2>Interac e-Transfer</h2>'+line('Send in CAD',new Intl.NumberFormat('en-CA',{style:'currency',currency:'CAD',currencyDisplay:'code'}).format(t.amount_cents/100))+line('Payee',t.payee)+line('Reference',t.reference)+'<p class="transfer-instructions">'+esc(t.instructions)+'</p>');return;
+    }
+    if(data.payment_path){location.assign(data.payment_path);return;}
+    const form=document.createElement('form');
+    form.innerHTML='<fieldset><legend>Payment</legend>'+paymentOptions(data.methods)+'</fieldset><button type="submit">Continue</button>';
+    root.append(form);
+    form.onsubmit=async event=>{
+      event.preventDefault();const btn=form.querySelector('button');btn.disabled=true;
+      try{renderPayment(await api({action:'select_payment',id:data.id,total_cents:data.total_cents,method_id:new FormData(form).get('method')}));status.textContent='';}
+      catch(e){status.textContent=e.message;btn.disabled=false;}
+    };
   }
   async function loadPlans() {
     overview = await api();
@@ -53,107 +67,156 @@
   }
   function initialItems(plan) {
     if (plan) return plan.snapshot.request.items.map(({id,size,qty})=>({id,size,qty}));
-    if (params.has('builder')) {
+    if (builderRoute) {
       try {return JSON.parse(sessionStorage.getItem('pure-monthly-builder')||'[]');} catch {return [];}
     }
     return [{id:params.get('product'),size:params.get('size'),qty:Number(params.get('qty')||1)}];
   }
-  function formView(plan) {
-    const kind=plan?.snapshot.kind||(params.has('builder')?'builder':'product');
+  async function formView(plan) {
+    const kind=plan?.snapshot.kind||(builderRoute?'builder':'product');
     let items=initialItems(plan);
     if (!Array.isArray(items)||!items.length||items.some(i=>!catalog.some(p=>p.id===i.id && p.variants.some(v=>v.size===i.size)))) {
       root.innerHTML='<p>Choose your items to start a monthly order.</p>'+link(kind==='builder'?'/research-builder':'/shop','Choose items');return;
     }
     const previous=plan?.snapshot.request||{};
-    const profile=user.user_metadata?.alta_profile||{};
+    const profile=user?.user_metadata?.alta_profile||{};
     const address=previous.address||profile.shipping||{};
     const countries=[...new Set(overview.methods.flatMap(m=>m.countries))].sort((a,b)=>displayCountry.of(a).localeCompare(displayCountry.of(b)));
-    if (!countries.length) {root.textContent='No monthly payment methods are currently available.';return;}
-    const key='pure-repeat-enrollment-'+user.id+'-'+kind+'-'+JSON.stringify(items.map(({id,size,qty})=>[id,size,qty]));
+    if(!countries.length){root.textContent='Monthly checkout is temporarily unavailable.';return;}
+    const key='pure-repeat-enrollment-'+(user?.id||'guest')+'-'+kind+'-'+JSON.stringify(items.map(({id,size,qty})=>[id,size,qty]));
     const id=plan?.id||sessionStorage.getItem(key)||crypto.randomUUID();
-    if (!plan) sessionStorage.setItem(key,id);
-    root.innerHTML='<a href="/monthly-orders">Your monthly orders</a><h2>'+esc(plan?'Change future invoices':kind==='builder'?'Start your monthly builder':'Start your monthly order')+'</h2>'+
-      '<p>You receive a payment link every month. Each order ships after you pay. Skip, pause, change or cancel future invoices in your account.</p>'+
-      '<form><fieldset><legend>Items</legend><div data-items></div>'+(kind==='builder'?'<button class="secondary" type="button" data-add>Add an item</button>':'')+'</fieldset>'+
-      '<fieldset><legend>Delivery</legend><div class="fields">'+field('Full name','name',previous.name||address.name||user.user_metadata?.full_name,'name')+
-      field('Street address','line1',address.line1,'address-line1')+field('Apartment / suite (optional)','line2',address.line2,'address-line2',false)+
-      field('City','city',address.city,'address-level2')+field('State / province / region','region',address.region,'address-level1')+
-      field('ZIP / postal code','postal_code',address.postal_code,'postal-code')+'<label>Country<select name="country">'+countries.map(c=>'<option value="'+esc(c)+'">'+esc(displayCountry.of(c))+'</option>').join('')+'</select></label></div></fieldset>'+
-      '<label>Invoice payment method<select class="method" name="method" required></select></label>'+
-      '<p class="muted">Pay each invoice in USD. Your payment provider may show fees or currency conversion before payment.</p>'+
-      '<button type="submit">Review monthly total</button><div data-review></div></form>';
-    const form=root.querySelector('form'),list=form.querySelector('[data-items]'),review=form.querySelector('[data-review]');
-    form.elements.country.value=countries.includes(address.country)?address.country:countries.includes('US')?'US':countries[0];
-    const products=catalog.filter(p=>p.category==='injectables'&&p.variants.length);
-    function drawItems(){
-      list.innerHTML=items.map((item,i)=>{
-        const product=products.find(p=>p.id===item.id);
-        return '<div class="item-edit" data-index="'+i+'"><label>Product<select data-property="id">'+products.map(p=>'<option value="'+esc(p.id)+'" '+(p.id===item.id?'selected':'')+'>'+esc(p.name)+'</option>').join('')+'</select></label><label>Size<select data-property="size">'+product.variants.map(v=>'<option value="'+esc(v.size)+'" '+(v.size===item.size?'selected':'')+'>'+esc(v.size)+'</option>').join('')+'</select></label><label>Quantity<input data-property="qty" type="number" min="1" max="60" required value="'+esc(item.qty)+'"></label>'+
-        (kind==='builder'?'<button type="button" data-remove class="secondary">Remove</button>':'')+'</div>';
-      }).join('');
-    }
-    function methods(){
-      const country=form.elements.country.value;
-      form.elements.method.innerHTML=overview.methods.filter(m=>m.countries.includes(country)).map(m=>'<option value="'+esc(m.id)+'">'+esc([m.label,m.network_label].filter(Boolean).join(' · '))+'</option>').join('');
-      if (plan && [...form.elements.method.options].some(o=>o.value===plan.snapshot.method_id)) form.elements.method.value=plan.snapshot.method_id;
-    }
-    drawItems();methods();
-    list.onchange=event=>{
-      const i=Number(event.target.closest('[data-index]')?.dataset.index),prop=event.target.dataset.property;
-      if (!prop||!items[i])return;
-      items[i][prop]=prop==='qty'?Number(event.target.value):event.target.value;
-      if(prop==='id'){items[i].size=products.find(p=>p.id===items[i].id).variants[0].size;drawItems();}
+    if(!plan) sessionStorage.setItem(key,id);
+    const billing=previous.billing?.address||address;
+    const title=plan?'Change your monthly plan':kind==='builder'?'Start your Subscribe & Save plan':'Start your monthly order';
+    document.querySelector('main h1').textContent=title;
+    const fields=(prefix,a,name)=>{
+      const nameField=(label,n,v,auto,required=true)=>field(label,prefix+n,v,(prefix?'shipping ':'billing ')+auto,required);
+      const country=countries.includes(a.country)?a.country:countries.includes('US')?'US':countries[0];
+      return nameField('Full name','name',name,'name')+'<label>Country / region<select name="'+prefix+'country">'+countries.map(c=>'<option value="'+esc(c)+'" '+(c===country?'selected':'')+'>'+esc(displayCountry.of(c))+'</option>').join('')+'</select></label>'+
+        nameField('Street address','line1',a.line1,'address-line1')+nameField('Apartment / suite (optional)','line2',a.line2,'address-line2',false)+
+        nameField('City','city',a.city,'address-level2')+nameField('State / province','region',a.region,'address-level1')+nameField('ZIP / postal code','postal_code',a.postal_code,'postal-code');
     };
-    list.onclick=event=>{
-      if (event.target.hasAttribute('data-remove')){items.splice(Number(event.target.closest('[data-index]').dataset.index),1);drawItems();invalidate();}
-    };
-    const add=form.querySelector('[data-add]');
-    if(add)add.onclick=()=>{if(items.length>=60)return;const p=products.find(p=>!items.some(x=>x.id===p.id))||products[0];items.push({id:p.id,size:p.variants[0].size,qty:1});drawItems();invalidate();};
-    form.elements.country.onchange=methods;
-    let revision=0;
-    function invalidate(){revision++;review.replaceChildren();status.textContent='';}
-    form.addEventListener('input', e=>{if(!review.contains(e.target))invalidate();});
-    form.addEventListener('change', e=>{if(!review.contains(e.target))invalidate();});
+    root.innerHTML='<a class="monthly-back" href="'+(kind==='builder'?'/subscribe-and-save':'/shop')+'">← Back to '+(kind==='builder'?'Subscribe &amp; Save':'products')+'</a>'+
+      '<form class="monthly-checkout-layout"><div class="monthly-details"><section class="plan-card"><h2>Your monthly plan</h2><div data-plan></div></section>'+
+      (plan?'<fieldset><legend>Edit selections</legend><div data-edit-items></div>'+(kind==='builder'?'<button type="button" class="secondary" data-add>Add an item</button>':'')+'</fieldset>':'')+
+      '<fieldset><legend>Billing details</legend>'+ (user?'<p>'+esc(user.email)+'</p>':'')+'<div class="fields">'+fields('',billing,previous.billing?.name||previous.name||billing.name||user?.user_metadata?.full_name)+'</div></fieldset>'+
+      '<label class="check"><input type="checkbox" name="separate" '+(previous.billing?'checked':'')+'>Ship to a different address</label>'+
+      '<fieldset data-shipping><legend>Delivery address</legend><div class="fields">'+fields('ship_',address,previous.name||address.name)+'</div></fieldset></div>'+
+      '<aside class="monthly-checkout-summary"><h2>Order summary</h2>'+
+      (Number.isSafeInteger(overview.protection_cents)?'<label class="check protection"><input name="protection" type="checkbox" '+((plan?plan.snapshot.pricing.delivery.selection.extras.includes('protection'):true)?'checked':'')+'>Shipment protection · '+esc(money(overview.protection_cents))+' <a href="/shipping-protection.html" target="_blank" rel="noopener">Details</a></label>':'')+
+      '<div data-review role="status"></div><fieldset><legend>Payment</legend><div data-methods></div></fieldset>'+
+      '<label class="check"><input type="checkbox" data-agree required>I agree to receive a monthly invoice until I cancel.</label>'+
+      '<label class="check"><input type="checkbox" data-use required>I confirm laboratory research use and accept the <a href="/commercial-terms.html" target="_blank" rel="noopener">checkout terms</a>.</label>'+
+      (user?'<button type="submit" data-confirm disabled>'+esc(plan?'Save changes':'Start my monthly plan')+'</button>':link('/account/login?returnTo='+encodeURIComponent(location.pathname+location.search),'Sign in to start my plan'))+'</aside></form>';
+    const form=root.querySelector('form'), review=form.querySelector('[data-review]'), confirm=form.querySelector('[data-confirm]');
+    const shipping=form.querySelector('[data-shipping]');
+    const supplied=(data,prefix)=>Object.fromEntries(['line1','line2','city','region','postal_code','country'].map(n=>[n,data.get(prefix+n)]));
+    const destination=()=>form.elements[form.elements.separate.checked?'ship_country':'country'].value;
+    let revision=0,displayed=null,saving=false;
+    async function refresh() {
+      const current=++revision;displayed=null;
+      shipping.disabled=shipping.hidden=!form.elements.separate.checked;
+      const methods=overview.methods.filter(m=>m.countries.includes(destination()));
+      const prev=form.querySelector('[name=method]:checked')?.value;
+      form.querySelector('[data-methods]').innerHTML=paymentOptions(methods,methods.some(m=>m.id===prev)?prev:null);
+      if(confirm)confirm.disabled=true;
+      review.textContent='Calculating total…';
+      try{
+        const q=await api({action:'preview',kind,items,country:destination(),protection:!!form.elements.protection?.checked},true);
+        if(current!==revision)return;
+        const p=q.pricing;
+        form.querySelector('[data-plan]').innerHTML=p.lines.map(x=>line(x.qty+' × '+x.name+' · '+x.size,money(x.line_total_cents))).join('')+
+          p.bundled_items.map(x=>line(x.qty+' × '+x.name+' · '+x.size,'Included')).join('')+line('Every month',money(p.subtotal_cents-p.discount_cents),'total');
+        review.innerHTML=line('Retail subtotal',money(p.subtotal_cents))+line('Monthly savings','−'+money(p.discount_cents))+
+          line(p.delivery.selection.shipping==='express'?'Express shipping':'Economy shipping',p.delivery.shipping_cents?money(p.delivery.shipping_cents):'Free')+
+          (p.delivery.extras_cents?line('Shipment protection',money(p.delivery.extras_cents)):'')+line('Total (USD)',money(q.total_cents),'total');
+        displayed=q.total_cents;if(confirm)confirm.disabled=!methods.length;
+      }catch(e){if(revision===current)review.textContent=e.message;}
+    }
+    if(plan) {
+      const editor=form.querySelector('[data-edit-items]');
+      function draw() {
+        editor.innerHTML=items.map((item,i)=>{
+          const product=catalog.find(p=>p.id===item.id);
+          const opts=(rows,current)=>rows.map(([value,label])=>'<option value="'+esc(value)+'" '+(value===current?'selected':'')+'>'+esc(label)+'</option>').join('');
+          return '<div class="item-edit" data-index="'+i+'"><label>Product<select data-prop="id">'+opts(catalog.map(p=>[p.id,p.name]),item.id)+'</select></label>'+
+            '<label>Size<select data-prop="size">'+opts(product.variants.map(v=>[v.size,v.size]),item.size)+'</select></label>'+
+            '<label>Quantity<input data-prop="qty" type="number" value="'+esc(item.qty)+'" min="1" max="60" required></label>'+
+            (kind==='builder'?'<button type="button" class="secondary" data-remove>Remove</button>':'')+'</div>';
+        }).join('');
+      }
+      editor.onchange=e=>{
+        const prop=e.target.dataset.prop,row=items[Number(e.target.closest('[data-index]')?.dataset.index)];
+        if(!row||!prop)return;
+        row[prop]=prop==='qty'?Number(e.target.value):e.target.value;
+        if(prop==='id'){row.size=catalog.find(p=>p.id===row.id).variants[0].size;draw();}
+        refresh();
+      };
+      editor.onclick=e=>{if(e.target.hasAttribute('data-remove')){items.splice(Number(e.target.closest('[data-index]').dataset.index),1);draw();refresh();}};
+      const add=form.querySelector('[data-add]');
+      if(add)add.onclick=()=>{if(items.length>=60)return;const p=catalog[0];items.push({id:p.id,size:p.variants[0].size,qty:1});draw();refresh();};
+      draw();
+    }
+    const draftKey='pure-checkout-contact-'+location.pathname+location.search;
+    if(!user){
+      form.querySelector('a[href^="/account/login"]').addEventListener('click',()=>{
+        const values=Object.fromEntries(new FormData(form));
+        try{sessionStorage.setItem(draftKey,JSON.stringify({values,separate:form.elements.separate.checked,protection:form.elements.protection?.checked}));}catch{}
+      });
+    }else{
+      try{
+        const stored=sessionStorage.getItem(draftKey);
+        if(stored){
+          const draft=JSON.parse(stored);sessionStorage.removeItem(draftKey);
+          for(const [key,value] of Object.entries(draft.values||{})) {
+            const el=form.elements.namedItem(key);
+            if(el && (el.type==='text'||el.type==='select-one'))el.value=value;
+          }
+          form.elements.separate.checked=draft.separate===true;
+          if(form.elements.protection)form.elements.protection.checked=draft.protection===true;
+        }
+      }catch{}
+    }
+    form.onchange=e=>{if(['separate','country','ship_country','protection'].includes(e.target.name))refresh();};
     form.onsubmit=async event=>{
-      event.preventDefault();const revisionAtRequest=revision;
-      const data=Object.fromEntries(new FormData(form));
-      const request={id,kind,items:items.map(x=>({...x})),name:data.name,
-        address:{line1:data.line1,line2:data.line2,city:data.city,region:data.region,postal_code:data.postal_code,country:data.country},method_id:data.method};
-      const submit=form.querySelector('[type=submit]');submit.disabled=true;status.textContent='Checking your total…';
-      try {
+      event.preventDefault();if(!user||saving||displayed===null||!form.reportValidity())return;
+      const data=new FormData(form),sep=form.elements.separate.checked,prefix=sep?'ship_':'';
+      const request={id,kind,items,name:data.get(prefix+'name'),address:supplied(data,prefix),method_id:data.get('method'),protection:!!form.elements.protection?.checked,
+        ...(sep?{billing:{name:data.get('name'),address:supplied(data,'')}}:{})};
+      const expected=displayed; saving=true;
+      const controls=Array.from(form.elements).filter(el=>!el.disabled); controls.forEach(el=>el.disabled=true);
+      status.textContent='Preparing your invoice…';
+      try{
         const q=await api({...request,action:'quote'});
-        if(revisionAtRequest!==revision)return;
-        review.innerHTML=summary(q.pricing,q.total_cents)+'<p>'+esc(plan?'Changes apply to future invoices.':'The first invoice is issued today, followed by one each month.')+'</p>'+
-          '<label class="check"><input type="checkbox" data-agree>I agree to receive monthly invoices for '+esc(money(q.total_cents))+' USD until I cancel. I authorize a separate invoice for each order and will pay it separately.</label>'+
-          '<label class="check"><input type="checkbox" data-use>I confirm laboratory research use and agree to the <a href="/terms-and-conditions.html" target="_blank" rel="noopener">store terms</a>.</label><button type="button" data-confirm>'+esc(plan?'Save changes':'Start monthly invoices')+'</button>';
-        status.textContent='';review.scrollIntoView({block:'nearest'});
-        const confirm=review.querySelector('[data-confirm]');
-        confirm.onclick=async()=>{
-          if(!review.querySelector('[data-agree]').checked||!review.querySelector('[data-use]').checked){status.textContent='Review and select both confirmations to continue.';return;}
-          Array.from(form.elements).forEach(el=>el.disabled=true);status.textContent='Saving your plan…';
-          try {const saved=await api({...request,action:plan?'change':'enroll',version:plan?.version,quote:q.quote,terms:q.terms,consent:true,research_use:true});
-            if(!plan)sessionStorage.removeItem(key);
-            location.assign(saved.invoice_id?'/account/purchases?id='+encodeURIComponent(saved.invoice_id):'/monthly-orders');
-          }catch(error){Array.from(form.elements).forEach(el=>el.disabled=false);status.textContent=error.message;}
-        };
-      }catch(error){status.textContent=error.message;}finally{submit.disabled=false;}
+        if(q.total_cents!==expected){controls.forEach(el=>el.disabled=false);await refresh();throw Error('Your total changed. Review it and submit again.');}
+        const saved=await api({...request,action:plan?'change':'enroll',version:plan?.version,quote:q.quote,terms:q.terms,consent:true,research_use:true});
+        if(!plan) sessionStorage.removeItem(key);
+        if(!saved.invoice_id){location.assign('/monthly-orders');return;}
+        const invoicePath='/monthly-orders?invoice='+encodeURIComponent(saved.invoice_id);
+        history.replaceState(null,'',invoicePath);
+        try{renderPayment(await api({action:'select_payment',id:saved.invoice_id,total_cents:expected,method_id:request.method_id}));status.textContent='';}
+        catch{location.assign(invoicePath);}
+      }catch(e){status.textContent=e.message;}
+      finally{controls.forEach(el=>el.disabled=false);if(confirm)confirm.disabled=displayed===null;saving=false;}
     };
+    await refresh();
   }
   try{
     const config=await fetch('/api/customer-config',{cache:'no-store'}).then(r=>r.json());
     if (!window.supabase||!config.supabaseUrl)throw Error('Customer accounts are temporarily unavailable.');
     auth=window.supabase.createClient(config.supabaseUrl,config.anonKey,{auth:{persistSession:true,autoRefreshToken:true,flowType:'pkce'}});
     const session=(await auth.auth.getSession()).data.session;
-    if (!session) {
+    if (!session && (!builderRoute&&!params.has('product')||params.has('edit')||params.has('invoice'))) {
       root.innerHTML='<p>Sign in to set up or manage your monthly invoice plan.</p>'+link('/account/login?returnTo='+encodeURIComponent(location.pathname+location.search),'Sign in to PURE');return;
     }
-    user=session.user;
-    if (!params.has('builder')&&!params.has('product')&&!params.has('edit')) {await loadPlans();return;}
-    overview=await api();
+    user=session?.user;
+    if(params.has('invoice')){renderPayment(await api({action:'payment_options',id:params.get('invoice')}));return;}
+    if (!builderRoute&&!params.has('product')&&!params.has('edit')) {await loadPlans();return;}
+    overview=await api(null,!user);
     catalog=overview.catalog;
     const plan=params.has('edit')?overview.plans.find(p=>p.id===params.get('edit')&&p.status!=='canceled'):null;
     if(params.has('edit')&&!plan) throw Error('This plan is unavailable.');
-    formView(plan);
+    await formView(plan);
   }catch(error){root.replaceChildren();status.textContent=error.message;}
   finally{root.removeAttribute('aria-busy');}
 })();

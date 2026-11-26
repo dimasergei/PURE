@@ -51,6 +51,14 @@
       "destination": "/product/:slug.html"
     },
     {
+      "source": "/bulk-orders/checkout",
+      "destination": "/account.html"
+    },
+    {
+      "source": "/subscribe-and-save/checkout",
+      "destination": "/monthly-orders.html"
+    },
+    {
       "source": "/bulk-orders",
       "destination": "/bulk-orders.html"
     },

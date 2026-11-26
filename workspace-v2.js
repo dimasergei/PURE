@@ -27,11 +27,19 @@
  function inquiryForm(type){return '<form class="ap-inquiry-form" data-inquiry-type="'+esc(type)+'"><div class="ap-form-grid"><label>Name<input name="name" autocomplete="name" required maxlength="120"></label><label>Email<input name="email" type="email" autocomplete="email" required maxlength="254"></label><label>Organization<input name="organization" autocomplete="organization" maxlength="160"></label><label>Country<input name="country" autocomplete="country-name" maxlength="100"></label><label class="ap-form-wide">Topic<input name="topic" value="'+(type==='bulk'?'Bulk order quote':'General inquiry')+'" maxlength="160"></label><label class="ap-form-wide">Message<textarea name="message" required maxlength="5000" rows="5"></textarea></label><label class="ap-honeypot" aria-hidden="true">Website<input name="website" tabindex="-1" autocomplete="off"></label><label class="ap-form-consent"><input type="checkbox" name="consent" required> PURE may use these details to respond to my inquiry.</label></div><button class="ap-button" type="submit">Send inquiry →</button><p class="ap-form-status" role="status" aria-live="polite"></p></form>';}
  function bulkPage(){return heading('Bulk orders','Build a bigger order.<br>Keep the details simple.','Choose quantities across exact product sizes. Review a catalog-price estimate, export your list, or send a bulk quote request to the team.')+`<div class="ap-container ap-workspace-layout"><div><div class="ap-toolbar"><label class="ap-sr" for="ap-bulk-query">Search products or sizes</label><input id="ap-bulk-query" type="search" maxlength="120" value="${esc(bulkQuery)}" placeholder="Search products, sizes, or categories"></div><p class="ap-result-count">${A.catalog.reduce((n,p)=>n+p.variants.length,0)} exact product/size combinations · quantities stay saved on this device</p><div class="ap-bulk-table-wrap"><table class="ap-bulk-table"><thead><tr><th>Compound</th><th>Size</th><th>Unit price</th><th>Qty</th><th>Line total</th></tr></thead><tbody id="ap-bulk-rows"></tbody></table></div><section id="ap-bulk-inquiry" class="ap-panel" hidden style="margin-top:25px"><span class="ap-eyebrow">SEND YOUR SELECTIONS</span><h2>Request a bulk quote.</h2><p class="ap-fine">The selected products and quantities will be sent with your inquiry. Submission does not place an order.</p>${inquiryForm('bulk')}</section></div><aside class="ap-summary"><span class="ap-eyebrow">YOUR BULK REQUEST</span><h2>Every size.<br>Every quantity.</h2><div id="ap-bulk-summary"></div></aside></div>`;}
  function bulkUnits(id){return bulk.filter(x=>x.id===id).reduce((n,x)=>n+x.qty,0);}
- function bulkPriceInfo(price,units){
+ function bulkPriceInfo(price,units,qty){
   const tier=window.PureQuantityPricing?.bulkRate(Math.max(10,units))||0;
   const cents=Math.round(price*100);
-  const net=(cents-Math.round(cents*tier/10000))/100;
+  const count=qty||10,gross=cents*count;
+  const net=(gross-Math.round(gross*tier/10000))/count/100;
   return `<strong>${priceMarkup(net)}</strong><span>/unit</span><del data-bulk-unit>${priceMarkup(price)}</del>`;
+ }
+ function tierIndicators(units){
+  const rate=window.PureQuantityPricing?.bulkRate(units)||0;
+  return [10,50].map(min=>{
+   const percent=min===10?50:60,active=rate===percent*100;
+   return '<span data-tier-active="'+active+'">'+min+'+ · '+percent+'% off'+(active?' ✓':'')+'</span>';
+  }).join('');
  }
  function tierProgress(units){
   if(units>=50)return '60% off applied';
@@ -44,8 +52,9 @@
   const input=card.querySelector('[data-bulk-id]'),size=input.dataset.bulkSize;
   const variant=product(id).variants.find(x=>x.size===size);
   const qty=bulk.find(x=>x.id===id&&x.size===size)?.qty||0,units=bulkUnits(id);
-  card.querySelector('.nl-bulk-prices').innerHTML=bulkPriceInfo(variant.price,units);
+  card.querySelector('.nl-bulk-prices').innerHTML=bulkPriceInfo(variant.price,units,qty);
   card.querySelector('.nl-bulk-progress').textContent=tierProgress(units);
+  card.querySelector('.nl-bulk-tier-key').innerHTML=tierIndicators(units);
   card.dataset.selected=String(qty>0);
   input.value=qty;
   card.querySelectorAll('[data-action="bulk-qty"]').forEach(button=>{button.disabled=Number(button.dataset.delta)<0?qty<=0:qty>=100;});
@@ -63,7 +72,7 @@
     <a class="nl-bulk-image" href="/product/${encodeURIComponent(p.id)}?size=${encodeURIComponent(v.size)}"><img src="${esc(image(p,v.size))}" alt="${esc(p.name+' '+v.size)}" loading="lazy"></a>
     <div class="nl-bulk-product-body"><span class="ap-eyebrow">${esc(p.group)}</span><h3><a href="/product/${encodeURIComponent(p.id)}?size=${encodeURIComponent(v.size)}">${esc(p.name)}</a></h3>
     <div class="nl-bulk-sizes" role="group" aria-label="Choose a strength for ${esc(p.name)}">${p.variants.map(x=>`<button type="button" data-action="bulk-size" data-id="${esc(p.id)}" data-size="${esc(x.size)}" aria-pressed="${x.size===v.size}">${esc(x.size)}</button>`).join('')}</div>
-    <div class="nl-bulk-prices">${bulkPriceInfo(v.price,bulkUnits(p.id))}</div>
+    <div class="nl-bulk-prices">${bulkPriceInfo(v.price,bulkUnits(p.id),qty)}</div><div class="nl-bulk-tier-key" aria-label="Per-product discounts">${tierIndicators(bulkUnits(p.id))}</div>
     <div class="nl-bulk-product-foot"><div class="nl-bulk-quantity-controls">${quantityControls(p.id,v.size,qty,p.name,true)}</div></div><p class="nl-bulk-progress">${tierProgress(bulkUnits(p.id))}</p></div></article>`;
   }).join('')||empty('No matching products','Try a different name or category.');
  }
@@ -79,6 +88,12 @@
    canCheckout=units>0&&bulk.every(x=>bulkUnits(x.id)>=10),
    tierSavingsCents=bulk.reduce((n,x)=>n+Math.round(Math.round(x.price*100)*x.qty*(window.PureQuantityPricing?.bulkRate(bulkUnits(x.id))||0)/10000),0),
    tierNet=subtotal-tierSavingsCents/100,ids=[...new Set(bulk.map(x=>x.id))];
+  const rates=new Set(ids.map(id=>window.PureQuantityPricing?.bulkRate(bulkUnits(id))||0));
+  for(const badge of $$('[data-bulk-threshold]')){
+   const active=rates.has(Number(badge.dataset.bulkThreshold)===10?5000:6000);
+   badge.dataset.tierActive=String(active);
+   badge.querySelector('small').textContent=active?'Applied ✓':'Per compound';
+  }
   const focused=root.contains(document.activeElement)?document.activeElement:null;
   const listScroll=root.querySelector('.nl-bulk-summary-scroll')?.scrollTop||0;
   const barTitle=$('[data-bulk-bar-total]'),barDetail=$('[data-bulk-bar-detail]');
@@ -88,13 +103,13 @@
   const selection=ids.length?ids.map(id=>{
    const p=product(id),lines=bulk.filter(x=>x.id===id),count=lines.reduce((n,x)=>n+x.qty,0);
    return `<section class="nl-bulk-menu-product"><header class="nl-bulk-menu-product-head"><img src="${esc(image(p,lines[0].size))}" alt=""><span><strong>${esc(p.name)}</strong><small>${count} units</small></span>${count>=10?`<b class="nl-bulk-rate-badge">${(window.PureQuantityPricing?.bulkRate(count)||0)/100}% off</b>`:''}</header>
-    ${lines.map(x=>{const gross=Math.round(x.price*100)*x.qty,saved=Math.round(gross*(window.PureQuantityPricing?.bulkRate(count)||0)/10000);return `<div class="nl-bulk-menu-line"><div class="nl-bulk-menu-controls"><span class="nl-bulk-menu-variant">${esc(x.size)} · ${priceMarkup(x.price)}/unit</span><div class="nl-bulk-quantity-controls">${quantityControls(x.id,x.size,x.qty,x.name)}</div></div><div class="nl-bulk-menu-line-price">${saved?`<del>${priceMarkup(gross/100)}</del>`:''}<strong>${priceMarkup((gross-saved)/100)}</strong></div></div>`;}).join('')}<small class="nl-bulk-progress">${tierProgress(count)}</small></section>`;
+    ${lines.map(x=>{const gross=Math.round(x.price*100)*x.qty,saved=Math.round(gross*(window.PureQuantityPricing?.bulkRate(count)||0)/10000);return `<div class="nl-bulk-menu-line"><div class="nl-bulk-menu-controls"><span class="nl-bulk-menu-variant">${esc(x.size)} · ${priceMarkup((gross-saved)/x.qty/100)}/unit</span><div class="nl-bulk-quantity-controls">${quantityControls(x.id,x.size,x.qty,x.name)}</div></div><div class="nl-bulk-menu-line-price">${saved?`<del>${priceMarkup(gross/100)}</del>`:''}<strong>${priceMarkup((gross-saved)/100)}</strong></div></div>`;}).join('')}<small class="nl-bulk-progress">${tierProgress(count)}</small></section>`;
   }).join(''):'<div class="nl-bulk-menu-empty">Select product quantities for your order.</div>';
   root.innerHTML=`<div class="nl-bulk-summary-heading"><h2>Your bulk order</h2><span class="nl-bulk-total-units">${units} units</span></div>
    ${units?'':'<button type="button" class="ap-button nl-bulk-add-products" data-action="bulk-add-products">ADD PRODUCTS</button>'}
    <div class="nl-bulk-summary-scroll" aria-label="Selected products">${selection}</div>
    <div class="nl-bulk-totals"><div class="nl-bulk-estimate-total"><span>Retail value</span><strong>${priceMarkup(subtotal)}</strong></div>${tierSavingsCents>0?`<div class="nl-bulk-tier-savings"><span>Bulk savings</span><strong>−${priceMarkup(tierSavingsCents/100)}</strong></div><div class="nl-bulk-included-shipping"><span>US two-day express</span><strong>Included</strong></div><div class="nl-bulk-net"><span>After bulk savings</span><strong>${priceMarkup(tierNet)}</strong></div>`:''} </div>
-   ${units?`<div class="nl-bulk-tier-key"><span>10+ units · 50% off</span><span>50+ units · 60% off</span><small>Strengths of each product count together.</small></div>`:''}
+   ${units?`<div class="nl-bulk-tier-key"><span data-tier-active="${rates.has(5000)}">10+ units · 50% off</span><span data-tier-active="${rates.has(6000)}">50+ units · 60% off</span><small>Strengths of each product count together.</small></div>`:''}
    <button class="ap-button" data-action="bulk-checkout" ${canCheckout?'':'disabled'}>Checkout · ${priceMarkup(tierNet)}</button>
    <p class="ap-fine nl-bulk-checkout-note">Save 50% at 10 units or 60% at 50 units per compound. Strengths of the same compound count together. Your regular cart stays saved for later.</p>`;
   const scroll=root.querySelector('.nl-bulk-summary-scroll');
@@ -211,7 +226,7 @@
     clearTimeout(timer);
    }
    A.write(bulkKey,simpleLines(bulk));
-   location.assign('/checkout?bulk=1');
+   location.assign('/bulk-orders/checkout');
   }
   if(action==='bulk-inquiry'){const panel=$('#ap-bulk-inquiry');panel.hidden=false;panel.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});$('input[name="name"]',panel).focus({preventScroll:true});}
  });

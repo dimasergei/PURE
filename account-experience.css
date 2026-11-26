@@ -70,3 +70,9 @@ body.ap-site.ap-auth-page .google-button img.pure-google-mark{
   display:block;width:24px;height:24px;object-fit:contain;flex:0 0 24px;border:0;box-shadow:none;filter:none;
 }
 body.ap-site.ap-auth-page .google-button{display:flex;align-items:center;justify-content:center;gap:12px}
+
+form.dc-form.dc-bulk-checkout {display:grid;align-items:start}
+.dc-bulk-checkout .dc-summary {position:static;grid-row:auto}
+.dc-bulk-checkout .dc-summary .dc-section {padding:18px 0 0;margin-top:18px;border:0;border-top:1px solid #ddd}
+.dc-bulk-details {min-width:0}
+@media(max-width:800px){form.dc-form.dc-bulk-checkout {grid-template-columns:minmax(0,1fr)}}
