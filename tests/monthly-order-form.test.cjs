@@ -24,3 +24,45 @@ assert.equal(form.querySelector('[data-shipping]').hidden,true);
 assert.equal(form.querySelector('[data-methods] input:checked').value,'mid');
 dom.window.close();
 });
+
+test('Subscribe & Save checkout discloses the three-delivery term and displays the selected strength as text', async () => {
+  const dom = new JSDOM(html, {url:'https://getpurelabs.com/subscribe-and-save/checkout',runScripts:'outside-only'});
+  const w = dom.window;
+  const preview = {
+    total_cents: 2400,
+    pricing: {
+      lines: [{qty:4,name:'Fixture',size:'S',line_total_cents:2400}],
+      bundled_items: [],
+      subtotal_cents: 4000,
+      discount_cents: 1600,
+      delivery: {shipping_cents:0,selection:{shipping:'express'}}
+    }
+  };
+  try {
+    w.sessionStorage.setItem('pure-monthly-builder', JSON.stringify([{id:'item',size:'S',qty:4}]));
+    w.supabase = {createClient:() => ({auth:{getSession:async () => ({data:{session:null}})}})};
+    w.fetch = async (url, options) => {
+      let result;
+      if (url.endsWith('config')) result = {supabaseUrl:'https://fixture.supabase.co',anonKey:'test'};
+      else if (options?.method === 'POST') result = preview;
+      else result = {
+        plans: [],
+        builder_terms: 'pure-monthly-invoice-v2',
+        methods: [{id:'mid',currency:'USD',countries:['US','CA'],label:'Card'}],
+        catalog: [{id:'item',name:'Fixture',category:'injectables',variants:[{size:'S'},{size:'L'}]}]
+      };
+      return {ok:true,json:async () => result};
+    };
+    await w.eval(src);
+    const plan = w.document.querySelector('[data-plan]');
+    const checkout = w.document.querySelector('.monthly-checkout-summary');
+    assert.match(plan.textContent, /4 × Fixture · S\$24\.00/);
+    assert.equal(plan.querySelector('select'), null);
+    assert.match(checkout.textContent, /Three monthly deliveries, paid one invoice at a time/);
+    assert.match(checkout.textContent, /Change future selections after your first delivery ships/);
+    assert.match(checkout.textContent, /Express shippingFree/);
+    assert.match(checkout.querySelector('[data-agree]').parentElement.textContent, /three-delivery plan/);
+  } finally {
+    w.close();
+  }
+});

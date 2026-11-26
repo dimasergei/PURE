@@ -65,16 +65,19 @@ test('preselects the exact linked strength and preserves the locally saved plan'
   } finally { view.close(); }
 });
 
-test('changes the chosen strength and adds exactly four product variants through the normal cart', () => {
+test('shows the chosen strength in the summary and adds the four selected variants through the normal cart', () => {
   const view = openPlanner();
   try {
+    view.card('alpha').querySelector('[data-pss-size="10mg"]').click();
     for (const id of ['alpha', 'beta', 'gamma', 'delta']) view.pick(id);
+    view.card('alpha').querySelector('[data-pss-size="5mg"]').click();
     assert.equal(view.get('[data-pss-count]').textContent, '4 / 4');
     assert.equal(view.card('epsilon').querySelector('[data-pss-pick]').disabled, true);
-    assert.equal(view.get('[data-pss-dialog]'), null);
-    const select = view.get('[data-pss-edit="0"]');
-    select.value = '10mg';
-    select.dispatchEvent(new view.window.Event('change', { bubbles: true }));
+    assert.equal(view.get('[data-pss-another]'), null);
+    const row = view.get('[data-pss-remove="0"]').closest('li');
+    assert.equal(row.querySelector('select'), null);
+    assert.equal(row.querySelector('small').textContent, '10mg');
+    assert.equal(row.querySelector('.pss-row-price').textContent, '$20.00');
     assert.equal(view.get('[data-pss-subtotal]').textContent, '$56.00');
     view.get('[data-pss-cart]').click();
     assert.equal(view.opened(), 1);
@@ -101,22 +104,18 @@ test('preserves a full plan and prevents cart quantity truncation', () => {
   } finally { view.close(); }
 });
 
-test('builds additional sets with repeated variants and consolidates them for the cart', () => {
-  const view = openPlanner();
+test('restores an older larger draft and consolidates repeated variants for the cart', () => {
+  const draft = Array.from({ length: 4 }, () => ({ id: 'alpha', size: '5mg' }));
+  draft.push({ id: 'alpha', size: '10mg' });
+  const view = openPlanner('', draft);
   try {
-    for (let i = 0; i < 4; i++) view.pick('alpha');
-    assert.equal(view.get('[data-pss-count]').textContent, '4 / 4');
-    view.get('[data-pss-another]').click();
-    assert.equal(view.get('[data-pss-dialog]'), null);
-    assert.equal(view.get('[data-pss-count]').textContent, '4 / 8');
-    view.card('alpha').querySelector('[data-pss-size="10mg"]').click();
-    view.pick('alpha');
+    assert.equal(view.get('[data-pss-count]').textContent, '5 / 8');
     assert.equal(view.get('[data-pss-cart]').disabled, true);
     for (let i = 0; i < 3; i++) view.pick('beta');
     assert.equal(view.get('[data-pss-count]').textContent, '8 / 8');
     assert.equal(view.get('[data-pss-subtotal]').textContent, '$93.00');
     assert.equal(view.get('[data-pss-monthly]').disabled, true);
-    assert.equal(view.get('[data-pss-selection]').querySelectorAll('.pss-set').length, 2);
+    assert.equal(view.get('[data-pss-selection]').querySelectorAll('[data-pss-remove]').length, 8);
     const restored = openPlanner('', view.saved());
     try {
       assert.equal(restored.get('[data-pss-subtotal]').textContent, '$93.00');
@@ -147,6 +146,11 @@ test('only offers monthly checkout for eligible complete sets after a positive r
     assert.equal(view.get('aside [data-pss-monthly]').textContent,'Continue · $26.40/mo');
     assert.equal(view.get('[data-pss-monthly-total]').textContent, '$26.40');
     assert.equal(view.get('[data-pss-subtotal]').textContent, '$44.00');
+    assert.equal(view.card('beta').querySelector('.pss-card-price').textContent, '$6.60 /mo');
+    assert.doesNotMatch(view.card('beta').textContent, /\$11\.00/);
+    const row = view.get('[data-pss-remove="0"]').closest('li');
+    assert.equal(row.querySelector('.pss-row-price').textContent, '$6.60');
+    assert.doesNotMatch(row.textContent, /\$11\.00/);
     assert.equal(view.get('[data-pss-selection]').querySelectorAll('.pss-included').length, 1);
     view.get('[data-pss-remove="3"]').click();
     assert.equal(view.get('[data-pss-monthly]').disabled, true);

@@ -30,6 +30,11 @@
     let capacity = minimumSlots();
     let group = '';
     let monthlyAvailable = false;
+    const useMonthlyPricing = () => monthlyAvailable && chosen.length <= 60;
+    const itemPrice = (id, size) => {
+      const amount = findVariant(id, size).price;
+      return price(useMonthlyPricing() ? monthlyCents(amount) / 100 : amount);
+    };
     const groups = [...new Set([...catalog.keys()].map(id => store.product(id).group).filter(Boolean))];
 
     function status(message) {
@@ -54,7 +59,7 @@
           save();
         } else {
           search.value = store.product(incomingId).name;
-          status('Your plan is full. Open your plan to start another set or remove an item.');
+          status('Your plan is full. Remove an item from your plan to make room.');
         }
       }
       params.searchParams.delete('product');
@@ -86,7 +91,7 @@
           <div class="pss-card-body">
             <h3>${esc(product.name)}</h3>
             <div class="pss-sizes" role="group" aria-label="Strength for ${esc(product.name)}">${chips}</div>
-            <div class="pss-prices"><span class="pss-monthly-price">${price(monthlyCents(findVariant(id, size).price) / 100)} <small>/mo</small></span><strong class="pss-list-price">${price(findVariant(id, size).price)}</strong></div>
+            <strong class="pss-card-price">${itemPrice(id, size)}${useMonthlyPricing() ? ' <small>/mo</small>' : ''}</strong>
             <button type="button" class="ap-button pss-pick" data-pss-pick aria-label="Add ${esc(product.name)} ${esc(size)} to your plan"${chosen.length === capacity ? ' disabled' : ''}>${matched ? 'Added ×' + matched + ' · Add again' : 'Add to plan'}</button>
           </div>
         </article>`;
@@ -104,27 +109,23 @@
       const monthly = chosen.reduce((sum, item) => sum + monthlyCents(findVariant(item.id, item.size).price), 0) / 100;
       get('monthly-total').innerHTML = price(monthly);
       get('savings').innerHTML = '−' + price(total - monthly);
-      const continueLabel = count ? 'Continue · ' + price(monthly) + '/mo' : 'Continue';
+      const continueLabel = count && useMonthlyPricing() ? 'Continue · ' + price(monthly) + '/mo' : 'Continue';
       get('monthly').innerHTML = get('mobile-continue').innerHTML = continueLabel;
       root.dataset.monthlySizeEligible = String(count <= 60);
       cart.disabled = !count || count % setSize !== 0;
-      get('monthly').disabled = get('mobile-continue').disabled = !monthlyAvailable || cart.disabled || count > 60;
-      const groups = [];
-      for (let start = 0; start < count; start += setSize) {
-        const rows = chosen.slice(start, start + setSize).map(({ id, size }, offset) => {
-          const product = store.product(id);
-          const variants = catalog.get(id);
-          const label = variants.length === 1 ? `<small>${esc(size)}</small>` :
-            `<select data-pss-edit="${start + offset}" aria-label="Strength for ${esc(product.name)}, item ${start + offset + 1}">${variants.map(v => `<option value="${esc(v.size)}"${v.size === size ? ' selected' : ''}>${esc(v.size)}</option>`).join('')}</select>`;
-          return `<li><img width="42" height="48" src="${esc(store.image(product, size))}" alt=""><div><strong>${esc(product.name)}</strong>${label}</div><span class="pss-row-price"><b class="pss-monthly-price">${price(monthlyCents(findVariant(id, size).price) / 100)}</b><b class="pss-list-price">${price(findVariant(id, size).price)}</b></span><button type="button" class="pss-remove" data-pss-remove="${start + offset}" aria-label="Remove ${esc(product.name)} ${esc(size)}">×</button></li>`;
-        }).join('');
-        const included = count >= start + setSize ? '<li class="pss-included"><span>Reconstitution solution · 3 mL</span><strong>Included monthly</strong></li>' : '';
-        groups.push(`<section class="pss-set"><h3>Set ${start / setSize + 1}</h3><ul class="pss-selection">${rows}${included}</ul></section>`);
-      }
-      selection.innerHTML = groups.join('') || '<p>Choose four items to build your first set.</p>';
-      get('next').hidden = count !== capacity || capacity >= 60;
-      get('completed').textContent = 'Set ' + count / setSize + ' complete';
-      get('another').textContent = 'Start set ' + (count / setSize + 1);
+      get('monthly').disabled = get('mobile-continue').disabled = !useMonthlyPricing() || cart.disabled;
+      const rows = chosen.map(({ id, size }, index) => {
+        const product = store.product(id);
+        return `<li>
+          <img width="42" height="48" src="${esc(store.image(product, size))}" alt="">
+          <div><strong>${esc(product.name)}</strong><small>${esc(size)}</small></div>
+          <b class="pss-row-price">${itemPrice(id, size)}</b>
+          <button type="button" class="pss-remove" data-pss-remove="${index}" aria-label="Remove ${esc(product.name)} ${esc(size)}">×</button>
+        </li>`;
+      }).join('');
+      const includedCount = Math.floor(count / setSize);
+      const included = includedCount ? `<li class="pss-included"><span>Reconstitution solution · 3 mL${includedCount > 1 ? ' × ' + includedCount : ''}</span><strong>Included monthly</strong></li>` : '';
+      selection.innerHTML = count ? `<ul class="pss-selection">${rows}${included}</ul>` : '<p>Choose four items to build your plan.</p>';
     }
 
     function render() {
@@ -135,14 +136,6 @@
     function focusCard(id, selector) {
       [...products.querySelectorAll('[data-pss-product]')].find(card => card.dataset.pssProduct === id)?.querySelector(selector)?.focus({ preventScroll: true });
     }
-
-    get('another').addEventListener('click', () => {
-      if (chosen.length !== capacity) return;
-      capacity += setSize;
-      status('');
-      render();
-
-    });
 
     search.addEventListener('input', renderProducts);
     get('filters').addEventListener('click', event => {
@@ -171,18 +164,6 @@
       render();
       focusCard(id, '[data-pss-pick]');
     });
-    selection.addEventListener('change', event => {
-      const select = event.target.closest('[data-pss-edit]');
-      if (!select) return;
-      const item = chosen[Number(select.dataset.pssEdit)];
-      if (!item || !findVariant(item.id, select.value)) return;
-      item.size = select.value;
-      sizes.set(item.id, item.size);
-      status('Strength updated.');
-      save();
-      render();
-      selection.querySelector('[data-pss-edit="' + select.dataset.pssEdit + '"]')?.focus();
-    });
     selection.addEventListener('click', event => {
       const remove = event.target.closest('[data-pss-remove]');
       if (!remove) return;
@@ -205,7 +186,7 @@
     }
     get('mobile-continue').addEventListener('click', () => get('monthly').click());
     get('monthly').addEventListener('click', () => {
-      if (!monthlyAvailable || cart.disabled || chosen.length > 60) return;
+      if (!useMonthlyPricing() || cart.disabled) return;
       try {
         sessionStorage.setItem('pure-monthly-builder', JSON.stringify([...orderLines().values()]));
       } catch {
@@ -240,7 +221,7 @@
         if (config?.available === true) {
           monthlyAvailable = true;
           root.dataset.monthlyAvailable = 'true';
-          renderReview();
+          render();
         } else { cart.hidden = false; status('Monthly checkout is unavailable.'); }
       }).catch(() => { cart.hidden = false; status('Monthly checkout is unavailable.'); });
   }
