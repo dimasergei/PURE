@@ -13,7 +13,7 @@ function referenceSource(file,scope,anchor){
  assert.ok(source.includes(anchor),file+' exposes the reference view insertion point');
  return source.replace(anchor,Object.entries(views).map(([name,fn])=>'\n '+name+' = '+fn.toString()+';\n').join('')+anchor);
 }
-async function fixture(route,{workspace=false,cart=[],reviews=null}={}){
+async function fixture(route,{workspace=false,cart=[],reviews=null,catalogFixture=null}={}){
  const errors=[],vc=new VirtualConsole();vc.on('jsdomError',e=>errors.push(e.message));
  const dom=new JSDOM(read('storefront-v2.html'),{url:'https://getpurelabs.com'+route,runScripts:'outside-only',virtualConsole:vc}),w=dom.window;
  w.localStorage.setItem('ap-age-verified','true');w.matchMedia=()=>({matches:false});
@@ -23,6 +23,7 @@ async function fixture(route,{workspace=false,cart=[],reviews=null}={}){
  w.HTMLDialogElement.prototype.close=function(){this.open=false;};
  w.fetch=async url=>({ok:true,json:async()=>String(url).includes('reviews=summary')?reviews:String(url).includes('/data/supplier-coas.json')?require('../data/supplier-coas.json'):[]});
  const scripts=['products.js','product-images.js','quantity-pricing.js'].map(read);
+ if(catalogFixture)scripts.push('CATALOG.splice(0,CATALOG.length,...'+JSON.stringify(catalogFixture)+');');
  // The production build replaces these views inside the storefront closure.
  scripts.push(referenceSource('storefront-v2.js','store',' window.AltaStore='));
  if(workspace)scripts.push(read('supplier-coas.js'),referenceSource('workspace-v2.js','workspace',' window.AltaWorkspace='));
@@ -119,8 +120,10 @@ test('catalog photo cards preserve product navigation, exact USD prices, search,
     assert.equal(price.textContent,'$'+variant.price.toLocaleString('en-US',{minimumFractionDigits:Number.isInteger(variant.price)?0:2,maximumFractionDigits:2}));
     assert.equal(photo.contains(name),false,'name remains separate from the product photo');
     assert.equal(photo.contains(price),false,'price remains separate from the product photo');
-    assert.equal(card.querySelectorAll('select,button,input,[data-action]').length,0,'purchasing and strength selection happen on the product page');
-    assert.doesNotMatch(card.textContent,/per unit|View More|Add to Cart/i);
+    const action=card.querySelector('button.ap-catalog-action');
+    assert.equal(action?.dataset.action,p.variants.length>1?'catalog-options':'add');
+    assert.equal(card.querySelectorAll('select,input,button').length,1,'the catalog card has one compact action');
+    assert.doesNotMatch(card.textContent,/per unit|View More/i);
    }
   };
   assert.equal(d.querySelectorAll('.nl-badge,del,.ap-pair-offer').length,0);
@@ -159,6 +162,47 @@ test('catalog photo cards preserve product navigation, exact USD prices, search,
   assert.equal(catalog.some(p=>p.id==='needles'),false);
   assert.equal(w.AltaStore.cart.length,0,'browsing the catalog never changes the cart');
   assert.doesNotMatch(d.querySelector('.nl-shop').textContent,retired);
+ }finally{await f.close();}
+});
+test('catalog adds single variants directly and asks for an explicit choice on cards with options',async()=>{
+ const f=await fixture('/shop',{catalogFixture:[
+  {id:'fixture-single',name:'Fixture single',group:'Supplies',variants:[{size:'Small',price:12}]},
+  {id:'fixture-multiple',name:'Fixture multiple',group:'Supplies',variants:[{size:'Small',price:15},{size:'Large',price:20}]}
+ ]});
+ try{
+  const {d,w}=f;
+  d.querySelector('[data-id="fixture-single"][data-action="add"]').click();
+  const cart=()=>Array.from(w.AltaStore.cart,x=>[x.id,x.size,x.qty]);
+  assert.deepEqual(cart(),[['fixture-single','Small',1]]);
+  const action=d.querySelector('[data-id="fixture-multiple"][data-action="catalog-options"]');
+  action.click();
+  const dialog=d.querySelector('.ap-catalog-options');
+  assert.ok(dialog.open);
+  assert.equal(dialog.querySelector('h2').textContent,'Fixture multiple');
+  dialog.querySelector('[type=submit]').click();
+  assert.deepEqual(cart(),[['fixture-single','Small',1]],'an unspecified option does not add an item');
+  dialog.querySelector('select').value='Large';
+  dialog.querySelector('[type=submit]').click();
+  assert.equal(dialog.open,false);
+  assert.deepEqual(cart(),[['fixture-single','Small',1],['fixture-multiple','Large',1]]);
+ }finally{await f.close();}
+});
+test('header and catalog searches show direct shipping and help destinations',async()=>{
+ const f=await fixture('/shop');
+ try{
+  const {d,w}=f;
+  d.querySelector('[data-action="search"]').click();
+  const search=(id,value)=>{const input=d.getElementById(id);input.value=value;input.dispatchEvent(new w.Event('input',{bubbles:true}));};
+  search('ap-global-search','shipping rates');
+  assert.ok(d.querySelector('#ap-search-results a[href="/shipping-policy.html"]'));
+  search('ap-global-search','help');
+  assert.ok(d.querySelector('#ap-search-results a[href="/#faq"]'));
+  assert.ok(d.querySelector('#ap-search-results a[href="/contact"]'));
+  search('ap-catalog-query','shipping');
+  assert.ok(d.querySelector('#ap-catalog-grid .ap-catalog-help a[href="/shipping-policy.html"]'));
+  assert.ok(d.querySelector('#ap-catalog-grid .ap-catalog-help a[href="/track-order"]'));
+  search('ap-catalog-query','');
+  assert.equal(d.querySelector('.ap-catalog-help'),null);
  }finally{await f.close();}
 });
 test('product page shows only Subscribe & Save and bulk savings paths, with regular quantity pricing',async()=>{

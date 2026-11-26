@@ -51,12 +51,38 @@
   if(!window.PureCampaign?.eligible?.(p.id,v.size))return '';
   return '<span class="pure-card-sale">Second unit '+esc(window.PureCampaign.discountPercent)+'% off</span>';
  }
+ function catalogCardAction(p,v){
+  const choose=p.variants.length>1;
+  const label=choose?t('chooseOptions','Choose options'):t('add');
+  return `<button type="button" class="ap-button ap-catalog-action" data-action="${choose?'catalog-options':'add'}" data-id="${esc(p.id)}" ${choose?'aria-haspopup="dialog"':`data-size="${esc(v.size)}"`} aria-label="${esc(label+' · '+p.name)}">${esc(label)}</button>`;
+ }
+ function openCatalogOptions(p){
+  if(!p)return;
+  const variants=state.group==='Offers'?eligibleSizes(p):p.variants;
+  if(!variants.length)return;
+  const dialog=document.createElement('dialog');
+  dialog.className='ap-dialog ap-catalog-options';
+  dialog.setAttribute('aria-labelledby','ap-catalog-options-title');
+  dialog.innerHTML=`<div class="ap-dialog-head"><h2 id="ap-catalog-options-title">${esc(p.name)}</h2><button type="button" data-action="close-dialog" aria-label="Close options">×</button></div>
+    <form><label>Strength <select name="size" required autofocus><option value="">Choose a strength</option>${variants.map(v=>`<option value="${esc(v.size)}">${esc(v.size+' · '+money(v.price))}</option>`).join('')}</select></label>
+    <p role="status" hidden></p><button type="submit" class="ap-button">${esc(t('add'))}</button></form>`;
+  const form=$('form',dialog),size=form.elements.size,status=$('[role=status]',dialog);
+  form.addEventListener('submit',event=>{
+   event.preventDefault();
+   if(!form.reportValidity())return;
+   try{addItems([{id:p.id,size:size.value,qty:1}]);dialog.close();}
+   catch(error){status.textContent=error.message;status.hidden=false;}
+  });
+  dialog.addEventListener('close',()=>dialog.remove(),{once:true});
+  document.body.append(dialog);
+  dialog.showModal();
+ }
  function card(p,options={}) {
  const v=cardVariant(p);
  const url='/product/'+encodeURIComponent(p.id)+'?size='+encodeURIComponent(v.size);
  if(options.featured){
   const price=new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(v.price);
-  return `<article class="ap-product-card nl-product nl-featured-product" data-product="${esc(p.id)}"><a class="ap-product-image" href="${url}">${cardBadge(p,v)}<img src="${esc(image(p,v.size))}" alt="${esc(p.name+' '+v.size+' product label')}" loading="lazy"></a><div class="nl-featured-meta"><h3><a href="${url}">${esc(p.name)}</a></h3><strong class="nl-featured-price" aria-label="${esc(price+' USD')}">${esc(price)}</strong></div></article>`;
+  return `<article class="ap-product-card nl-product nl-featured-product" data-product="${esc(p.id)}"><a class="ap-product-image" href="${url}">${cardBadge(p,v)}<img src="${esc(image(p,v.size))}" alt="${esc(p.name+' '+v.size+' product label')}" loading="lazy"></a><div class="nl-featured-meta"><h3><a href="${url}">${esc(p.name)}</a></h3><strong class="nl-featured-price" aria-label="${esc(price+' USD')}">${esc(price)}</strong>${options.quickAdd?catalogCardAction(p,v):''}</div></article>`;
  }
  return `<article class="ap-product-card nl-product" data-product="${esc(p.id)}"><a class="ap-product-image" href="${url}">${cardBadge(p,v)}<img src="${esc(image(p,v.size))}" alt="${esc(p.name+' '+v.size+' product label')}" loading="lazy"></a><div class="ap-card-body"><h3><a href="${url}">${esc(p.name)} <span>(${esc(v.size)})</span></a></h3><label class="nl-size-label"><span class="ap-sr">Size for ${esc(p.name)}</span><select class="ap-card-size" data-card-size="${esc(p.id)}">${p.variants.map(x=>`<option value="${esc(x.size)}" ${x.size===v.size?'selected':''}>${esc(x.size)}</option>`).join('')}</select></label><div class="nl-prices"><strong class="ap-card-price">${priceMarkup(v.price)}</strong><small>per unit</small></div><div class="nl-card-actions"><a class="ap-button ap-button-secondary" href="${url}">View More</a><button class="ap-add" data-action="add" data-id="${esc(p.id)}" data-size="${esc(v.size)}" data-quantity="1">Add to Cart</button></div></div></article>`;
 }
@@ -107,7 +133,9 @@
    const title=status==='loading'?'Loading offers…':status==='inactive'?'No active second-unit offers':'Offers are temporarily unavailable';
    grid.innerHTML='<div class="ap-empty" role="status"><h3>'+title+'</h3><a class="ap-button ap-button-secondary" href="/shop">View all products</a></div>';
   }else{
-   grid.innerHTML=list.slice(0,state.limit).map(p=>card(p,{featured:true})).join('')||`<div class="ap-empty"><h3>${t('noResults')}</h3><button class="ap-button ap-button-secondary" data-action="clear-filters">${t('clear')}</button></div>`;
+   const links=state.query.trim()?pageSearchLinks(state.query):'';
+   const cards=list.slice(0,state.limit).map(p=>card(p,{featured:true,quickAdd:true})).join('');
+   grid.innerHTML=(links?`<section class="ap-catalog-help" aria-label="Pages and help"><h3>Pages &amp; help</h3>${links}</section>`:'')+cards||`<div class="ap-empty"><h3>${t('noResults')}</h3><button class="ap-button ap-button-secondary" data-action="clear-filters">${t('clear')}</button></div>`;
   }
   more.hidden=list.length<=state.limit;
   $$('[data-filter-group]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.filterGroup===state.group)));
@@ -119,7 +147,7 @@
    if(p)item.outerHTML=card(p,{featured:true});
   }
  });
- function shop(){const shopGroups=shopCategories;return `<section class="ap-container nl-shop"><header class="nl-shop-header"><h1 data-pure-collection-title>All Products</h1><p data-pure-collection-intro>Browse research compounds and available testing reports.</p></header><div class="ap-toolbar nl-shop-controls"><label class="nl-shop-search"><span class="ap-sr">Search products</span><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.7"></circle><path d="m16 16 5 5"></path></svg><input id="ap-catalog-query" type="search" placeholder="Search products..." value="${esc(state.query)}" maxlength="120"></label><div class="nl-shop-sort"><label class="nl-shop-sort-label" for="ap-catalog-sort">Sort by:</label><select id="ap-catalog-sort"><option value="popular" ${state.sort==='popular'?'selected':''}>Most Popular</option><option value="low" ${state.sort==='low'?'selected':''}>Price: Low to High</option><option value="high" ${state.sort==='high'?'selected':''}>Price: High to Low</option><option value="name" ${state.sort==='name'?'selected':''}>Name: A–Z</option></select></div></div><div class="nl-filter-pills" role="group" aria-label="Product categories">${shopGroups.map(g=>`<button type="button" data-filter-group="${esc(g)}" aria-pressed="${state.group===g}">${esc(g==='All'?'All Products':g)}</button>`).join('')}</div><div class="ap-grid" id="ap-catalog-grid"></div><button class="ap-button ap-button-secondary ap-load-more" id="ap-load-more" data-action="more">Load More Products</button></section>`;}
+ function shop(){const shopGroups=shopCategories;return `<section class="ap-container nl-shop"><header class="nl-shop-header"><h1 data-pure-collection-title>All Products</h1><p data-pure-collection-intro>Browse research compounds and available testing reports.</p></header><div class="ap-toolbar nl-shop-controls"><label class="nl-shop-search"><span class="ap-sr">Search products and help</span><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.7"></circle><path d="m16 16 5 5"></path></svg><input id="ap-catalog-query" type="search" placeholder="Search products and help…" value="${esc(state.query)}" maxlength="120"></label><div class="nl-shop-sort"><label class="nl-shop-sort-label" for="ap-catalog-sort">Sort by:</label><select id="ap-catalog-sort"><option value="popular" ${state.sort==='popular'?'selected':''}>Most Popular</option><option value="low" ${state.sort==='low'?'selected':''}>Price: Low to High</option><option value="high" ${state.sort==='high'?'selected':''}>Price: High to Low</option><option value="name" ${state.sort==='name'?'selected':''}>Name: A–Z</option></select></div></div><div class="nl-filter-pills" role="group" aria-label="Product categories">${shopGroups.map(g=>`<button type="button" data-filter-group="${esc(g)}" aria-pressed="${state.group===g}">${esc(g==='All'?'All Products':g)}</button>`).join('')}</div><div class="ap-grid" id="ap-catalog-grid"></div><button class="ap-button ap-button-secondary ap-load-more" id="ap-load-more" data-action="more">Load More Products</button></section>`;}
  function detail(id) {
  const p=product(id);if(!p)return heading('Product','Product not found','Browse the current catalog.')+'<a href="/shop">View products</a>';
  const v=p.variants.find(x=>x.size===(selections[p.id]||new URLSearchParams(location.search).get('size')))||p.variants[0];
@@ -133,7 +161,27 @@
  root.innerHTML=cart.map(x=>`<div class="ap-cart-line"><img src="${esc(image(product(x.id),x.size))}" alt="${esc(x.name+' '+x.size)}"><div><a href="/product/${x.id}?size=${encodeURIComponent(x.size)}"><strong>${esc(x.name)}</strong></a><small>${esc(x.size)} · ${priceMarkup(x.price)} each</small><div class="ap-quantity"><button data-action="cart-quantity" data-key="${esc(x.key)}" data-step="-1" aria-label="Decrease ${esc(x.name)} quantity">−</button><input value="${x.qty}" readonly aria-label="Quantity"><button data-action="cart-quantity" data-key="${esc(x.key)}" data-step="1" aria-label="Increase ${esc(x.name)} quantity">+</button></div></div><div><strong>${priceMarkup(x.qty*x.price)}</strong><button class="ap-remove" data-action="cart-remove" data-key="${esc(x.key)}">Remove</button></div></div>`).join('')+`<div class="ap-cart-totals"><strong>Merchandise subtotal</strong><strong>${priceMarkup(subtotal)}</strong></div><p class="ap-fine">Coupons, delivery, tax, points and store credit are confirmed at checkout. Final totals and payment currency are confirmed at checkout.</p><a class="ap-button" href="/checkout">Proceed to Checkout</a><a class="ap-button ap-button-secondary" href="/shop">Continue Shopping</a>`;
  window.AltaCartNmi?.offer(root);
 }
- function searchResults(value=''){const needle=value.trim().toLowerCase();const matches=catalog.filter(p=>searchText(p).includes(needle)).slice(0,7);const pages=[['Bulk orders','/bulk-orders'],['Testing','/coas'],['Contact Us','/contact'],['Partner Program','/partner-program'],['Rewards & Credit','/rewards'],['Track an order','/track-order']].filter(([label])=>!needle||label.toLowerCase().includes(needle));$('#ap-search-results').innerHTML=`<p class="ap-fine" style="margin-top:18px">${needle?'MATCHING PRODUCTS':'EXPLORE COMPOUNDS'}</p>`+matches.map(p=>`<a class="ap-search-result" href="/product/${p.id}"><img src="${esc(image(p,p.variants[0].size))}" alt=""><span><strong>${esc(p.name)}</strong><small>${esc(p.variants.map(v=>v.size).join(' · '))}</small></span><span>${priceMarkup(Math.min(...p.variants.map(v=>v.price)))} ↗</span></a>`).join('')+`<p class="ap-fine" style="margin-top:22px">PAGES & HELP</p>`+pages.map(([name,url])=>`<a class="ap-search-result" href="${url}"><strong>${esc(name)}</strong><span>↗</span></a>`).join('')+(!matches.length&&!pages.length?'<p class="ap-empty">No matches. Try a compound name or browse the catalog.</p>':'');}
+ function pageSearchLinks(value){
+  const terms=value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const pages=[
+   ['Shipping policy','/shipping-policy.html','shipping delivery rates costs transit international Canada'],
+   ['Frequently asked questions','/#faq','help faq ordering payments questions'],
+   ['Contact Us','/contact','help support customer service'],
+   ['Track an order','/track-order','shipping delivery tracking status'],
+   ['Refund policy','/refund-policy.html','refund return cancellation help'],
+   ['Testing','/coas','certificate analysis COA lab reports documentation'],
+   ['Bulk orders','/bulk-orders',''],['Partner Program','/partner-program',''],['Rewards & Credit','/rewards','']
+  ];
+  return pages.filter(([name,,keywords])=>terms.every(term=>(name+' '+keywords).toLowerCase().includes(term)))
+   .map(([name,url])=>`<a class="ap-search-result ap-page-search-result" href="${url}"><strong>${esc(name)}</strong><span aria-hidden="true">↗</span></a>`).join('');
+ }
+ function searchResults(value=''){
+  const needle=value.trim().toLowerCase(),links=pageSearchLinks(value);
+  const matches=catalog.filter(p=>searchText(p).includes(needle)).slice(0,7);
+  const products=matches.map(p=>`<a class="ap-search-result" href="/product/${p.id}"><img src="${esc(image(p,p.variants[0].size))}" alt=""><span><strong>${esc(p.name)}</strong><small>${esc(p.variants.map(v=>v.size).join(' · '))}</small></span><span>${priceMarkup(Math.min(...p.variants.map(v=>v.price)))} ↗</span></a>`).join('');
+  $('#ap-search-results').innerHTML=(products?`<p class="ap-fine" style="margin-top:18px">${needle?'MATCHING PRODUCTS':'EXPLORE COMPOUNDS'}</p>${products}`:'')
+   +(links?`<p class="ap-fine" style="margin-top:22px">PAGES &amp; HELP</p>${links}`:'')||'<p class="ap-empty">No matches. Try a product, shipping, or help topic.</p>';
+ }
  function updateCompare(){const bar=$('#ap-compare-bar');if(!bar)return;bar.hidden=compared.length===0;bar.innerHTML=`${compared.length} selected <button class="ap-button ap-button-small" data-action="compare-open">Compare compounds ↗</button> <button class="ap-text-button" data-action="compare-clear">Clear</button>`;$$('[data-compare]').forEach(x=>x.checked=compared.includes(x.dataset.compare));}
  function renderCompare(){const rows=compared.map(product).filter(Boolean);$('#ap-compare-content').innerHTML=`<div class="ap-compare-grid" style="--cols:${rows.length||1}">${rows.map(p=>`<div><img src="${esc(image(p,selections[p.id]))}" alt="${esc(p.name)}"><h3>${esc(p.name)}</h3><p>${esc(p.group)}</p><p>${esc(p.blurb)}</p><p>${p.variants.map(v=>esc(v.size)+' · '+priceMarkup(v.price)).join('<br>')}</p><a class="ap-button ap-button-small" href="/product/${p.id}">View product ↗</a></div>`).join('')}</div>`;}
  function validReport(r){if(!r||r.status!=='verified'||r.publication_approved!==true||!product(r.product_id)||!r.lot||!r.report_id||!r.lab_name||!r.reviewer||!r.evidence_reference)return false;try{const u=new URL(r.document_url);return u.origin==='https://getpurelabs.com'&&!u.username&&!u.password;}catch{return false;}}
@@ -148,6 +196,7 @@
   if(action==='menu'){const nav=$('#ap-nav');const open=nav.classList.toggle('ap-open');button.setAttribute('aria-expanded',String(open));return;}
   if(action==='age-confirm'){write('ap-age-verified',true);$('#ap-age-dialog').close();return;}
   if(action==='age-exit'){$('#ap-age-message').textContent='This catalog is limited to adults aged 21 and older.';return;}
+  if(action==='catalog-options'){openCatalogOptions(product(id));return;}
   if(action==='add'||action==='detail-add'){let qty=action==='detail-add'?Number($('#ap-detail-quantity')?.value):1;if(!Number.isInteger(qty)||qty<1||qty>100){toast('Choose a quantity between 1 and 100.');return;}try{addItems([{id,size:button.dataset.size,qty}]);}catch(e){toast(e.message);}return;}
   if(action==='save'){if(!product(id))return;saved=saved.includes(id)?saved.filter(x=>x!==id):[...saved,id];write('ap-wishlist',saved);$$(`[data-action="save"][data-id="${id}"]`).forEach(b=>{b.setAttribute('aria-pressed',String(saved.includes(id)));b.textContent=b.classList.contains('ap-save')?(saved.includes(id)?'♥':'♡'):(saved.includes(id)?'♥ '+t('saved'):'♡ '+t('save'));});toast(saved.includes(id)?'Saved on this device.':'Removed from saved products.');return;}
   if(action==='detail-size'){selections[id]=button.dataset.size;const u=new URL(location.href);u.searchParams.set('size',button.dataset.size);history.replaceState(null,'',u);render();return;}

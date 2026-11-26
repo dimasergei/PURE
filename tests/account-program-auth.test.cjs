@@ -3,6 +3,7 @@
 // fixtures never rebuild the shared output, authenticate a real user, or send mail.
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const {JSDOM}=require('jsdom');
+const {createHash}=require('node:crypto');
 const root=path.resolve(__dirname,'..'),read=file=>fs.readFileSync(path.join(root,file),'utf8');
 function generatedAccount(){
  const files=new Map(),key=file=>String(file).replaceAll('\\','/');
@@ -20,9 +21,19 @@ function generatedAccount(){
 }
 const source=generatedAccount(),user={id:'fixture-member',email:'researcher@example.test',user_metadata:{full_name:'Fixture Researcher'}};
 const tick=()=>new Promise(resolve=>setTimeout(resolve,0));
-async function page(route,{signedIn=false,storedReturn=null,origin='https://pure.example'}={}){
+async function page(route,{signedIn=false,storedReturn=null,origin='https://pure.example',google='',rejectGoogleToken=false}={}){
  const dom=new JSDOM('<body class="ap-site ap-account-site"><main class="account-page"><div class="account-shell"><section id="account-root" class="account-card"></section></div></main><span id="year"></span></body>',{url:origin+route});
- const w=dom.window,assigned=[],panels=[],signins=[],signups=[],oauth=[],resets=[],requests=[];
+ const w=dom.window,assigned=[],panels=[],signins=[],signups=[],oauth=[],resets=[],requests=[],idTokens=[],googleInitializations=[],googleButtons=[];
+ if(google){
+  Object.defineProperty(w.crypto,'subtle',{value:{digest:async(algorithm,bytes)=>{
+   assert.equal(algorithm,'SHA-256');return createHash('sha256').update(bytes).digest();
+  }}});
+  w.TextEncoder=TextEncoder;
+  if(google==='ready')w.google={accounts:{id:{
+   initialize(config){googleInitializations.push(config);},
+   renderButton(host,options){googleButtons.push(options);host.append(w.document.createElement('iframe'));}
+  }}};
+ }
  if(storedReturn)w.sessionStorage.setItem('ap-account-return',storedReturn);
  let onState;
  const auth={auth:{
@@ -31,6 +42,9 @@ async function page(route,{signedIn=false,storedReturn=null,origin='https://pure
   signInWithPassword:async value=>{signins.push(value);return {error:null};},
   signUp:async value=>{signups.push(value);return {data:{session:null},error:null};},
   signInWithOAuth:async value=>{oauth.push(value);return {error:null};},
+  ...(google?{signInWithIdToken:async value=>{
+   idTokens.push(value);return rejectGoogleToken?{data:null,error:new Error('Fixture refusal')}:{data:{session:{user}},error:null};
+  }}:{}),
   resetPasswordForEmail:async(email,options)=>{resets.push({email,options});return {};},
   updateUser:async()=>({error:null}),signOut:async()=>({})
  }};
@@ -42,7 +56,7 @@ async function page(route,{signedIn=false,storedReturn=null,origin='https://pure
  const context={window:w,document:w.document,location,sessionStorage:w.sessionStorage,FormData:w.FormData,URL,URLSearchParams,Intl,Date,
   fetch:async endpoint=>{requests.push(endpoint);assert.equal(endpoint,'/api/customer-config');return {ok:true,json:async()=>({supabaseUrl:'https://fixture.invalid',anonKey:'fixture-public-key'})};}};
  vm.runInNewContext(source,context,{timeout:1000});await tick();
- return {dom,w,assigned,panels,signins,signups,oauth,resets,requests,recovery:()=>onState('PASSWORD_RECOVERY',{user})};
+ return {dom,w,assigned,panels,signins,signups,oauth,resets,requests,idTokens,googleInitializations,googleButtons,recovery:()=>onState('PASSWORD_RECOVERY',{user})};
 }
 function authLink(env,route){
  const link=[...env.w.document.querySelectorAll('a[href]')].find(a=>new URL(a.href).pathname===route);
@@ -178,6 +192,56 @@ test('Google sign-in precedes the alternative divider and email form on both aut
    assert.equal(callback.pathname,'/account');assert.equal(callback.search,'','OAuth callback URL remains query-free');
   }finally{env.dom.window.close();}
  }
+});
+
+test('branded Google popup exchanges a single nonce-bound token and resumes the original checkout',async()=>{
+ const destination='/checkout?plan=vip&period=monthly',origin='https://getpurelabs.com';
+ const loginPage=await page('/account/login?returnTo='+encodeURIComponent(destination),{origin,google:'ready'});
+ try{
+  const host=loginPage.w.document.getElementById('google-identity');
+  assert.equal(host.hidden,false);
+  assert.equal(loginPage.w.document.getElementById('google-signin').hidden,true);
+  assert.ok(host.querySelector('iframe'));
+  const [init]=loginPage.googleInitializations;
+  assert.match(init.client_id,/\.apps\.googleusercontent\.com$/);
+  assert.equal(init.ux_mode,'popup');
+  assert.equal(init.use_fedcm_for_button,true);
+  await init.callback({credential:'fixture-id-token'});
+  await init.callback({credential:'fixture-replayed-token'});
+  assert.equal(loginPage.idTokens.length,1);
+  const [exchange]=loginPage.idTokens;
+  assert.equal(exchange.provider,'google');
+  assert.equal(exchange.token,'fixture-id-token');
+  assert.match(exchange.nonce,/^[a-f0-9]{64}$/);
+  assert.equal(createHash('sha256').update(exchange.nonce).digest('hex'),init.nonce);
+  assert.deepEqual(loginPage.oauth,[]);
+  assert.deepEqual(loginPage.assigned,['/account']);
+  const resumed=await page('/account',{origin,signedIn:true,storedReturn:loginPage.w.sessionStorage.getItem('ap-account-return')});
+  try{assert.deepEqual(resumed.assigned,[destination]);}finally{resumed.w.close();}
+ }finally{loginPage.w.close();}
+});
+
+test('failed Google token exchange rotates the nonce and a blocked script restores the redirect fallback',async()=>{
+ const origin='https://getpurelabs.com';
+ const refused=await page('/account/signup',{origin,google:'ready',rejectGoogleToken:true});
+ const blocked=await page('/account/login?returnTo=%2Faccount%2Fpartner',{origin,google:'blocked'});
+ try{
+  const [initial]=refused.googleInitializations;
+  await initial.callback({credential:'fixture-refused-token'});
+  assert.equal(refused.googleInitializations.length,2);
+  assert.notEqual(initial.nonce,refused.googleInitializations[1].nonce);
+  assert.match(refused.w.document.getElementById('google-error').textContent,/couldn’t be completed/);
+  assert.deepEqual(refused.assigned,[]);
+  const script=blocked.w.document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
+  assert.ok(script);
+  script.onerror();
+  await tick();
+  const fallback=blocked.w.document.getElementById('google-signin');
+  assert.equal(fallback.hidden,false);
+  assert.equal(blocked.w.document.getElementById('google-identity').hidden,true);
+  await fallback.onclick();
+  assert.equal(blocked.oauth[0].options.redirectTo,origin+'/account/partner');
+ }finally{refused.w.close();blocked.w.close();}
 });
 
 test('partner Google and signup callbacks use one exact route and retain enrollment across tabs',async()=>{

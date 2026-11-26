@@ -34,7 +34,7 @@ function fixture({cryptoReady=false,interacReady=false,payment={state:'unknown'}
  const user={email:'fixture@example.test',user_metadata:{full_name:'Fixture Researcher',alta_profile:{shipping:{name:'Fixture Researcher',line1:'123 Test Street',city:'Test City',region:'ON',postal_code:'N2L 1A1',country,phone:'3055550157'}}}};
  for(const file of ['readiness-ui.js','direct-checkout-client.js','checkout-reference.js'])w.eval(fs.readFileSync(file,'utf8'));
  const root=w.document.getElementById('root');
- return{dom,w,root,requests,auth,fx,quote,setMobile(value){media.matches=value;for(const callback of media.listeners)callback(media);},async open(){await w.DirectCheckout.checkout(root,auth,user);await tick();},async paymentStep(){root.querySelector('[data-nlx-next]').click();await tick();root.querySelector('[data-nlx-next]').click();await tick();}};
+ return{dom,w,root,requests,auth,fx,quote,setMobile(value){media.matches=value;for(const callback of media.listeners)callback(media);},async open(){await w.DirectCheckout.checkout(root,auth,user);await tick();},async paymentStep(){root.querySelector('[data-nlx-next]').click();await tick();if(!media.matches){root.querySelector('[data-nlx-next]').click();await tick();}}};
 }
 function change(f,control,value){if(control.type==='checkbox'||control.type==='radio')control.checked=value;else control.value=value;control.dispatchEvent(new f.w.Event('change',{bubbles:true}));}
 function consent(f){for(const name of ['ruo','responsibility'])change(f,f.root.querySelector('[name='+name+']'),true);}
@@ -117,7 +117,7 @@ test('a provider return URL alone never confirms payment or permits an unrelated
  }
 });
 
-test('mobile Shipping, Delivery and Payment actions follow all information and the order summary; desktop positions restore',async()=>{
+test('mobile Contact & delivery and Payment actions follow the order summary; desktop positions restore',async()=>{
  const f=fixture({mobile:true});
  const verifyOrder=()=>{
   const action=f.root.querySelector('[data-nlx-next],[data-nlx-place]'),summary=f.root.querySelector('.nlx-right');
@@ -133,7 +133,7 @@ test('mobile Shipping, Delivery and Payment actions follow all information and t
  };
  try{
   await f.open();verifyOrder();
-  f.root.querySelector('[data-nlx-next]').click();await tick();verifyOrder();
+  assert.ok(f.root.querySelector('[data-nlx-inline-delivery] [name=delivery_speed]'));
   f.root.querySelector('[data-nlx-next]').click();await tick();verifyOrder();
   assert.equal(f.root.querySelector('[data-nlx-place]').disabled,true);
   consent(f);assert.equal(f.root.querySelector('[data-nlx-place]').disabled,false);

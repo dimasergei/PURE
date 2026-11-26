@@ -12,6 +12,9 @@ html:root body.ap-site.ap-auth-page .account-form input:not([type=checkbox]){min
 html:root body.ap-site.ap-auth-page .account-form>button{width:100%;min-height:48px;font-size:14px;line-height:1.3}
 html:root body.ap-site.ap-auth-page .google-button,html:root body.ap-site.ap-auth-page .account-divider{width:100%;max-width:none}
 html:root body.ap-site.ap-auth-page .google-button{font-size:15px;min-height:48px}
+.google-identity-slot{display:flex;align-items:center;justify-content:center;min-height:48px;width:min(100%,400px);margin-inline:auto}
+.google-identity-slot[hidden],.google-button[hidden]{display:none!important}
+.google-identity-slot[inert]{opacity:.65;pointer-events:none}
 html:root body.ap-site.ap-auth-page .account-check{font-size:13px;line-height:1.5}
 html:root body.ap-site.ap-auth-page .account-disclaimer{margin-top:24px;font-size:12px;line-height:1.6}
 @media(max-width:480px){html:root body.ap-site.ap-auth-page .account-page{padding:24px 16px 40px}html:root body.ap-site.ap-auth-page .account-card{padding:24px 20px}html:root body.ap-site.ap-auth-page .account-card>h1{font-size:32px}}

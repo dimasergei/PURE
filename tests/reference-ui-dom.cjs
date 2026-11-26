@@ -104,8 +104,9 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
    assert.equal(card.querySelector('.nl-featured-meta h3').textContent,p.name);
    assert.equal(card.querySelector('.nl-featured-meta h3 a').href,photo.href);
    assert.equal(card.querySelector('.nl-featured-price').textContent,new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',minimumFractionDigits:Number.isInteger(variant.price)?0:2,maximumFractionDigits:2}).format(variant.price));
-   assert.equal(card.querySelector('select,button,.nl-card-actions,.nl-size-label,.ap-card-body'),null);
-   assert.doesNotMatch(card.textContent,/per unit|View More|Add to Cart|\(\d+\s*mg\)/i);
+   assert.equal(card.querySelector('select,.nl-card-actions,.nl-size-label,.ap-card-body'),null);
+   assert.equal(card.querySelector('button.ap-catalog-action')?.dataset.action,p.variants.length>1?'catalog-options':'add');
+   assert.doesNotMatch(card.textContent,/per unit|View More|\(\d+\s*mg\)/i);
   }
   const input=d.querySelector('#ap-catalog-query'),sort=d.querySelector('#ap-catalog-sort');
   assert.ok(input.closest('.nl-shop-controls')===sort.closest('.nl-shop-controls'));

@@ -1,6 +1,8 @@
 (()=>{const root=document.getElementById('account-root');document.getElementById('year').textContent=new Date().getFullYear();let auth,user,recovery=false;
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),money=(v,c='USD')=>new Intl.NumberFormat('en-US',{style:'currency',currency:(c||'USD').toUpperCase()}).format((Number(v)||0)/100),date=v=>v?new Intl.DateTimeFormat('en-US',{dateStyle:'medium',timeStyle:'short'}).format(new Date(v)):'Date unavailable',status=v=>String(v||'pending').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase()),msg=(v,b=false)=>'<div class="'+(b?'account-error':'account-message')+'" role="'+(b?'alert':'status')+'">'+esc(v)+'</div>',dis='<div class="account-disclaimer"><strong>Research use only.</strong> Products are supplied for controlled laboratory research only. They are not for human or veterinary use, ingestion, injection, diagnosis, treatment, or consumption.</div>',head=(h,s='')=>'<p class="account-eyebrow">PURE · Customer account</p><h1>'+h+'</h1>'+(s?'<p class="account-muted">'+s+'</p>':''),go=p=>location.assign(p),valid=e=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e),strong=p=>p.length>=12&&p.length<=128&&/[a-z]/.test(p)&&/[A-Z]/.test(p)&&/[0-9]/.test(p)&&/[^A-Za-z0-9]/.test(p);
 const liveAccountOrigin='https://getpurelabs.com';
+const googleClientId='259510881588-qk99i7meksolpbd3dpihclkt43ah5lov.apps.googleusercontent.com';
+let googleLibrary;
 function accountAuthOrigin(){
  return /^https?:\/\/(?:www\.)?(?:getpurelabs|altapurelabs)\.com$/.test(location.origin)?liveAccountOrigin:location.origin;
 }
@@ -20,13 +22,91 @@ async function start(){try{
  }
  const r=await fetch('/api/customer-config',{cache:'no-store'}),c=await r.json();if(!r.ok)throw Error();auth=window.supabase.createClient(c.supabaseUrl,c.anonKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:'pkce'}});auth.auth.onAuthStateChange((e,s)=>{user=s?.user||null;if(e==='PASSWORD_RECOVERY'){recovery=true;reset(true);}});const {data}=await auth.auth.getSession();user=data.session?.user||null;if(user&&!valid(String(user.email||''))){await auth.auth.signOut();user=null;root.innerHTML=head('Email required')+msg('Google did not provide an email address, so we could not connect your orders. Please sign in with an account that has a verified email address.',true)+'<a href="/account/login">Return to sign in</a>';return;}route();}catch(e){root.innerHTML=head('Account unavailable')+msg('Customer accounts are temporarily unavailable. Please try again later.',true);}}
 function route(){const p=location.pathname.replace(/^\/my-account(?=\/|$)/,'/account').replace(/\/$/,'')||'/account';if(p==='/account/stack'||p==='/account/subscriptions')return go('/account/membership');if(p==='/account/invoices'){if(!user)return go('/account/login?returnTo='+encodeURIComponent(location.pathname+location.search));root.innerHTML=head('Invoices & manual orders')+accountNav(p)+'<section id="manual-invoices-root"></section>';document.getElementById('logout').onclick=logout;window.ManualCommerce.render(document.getElementById('manual-invoices-root'),auth,user);return;}if(p==='/account/requests'){if(!user)return go('/account/login?returnTo=%2Faccount%2Frequests');root.innerHTML=head('Your requests')+accountNav(p)+'<section id="ap-requests-panel"></section>';document.getElementById('logout').onclick=logout;window.AltaOperationsUI.renderRequests(document.getElementById('ap-requests-panel'),auth);return;}if(p==='/account/reset-password'&&(recovery||new URLSearchParams(location.search).get('type')==='recovery'))return reset(true);if(p==='/account/login')return login();if(p==='/account/signup')return signup();if(p==='/account/reset-password')return reset(false);if(p==='/account/profile'){if(!user)return go('/account/login');return profile();}if(p==='/account/tracking'){if(!user)return go('/account/login?returnTo=%2Faccount%2Ftracking');return tracking();}if(['/account/points','/account/store-credit','/account/partner','/account/membership'].includes(p)){if(!user)return go('/account/login?returnTo='+encodeURIComponent(accountReturnDestination(p)));return placeholder(p);}if(p==='/account/orders'||p.startsWith('/account/orders/')){if(!user)return go('/account/login?returnTo='+encodeURIComponent(location.pathname+location.search));return p==='/account/orders'?orders():detail(decodeURIComponent(p.slice('/account/orders/'.length)));}if(user)return overview();root.innerHTML=head('Your account','Sign in to view your order history and tracking, or create an account using the email address used at checkout.')+'<div class="account-tabs"><a href="/account/login">Sign in</a><a href="/account/signup">Create account</a><a href="/account/reset-password">Forgot password</a></div>'+googleOption()+'<div class="account-actions"><a class="pill pill-dark" href="/account/login">Sign in →</a><a class="pill pill-ghost" href="/account/signup">Create account</a></div>'+dis;bindGoogle();}
-function googleOption(){return '<div class="account-divider" aria-label="or"><span>or</span></div><button type="button" id="google-signin" class="google-button"><img class="pure-google-mark" src="/assets/payment-brands/google-g-clean.svg" width="23" height="23" alt="" aria-hidden="true"><span>Continue with Google</span></button><p id="google-error" class="google-error" role="alert" aria-live="polite"></p>';}
+function googleOption(){return '<div class="account-divider" aria-label="or"><span>or</span></div><div id="google-identity" class="google-identity-slot" hidden></div><button type="button" id="google-signin" class="google-button"><img class="pure-google-mark" src="/assets/payment-brands/google-g-clean.svg" width="23" height="23" alt="" aria-hidden="true"><span>Continue with Google</span></button><p id="google-error" class="google-error" role="alert" aria-live="polite"></p>';}
 function signInCallbackUrl(){
  const destination=new URLSearchParams(location.search).get('returnTo')||sessionStorage.getItem('ap-account-return');
  // Match exact allowlisted paths. Continuation queries stay in the browser.
  return authCallbackUrl(destination?.split('?')[0]==='/account/partner'?'/account/partner':'/account');
 }
-function bindGoogle(){const b=document.getElementById('google-signin');if(!b)return;b.onclick=async()=>{b.disabled=true;b.querySelector('span').textContent='Redirecting to Google…';const note=document.getElementById('google-error');if(note)note.textContent='';try{const {error}=await auth.auth.signInWithOAuth({provider:'google',options:{redirectTo:signInCallbackUrl()}});if(error)throw error;}catch(e){b.disabled=false;b.querySelector('span').textContent='Continue with Google';if(note)note.textContent='Google sign-in is temporarily unavailable. Please try again or use email and password.';}};}
+function loadGoogleIdentity(){
+ const current=window.google?.accounts?.id;
+ if(current)return Promise.resolve(current);
+ if(!googleLibrary)googleLibrary=new Promise((resolve,reject)=>{
+  const script=document.createElement('script');
+  const fail=()=>{window.clearTimeout(timeout);script.remove();reject(new Error('Google Identity Services unavailable'));};
+  const timeout=window.setTimeout(fail,7000);
+  script.src='https://accounts.google.com/gsi/client';
+  script.async=true;
+  script.onerror=fail;
+  script.onload=()=>{
+   const identity=window.google?.accounts?.id;
+   if(!identity)return fail();
+   window.clearTimeout(timeout);
+   resolve(identity);
+  };
+  document.head.append(script);
+ }).catch(error=>{googleLibrary=null;throw error;});
+ return googleLibrary;
+}
+async function renderGoogleIdentity(identity,host,fallback,note){
+ const random=window.crypto.getRandomValues(new Uint8Array(32));
+ const nonce=Array.from(random,byte=>byte.toString(16).padStart(2,'0')).join('');
+ const hash=await window.crypto.subtle.digest('SHA-256',new window.TextEncoder().encode(nonce));
+ const hashedNonce=Array.from(new Uint8Array(hash),byte=>byte.toString(16).padStart(2,'0')).join('');
+ if(!host.isConnected)return;
+ let consumed=false;
+ identity.initialize({
+  client_id:googleClientId,
+  nonce:hashedNonce,
+  ux_mode:'popup',
+  use_fedcm_for_button:true,
+  callback:async response=>{
+   if(consumed||!host.isConnected||typeof response?.credential!=='string'||!response.credential)return;
+   consumed=true;
+   host.inert=true;
+   note.textContent='';
+   try{
+    const {data,error}=await auth.auth.signInWithIdToken({provider:'google',token:response.credential,nonce});
+    if(error||!data?.session)throw new Error('Google session unavailable');
+    go('/account');
+   }catch{
+    if(!host.isConnected)return;
+    note.textContent='Google sign-in couldn’t be completed. Try again or sign in with email and password.';
+    await mountGoogleIdentity(host,fallback,note);
+   }
+  }
+ });
+ host.hidden=false;
+ host.inert=false;
+ host.replaceChildren();
+ identity.renderButton(host,{type:'standard',size:'large',theme:'outline',shape:'rectangular',text:'continue_with',width:Math.min(400,host.clientWidth||400)});
+}
+async function mountGoogleIdentity(host,fallback,note){
+ try{await renderGoogleIdentity(await loadGoogleIdentity(),host,fallback,note);}
+ catch{if(host.isConnected){host.hidden=true;fallback.hidden=false;}}
+}
+function bindGoogle(){
+ const fallback=document.getElementById('google-signin'),host=document.getElementById('google-identity'),note=document.getElementById('google-error');
+ if(!fallback||!host||!note)return;
+ fallback.onclick=async()=>{
+  fallback.disabled=true;
+  fallback.querySelector('span').textContent='Redirecting to Google…';
+  note.textContent='';
+  try{
+   const {error}=await auth.auth.signInWithOAuth({provider:'google',options:{redirectTo:signInCallbackUrl()}});
+   if(error)throw error;
+  }catch{
+   fallback.disabled=false;
+   fallback.querySelector('span').textContent='Continue with Google';
+   note.textContent='Google sign-in is temporarily unavailable. Please try again or use email and password.';
+  }
+ };
+ if(location.origin===liveAccountOrigin&&window.crypto?.subtle&&window.TextEncoder&&typeof auth.auth.signInWithIdToken==='function'){
+  fallback.hidden=true;
+  host.hidden=false;
+  void mountGoogleIdentity(host,fallback,note);
+ }
+}
 function login(error=''){root.innerHTML=head('Sign in','Access your order history and shipment tracking.')+(error?msg(error,true):'')+googleOption()+'<form id="login" class="account-form" novalidate><label>Email address<input name="email" type="email" autocomplete="email" required maxlength="254"></label><label>Password<input name="password" type="password" autocomplete="current-password" required maxlength="128"></label><a href="/account/reset-password">Forgot password?</a><button class="pill pill-dark">Sign in →</button></form><p class="account-muted">New to PURE? <a href="/account/signup">Create an account</a>.</p>'+dis;bindGoogle();document.getElementById('login').onsubmit=async e=>{e.preventDefault();const d=new FormData(e.currentTarget),email=String(d.get('email')||'').trim().toLowerCase(),password=String(d.get('password')||'');if(!valid(email))return login('Enter a valid email address.');const b=e.currentTarget.querySelector('button');b.disabled=true;const {error}=await auth.auth.signInWithPassword({email,password});if(error)return login('Email or password is incorrect. Please try again.');const ret=new URLSearchParams(location.search).get('returnTo');go(ret&&ret.startsWith('/')&&!ret.startsWith('//')?ret:'/account/orders');};}
 function signup(error=''){root.innerHTML=head('Create your account','Use your checkout email to connect previous guest orders.')+(error?msg(error,true):'')+googleOption()+'<form id="signup" class="account-form" novalidate><label>Full name<input name="name" autocomplete="name" required maxlength="120"></label><label>Email address<input name="email" type="email" autocomplete="email" required maxlength="254"></label><label>Password<input name="password" type="password" autocomplete="new-password" required maxlength="128"></label><small class="account-muted">At least 12 characters with uppercase, lowercase, a number, and a symbol.</small><label>Confirm password<input name="confirm" type="password" autocomplete="new-password" required maxlength="128"></label><label class="account-check"><input type="checkbox" name="research" required> I acknowledge products are for controlled laboratory research only and not for human or veterinary use, ingestion, injection, diagnosis, treatment, or consumption.</label><button class="pill pill-dark">Create account →</button></form><p class="account-muted">Already registered? <a href="/account/login">Sign in</a>.</p>'+dis;bindGoogle();document.getElementById('signup').onsubmit=async e=>{e.preventDefault();const d=new FormData(e.currentTarget),name=String(d.get('name')||'').trim(),email=String(d.get('email')||'').trim().toLowerCase(),pw=String(d.get('password')||'');if(name.length<2||name.length>120)return signup('Enter your full name.');if(!valid(email))return signup('Enter a valid email address.');if(!strong(pw))return signup('Choose a password with at least 12 characters, uppercase and lowercase letters, a number, and a symbol.');if(pw!==d.get('confirm'))return signup('Your passwords do not match.');if(d.get('research')!=='on')return signup('Please acknowledge the research-use-only notice.');e.currentTarget.querySelector('button').disabled=true;const {data,error}=await auth.auth.signUp({email,password:pw,options:{data:{full_name:name},emailRedirectTo:signInCallbackUrl()}});if(error){root.innerHTML=head('Check your email')+msg('If the address can be registered, you will receive an email with next steps. Check your inbox and spam folder.')+'<a href="/account/login">Continue to sign in</a>';return;}if(data.session)return go('/account/orders');root.innerHTML=head('Check your email')+msg('Signup received. If the address can be registered, Supabase will send a confirmation email. Follow its link, then sign in to view your orders.')+'<a class="pill pill-dark" href="/account/login">Continue to sign in →</a>';};}
 function reset(recoveryMode){if(!recoveryMode){root.innerHTML=head('Reset your password','Enter your account email and we will send a reset link.')+'<form id="forgot" class="account-form" novalidate><label>Email address<input name="email" type="email" required maxlength="254"></label><button class="pill pill-dark">Send reset link →</button></form><p><a href="/account/login">Back to sign in</a></p>'+dis;document.getElementById('forgot').onsubmit=async e=>{e.preventDefault();const email=String(new FormData(e.currentTarget).get('email')||'').trim().toLowerCase();if(!valid(email))return reset(false);e.currentTarget.querySelector('button').disabled=true;await auth.auth.resetPasswordForEmail(email,{redirectTo:authCallbackUrl('/account/reset-password')});root.innerHTML=head('Check your email')+msg('If an account exists for that address, a password-reset email will be sent. Follow the link to choose a new password.')+'<a href="/account/login">Return to sign in</a>';};return;}root.innerHTML=head('Choose a new password','Enter a new password for your account.')+'<form id="newpw" class="account-form" novalidate><label>New password<input name="password" type="password" required></label><label>Confirm new password<input name="confirm" type="password" required></label><button class="pill pill-dark">Update password →</button></form>'+dis;document.getElementById('newpw').onsubmit=async e=>{e.preventDefault();const d=new FormData(e.currentTarget),pw=String(d.get('password')||'');if(!strong(pw))return reset(true);if(pw!==d.get('confirm'))return reset(true);const {error}=await auth.auth.updateUser({password:pw});if(error){root.innerHTML=head('Reset link expired')+msg('Request a new password-reset email and try again.',true);return;}recovery=false;await auth.auth.signOut();root.innerHTML=head('Password updated')+msg('Your password has been updated. Sign in with your new password.')+'<a class="pill pill-dark" href="/account/login">Sign in →</a>';};}

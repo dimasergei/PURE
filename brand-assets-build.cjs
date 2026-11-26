@@ -28,7 +28,7 @@ for(const file of fs.readdirSync(out,{recursive:true}).filter(f=>f.endsWith('.ht
   html=html.replace(/<meta\b[^>]*\bname=["'](?:theme-color|altapure-promo-end)["'][^>]*>/gi,'');
   if(path.basename(file).startsWith('admin-')){
     html=html.replace(/src="\/admin-fulfillment\.js(?:\?[^"]*)?"/g,'src="/admin-fulfillment.js?v=20261126-bulk"');
-    html=html.replace(/href="\/admin-fulfillment\.css(?:\?[^"]*)?"/g,'href="/admin-fulfillment.css?v=20261126-bulk"');
+    html=html.replace(/href="\/admin-fulfillment\.css(?:\?[^"]*)?"/g,'href="/admin-fulfillment.css?v=20261125-order-rows"');
     html=html.replace(/<link\b[^>]*href=["']\/admin-violet\.css[^"']*["'][^>]*>/gi,'');
     html=html.replace(/href="\/(admin-dashboard|operations)\.css(?:\?[^"]*)?"/g,'href="/$1.css?v=20261117b"');
     html=html.replace('</head>','<link rel="stylesheet" href="/admin-violet.css?v=20261117b">'+iconLinks+'</head>');
@@ -64,6 +64,8 @@ for(const file of fs.readdirSync(out,{recursive:true}).filter(f=>f.endsWith('.ht
   html=html.replace(/\b(src|href)="\/(checkout-reference\.(?:js|css))(?:\?[^"]*)?"/g,'$1="/$2?v=20261122-summary-gifts"');
   html=html.replace(/src="\/(readiness-ui|direct-checkout-client)\.js(?:\?[^"]*)?"/g,'src="/$1.js?v=20261122-bulk-savings"');
   html=html.replace(/src="\/(account|checkout-reference|direct-checkout-client|native-pay)\.js(?:\?[^"]*)?"/g,'src="/$1.js?v=20261126-guest-checkout"');
+  html=html.replace(/\b(src|href)="\/(cart-reference\.(?:js|css)|checkout-reference\.(?:js|css)|account\.js|account-experience\.css)(?:\?[^"]*)?"/g,'$1="/$2?v=20261125-mobile-checkout"');
+  html=html.replace(/\b(src|href)="\/(storefront-v2\.js|reference-ui\.css)(?:\?[^"]*)?"/g,'$1="/$2?v=20261126-catalog-tools"');
   fs.writeFileSync(target,html);
   count++;
 }

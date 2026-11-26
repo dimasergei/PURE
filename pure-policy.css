@@ -156,3 +156,6 @@ html:root body.pure-policy-page .pure-policy-content .back {
   html:root body.pure-policy-page .pure-policy-content :is(#manual-invoice-policy-note, #supplier-delivery-estimates, .ap-guide-note) { padding: 16px; }
   html:root body.pure-policy-page .pure-policy-content .ap-actions > .ap-button { min-height: 44px; }
 }
+.pure-policy-content .shipping-rates{width:100%;border-collapse:collapse;margin:16px 0;color:#111;font-size:clamp(.84rem,3vw,.96rem)}
+.pure-policy-content .shipping-rates :is(th,td){padding:10px 6px;border-bottom:1px solid #ddd;text-align:left}
+.pure-policy-content .shipping-rates td{white-space:nowrap;font-variant-numeric:tabular-nums}

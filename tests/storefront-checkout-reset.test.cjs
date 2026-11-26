@@ -39,7 +39,7 @@ for(const surface of ['cart','checkout'])test(surface+': regular purchased quant
   assert.equal(f.requests[0].coupon,'');
   assert.equal(f.w.localStorage.getItem('ap-checkout-coupon'),null);
   assert.match(f.root.textContent,/\$160\.00/);
-  assert.match(f.root.textContent,(surface==='cart'?/\$176\.95/:/\$172\.95/));
+  assert.match(f.root.textContent,/\$172\.95/);
   assert.doesNotMatch(f.root.textContent,/BOGO|\+\d+ FREE|member(ship)?/i);
   const cryptoOffer='Pay with Crypto at checkout for an extra 5% off the remaining merchandise.';
   if(surface==='cart'){
@@ -65,11 +65,11 @@ for(const surface of ['cart','checkout'])test(surface+': regular purchased quant
   assert.match(f.root.textContent,/BLACKFRIDAY10 applied/);
   if(surface==='cart')assert.match(f.root.querySelector('.nlc-coupon summary').textContent,/BLACKFRIDAY10/);
   assert.match(f.root.textContent,/\$16\.00/);
-  assert.match(f.root.textContent,surface==='cart'?/\$160\.95/:/\$156\.95/);
+  assert.match(f.root.textContent,/\$156\.95/);
   if(surface==='cart')assert.match(f.root.querySelector('[data-nlc-unlock-copy]').textContent,/\$106\.00/);
   input.value='BOGO';apply.click();await tick();await tick();
   assert.equal(f.w.localStorage.getItem('ap-checkout-coupon'),'BLACKFRIDAY10','Rejected code cannot replace the applied coupon');
-  assert.match(f.root.textContent,surface==='cart'?/\$160\.95/:/\$156\.95/);
+  assert.match(f.root.textContent,/\$156\.95/);
   assert.doesNotMatch(f.root.textContent,/BOGO applied/);
   remove.click();await tick();
   assert.equal(f.requests.at(-1).coupon,'');
@@ -77,7 +77,7 @@ for(const surface of ['cart','checkout'])test(surface+': regular purchased quant
   assert.equal(f.w.localStorage.getItem('ap-cart-coupon'),null);
   assert.equal(remove.hidden,true);
   assert.match(f.root.textContent,/Coupon removed/);
-  assert.match(f.root.textContent,(surface==='cart'?/\$176\.95/:/\$172\.95/));
+  assert.match(f.root.textContent,/\$172\.95/);
   if(surface==='cart')assert.match(f.root.querySelector('[data-nlc-unlock-copy]').textContent,/\$90\.00/);
  }finally{f.dom.window.close();}
 });
@@ -144,7 +144,7 @@ test('a rejected saved coupon and retired delivery extra cannot block cart total
   assert.deepEqual(f.requests.map(body=>body.coupon),['BLACKFRIDAY15','']);
   assert.deepEqual(f.requests[1].delivery.extras,['protection']);
   assert.equal(f.root.querySelector('.nlc-coupon').open,false);
-  assert.match(f.root.querySelector('.nlc-proceed').textContent,/\$176\.95/);
+  assert.match(f.root.querySelector('.nlc-proceed').textContent,/\$172\.95/);
   assert.match(f.root.querySelector('[data-nlc-cart-totals]').textContent,/Subtotal\$160\.00/);
   for(const key of ['ap-checkout-coupon','ap-cart-coupon'])assert.equal(f.w.localStorage.getItem(key),null);
  }finally{f.dom.window.close();}
@@ -162,8 +162,25 @@ test('a temporarily unavailable quote keeps the saved coupon and allows retrying
   assert.doesNotMatch(f.root.querySelector('.nlc-proceed').textContent,/\$/);
   f.w.fetch=fetch;
   f.root.querySelector('[data-nlc-retry]').click();await tick();
-  assert.match(f.root.querySelector('.nlc-proceed').textContent,/\$160\.95/);
+  assert.match(f.root.querySelector('.nlc-proceed').textContent,/\$156\.95/);
   assert.equal(f.root.querySelector('[data-nlc-retry]'),null);
+ }finally{f.dom.window.close();}
+});
+
+test('cart destination changes update the economy estimate beside the payable total',async()=>{
+ const f=fixture('cart');
+ try{
+  await f.w.AltaCartNmi.offer(f.root);
+  const destination=f.root.querySelector('[data-nlc-country]');
+  assert.equal(destination.value,'US');
+  assert.equal(f.requests[0].delivery.shipping,'economy');
+  assert.match(f.root.querySelector('[data-nlc-cart-totals]').textContent,/Economy shipping estimate\$7\.95/);
+  destination.value='CA';destination.dispatchEvent(new f.w.Event('change'));
+  await tick();
+  assert.equal(f.requests.at(-1).country,'CA');
+  assert.equal(f.w.sessionStorage.getItem('pure-cart-destination'),'CA');
+  assert.match(f.root.querySelector('[data-nlc-cart-totals]').textContent,/Economy shipping estimate\$14\.95/);
+  assert.match(f.root.querySelector('.nlc-proceed').textContent,/\$179\.95/);
  }finally{f.dom.window.close();}
 });
 

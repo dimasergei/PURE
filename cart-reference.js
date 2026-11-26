@@ -6,6 +6,8 @@
  const couponKeys=['ap-checkout-coupon','ap-cart-coupon'];
  const saveCoupon=value=>couponKeys.forEach(key=>value?localStorage.setItem(key,value):localStorage.removeItem(key));
  const storedCoupon=()=>{const code=(localStorage.getItem(couponKeys[0])||localStorage.getItem(couponKeys[1])||'').trim().toUpperCase();const valid=/^[A-Z0-9][A-Z0-9_-]{2,23}$/.test(code)&&code!=='BOGO'?code:'';saveCoupon(valid);return valid;};
+ const countryNames=new Intl.DisplayNames(['en'],{type:'region'});
+ const countryName=code=>countryNames.of(code)||code;
  let seq=0,config=null;
  const methods=async()=>{
   if(config)return config;
@@ -95,7 +97,7 @@
    +'</div><div class="nlc-cart-checkout cart__checkout" data-testid="cart-fixed-footer">'
    +'<details class="nlc-coupon"><summary><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" aria-hidden="true"><path d="M20.5 13.5 13.5 20.5a1.7 1.7 0 0 1-2.4 0L3 12.4V3h9.4l8.1 8.1a1.7 1.7 0 0 1 0 2.4Z"/><circle cx="7.8" cy="7.8" r="1.15"/></svg><span data-nlc-coupon-label>Add coupon code</span><i aria-hidden="true"></i></summary>'
    +'<div class="nlc-coupon-fields"><input type="text" name="nlc_coupon" aria-label="Coupon code" aria-describedby="nlc-coupon-status" placeholder="Enter code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="24" value="'+html(appliedCoupon)+'"><button type="button" data-nlc-apply>Apply</button><button type="button" data-nlc-remove-coupon hidden>Remove</button></div><p id="nlc-coupon-status" data-nlc-coupon-status role="status"></p></details>'
-   +'<p class="nlc-delivery-est"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 6h11v11H3zM14 10h4l3 4v3h-7z"/><circle cx="7" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></svg> <strong>Estimated delivery:</strong> <span data-nlc-estimate></span></p>'
+   +'<label class="nlc-destination"><span>Ship to</span><select data-nlc-country disabled aria-label="Shipping destination"><option>Loading destinations…</option></select></label>'
    +'<div class="nlc-cart-totals" data-nlc-cart-totals><p role="status">Calculating your order total…</p></div>'
    +'<a class="nlc-proceed" href="/checkout">Proceed to Checkout</a>'
    +'<div class="nlc-wallet-area"><div class="nlc-express" hidden><div class="nlc-pay-divider">OR PAY WITH</div><div class="nlc-wallet-row" data-nlc-wallets>'
@@ -103,6 +105,8 @@
    +'<a class="nlc-wallet-link" data-nlc-wallet="google" role="link" aria-disabled="true" aria-label="Continue with Google Pay"><span class="nlc-wallet-lockup"><img class="nlc-wallet-logo nlc-google-mark" src="/assets/payment-brands/google-g-clean.svg" width="20" height="20" alt="" aria-hidden="true"><span class="nlc-google-pay-word">Pay</span></span></a></div>'
    +'</div><p>21+ · Research use only · <a href="/research-use-policy.html">RUO Agreement</a> · <a href="/commercial-terms.html">Terms</a></p></div></div>';
   const track=root.querySelector('[data-nlc-cart-totals]'),input=root.querySelector('[name=nlc_coupon]'),apply=root.querySelector('[data-nlc-apply]'),remove=root.querySelector('[data-nlc-remove-coupon]'),couponStatus=root.querySelector('[data-nlc-coupon-status]');
+  const destination=root.querySelector('[data-nlc-country]'),proceed=root.querySelector('.nlc-proceed');
+  let selectedCountry=null;
   const redraw=async(candidate=appliedCoupon,action='refresh')=>{
    const id=++seq;
    apply.disabled=true;remove.disabled=true;
@@ -114,12 +118,19 @@
     };
     const [settings,account]=await Promise.all([methods(),session(),window.PurePartnerVisit]);
     if(!input.isConnected||id!==seq)return;
-    const country=localStorage.getItem('ap-shipping-country')||'US';
+    const countries=settings.config?.shipping_countries||['US','CA'];
+    if(!selectedCountry){
+     const preferred=sessionStorage.getItem('pure-cart-destination')||account?.user?.user_metadata?.alta_profile?.shipping?.country||localStorage.getItem('ap-shipping-country');
+     selectedCountry=countries.includes(preferred)?preferred:'US';
+     destination.replaceChildren(...countries.slice().sort((a,b)=>countryName(a).localeCompare(countryName(b))).map(code=>new Option(countryName(code),code)));
+     destination.value=selectedCountry;destination.disabled=false;
+    }
+    const country=selectedCountry;
     const availableExtras=(settings.delivery_options||[]).filter(option=>option.kind==='extra'&&option.enabled===true);
     const selectedExtras=extras(items).filter(option=>availableExtras.some(extra=>extra.id===option));
     try{sessionStorage.setItem(cartKey(items),JSON.stringify(selectedExtras));}catch{}
     const quoteBody={items:items.map(({id,size,qty})=>({id,size,qty})),method_id:null,country,
-     delivery:{shipping:'standard',extras:selectedExtras.sort()}};
+     delivery:{shipping:'economy',extras:selectedExtras.sort()}};
     const fetchQuote=async coupon=>{
      const response=await fetch('/api/customer-config?checkout=cart',{method:'POST',cache:'no-store',
       headers:{'Content-Type':'application/json',...(account?.access_token?{Authorization:'Bearer '+account.access_token}:{})},body:JSON.stringify({...quoteBody,coupon})});
@@ -164,12 +175,13 @@
     root.querySelector('[data-nlc-gifts]').innerHTML=(data.pricing?.bundled_items||[]).map(gift=>
      '<div class="nlc-included-gift"><strong>'+html(gift.name)+' <span>'+html(gift.size)+'</span></strong><b>Free gift</b></div>'
     ).join('');
-    nodes.push(['Shipping',shipping]);
+    const shippingLabel='Economy shipping estimate';
+    nodes.push([shippingLabel,shipping]);
     for(const feature of features)nodes.push([feature.label,feature.amount_cents]);
     if(data.tax_cents>0)nodes.push(['Tax',data.tax_cents]);
-    track.innerHTML=nodes.map(([label,price],index)=>'<div class="'+(index===0?'nlc-first-subtotal':label==='Shipping Protection'?'nlc-protection-static':'')+'"><span>'+html(label)+'</span><strong>'+(price<0?'−'+money(-price):label==='Shipping'&&price===0?'FREE':money(price))+'</strong></div>').join('');
+    track.innerHTML=nodes.map(([label,price],index)=>'<div class="'+(index===0?'nlc-first-subtotal':label==='Shipping Protection'?'nlc-protection-static':'')+'"><span>'+html(label)+'</span><strong>'+(price<0?'−'+money(-price):label===shippingLabel&&price===0?'FREE':money(price))+'</strong></div>').join('');
     renderRewards(root,data,country);
-    root.querySelector('.nlc-proceed').innerHTML='Proceed to Checkout ('+money(data.total_cents)+')';
+    proceed.textContent='Proceed to Checkout ('+money(data.total_cents)+')';
     const hostedCard=(settings.methods||[]).find(method=>method.native_provider==='rampex'&&method.rampex_provider==='hosted'&&method.active!==false&&method.countries?.includes(country));
     root.querySelector('.nlc-express').hidden=!hostedCard;
     root.querySelectorAll('[data-nlc-wallet]').forEach(link=>{
@@ -178,6 +190,7 @@
      link.setAttribute('aria-disabled',String(!hostedCard));
     });
     hasQuote=true;
+    window.PureFunnel?.mark('cart');
    }catch(error){
     if(!input.isConnected||id!==seq)return;
     if(action==='apply'&&error.status===400){
@@ -192,8 +205,15 @@
     }
    }finally{if(input.isConnected&&id===seq){apply.disabled=false;remove.disabled=false;}}
   };
-  const dateLabel=offset=>{const date=new Date();date.setDate(date.getDate()+offset);return new Intl.DateTimeFormat('en-US',{weekday:'short',month:'short',day:'numeric'}).format(date);};
-  root.querySelector('[data-nlc-estimate]').textContent=dateLabel(7)+' – '+dateLabel(13);
+  destination.addEventListener('change',()=>{
+   selectedCountry=destination.value;
+   localStorage.setItem('ap-shipping-country',selectedCountry);
+   sessionStorage.setItem('pure-cart-destination',selectedCountry);
+   hasQuote=false;
+   track.innerHTML='<p role="status">Updating shipping and total…</p>';
+   proceed.textContent='Proceed to Checkout';
+   void redraw();
+  });
   apply.addEventListener('click',()=>redraw(input.value.trim().toUpperCase(),'apply'));
   input.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();apply.click();}});
   remove.addEventListener('click',()=>redraw('','remove'));
