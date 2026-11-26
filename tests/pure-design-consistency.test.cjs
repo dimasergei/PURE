@@ -46,10 +46,8 @@ test('only the terms link remains below membership cards on both routes',()=>{
  assert.match(src,/class="mx-terms"><a href="\/membership-terms\.html">See full terms\.<\/a>/);
  assert.doesNotMatch(src,/class="mx-terms">\$\{esc\(terms\(config\)\)\}/);
 });
-test('rewards and credit links show balances on account overview, not separate tabs',()=>{
- const site=read('site-build.cjs'),nav=read('account-experience-build.cjs'),ui=read('readiness-ui.js');
- assert.match(site,/\['Rewards & Credit','\/account#rewards-and-credit'\]/);
- assert.match(site,/href="\/account#rewards-and-credit">Rewards & Credit/);
+test('rewards and credit remain on the account overview after the menu is simplified',()=>{
+ const nav=read('account-experience-build.cjs'),ui=read('readiness-ui.js');
  assert.doesNotMatch(nav,/\['Points','\/account\/points'\],\['Store Credit'/);
  assert.match(nav,/includes\(location\.pathname\)\)return go\('\/account#rewards-and-credit'\)/);
  assert.match(ui,/id="rewards-and-credit"/);
@@ -57,14 +55,15 @@ test('rewards and credit links show balances on account overview, not separate t
  assert.doesNotMatch(ui,/href="\/account\/points">View points/);
 });
 test('homepage FAQ and featured laboratory sample preserve the real Testing destination',()=>{
- const home=views.store.home.toString(),css=read('pure-brand.css');
+ const home=views.store.home.toString(),storefront=read('storefront-v2.js'),css=read('pure-brand.css');
  const reports=JSON.parse(read('data/supplier-coas.json')).reports;
  const sample=reports.find(report=>report.lot.endsWith('202607-PRO-005'));
  assert.ok(sample);
  assert.equal(sample.scope,'supplier_reference');
  assert.equal(sample.inventory_lot_linked,false);
- assert.match(home,/pure-faq-section/);
- assert.match(home,/pure-faq-list/);
+ assert.match(home,/\$\{homeFAQ\(\)\}/);
+ assert.match(storefront,/pure-faq-section/);
+ assert.match(storefront,/pure-faq-list/);
  assert.match(home,/nl-doc-sheet/);
  assert.match(home,/LAB SAMPLE/);
  assert.ok(home.includes(sample.lab_name));
