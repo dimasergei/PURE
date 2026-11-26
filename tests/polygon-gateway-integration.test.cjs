@@ -1,6 +1,6 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict');
-const gateway=require('../lib/native-gateway'),polygon=require('../lib/polygon-usdc');
+const gateway=require('../lib/native-gateway'),polygon=require('../lib/polygon-usdc'),guest=require('../lib/guest-checkout');
 const id='e1000000-0000-4000-8000-000000000001',method='e1000000-0000-4000-8000-000000000002',attempt='e1000000-0000-4000-8000-000000000003';
 const recipient='0x1111111111111111111111111111111111111111',payer='0x2222222222222222222222222222222222222222';
 const env={SITE_URL:'https://getpurelabs.com',POLYGON_USDC_RECIPIENT:recipient,POLYGON_USDC_RPC_URL:'https://polygon-rpc.test',POLYGON_USDC_SECONDARY_RPC_URL:'https://polygon-second.test',POLYGON_USDC_ENABLED:'true',ADMIN_ORDERS_PASSWORD:'gateway-admin-fixture-with-at-least-32-characters'};
@@ -8,15 +8,15 @@ const invoice={id,method_id:method,customer_id:'customer-one',kind:'goods',statu
 const account={method_id:method,provider:'polygon_usdc',mode:'live',account_tag:polygon.configuration(env).account_tag,countries:['US','CA'],polygon_recipient:recipient};
 function response(){return{headers:{},setHeader(k,v){this.headers[k]=v;},status(code){this.code=code;return this;},json(body){this.body=body;return this;}};}
 function request(body,admin=false){return{method:'POST',headers:{origin:env.SITE_URL,'content-type':'application/json',...(admin?{'x-admin-password':env.ADMIN_ORDERS_PASSWORD}:{authorization:'Bearer customer-session-fixture-with-32-characters'})},body:JSON.stringify(body)};}
-function database({owner='customer-one',provider='polygon_usdc'}={}){
+function database({owner='customer-one',provider='polygon_usdc',order=invoice}={}){
  const calls=[];
  return{calls,auth:{getUser:async()=>({data:{user:{id:owner,email:'customer@example.test',email_confirmed_at:'2026-01-01'}}})},
   rpc:async(name,args)=>{calls.push({name,args});return{data:{id:args.p_data?.id||id}};},
   from(table){const filters={};const q={select(){return q;},eq(k,v){filters[k]=v;return q;},order(){return q;},limit(){return q;},single:async()=>get(),maybeSingle:async()=>get(),then(resolve){return Promise.resolve(get()).then(resolve);}};
    function get(){
-    if(table==='commerce_invoices')return{data:(!filters.id||filters.id===id)&&(!filters.customer_id||filters.customer_id===invoice.customer_id)?invoice:null};
+    if(table==='commerce_invoices')return{data:(!filters.id||filters.id===id)&&(!filters.customer_id||filters.customer_id===order.customer_id)?order:null};
     if(table==='commerce_gateway_accounts')return{data:{...account,provider}};
-    if(table==='commerce_payment_methods')return{data:{id:method,active:true,native_provider:provider}};
+    if(table==='commerce_payment_methods')return{data:{id:method,active:true,native_provider:provider,currency:'USD',sale_scope:'goods'}};
     if(table==='commerce_gateway_attempts')return{data:[]};
     throw Error('Unexpected table '+table);
    }return q;
@@ -51,6 +51,58 @@ test('customer reload returns the stored wallet authorization without creating a
  t.mock.method(polygon,'customerState',async(db,i,u)=>{assert.equal(i.id,id);assert.equal(u.id,invoice.customer_id);return{state:'pending',intent:{attempt_id:attempt}};});
  const db=database(),res=response();await gateway.handle({method:'GET',headers:{authorization:'Bearer customer-session-fixture-with-32-characters'}},res,new URLSearchParams({native:'customer',invoice:id}),{env,db});
  assert.equal(res.code,200);assert.equal(res.body.crypto.intent.attempt_id,attempt);assert.equal(res.body.gateway.provider,'polygon_usdc');assert.equal(res.body.gateway.ready,true);assert.equal(db.calls.length,0);assert.ok(!JSON.stringify(res.body.gateway).includes(recipient));
+});
+test('guest wallet handoff authorizes only the matching order and keeps customer details private',async t=>{
+ const settings={...env,CHECKOUT_RATE_LIMIT_SECRET:'guest-wallet-fixture-secret'.repeat(2)},initial=response();
+ const credential=guest.createCredential(id,initial,settings);credential.issue();
+ const originalCookie=initial.headers['Set-Cookie'].split(';')[0];
+ const order={...invoice,customer_id:credential.id,request_data:{checkout:{guest:true},address:{country:'CA'}}};
+ const db=database({order});
+ const start=t.mock.method(polygon,'start',async(_,i,a,c,b,u)=>{
+  assert.equal(i.id,id);assert.equal(u.id,credential.id);
+  return {state:'awaiting_wallet',attempt_id:b.attempt_id};
+ });
+ const confirm=t.mock.method(polygon,'confirm',async(_,i,a,c,b,u)=>{
+  assert.equal(i.id,id);assert.equal(u.id,credential.id);
+  return {state:'pending'};
+ });
+ t.mock.method(polygon,'customerState',async(_,i,u)=>{
+  assert.equal(i.id,id);assert.equal(u.id,credential.id);
+  return {state:'not_started'};
+ });
+ async function guestRequest(body,{cookie,origin=env.SITE_URL}={}){
+  const req={method:body?'POST':'GET',headers:{origin,'content-type':'application/json',...(cookie?{cookie}:{})},...(body?{body:JSON.stringify(body)}:{})};
+  const res=response();
+  await gateway.handle(req,res,new URLSearchParams({native:'customer',invoice:id}),{env:settings,db,rateLimit:async()=>{}});
+  return res;
+ }
+ const link={action:'guest_wallet_link',invoice_id:id};
+ assert.equal((await guestRequest(link)).code,401);
+ const issued=await guestRequest(link,{cookie:originalCookie});
+ assert.equal(issued.code,200);
+ const exchange={action:'guest_wallet_exchange',invoice_id:id,ticket:issued.body.ticket};
+ assert.equal((await guestRequest(exchange,{origin:'https://other.example.test'})).code,403);
+ assert.equal((await guestRequest({...exchange,invoice_id:method})).code,401);
+ const invalidTicket=exchange.ticket.slice(0,-1)+(exchange.ticket.endsWith('a')?'b':'a');
+ assert.equal((await guestRequest({...exchange,ticket:invalidTicket})).code,401);
+ const realNow=Date.now(),oldClock=t.mock.method(Date,'now',()=>realNow-360000);
+ const expiredTicket=require('../lib/guest-wallet-handoff').issue(id,credential.id,settings);
+ oldClock.mock.restore();
+ assert.equal((await guestRequest({...exchange,ticket:expiredTicket})).code,401);
+ const redeemed=await guestRequest(exchange);
+ assert.equal(redeemed.code,200);
+ assert.match(redeemed.headers['Set-Cookie'],/Secure; HttpOnly; SameSite=Lax/);
+ const cookie=redeemed.headers['Set-Cookie'].split(';')[0];
+ const model=(await guestRequest(undefined,{cookie})).body;
+ assert.equal(model.invoice.guest,true);
+ assert.equal(model.gateway.provider,'polygon_usdc');
+ assert.equal(model.customer,undefined);
+ assert.equal((await guestRequest(pay)).code,401);
+ assert.equal((await guestRequest({...pay,confirm_amount_cents:1},{cookie})).code,409);
+ assert.equal((await guestRequest(pay,{cookie})).body.state,'awaiting_wallet');
+ assert.equal((await guestRequest({...pay,action:'confirm_crypto'},{cookie})).body.state,'pending');
+ assert.equal(start.mock.callCount(),1);
+ assert.equal(confirm.mock.callCount(),1);
 });
 test('admin activation needs live token/finality readiness and derives the recipient from server configuration',async t=>{
  const body={action:'configure',provider:'polygon_usdc',id:method,version:0,active:true,currency:'USD',sale_scope:'goods',confirmed:true,label:'Crypto',payee:'PURE',approval_reference:'Owner-authorized recipient',countries:['US','CA'],polygon_recipient:payer,account_tag:'tampered',mode:'sandbox'};

@@ -39,11 +39,11 @@ function fixture(){
   },
   async rpc(name,args){
    calls.push({name,args});
-   if(name==='commerce_place_checkout'){
+   if(name==='commerce_place_checkout'||name==='commerce_place_interac_checkout'){
     const order=args.p_data;
     invoices.push({...order,request_data:order.request,request_digest:order.digest,status:'accepted',
      public_order_number:orderNumber,expires_at:new Date(Date.now()+86400000).toISOString()});
-    return {data:{id:order.id,status:'accepted'}};
+    return {data:{id:order.id,status:'accepted',currency:order.currency,total_cents:order.total_cents,manual_transfer:name==='commerce_place_interac_checkout'}};
    }
    if(name==='commerce_begin_gateway_attempt'){
     const invoice=invoices.find(row=>row.id===args.p_invoice&&row.customer_id===args.p_customer);
@@ -91,7 +91,7 @@ test('guest quote, exact-order cookie and provider-verified payment work without
  const f=fixture();
  const run=(body,headers)=>call(checkout.handle,'checkout=customer',f.deps,body,headers);
  const configResponse=await call(checkout.handle,'checkout=public',f.deps);
- assert.deepEqual(configResponse.data.guest_methods,[method.id]);
+ assert.deepEqual(configResponse.data.guest_methods,[method.id,interac.id]);
  const preview=await call(checkout.handle,'checkout=cart',f.deps,{...checkoutBody,country:'US'});
  const quote=await run({...checkoutBody,action:'quote'});
  assert.equal(quote.code,200);
@@ -147,7 +147,7 @@ test('guest quote, exact-order cookie and provider-verified payment work without
 
 test('guest checkout rejects account-only benefits and never issues a credential for an invalid purchase',async()=>{
  const f=fixture();
- for(const [change,status] of [[{email:'bad'},400],[{method_id:interac.id,address:{...checkoutBody.address,country:'CA'}},409],
+ for(const [change,status] of [[{email:'bad'},400],[{method_id:interac.id},409],
   [{points:100},403],[{credit_cents:200},403],[{bulk_order:true},403],[{coupon:'CARDTEST'},403],
   [{coupon:'AP-ABCDEFGH2345'},403],[{membership_addon:{plan:'vip',period:'monthly'}},403],[{research_builder_mode:'member_stack'},403]]){
   const response=await call(checkout.handle,'checkout=customer',f.deps,{...checkoutBody,action:'quote',...change});
@@ -155,6 +155,31 @@ test('guest checkout rejects account-only benefits and never issues a credential
   assert.equal(response.headers['Set-Cookie'],undefined);
  }
  assert.equal(f.calls.length,0);
+});
+
+test('guest Interac locks its CAD quote and scopes the credential to the transfer window',async()=>{
+ const f=fixture();
+ const token='fixture-signed-rate-token';
+ f.deps.interacFx={resolve:async({strict,token:submitted})=>{
+  if(strict&&submitted!==token)throw Object.assign(Error('Quote expired.'),{status:409});
+  return {token,fx_ppm:1375000,source:'Bank of Canada',series:'FXUSDCAD',rate_date:'2026-11-17',quoted_at:'2026-11-18T07:00:00.000Z',expires_at:'2026-11-18T07:30:00.000Z'};
+ }};
+ const body={...checkoutBody,id:randomUUID(),method_id:interac.id,address:{line1:'123 Fixture Street',city:'Waterloo',region:'ON',postal_code:'N2L 1A1',country:'CA'}};
+ const run=(fields,headers)=>call(checkout.handle,'checkout=customer',f.deps,{...body,...fields},headers);
+ const quote=await run({action:'quote'});
+ assert.equal(quote.code,200);
+ assert.equal(quote.data.currency,'CAD');
+ assert.equal(quote.data.manual_transfer,true);
+ assert.match(quote.headers['Set-Cookie'],/Max-Age=86400/);
+ const cookie=quote.headers['Set-Cookie'].split(';')[0];
+ const place={action:'place',quote:quote.data.quote,fx_quote:token};
+ assert.equal((await run(place)).code,401);
+ const result=await run(place,{cookie});
+ assert.equal(result.code,201);
+ assert.equal(result.data.currency,'CAD');
+ assert.equal(result.data.total_cents,quote.data.total_cents);
+ assert.equal(f.invoices[0].request_data.checkout.guest,true);
+ assert.equal((await run(place,{cookie})).data.replayed,true);
 });
 
 test('Canadian guest checkout uses its destination-specific shipping quote and collects Card in USD',async()=>{

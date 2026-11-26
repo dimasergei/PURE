@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="referrer" content="no-referrer">
+  <title>Interac e-Transfer | PURE</title>
+  <link rel="stylesheet" href="/storefront-v2.css">
+  <style>
+    .interac-shell{max-width:640px;margin:36px auto;padding:20px}
+    .interac-shell h1{font-size:clamp(28px,7vw,46px);margin:6px 0 12px}
+    .interac-panel{padding:20px;margin:16px 0;border:1px solid #ddd;border-radius:14px}
+    .interac-panel p{margin:0 0 14px}
+    .interac-panel p:last-child{margin-bottom:0}
+    .interac-total{font-size:1.4rem}
+    .interac-instructions{white-space:pre-wrap;overflow-wrap:anywhere}
+    .interac-shell [hidden]{display:none!important}
+    .interac-refresh{margin:0 0 18px}
+  </style>
+</head>
+<body class="ap-site">
+  <main class="interac-shell">
+    <a class="ap-text-link" href="/shop">PURE shop</a>
+    <h1>Interac e-Transfer</h1>
+    <p id="interac-status" role="status" aria-live="polite">Loading your order…</p>
+    <section class="interac-panel" id="interac-summary" aria-label="Order summary" hidden>
+      <p id="interac-order"></p>
+      <p>Order total · CAD <strong class="interac-total" id="interac-total"></strong></p>
+      <p id="interac-deadline" hidden>Payment deadline <time></time></p>
+    </section>
+    <section class="interac-panel" id="interac-payment" aria-labelledby="interac-payment-title" hidden>
+      <h2 id="interac-payment-title">Transfer details</h2>
+      <p>Payee <strong id="interac-payee"></strong></p>
+      <p class="interac-instructions" id="interac-instructions"></p>
+      <p>Order reference <strong id="interac-reference"></strong></p>
+      <p>Send the exact CAD total and include the order reference. Payment is confirmed after PURE verifies the deposit.</p>
+    </section>
+    <button class="ap-button ap-button-secondary interac-refresh" id="interac-refresh" type="button">Refresh status</button>
+    <p>Questions about this order? <a href="mailto:support@getpurelabs.com">Contact PURE support</a>.</p>
+  </main>
+  <script src="/guest-interac-pay.js?v=1" defer></script>
+</body>
+</html>

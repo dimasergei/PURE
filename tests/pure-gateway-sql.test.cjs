@@ -13,6 +13,7 @@ const migration='20261125000100_pure_gateway_card_route.sql';
 const cardTestMigration='20261125223346_one_use_card_test_coupon.sql';
 const reversalMigration='20261126011403_verified_pure_gateway_reversals.sql';
 const guestMigration='20261126013508_guest_checkout.sql';
+const guestPaymentsMigration='20261126024818_guest_interac_and_crypto.sql';
 const tag=gw.configuration({PURE_GATEWAY_URL:'https://pay.example.test'}).account_tag;
 const catalog=[
  {id:'fixture-a',name:'Fixture A',category:'injectables',variants:[{size:'5mg',price:99.99}]},
@@ -272,6 +273,40 @@ test('the pure_gateway card route is registered, priced and settled atomically i
    assert.equal(paid.earned_points,0);
    assert.equal(paid.pricing.first_order_bac,undefined);
    assert.equal((await db.query('select points from commerce_balance_accounts where customer_id=$1',[order.customer])).rows[0].points,0);
+  });
+  await db.exec(read(guestPaymentsMigration));
+  await t.test('a Canadian guest can save a fixed CAD Interac order without a receipt or account rewards',async()=>{
+   const customer=randomUUID(), item=catalog[0], now=new Date();
+   const method=(await db.query('select * from commerce_payment_methods where id=$1',[interac])).rows[0];
+   const record=await checkout.normalize({}, {id:customer,email:'guest-cad@example.test'}, {
+    id:randomUUID(),kind:'goods',name:'Fixture guest',method_id:interac,checkout_version:config.version,
+    consent:true,research_use:true,items:[{id:item.id,size:item.variants[0].size,qty:1}],
+    address:{line1:'100 Fixture Street',city:'Waterloo',region:'ON',postal_code:'N2L 1A1',country:'CA'},
+    delivery:{shipping:'economy',extras:[]}
+   },catalog);
+   record.request.checkout.guest=true;
+   record.request.checkout.input_digest=record.digest;
+   record.request.checkout.payment_kind='interac';
+   record.request.checkout.payment_method_version=method.version;
+   record.request.preferred_payment={method_id:interac,provider_key:'interac',label:method.label,currency:'CAD'};
+   const fx={fx_ppm:1375000,source:'Bank of Canada',series:'FXUSDCAD',
+    rate_date:new Intl.DateTimeFormat('en-CA',{timeZone:'America/Toronto',year:'numeric',month:'2-digit',day:'2-digit'}).format(now),
+    quoted_at:now.toISOString(),expires_at:new Date(now.getTime()+900000).toISOString(),token:'fixture'};
+   const order={...record,...checkout.price(record,method,null,{points:0,credit_cents:0},null,delivery.defaults,fx),
+    checkout_version:checkout.INTERAC_VERSION};
+   await assert.rejects(rpc('commerce_place_interac_checkout',[{...order,earned_points:1}]),/points earning basis changed/);
+   const result=await rpc('commerce_place_interac_checkout',[order]);
+   assert.equal(result.status,'accepted');
+   assert.equal(result.manual_transfer,true);
+   assert.equal(result.currency,'CAD');
+   assert.equal(result.total_cents,order.total_cents);
+   const saved=await load(order.id);
+   assert.equal(saved.request_data.checkout.guest,true);
+   assert.equal(saved.paid_at,null);
+   assert.equal(saved.earned_points,0);
+   assert.equal(saved.payment_snapshot.instructions,method.instructions);
+   assert.deepEqual((await db.query('select id from auth.users where id=$1',[customer])).rows,[]);
+   assert.deepEqual((await db.query('select id from commerce_receipts where invoice_id=$1',[order.id])).rows,[]);
   });
   const reverseFixture=async suffix=>{
    const order=await payable(),attempt=await begin(order),session='pi_reverse'+suffix,charge='ch_reverse'+suffix;

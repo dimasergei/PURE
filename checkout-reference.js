@@ -34,7 +34,11 @@
   const params=new URLSearchParams(location.search);
   const guest=!user;
   const signIn='/account/login?returnTo='+encodeURIComponent(location.pathname+location.search);
-  const savedOrderPath=id=>guest?'/pay.html?invoice='+encodeURIComponent(id)+'&guest=1':'/account/purchases?id='+encodeURIComponent(id);
+  const savedOrderPath=(id,kind)=>{
+   const reference=encodeURIComponent(id);
+   if(!guest)return '/account/purchases?id='+reference;
+   return kind==='interac'?'/guest-interac-pay.html?invoice='+reference:'/pay.html?invoice='+reference+'&guest=1';
+  };
   if(guest&&(params.has('plan')||params.has('period')||params.get('bulk')==='1'||params.get('balance')==='1')){location.assign(signIn);return;}
   if(params.has('plan')||params.has('period'))return window.PureMembershipCheckout.checkout(root,auth,user);
   if(params.get('bulk')==='1'||params.get('balance')==='1'){
@@ -469,7 +473,7 @@
    const amount=view('[data-nlx-wallet-amount]',form);if(amount)amount.textContent=state.paymentKind==='interac'?'Card payments in USD':usd(currentPreview?.total_cents||0);
      }
   function paymentLayout(){
-   const paymentKinds=guest?[...new Set(paymentMethods.map(paymentKind))]:['card','crypto',...(paymentMethods.some(m=>paymentKind(m)==='interac')?['interac']:[])];
+   const paymentKinds=guest?[...new Set(paymentMethods.filter(method=>method.countries?.includes(shippingCountry())).map(paymentKind))]:['card','crypto',...(paymentMethods.some(m=>paymentKind(m)==='interac')?['interac']:[])];
    const rows=paymentKinds.map(key=>{
     const method=paymentMethods.find(m=>paymentKind(m)===key&&Array.isArray(m.countries)&&m.countries.includes(shippingCountry()))||paymentMethods.find(m=>paymentKind(m)===key),available=method&&Array.isArray(method.countries)&&method.countries.includes(shippingCountry());
     const description=key==='interac'?'Pay in Canadian dollars by Interac e-Transfer. Your final CAD total is shown before you place the order. Receiving details and your payment reference appear immediately afterward.':key==='card'&&method?.native_provider==='pure_gateway'
@@ -482,7 +486,7 @@
    }).join('');
    return '<section class="nlx-payment"><h2>Choose how to pay</h2><div class="nlx-express-label"><strong>DIGITAL WALLET</strong><span data-nlx-wallet-amount>'+(state.paymentKind==='interac'?'Card payments in USD':usd(currentPreview?.total_cents||0))+'</span></div>'
     +'<div class="nlx-wallets" data-nlx-wallets><button type="button" class="nlx-wallet-button nlx-apple-pay" data-nlx-wallet="apple" aria-label="Choose Apple Pay" aria-pressed="false"><span class="nlx-wallet-lockup"><img class="nlx-wallet-symbol nlx-apple-symbol" src="/assets/payment-brands/apple-mark-clean.svg" alt="" aria-hidden="true" width="20" height="24"><span class="nlx-wallet-wordmark">Pay</span></span></button><span class="nlx-or">or</span><button type="button" class="nlx-wallet-button nlx-google-pay" data-nlx-wallet="google" aria-label="Choose Google Pay" aria-pressed="false"><span class="nlx-wallet-lockup"><img class="nlx-wallet-symbol nlx-google-symbol" src="/assets/payment-brands/google-g-clean.svg" alt="" aria-hidden="true" width="22" height="22"><span class="nlx-wallet-wordmark">Pay</span></span></button></div>'
-    +'<div class="nlx-divider"><span>OR PAY ANOTHER WAY</span></div><div class="nlx-payment-rows">'+rows+'</div>'
+    +'<div class="nlx-divider"><span>OR PAY ANOTHER WAY</span></div><div class="nlx-payment-rows">'+(rows||'<p class="nlx-error">No payment methods are available for this shipping address.</p>')+'</div>'
     +'<div class="nlx-terms"><label><input type="checkbox" name="ruo" required><span>'+esc(terms1)+'</span></label><label><input type="checkbox" name="responsibility" required><span>'+esc(terms2)+'</span></label></div>'
     +'<div class="nlx-payment-controls"><div class="nlx-status" data-nlx-status role="status" aria-live="polite"></div>'+actionTotal+'<button type="button" class="nlx-primary" data-nlx-place disabled>CONTINUE TO PAYMENT</button></div>'+trustMarkup+'</section>';
   }
@@ -581,7 +585,7 @@
       const result=await checkoutApi({...body,action:'place',quote:q.quote,...(cohort?{funnel_day:cohort}:{})});
       if(result?.id!==lastPlaced)throw Error('The saved order reference could not be verified.');
       if(state.paymentKind==='interac'&&(result.currency!=='CAD'||result.manual_transfer!==true||result.total_cents!==q.total_cents||result.request_only===true||result.status!=='accepted'&&!(result.replayed===true&&['paid','processing','shipped','delivered','void','refunded'].includes(result.status))))throw Error('The Interac order could not be verified. Check its status before trying again.');
-      let destination=savedOrderPath(lastPlaced);
+      let destination=savedOrderPath(lastPlaced,state.paymentKind);
       if(state.paymentKind==='interac')note('Your order is saved. Opening Interac payment details…');
       else if(q.total_cents>0){
        note(state.paymentKind==='card'?'Opening secure card payment…':'Opening USDC wallet payment…');
@@ -596,7 +600,7 @@
      }catch(error){
       if(lastPlaced){
        note('Your order reference is '+lastPlaced+'. '+error.message+' Check its status before starting another order.',true);
-       const link=el('a','nlx-view-order','CHECK SAVED ORDER');link.href=savedOrderPath(lastPlaced);status().append(document.createTextNode(' '),link);
+       const link=el('a','nlx-view-order','CHECK SAVED ORDER');link.href=savedOrderPath(lastPlaced,state.paymentKind);status().append(document.createTextNode(' '),link);
       }else{
        onePayment=false;all('input,select,textarea,button',div).forEach(control=>control.disabled=false);
        all('[name=payment_choice]',form).forEach(control=>{control.disabled=!paymentMethods.some(m=>paymentKind(m)===control.value&&Array.isArray(m.countries)&&m.countries.includes(shippingCountry()));});

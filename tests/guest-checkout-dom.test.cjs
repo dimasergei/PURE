@@ -71,6 +71,35 @@ test('guest checkout takes an email, reprices and saves before an exact-origin c
  assert.equal(submit.disabled,true);
 });
 
+test('guest payment options include available Crypto and Canadian Interac',async t=>{
+ for(const country of ['US','CA']){
+  const w=fixture(t,'/checkout'),root=w.document.querySelector('main');
+  const item={id:'fixture',size:'Single',key:'fixture:Single',name:'Catalog item',price:63,qty:1};
+  const crypto={id:'crypto-1',native_provider:'polygon_usdc',countries:['US','CA']};
+  const interac={id:'interac-1',kind:'interac',provider_key:'interac',currency:'CAD',countries:['CA']};
+  w.AltaStore={cart:[item],catalog:[],product:()=>item,image:()=>'/fixture.svg'};
+  w.localStorage.setItem('ap-shipping-country',country);
+  w.fetch=async(url,init)=>{
+   assert.equal(init.headers.Authorization,undefined);
+   if(url.endsWith('checkout=public'))return response({config,delivery_options,shipping_zones,methods:[card,crypto,interac],guest_methods:[card.id,crypto.id,interac.id]});
+   assert.ok(url.endsWith('checkout=cart'));
+   const body=JSON.parse(init.body);
+   assert.equal(body.guest,true);
+   return response(body.method_id===interac.id?{...preview,currency:'CAD',total_cents:9700,fx_quote:'fixture-rate',pricing:{...preview.pricing,fx_ppm:1347222}}:preview);
+  };
+  w.eval(read('checkout-reference.js'));
+  await w.DirectCheckout.checkout(root,null,null);await settle();
+  const form=root.querySelector('form');
+  for(const [field,value] of Object.entries({first_name:'Fixture',last_name:'Guest',email:'guest@example.test',phone:'4165550100',line1:'100 Main St',city:'Test City',region:'ON',postal_code:'N2L 3G1'}))form.elements[field].value=value;
+  root.querySelector('[data-nlx-next]').click();root.querySelector('[data-nlx-next]').click();
+  assert.deepEqual([...root.querySelectorAll('[name=payment_choice]')].map(option=>option.value),country==='CA'?['card','crypto','interac']:['card','crypto']);
+  if(country==='CA'){
+   form.querySelector('[value=interac]').click();await settle();
+   assert.match(root.querySelector('[data-nlx-place]').textContent,/CA\$97\.00/);
+  }
+ }
+});
+
 test('guest card return confirms and displays the scoped order without starting an account session',async t=>{
  const id='80000000-0000-4000-8000-000000000002',w=fixture(t,'/pay.html?invoice='+id+'&payment_intent=pi_untrusted',read('pay.html'));
  const requests=[];

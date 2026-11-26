@@ -9,7 +9,7 @@
   let v=parseInt(signature.slice(130,132),16);if(v<27)v+=27;if(v!==27&&v!==28)throw Error('Your wallet returned an unsupported signature.');
   return '0xe3ee160e'+address(m.from)+address(m.to)+word(m.value)+word(m.validAfter)+word(m.validBefore)+m.nonce.slice(2)+word(v)+signature.slice(2,66)+signature.slice(66,130);
  }
- async function mount({host,auth,invoice,amount,currency,ready,state}){
+ async function mount({host,auth,guest=false,invoice,amount,currency,ready,state}){
   let current=state||{state:'not_started'},wallet=null,provider=null,busy=false,disposed=false,poll=null,pollCount=0;
   const root=document.createElement('section');root.className='ap-form pure-usdc-payment';
   const heading=document.createElement('h2');heading.textContent='Pay with native USDC on Polygon';
@@ -19,16 +19,17 @@
   const connect=document.createElement('button');connect.type='button';connect.className='ap-button';connect.textContent='CONNECT WALLET';
   const pay=document.createElement('button');pay.type='button';pay.className='ap-button';pay.textContent='AUTHORIZE & PAY '+(amount/100).toFixed(2)+' USDC';pay.hidden=true;
   const check=document.createElement('button');check.type='button';check.className='ap-button ap-button-secondary';check.textContent='CHECK PAYMENT STATUS';
-  const handoff=document.createElement('p');handoff.className='ap-fine';handoff.textContent='On mobile, open this saved order in the browser inside your compatible wallet, then sign in. On desktop, use a compatible wallet extension. This flow supports standard externally owned wallets.';
-  const copy=document.createElement('button');copy.type='button';copy.className='ap-button ap-button-secondary';copy.textContent='COPY SAVED ORDER LINK';
-  root.append(heading,details,summary,status,connect,pay,check,handoff,copy);host.replaceChildren(root);
+  const handoff=document.createElement('p');handoff.className='ap-fine';handoff.textContent=guest?'On mobile, copy a private payment link and open it in the browser inside your compatible wallet. It is valid for five minutes.':'On mobile, open this saved order in the browser inside your compatible wallet, then sign in. On desktop, use a compatible wallet extension. This flow supports standard externally owned wallets.';
+  const copy=document.createElement('button');copy.type='button';copy.className='ap-button ap-button-secondary';copy.textContent=guest?'COPY WALLET PAYMENT LINK':'COPY SAVED ORDER LINK';
+  const walletLink=document.createElement('input');walletLink.type='text';walletLink.readOnly=true;walletLink.hidden=true;walletLink.setAttribute('aria-label','Private wallet payment link');
+  root.append(heading,details,summary,status,connect,pay,check,handoff,copy,walletLink);host.replaceChildren(root);
   const key=()=>current.intent?'pure-usdc:'+invoice+':'+current.intent.attempt_id:null;
   function marker(value){try{const k=key();if(!k)return null;if(value===null)localStorage.removeItem(k);else if(value!==undefined)localStorage.setItem(k,value);return localStorage.getItem(k);}catch{return null;}}
   const uncertain=()=>current.state==='pending'||!!marker();
   const stopped=()=>['paid','review','expired','canceled','cancel_pending'].includes(current.state);
   function draw(text){
    if(disposed)return;const intent=current.intent,ended=stopped(),expired=intent&&Date.now()/1000>=Number(intent.valid_before);
-   connect.hidden=ended||expired||!ready||uncertain()||!!wallet;connect.disabled=busy;
+   connect.hidden=ended||expired||!ready||uncertain()||!!wallet||!window.ethereum?.request;connect.disabled=busy;
    pay.hidden=ended||!ready||uncertain()||!wallet||!intent||expired;pay.disabled=busy;
    check.hidden=!intent||['paid','canceled'].includes(current.state);check.disabled=busy;
    summary.textContent=intent?'Network: Polygon · Native USDC · Receiving wallet: '+intent.recipient:'';
@@ -36,8 +37,9 @@
    status.textContent=text||(current.state==='canceled'?'Your unpaid order is canceled. No payment was received and no refund was issued.':current.state==='cancel_pending'?'Cancellation requested. Do not send payment. We are checking the wallet authorization and will finish canceling automatically once it has expired unused.':current.state==='paid'?'Payment confirmed. Your order is paid.':current.state==='review'?'Your transfer was received and needs order review. Please contact support with this saved order; do not send another payment.':current.state==='expired'||expired?'This authorization has expired. Check payment status before creating a new order.':uncertain()?'Checking your transfer on Polygon. Keep this order link; confirmation continues even if you close this page. Do not send a second payment.':!ready?'New wallet payments are currently unavailable for this order. You can still check a previously sent payment.':wallet?'Wallet connected. Review the amount, then authorize this order and confirm the transaction in your wallet.':'Connect your wallet to review the exact order authorization.');
   }
   async function api(body){
-   const session=await auth.auth.getSession(),token=session.data?.session?.access_token;if(!token)throw Error('Sign in again to check or pay this saved order.');
-   const r=await fetch('/api/checkout?native=customer&invoice='+encodeURIComponent(invoice),{method:body?'POST':'GET',cache:'no-store',headers:{Authorization:'Bearer '+token,...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});
+   const session=guest?null:await auth.auth.getSession(),token=session?.data?.session?.access_token;
+   if(!guest&&!token)throw Error('Sign in again to check or pay this saved order.');
+   const r=await fetch('/api/checkout?native=customer&invoice='+encodeURIComponent(invoice),{method:body?'POST':'GET',cache:'no-store',credentials:'same-origin',headers:{...(token?{Authorization:'Bearer '+token}:{}),...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});
    const data=await r.json();if(!r.ok)throw Error(data.error||'Payment confirmation is temporarily unavailable. Keep this saved order link.');return data;
   }
   function schedule(){clearTimeout(poll);if(disposed||!current.intent||['paid','review','expired','canceled'].includes(current.state)||pollCount>=18)return;poll=setTimeout(async()=>{pollCount++;await refresh();schedule();},10000);}
@@ -86,7 +88,29 @@
    }finally{busy=false;draw(status.textContent);if(uncertain()){await refresh();schedule();}}
   };
   check.onclick=async()=>{pollCount=0;await refresh();schedule();};
-  copy.onclick=async()=>{try{await navigator.clipboard.writeText(location.origin+'/pay.html?invoice='+encodeURIComponent(invoice));draw('Saved order link copied. Open it in your wallet browser and sign in.');}catch{draw('Open '+location.origin+'/pay.html?invoice='+invoice+' in your wallet browser and sign in.');}};
+  copy.onclick=async()=>{
+   const url=new URL('/pay.html',location.origin);
+   url.searchParams.set('invoice',invoice);
+   if(!guest){
+    try{await navigator.clipboard.writeText(url.href);draw('Saved order link copied. Open it in your wallet browser and sign in.');}
+    catch{draw('Open '+url.href+' in your wallet browser and sign in.');}
+    return;
+   }
+   copy.disabled=true;walletLink.hidden=true;walletLink.value='';
+   try{
+    const {ticket}=await api({action:'guest_wallet_link',invoice_id:invoice});
+    if(disposed)return;
+    if(!/^[a-f0-9.-]+\.[A-Za-z0-9_-]{43}$/i.test(ticket||''))throw Error('Could not create a private wallet link.');
+    url.searchParams.set('guest','1');
+    url.hash='wallet='+ticket;
+    try{await navigator.clipboard.writeText(url.href);draw('Private wallet payment link copied. Paste it in your wallet browser within five minutes.');}
+    catch{
+     walletLink.value=url.href;walletLink.hidden=false;walletLink.focus();walletLink.select();
+     draw('Copy this private payment link and open it in your wallet browser within five minutes.');
+    }
+   }catch(e){draw(e.message);}
+   finally{copy.disabled=false;}
+  };
   draw();if(current.intent)schedule();
   return{destroy(){disposed=true;clearTimeout(poll);root.remove();}};
  }

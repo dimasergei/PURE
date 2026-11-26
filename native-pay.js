@@ -21,12 +21,13 @@
  async function guestInvoice(){
   try{
    const result=await request();
-   if(result.invoice?.guest!==true||result.invoice.id!==invoice||result.gateway?.provider!=='pure_gateway')throw Error('Guest order access could not be verified.');
+   if(result.invoice?.guest!==true||result.invoice.id!==invoice||!['pure_gateway','polygon_usdc'].includes(result.gateway?.provider))throw Error('Guest order access could not be verified.');
    guest=true;return result;
   }catch(error){if(!unavailable(error))throw error;return null;}
  }
  async function loadInvoice(){
   const guestLink=query.get('guest')==='1',paymentReturn=query.has('payment_intent');
+  if(window.PureWalletHandoff&&!await window.PureWalletHandoff)throw Error('This wallet link is invalid or expired. Copy a new link from your checkout browser.');
   if(guestLink||paymentReturn){const result=await guestInvoice();if(result)return result;}
   if(guestLink)throw Error('This guest order is unavailable in this browser. Open the link in the browser used at checkout or contact support.');
   const r=await fetch('/api/customer-config',{cache:'no-store'}),c=await r.json();
@@ -66,7 +67,7 @@
   $('native-form').hidden=false;
   if(!window.PureUSDC?.mount){$('native-status').textContent='The wallet payment screen could not load. Refresh your saved order before retrying.';return;}
   $('native-status').textContent='Pay USDC on Polygon directly from your wallet. You need POL for gas; the exact recipient and amount are shown before signing.';
-  widget=await window.PureUSDC.mount({host:$('native-widget'),auth,invoice:i.id,amount:i.amount_cents,currency:i.currency,ready:g.ready&&Date.parse(i.expires_at)>Date.now(),state:data.crypto});
+  widget=await window.PureUSDC.mount({host:$('native-widget'),auth,guest,invoice:i.id,amount:i.amount_cents,currency:i.currency,ready:g.ready&&Date.parse(i.expires_at)>Date.now(),state:data.crypto});
   return;
  }
  const active=data.attempts.find(a=>a.operation==='sale'&&a.state!=='declined');if(active){$('native-status').textContent=attemptNote(active,g);if(active.state==='redirected'&&active.redirect_url){try{const a=document.createElement('a');a.href=paymentDestination(active.redirect_url,g);a.className='ap-button';a.textContent='Resume the existing payment session ↗';$('native-status').append(document.createElement('br'),a);}catch(error){$('native-status').textContent=error.message+' Contact support before trying again.';}}schedulePoll();return;}

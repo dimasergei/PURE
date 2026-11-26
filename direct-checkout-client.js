@@ -28,7 +28,7 @@
  async function openHostedPayment(auth,invoice,amount,currency,method,billing={},guest=false){
   const kind=paymentKind(method);if(!kind)throw Error('This payment route is unavailable for a new order.');
   if(kind==='interac')throw Error('Use the Interac receiving details in My Orders to complete your payment.');
-  if(kind==='crypto')return{url:'/pay.html?invoice='+encodeURIComponent(invoice)};
+  if(kind==='crypto')return{url:'/pay.html?invoice='+encodeURIComponent(invoice)+(guest?'&guest=1':'')};
   const session=guest?null:await auth.auth.getSession(),token=session?.data?.session?.access_token;
   if(!guest&&!token)throw Error('Sign in again to pay your saved order.');
   const response=await fetch('/api/checkout?native=customer&invoice='+encodeURIComponent(invoice),{
