@@ -134,9 +134,9 @@ html:root body.ap-site .ap-announcement::before {
   left: 0;
   width: 28%;
   pointer-events: none;
-  background: linear-gradient(90deg, transparent, #ffffff08 20%, #ffffff30 50%, #ffffff08 80%, transparent) !important;
+  background: linear-gradient(90deg, transparent, #ffffff0c 20%, #ffffff48 50%, #ffffff0c 80%, transparent) !important;
   transform: translateX(-150%) skewX(-18deg);
-  animation: pure-announcement-shimmer 6.6s ease-in-out infinite !important;
+  animation: pure-announcement-shimmer 5s ease-in-out infinite !important;
 }
 @keyframes pure-announcement-shimmer {
   0%, 12% { transform: translateX(-150%) skewX(-18deg); }
@@ -356,6 +356,39 @@ html:root body.ap-site.ap-account-site .rd-points .rd-balance-note{margin:12px 0
 .pure-home-close { text-align: center; border-top: 1px solid #ddd; padding-block: 42px 58px; }
 .pure-home-close > div { display: flex; gap: 18px; flex-wrap: wrap; justify-content: center; align-items: center; }
 #nl-featured .nl-featured-meta .ap-catalog-actions { grid-column: 1/-1; width: 100%; }
+@media (min-width:768px) {
+  html:root body.ap-site :is(#nl-featured, #ap-catalog-grid) .ap-catalog-actions {
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:8px;
+    grid-column:1/-1;
+    width:100%;
+    margin-top:8px;
+  }
+  html:root body.ap-site :is(#nl-featured, #ap-catalog-grid) .ap-catalog-actions > .ap-button {
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:100%;
+    min-width:0;
+    min-height:42px;
+    padding:9px 5px;
+    border:1px solid #111;
+    border-radius:8px;
+    font-size:11px;
+    line-height:1.2;
+    text-align:center;
+    white-space:normal;
+  }
+  html:root body.ap-site :is(#nl-featured, #ap-catalog-grid) .ap-catalog-actions > .ap-catalog-view {
+    background:#fff!important;
+    color:#111!important;
+  }
+  html:root body.ap-site :is(#nl-featured, #ap-catalog-grid) .ap-catalog-actions > .ap-catalog-action {
+    background:#111!important;
+    color:#fff!important;
+  }
+}
 @media(max-width:700px) {
   .pure-home-packaging { grid-template-columns: 1fr; gap: 18px; text-align: center; }
   .pure-home-packaging p { margin-inline: auto; }

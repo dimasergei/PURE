@@ -24,6 +24,7 @@ test('owner consent, replay, pause/skip/edit, unpaid cycles, email and fulfilmen
   const owner=randomUUID(),other=randomUUID(),id=randomUUID(),mid=randomUUID();
   try{
     await base(db);
+    await db.exec(read('20261113124000_global_checkout_delivery_options.sql'));
     await db.exec('drop function commerce_internal.queue_invoice_notification()');
     await db.exec(read('20261110061306_invoice_notification_outbox.sql'));
     const queue=read('20261111025932_direct_checkout_balances.sql');
@@ -31,6 +32,9 @@ test('owner consent, replay, pause/skip/edit, unpaid cycles, email and fulfilmen
     await db.exec("alter table public.commerce_invoices add column membership_invoice_id uuid;create schema cron;create table cron.job(jobname text,active boolean default true);create function cron.schedule(text,text,text) returns bigint language plpgsql as $$begin insert into cron.job(jobname) values($1); return 1; end$$;");
     await db.exec(read('20261122000700_bogo_fulfillment.sql'));
     await db.exec(read('20261126180000_monthly_order_invoices.sql'));
+    await db.exec('alter table commerce_invoices add column cancellation_requested_at timestamptz');
+    await db.exec(read('20261122001200_commerce_order_numbers.sql'));
+    await db.exec(read('20261126184519_monthly_invoice_payment_choice.sql'));
     await db.exec('alter table auth.users add column email text, add column email_confirmed_at timestamptz');
     await run("insert into auth.users values($1,'owner@example.test',now()),($2,'other@example.test',now())",[owner,other]);
     await run("insert into commerce_payment_methods(id,kind,provider_key,label,currency,payee,instructions,allowed_host,acceptance_reference,active,sale_scope,native_provider) values($1,'hosted_link','custom','Fixture card','USD','Fixture store','Disposable test environment','getpurelabs.com','Test route fixture evidence',true,'goods','rampex')",[mid]);
@@ -74,5 +78,33 @@ test('owner consent, replay, pause/skip/edit, unpaid cycles, email and fulfilmen
     await manage('resume');await manage('pause');await manage('resume');await manage('cancel');await due();
     assert.equal((await readPlan()).status,'canceled');
     assert.equal(await scalar('select count(*)::int v from commerce_invoices'),2);
+
+    const interac=randomUUID(),newPlan=randomUUID();
+    await run("insert into commerce_payment_methods(id,kind,provider_key,label,currency,payee,instructions,acceptance_reference,active,sale_scope) values($1,'interac','interac','Interac','CAD','Test store','Send to fixture@example.test','Fixture reference',true,'goods')",[interac]);
+    const current=pricedBasket('builder',[{id:'example',size:'small',qty:8}],fixture,'CA',delivery.defaults,true);
+    const flexible={...snapshot,payment_choice:'per_invoice',pricing:current.pricing,total_cents:current.total_cents};
+    delete flexible.method_id;delete flexible.method_version;
+    const start=await scalar('select pure_repeat_save($1,$2,$3,$4,$5,null) v',[newPlan,owner,'owner@example.test',JSON.stringify(flexible),'c'.repeat(64)]);
+    const invoice=start.invoice_id;
+    assert.equal(await scalar('select method_id v from commerce_invoices where id=$1',[invoice]),null);
+    const fx={series:'FXUSDCAD',source:'Bank of Canada',fx_ppm:1350100,expires_at:new Date(Date.now()+60000).toISOString()};
+    const choose=(who,method=interac)=>run('select pure_repeat_choose_payment($1,$2,$3,1,$4,$5)',[who,invoice,method,current.total_cents,JSON.stringify(fx)]);
+    await assert.rejects(choose(other));await choose(owner);await choose(owner);await assert.rejects(choose(owner,mid));
+    const cad=Math.round(current.total_cents*fx.fx_ppm/1000000);
+    assert.deepEqual((await run("select currency,total_cents,(payment_snapshot->>'settlement_cents')::int as cad from commerce_invoices where id=$1",[invoice])).rows[0],{currency:'USD',total_cents:current.total_cents,cad});
+    await run("update pure_repeat_plans set next_due_at=now()-interval '1 second' where id=$1",[newPlan]);
+    await db.exec('select commerce_internal.process_repeat_invoices()');
+    const renewal=await scalar('select latest_invoice_id v from pure_repeat_plans where id=$1',[newPlan]);
+    assert.notEqual(renewal,invoice);assert.equal(await scalar('select method_id v from commerce_invoices where id=$1',[renewal]),null);
+    await run('select pure_repeat_choose_payment($1,$2,$3,1,$4,null)',[owner,renewal,mid,current.total_cents]);
+    const version=await scalar('select version v from commerce_invoices where id=$1',[invoice]);
+    const receipt={receipt_id:randomUUID(),method_id:interac,expected_version:version,confirm_funds_received:true,external_reference:'TEST-INTERAC-001'};
+    await assert.rejects(run("select commerce_admin_command('record_payment',$1,'fixture-admin')",[JSON.stringify({...receipt,id:invoice,version,funds_confirmed:true,amount_cents:current.total_cents,currency:'USD'})]));
+    await run('select commerce_admin_record_bank_payment($1,$2)',[invoice,JSON.stringify(receipt)]);
+    assert.deepEqual((await run('select currency,amount_cents from commerce_receipts where invoice_id=$1',[invoice])).rows,[{currency:'CAD',amount_cents:cad}]);
+    assert.equal(await scalar('select currency v from commerce_invoices where id=$1',[invoice]),'USD');
+    const refund={receipt_id:randomUUID(),id:invoice,version:version+1,funds_confirmed:true,amount_cents:cad,currency:'CAD',external_reference:'TEST-REFUND-001'};
+    await run("select commerce_admin_command('record_refund',$1,'fixture-admin')",[JSON.stringify(refund)]);
+    assert.equal(await scalar("select currency v from commerce_receipts where invoice_id=$1 and kind='refund'",[invoice]),'CAD');
   }finally{await db.close();}
 });

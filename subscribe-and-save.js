@@ -1,4 +1,4 @@
-/* Saved sets use the regular PURE cart for each order. */
+/* Monthly selections are separate from the regular cart. */
 (() => {
   'use strict';
   const planKey = 'pure-subscribe-plan-v1';
@@ -20,7 +20,6 @@
     const monthlyCents = amount => Math.round(Math.round(amount * 100) * 0.6);
     const products = get('products');
     const selection = get('selection');
-    const dialog = get('dialog');
     const cart = get('cart');
     const search = get('search');
     const sizes = new Map();
@@ -98,18 +97,18 @@
       const count = chosen.length;
       const total = chosen.reduce((sum, item) => sum + Math.round(findVariant(item.id, item.size).price * 100), 0) / 100;
       get('count').textContent = count + ' / ' + capacity;
-      get('drawer-count').textContent = count + ' of ' + capacity + ' selected';
+      get('mobile-count').textContent = count + '/' + capacity;
       get('progress').max = capacity;
       get('progress').value = count;
       get('subtotal').innerHTML = price(total);
-      get('review-total').innerHTML = price(total);
       const monthly = chosen.reduce((sum, item) => sum + monthlyCents(findVariant(item.id, item.size).price), 0) / 100;
       get('monthly-total').innerHTML = price(monthly);
-      get('monthly').innerHTML = 'Review monthly invoices · ' + price(monthly);
-      get('preview-monthly').innerHTML = price(monthly);
+      get('savings').innerHTML = '−' + price(total - monthly);
+      const continueLabel = count ? 'Continue · ' + price(monthly) + '/mo' : 'Continue';
+      get('monthly').innerHTML = get('mobile-continue').innerHTML = continueLabel;
       root.dataset.monthlySizeEligible = String(count <= 60);
       cart.disabled = !count || count % setSize !== 0;
-      get('monthly').hidden = !monthlyAvailable || cart.disabled || count > 60;
+      get('monthly').disabled = get('mobile-continue').disabled = !monthlyAvailable || cart.disabled || count > 60;
       const groups = [];
       for (let start = 0; start < count; start += setSize) {
         const rows = chosen.slice(start, start + setSize).map(({ id, size }, offset) => {
@@ -123,7 +122,7 @@
         groups.push(`<section class="pss-set"><h3>Set ${start / setSize + 1}</h3><ul class="pss-selection">${rows}${included}</ul></section>`);
       }
       selection.innerHTML = groups.join('') || '<p>Choose four items to build your first set.</p>';
-      get('next').hidden = count !== capacity;
+      get('next').hidden = count !== capacity || capacity >= 60;
       get('completed').textContent = 'Set ' + count / setSize + ' complete';
       get('another').textContent = 'Start set ' + (count / setSize + 1);
     }
@@ -137,21 +136,12 @@
       [...products.querySelectorAll('[data-pss-product]')].find(card => card.dataset.pssProduct === id)?.querySelector(selector)?.focus({ preventScroll: true });
     }
 
-    function openReview() {
-      if (!dialog.open) dialog.showModal();
-    }
-    // Browsers do not automatically restore button focus after a DOM redraw.
-    dialog.addEventListener('close', () => get('view').focus({ preventScroll: true }));
-    dialog.addEventListener('click', event => {
-      if (event.target.closest('[data-pss-close]') || event.target === dialog) dialog.close();
-    });
-    get('view').addEventListener('click', openReview);
     get('another').addEventListener('click', () => {
       if (chosen.length !== capacity) return;
       capacity += setSize;
       status('');
       render();
-      dialog.close();
+
     });
 
     search.addEventListener('input', renderProducts);
@@ -179,8 +169,7 @@
       status(store.product(id).name + ' ' + size + ' added to your plan.');
       save();
       render();
-      if (chosen.length === capacity) openReview();
-      else focusCard(id, '[data-pss-pick]');
+      focusCard(id, '[data-pss-pick]');
     });
     selection.addEventListener('change', event => {
       const select = event.target.closest('[data-pss-edit]');
@@ -202,7 +191,7 @@
       status('Item removed.');
       save();
       render();
-      (selection.querySelector('.pss-remove') || get('close')).focus();
+      (selection.querySelector('.pss-remove') || get('search')).focus();
     });
     function orderLines() {
       const items = new Map();
@@ -214,6 +203,7 @@
       }
       return items;
     }
+    get('mobile-continue').addEventListener('click', () => get('monthly').click());
     get('monthly').addEventListener('click', () => {
       if (!monthlyAvailable || cart.disabled || chosen.length > 60) return;
       try {
@@ -222,7 +212,7 @@
         status('Allow this site to save your selection to review monthly invoices.');
         return;
       }
-      location.assign('/monthly-orders?builder=1');
+      location.assign('/subscribe-and-save/checkout');
     });
     cart.addEventListener('click', () => {
       if (!chosen.length || chosen.length % setSize !== 0) return;
@@ -236,7 +226,6 @@
       try {
         store.addItems([...items.values()]);
         status('Plan added to your cart.');
-        if (dialog.open) dialog.close();
         document.querySelector('.ap-header [data-action="cart"]')?.click();
       } catch (error) {
         status(error.message);
@@ -251,9 +240,9 @@
         if (config?.available === true) {
           monthlyAvailable = true;
           root.dataset.monthlyAvailable = 'true';
-          get('monthly').hidden = cart.disabled || chosen.length > 60;
-        }
-      }).catch(() => {});
+          renderReview();
+        } else { cart.hidden = false; status('Monthly checkout is unavailable.'); }
+      }).catch(() => { cart.hidden = false; status('Monthly checkout is unavailable.'); });
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount, { once: true });

@@ -58,6 +58,20 @@ test('every order status uses a summary-contained secure action and the same mon
   }
 });
 
+test('monthly invoice email says payment is manual without changing other order notices', () => {
+  const snapshot = { id, checkout_version: 'checkout-2026-11-v8', kind: 'goods', status: 'accepted', customer_email: order.customer_email, customer_name: 'Researcher', currency: 'USD', total_cents: 17100 };
+  const detail = { request_data: { repeat_plan_id: id, repeat_cycle: 2 }, pricing: { lines: [] } };
+  const monthly = envelope({ audience: 'customer', event_action: 'checkout_placed', snapshot, detail }, env);
+  assert.match(monthly.subject, /monthly invoice/i);
+  assert.match(monthly.text, /will not be charged automatically/i);
+  assert.match(monthly.html, /will not be charged automatically/i);
+  assertSummaryAction(monthly.html, orderUrl);
+  const normal = envelope({ audience: 'customer', event_action: 'checkout_placed', snapshot, detail: { pricing: { lines: [] } } }, env);
+  assert.doesNotMatch(normal.subject, /monthly invoice/i);
+  const admin = envelope({ audience: 'admin', event_action: 'checkout_placed', snapshot, detail }, env);
+  assert.doesNotMatch(admin.subject, /monthly invoice/i);
+});
+
 test('checkout and invoice envelopes keep recipients, support replies, and audience-specific secure destinations', () => {
   for (const checkout of [true, false]) {
     for (const audience of ['customer', 'admin']) {

@@ -57,7 +57,7 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
  }
  {const{dom,d,w}=await setup('/');
   const ribbon=d.querySelector('.ap-announcement .pure-offer-trigger[data-default-offer]');
-  assert.equal(ribbon.getAttribute('href'),'/shop');
+  assert.equal(ribbon.querySelector('.pure-offer-action').getAttribute('href'),'/shop');
   assert.equal(ribbon.querySelector('.pure-offer-free').textContent,'BLACKFRIDAY10');
   assert.match(d.querySelector('h1').textContent,/CUTTING EDGEPURITY/);
    // Desktop navigation and mobile side menu share this single route/link.
@@ -148,8 +148,8 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
   assert.equal(d.querySelector('.nl-bulk-count'),null);assert.equal(d.querySelector('#ap-bulk-count'),null);
   const benefits=[...d.querySelectorAll('.nl-bulk-benefit')];
   assert.equal(benefits.length,4);
-  assert.deepEqual(benefits.map(benefit=>benefit.querySelector('.nl-bulk-benefit-copy').textContent),['10+ units','50+ units','Review before payment','Product documentation']);
-  assert.equal(d.querySelector('.nl-bulk-benefit-shipping'),null);
+  assert.deepEqual(benefits.map(benefit=>benefit.querySelector('.nl-bulk-benefit-copy').textContent),['10+ units','50+ units','Free express shipping','Product documentation']);
+  assert.match(d.querySelector('.nl-bulk-benefit-shipping').textContent,/2-day.*US bulk orders/);
   assert.equal(benefits[3].getAttribute('href'),'/coas');
   assert.match(d.querySelector('.nl-bulk-hero p').textContent,/Save 50% at 10 units/);
   assert.deepEqual([...d.querySelectorAll('[data-action="bulk-category"]')].map(button=>button.textContent),['All Products','Peptides','Mist Applicators','Supplies']);
@@ -170,6 +170,12 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
   assert.equal(subtotal(),money(variant.price*10),'larger quantities retain the same catalog unit price');
   assert.equal(w.AltaStore.read('ap-bulk-draft-v2',[])[0].qty,10,'the draft contains exactly the selected units');
   assert.equal(d.querySelector('[data-action="bulk-checkout"]').textContent,'Checkout · '+money(variant.price*5));
+  assert.equal(d.querySelector('[data-bulk-threshold="10"]').dataset.tierActive,'true');
+  qty.value='50';qty.dispatchEvent(new w.Event('input',{bubbles:true}));
+  assert.equal(d.querySelector('[data-bulk-threshold="50"]').dataset.tierActive,'true');
+  assert.match(qty.closest('article').querySelector('[data-tier-active="true"]').textContent,/60% off/);
+  qty.value='9';qty.dispatchEvent(new w.Event('input',{bubbles:true}));
+  assert.equal(d.querySelector('[data-bulk-threshold][data-tier-active="true"]'),null);
   assert.equal(w.AltaStore.cart.length,0);
   assertCurrentView(d,'/bulk-orders after quantity changes');
   dom.window.close();

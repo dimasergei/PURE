@@ -181,9 +181,6 @@ html:root body.ap-site .ap-announcement.pure-offer-active {
   background: #111 !important;
   border-bottom: 1px solid #383838;
 }
-html:root body.ap-site .ap-announcement.pure-offer-active::before {
-  display: none !important;
-}
 .ap-announcement .pure-offer-trigger {
   position: absolute;
   inset: 0;
@@ -233,7 +230,14 @@ html:root body.ap-site .ap-announcement.pure-offer-active::before {
   border-bottom: 1.5px solid;
   transform: translateY(-.1rem) rotate(45deg);
 }
-.pure-offer-trigger:hover .pure-offer-action { text-decoration: underline; text-underline-offset: 3px; }
+html:root body.ap-site .pure-offer-trigger a.pure-offer-action { display:inline-flex; color:#fff; text-decoration:none; transition:transform .18s ease }
+.pure-offer-trigger .pure-offer-free {border:0;font-family:inherit;cursor:copy}
+.pure-offer-trigger .pure-offer-free.is-copied {box-shadow:0 0 0 2px #aaa}
+.pure-offer-trigger :is(button,a):focus-visible {outline:2px solid white;outline-offset:3px}
+@media (hover:hover) and (prefers-reduced-motion:no-preference){
+ .pure-offer-trigger .pure-offer-action:hover {transform:translateX(2px);text-decoration:underline;text-underline-offset:3px}
+ .pure-offer-trigger .pure-offer-free:hover {box-shadow:0 0 10px #ffffff55}
+}
 .ap-announcement .pure-offer-trigger:focus-visible { outline: 2px solid #fff; outline-offset: -3px; }
 html:root body.ap-site .pure-offer-active a.pure-offer-trigger { display: flex; color: #fff; text-decoration: none; }
 .pure-offer-action::after { transform: rotate(-45deg); }

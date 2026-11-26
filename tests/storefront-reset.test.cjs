@@ -37,7 +37,7 @@ test('homepage keeps the announcement, five-vial hero and product links with qui
  try{
   const {d,w}=f,hero=d.querySelector('.nl-hero');
   const offer=d.querySelector('.ap-announcement.pure-offer-active .pure-offer-trigger');
-  assert.equal(offer.getAttribute('href'),'/shop');
+  assert.equal(offer.querySelector('.pure-offer-action').getAttribute('href'),'/shop');
   assert.equal(offer.querySelector('.pure-offer-buy').textContent,'10% off');
   assert.equal(offer.querySelector('.pure-offer-free').textContent,'BLACKFRIDAY10');
   assert.equal(offer.querySelector('.pure-offer-action').textContent,'Shop now');

@@ -39,6 +39,7 @@
    if(!guest)return '/account/purchases?id='+reference;
    return kind==='interac'?'/guest-interac-pay.html?invoice='+reference:'/pay.html?invoice='+reference+'&guest=1';
   };
+  if(location.pathname?.replace(/\/$/,'')==='/bulk-orders/checkout')return standardCheckout(root,auth,user,{...options,bulk:true});
   if(guest&&(params.has('plan')||params.has('period')||params.get('bulk')==='1'||params.get('balance')==='1')){location.assign(signIn);return;}
   if(params.has('plan')||params.has('period'))return window.PureMembershipCheckout.checkout(root,auth,user);
   if(params.get('bulk')==='1'||params.get('balance')==='1'){

@@ -54,7 +54,7 @@ test('preselects the exact linked strength and preserves the locally saved plan'
   const view = openPlanner('?product=alpha&size=10mg', [{ id: 'beta', size: '5mg' }, { id: 'supply', size: '10mL' }]);
   try {
     assert.equal(view.get('h1').textContent, 'SUBSCRIBE & SAVE.');
-    assert.match(view.get('.pss-plan-note').textContent, /Confirm each order/);
+    assert.ok(view.get('aside [data-pss-selection]'));
     assert.equal(view.get('[data-pss-count]').textContent, '2 / 4');
     assert.equal(view.card('alpha').querySelector('[data-pss-size][aria-pressed="true"]').dataset.pssSize, '10mg');
     assert.equal(view.card('supply'), null);
@@ -71,7 +71,7 @@ test('changes the chosen strength and adds exactly four product variants through
     for (const id of ['alpha', 'beta', 'gamma', 'delta']) view.pick(id);
     assert.equal(view.get('[data-pss-count]').textContent, '4 / 4');
     assert.equal(view.card('epsilon').querySelector('[data-pss-pick]').disabled, true);
-    assert.equal(view.get('[data-pss-dialog]').open, true);
+    assert.equal(view.get('[data-pss-dialog]'), null);
     const select = view.get('[data-pss-edit="0"]');
     select.value = '10mg';
     select.dispatchEvent(new view.window.Event('change', { bubbles: true }));
@@ -107,7 +107,7 @@ test('builds additional sets with repeated variants and consolidates them for th
     for (let i = 0; i < 4; i++) view.pick('alpha');
     assert.equal(view.get('[data-pss-count]').textContent, '4 / 4');
     view.get('[data-pss-another]').click();
-    assert.equal(view.get('[data-pss-dialog]').open, false);
+    assert.equal(view.get('[data-pss-dialog]'), null);
     assert.equal(view.get('[data-pss-count]').textContent, '4 / 8');
     view.card('alpha').querySelector('[data-pss-size="10mg"]').click();
     view.pick('alpha');
@@ -115,7 +115,7 @@ test('builds additional sets with repeated variants and consolidates them for th
     for (let i = 0; i < 3; i++) view.pick('beta');
     assert.equal(view.get('[data-pss-count]').textContent, '8 / 8');
     assert.equal(view.get('[data-pss-subtotal]').textContent, '$93.00');
-    assert.equal(view.get('[data-pss-monthly]').hidden, true);
+    assert.equal(view.get('[data-pss-monthly]').disabled, true);
     assert.equal(view.get('[data-pss-selection]').querySelectorAll('.pss-set').length, 2);
     const restored = openPlanner('', view.saved());
     try {
@@ -143,12 +143,13 @@ test('only offers monthly checkout for eligible complete sets after a positive r
   const view = openPlanner('', draft, [], true);
   try {
     await new Promise(resolve => setTimeout(resolve, 0));
-    assert.equal(view.get('[data-pss-monthly]').hidden, false);
+    assert.equal(view.get('[data-pss-monthly]').disabled, false);
+    assert.equal(view.get('aside [data-pss-monthly]').textContent,'Continue · $26.40/mo');
     assert.equal(view.get('[data-pss-monthly-total]').textContent, '$26.40');
-    assert.equal(view.get('[data-pss-review-total]').textContent, '$44.00');
+    assert.equal(view.get('[data-pss-subtotal]').textContent, '$44.00');
     assert.equal(view.get('[data-pss-selection]').querySelectorAll('.pss-included').length, 1);
     view.get('[data-pss-remove="3"]').click();
-    assert.equal(view.get('[data-pss-monthly]').hidden, true);
+    assert.equal(view.get('[data-pss-monthly]').disabled, true);
   } finally { view.close(); }
 });
 
