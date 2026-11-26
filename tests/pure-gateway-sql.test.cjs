@@ -12,6 +12,7 @@ const read=name=>fs.readFileSync(path.join(__dirname,'../supabase/migrations',na
 const migration='20261125000100_pure_gateway_card_route.sql';
 const cardTestMigration='20261125223346_one_use_card_test_coupon.sql';
 const reversalMigration='20261126011403_verified_pure_gateway_reversals.sql';
+const guestMigration='20261126013508_guest_checkout.sql';
 const tag=gw.configuration({PURE_GATEWAY_URL:'https://pay.example.test'}).account_tag;
 const catalog=[
  {id:'fixture-a',name:'Fixture A',category:'injectables',variants:[{size:'5mg',price:99.99}]},
@@ -248,6 +249,30 @@ test('the pure_gateway card route is registered, priced and settled atomically i
    assert.equal((await place(await make())).status,'accepted');
   });
   await db.exec(read(reversalMigration));
+  await db.exec(read(guestMigration));
+  await t.test('a guest can place and pay for a Card order without an auth user or account rewards',async()=>{
+   const order=await make({products:[catalog[0]]});
+   order.request.checkout.guest=true;
+   order.earned_points=0;
+   assert.deepEqual((await db.query('select id from auth.users where id=$1',[order.customer])).rows,[]);
+   await assert.rejects(place({...order,earned_points:1}),/points earning basis changed/);
+   const otherMethod=await make({method:hosted,products:[catalog[0]]});
+   otherMethod.request.checkout.guest=true;
+   otherMethod.earned_points=0;
+   await assert.rejects(place(otherMethod),/Invalid guest checkout sale/);
+   assert.equal((await place(order)).status,'accepted');
+   assert.equal((await place(order)).replayed,true);
+   assert.equal((await load(order.id)).request_data.checkout.guest,true);
+   await assert.rejects(begin({...order,customer:randomUUID()}),/invoice|eligible/i);
+   const attempt=await begin(order),session='pi_guestFixture123456';
+   await rpc('commerce_bind_pure_gateway_session',[attempt.id,session,redirect(session),tag]);
+   assert.equal((await finish(attempt.id,'pure-gateway-paid:'+session,'approved','ch_guestFixture123456',order.total_cents,'USD')).state,'paid');
+   const paid=await load(order.id);
+   assert.equal(paid.status,'paid');
+   assert.equal(paid.earned_points,0);
+   assert.equal(paid.pricing.first_order_bac,undefined);
+   assert.equal((await db.query('select points from commerce_balance_accounts where customer_id=$1',[order.customer])).rows[0].points,0);
+  });
   const reverseFixture=async suffix=>{
    const order=await payable(),attempt=await begin(order),session='pi_reverse'+suffix,charge='ch_reverse'+suffix;
    await rpc('commerce_bind_pure_gateway_session',[attempt.id,session,redirect(session),tag]);

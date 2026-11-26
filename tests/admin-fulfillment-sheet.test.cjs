@@ -1,7 +1,8 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const {normalizeSheet, loadFulfillmentSheet, buildFulfillmentCsv, buildFulfillmentPdf} = require('../lib/admin-fulfillment-sheet');
+const {normalizeSheet, loadFulfillmentSheet, buildFulfillmentCsv, buildFulfillmentPdf,
+  loadBulkFulfillmentSheets, buildBulkFulfillmentCsv, buildBulkFulfillmentPdf} = require('../lib/admin-fulfillment-sheet');
 const id = '52788339-e005-4ee8-a851-200ba27496e3';
 const date = '2026-11-16T12:00:00.000Z';
 function order(overrides = {}) {
@@ -85,6 +86,8 @@ test('paid manual order has fulfillment sheet; canceled, refunded, dispatched an
     assert.doesNotMatch(JSON.stringify(active),/PRIVATE-|supplier|payload/);
   }
   assert.equal(sheet({status:'paid'},{allocations:[allocation({status:'ordered'})]}).release.ready,false);
+  assert.match(sheet({status:'paid', tracking_number:'12345'}).release.title,/DO NOT SHIP AGAIN/);
+  assert.match(sheet({status:'paid', cancellation_status:'pending'}).release.title,/CANCELLATION NEEDS REVIEW/);
 });
 
 test('quantity mismatch and unknown extra allocations stop exports instead of causing wrong fulfillment', () => {
@@ -145,7 +148,7 @@ test('PDF xref offsets are valid and payment hold is repeated on every page', ()
 
 function fakeDb(tables) {
   const reads=[];
-  return {reads,from(table){reads.push(table);let key;return {select(){return this},eq(_,id){key=id;return this},maybeSingle(){return Promise.resolve({data:tables[table]??null,error:null})},then(resolve){return Promise.resolve({data:tables[table]??[],error:null}).then(resolve)},insert(){throw Error('Mutation forbidden')},update(){throw Error('Mutation forbidden')},delete(){throw Error('Mutation forbidden')}}}};
+  return {reads,from(table){reads.push(table);let key;return {select(){return this},eq(_,id){key=id;return this},maybeSingle(){const entry=tables[table];return Promise.resolve({data:(typeof entry==='function'?entry(key):entry)??null,error:null})},then(resolve){return Promise.resolve({data:tables[table]??[],error:null}).then(resolve)},insert(){throw Error('Mutation forbidden')},update(){throw Error('Mutation forbidden')},delete(){throw Error('Mutation forbidden')}}}};
 }
 test('server loader resolves only requested order and does not mutate records or call supplier APIs', async () => {
   const db=fakeDb({commerce_invoices:order(),commerce_fulfillment_items:[],commerce_supplier_jobs:[]});
@@ -158,6 +161,42 @@ test('loader validates IDs/sources and membership/subscription non-shippable rec
   await assert.rejects(loadFulfillmentSheet(db,new URLSearchParams({id,source:'research_subscription'})),/paid delivery order/);
   await assert.rejects(loadFulfillmentSheet(db,new URLSearchParams({id,source:'commerce'})),/Membership purchases/);
   assert.deepEqual(db.reads,['commerce_invoices']);
+});
+
+test('batch exports keep separate recipient pages and one tabular CSV across current and legacy orders', async () => {
+  const legacyId='b31140f9-4114-4e30-bdc8-5aa51738ae10';
+  const current=order({status:'paid',public_order_number:'P00001250'});
+  current.pricing.delivery.selection.shipping='economy';
+  current.request_data.organization='=2+2';
+  const legacy={id:legacyId,order_number:'P00000250',created_at:date,customer_name:'Legacy Recipient',
+    payment_status:'paid',fulfillment_status:'unfulfilled',
+    shipping_address:{line1:'2 Other',city:'Austin',state:'TX',postal_code:'78701',country:'US',service:'Tracked'},
+    store_order_items:[{product_id:'p2',product_name:'Fixture item',variant_size:'5mg',quantity:3,supplier_name:'PRIVATE SUPPLIER'}]};
+  const db=fakeDb({commerce_invoices:current,store_orders:legacy,commerce_fulfillment_items:[],commerce_supplier_jobs:[]});
+  const params=new URLSearchParams({orders:'commerce:'+id+',store:'+legacyId});
+  const batch=await loadBulkFulfillmentSheets(db,params);
+  assert.deepEqual(batch.map(s=>s.order_number),['P00001250','P00000250']);
+  assert.equal(batch[0].shipping_service,'Economy Tracked');
+  const pdf=buildBulkFulfillmentPdf(batch).toString('latin1');
+  assert.match(pdf,/\/Count 2/);
+  assert.match(pdf,/Page 1 of 2/); assert.match(pdf,/Page 2 of 2/);
+  assert.ok(pdf.indexOf('(P00001250)')<pdf.indexOf('(P00000250)'));
+  const csv=buildBulkFulfillmentCsv(batch).toString('utf8');
+  assert.match(csv,/"P00001250","Dr\. Example","'=2\+2"/);
+  assert.match(csv,/"P00000250","Legacy Recipient"/);
+  assert.doesNotMatch(csv+' '+pdf,/PRIVATE|SUPPLIER/);
+});
+
+test('batch refuses a mixed held order selection and rejects duplicate or unsupported sources before reads', async () => {
+  const other='b31140f9-4114-4e30-bdc8-5aa51738ae10';
+  const db=fakeDb({commerce_invoices:key=>key===id?order({status:'paid',public_order_number:'P00001250'}):
+    order({id:other,status:'void',public_order_number:'P00001251'})});
+  for(const orders of ['', 'commerce:'+id+',commerce:'+id, 'research_subscription:'+id, 'none', Array(26).fill('commerce:'+id).join(',')]) {
+    await assert.rejects(loadBulkFulfillmentSheets(db,new URLSearchParams({orders})),{status:400});
+  }
+  assert.equal(db.reads.length,0);
+  await assert.rejects(loadBulkFulfillmentSheets(db,new URLSearchParams({orders:'commerce:'+id+',commerce:'+other})),
+    error=>error.status===409&&/P00001251.*HOLD.*No sheet was generated/.test(error.message)&&!/P00001250/.test(error.message));
 });
 
 test('a premixed retail vial, BOGO units and overlapping recon awards export once per physical SKU',()=>{

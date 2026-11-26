@@ -134,6 +134,19 @@ module.exports = async (req, res) => {
         return res.status(200).send(file.bytes);
       }
 
+      if (params.get('view') === 'bulk-fulfillment-sheet') {
+        const format = params.get('format') || 'pdf';
+        if (!['pdf', 'csv'].includes(format)) throw httpError(400, 'Choose PDF or CSV.');
+        const { loadBulkFulfillmentSheets, buildBulkFulfillmentPdf, buildBulkFulfillmentCsv } = require('../lib/admin-fulfillment-sheet');
+        const sheets = await loadBulkFulfillmentSheets(db, params);
+        const content = format === 'pdf' ? buildBulkFulfillmentPdf(sheets) : buildBulkFulfillmentCsv(sheets);
+        if (content.length > 3_750_000) throw httpError(413, 'The fulfillment sheet is too large. Export fewer orders or use CSV.');
+        res.setHeader('Cache-Control', 'private, no-store, max-age=0');
+        res.setHeader('Content-Type', format === 'pdf' ? 'application/pdf' : 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', `attachment; filename="fulfillment-selected-orders.${format}"`);
+        return res.status(200).send(content);
+      }
+
       if (params.get('view') === 'fulfillment-sheet') {
         const format = params.get('format') || 'pdf';
         if (!['pdf', 'csv'].includes(format)) throw httpError(400, 'Choose PDF or CSV.');
@@ -171,6 +184,17 @@ module.exports = async (req, res) => {
     if (typeof body.action === 'string' && body.action.startsWith('shipping_label_')) {
       const { handleAction } = require('../lib/admin-shipping-labels');
       const { db } = clients();
+      if (body.action === 'shipping_label_bulk_file') {
+        const { readBulkLabels } = require('../lib/admin-shipping-documents');
+        const file = await readBulkLabels(db, body);
+        res.setHeader('Cache-Control', 'private, no-store, max-age=0');
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${file.filename}"`);
+        res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+        res.setHeader('Content-Security-Policy', "default-src 'none'; frame-ancestors 'self'; base-uri 'none'");
+        res.setHeader('Referrer-Policy', 'no-referrer');
+        return res.status(200).send(file.bytes);
+      }
       if (body.action === 'shipping_label_reconcile') {
         const { reconcile } = require('../lib/admin-shipping-documents');
         return res.status(200).json(await reconcile(db, body));
@@ -343,47 +367,9 @@ async function updateSupplierReportTimestamp(res, body) {
 }
 
 async function updateArchiveStatus(res, body) {
-  const orderIds = body.order_ids;
-
-  if (
-    !Array.isArray(orderIds) ||
-    !orderIds.length ||
-    orderIds.length > 200 ||
-    orderIds.some(
-      (id) =>
-        typeof id !== 'string' ||
-        !UUID_PATTERN.test(id)
-    )
-  ) {
-    throw httpError(
-      400,
-      'Select between 1 and 200 valid orders.'
-    );
-  }
-
-  const uniqueIds = [...new Set(orderIds)];
   const { db } = clients();
-  const archived = body.action === 'archive';
-
-  const updatedOrders = checked(
-    await db
-      .from('store_orders')
-      .update({
-        archived,
-        archived_at: archived
-          ? new Date().toISOString()
-          : null
-      })
-      .in('id', uniqueIds)
-      .select(
-        'id,order_number,archived,archived_at'
-      )
-  );
-
-  return res.status(200).json({
-    updated: updatedOrders.length,
-    orders: updatedOrders
-  });
+  const { updateArchive } = require('../lib/admin-order-archive');
+  return res.status(200).json(await updateArchive(db, body));
 }
 
 async function updateOrder(res, body) {

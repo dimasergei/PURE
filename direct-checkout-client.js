@@ -4,9 +4,11 @@
  const money=(v,c='USD')=>new Intl.NumberFormat('en-US',{style:'currency',currency:c}).format(v/100);
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  async function api(auth,body,mode='customer',id){
-  const s=await auth.auth.getSession(),token=s.data?.session?.access_token;if(!token)throw Error('Sign in to continue.');
-  const url=mode==='orders'?'/api/customer-config?commerce=customer'+(id?'&id='+encodeURIComponent(id):''):'/api/customer-config?checkout='+mode;
-  const r=await fetch(url,{method:body?'POST':'GET',cache:'no-store',headers:{Authorization:'Bearer '+token,...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});
+  const guest=mode==='guest';
+  const s=guest?null:await auth.auth.getSession(),token=s?.data?.session?.access_token;
+  if(!guest&&!token)throw Error('Sign in to continue.');
+  const url=mode==='orders'?'/api/customer-config?commerce=customer'+(id?'&id='+encodeURIComponent(id):''):'/api/customer-config?checkout='+(guest?(body?'customer':'public'):mode);
+  const r=await fetch(url,{method:body?'POST':'GET',cache:'no-store',credentials:'same-origin',headers:{...(token?{Authorization:'Bearer '+token}:{}),...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(guest?{...body,guest:true}:body)}:{})});
   const data=await r.json();if(!r.ok)throw Error(data.error||'The request could not be confirmed.');return data;
  }
  function paymentKind(method){
@@ -17,14 +19,20 @@
  const interacNote='Pay in Canadian dollars by Interac e-Transfer. Your final CAD total is shown before you place the order. Receiving details and your payment reference appear immediately afterward.';
  const validCadQuote=q=>q?.currency==='CAD'&&q.request_only!==true&&typeof q.fx_quote==='string'&&q.fx_quote.length>0&&typeof q.quote==='string'&&q.quote.length>0&&Number.isSafeInteger(q.total_cents)&&q.total_cents>0&&Number.isSafeInteger(q.pricing?.fx_ppm)&&q.pricing.fx_ppm>0;
  function methodAvailable(method,country){return !!paymentKind(method)&&method.active!==false&&Array.isArray(method.countries)&&method.countries.includes(country);}
- async function openHostedPayment(auth,invoice,amount,currency,method,billing={}){
+ function gatewayPaymentUrl(value,origin){
+  let url;try{url=new URL(value);}catch{throw Error('The provider returned an invalid payment destination.');}
+  if(!origin||url.origin!==origin||url.pathname!=='/pay'||!/^[?]pi=pi_[A-Za-z0-9_]{6,120}$/.test(url.search)||url.username||url.password||url.hash||(url.protocol!=='https:'&&!/^(localhost|127[.]0[.]0[.]1)$/.test(url.hostname)))
+   throw Error('The provider returned an unexpected payment destination.');
+  return url.href;
+ }
+ async function openHostedPayment(auth,invoice,amount,currency,method,billing={},guest=false){
   const kind=paymentKind(method);if(!kind)throw Error('This payment route is unavailable for a new order.');
   if(kind==='interac')throw Error('Use the Interac receiving details in My Orders to complete your payment.');
   if(kind==='crypto')return{url:'/pay.html?invoice='+encodeURIComponent(invoice)};
-  const session=await auth.auth.getSession(),token=session.data?.session?.access_token;
-  if(!token)throw Error('Sign in again to pay your saved order.');
+  const session=guest?null:await auth.auth.getSession(),token=session?.data?.session?.access_token;
+  if(!guest&&!token)throw Error('Sign in again to pay your saved order.');
   const response=await fetch('/api/checkout?native=customer&invoice='+encodeURIComponent(invoice),{
-   method:'POST',cache:'no-store',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},
+   method:'POST',cache:'no-store',credentials:'same-origin',headers:{...(token?{Authorization:'Bearer '+token}:{}),'Content-Type':'application/json'},
    body:JSON.stringify({action:'pay',invoice_id:invoice,attempt_id:crypto.randomUUID(),
     confirm_amount_cents:amount,confirm_currency:currency,consent:true,
     crypto_conversion_consent:kind==='card'&&method.native_provider!=='pure_gateway',redirect_notice_ack:method.native_provider==='pure_gateway',billing})
@@ -33,14 +41,8 @@
   if(!response.ok)throw Error(payment.error||'The provider could not confirm a payment link. Check your saved order before retrying.');
   if(payment.state==='paid')return{paid:true};
   if(payment.state!=='redirected'||!payment.redirect_url)throw Error('The payment link needs review. No second payment link will be created automatically.');
+  if(method.native_provider==='pure_gateway')return{url:gatewayPaymentUrl(payment.redirect_url,method.gateway_origin)};
   let url;try{url=new URL(payment.redirect_url);}catch{throw Error('The provider returned an invalid payment destination.');}
-  if(method.native_provider==='pure_gateway'){
-   // The card payment page is the one origin the server announced for this route, at exactly /pay?pi=<payment>.
-   const page=typeof method.gateway_origin==='string'?method.gateway_origin:'';
-   if(!page||url.origin!==page||url.pathname!=='/pay'||!/^[?]pi=pi_[A-Za-z0-9_]{6,120}$/.test(url.search)||url.username||url.password||url.hash||(url.protocol!=='https:'&&!/^(localhost|127[.]0[.]0[.]1)$/.test(url.hostname)))
-    throw Error('The provider returned an unexpected payment destination.');
-   return{url:url.href};
-  }
   const trusted=url.origin==='https://checkout.rampex.io';
   if(!trusted||url.protocol!=='https:'||url.username||url.password||url.port||url.hash||url.pathname==='/'
    ||kind==='card'&&(url.searchParams.getAll('provider').length>1||url.searchParams.has('provider')&&url.searchParams.get('provider')!=='hosted'))
@@ -319,5 +321,5 @@
  }
  async function balance(root,auth,path){return window.ReadinessUI.balance(root,auth,path);}
  async function overview(root,auth,user){return window.ReadinessUI.overview(root,auth,user);}
- window.DirectCheckout={api,checkout,orders,balance,overview,openHostedPayment,paymentKind,methodAvailable};
+ window.DirectCheckout={api,checkout,orders,balance,overview,openHostedPayment,paymentKind,methodAvailable,gatewayPaymentUrl};
 })();

@@ -67,5 +67,5 @@ test('operator can register the named supplier once and retry a failed gift rece
 test('published order screen registers the receiving script before the order controls',()=>{
  const build=fs.readFileSync('readiness-build.cjs','utf8'),hub=fs.readFileSync('admin-fulfillment.js','utf8');
  assert.match(build,/admin-pilot-intake\.js\?v=[^"]+"><\/script><script src="\/admin-fulfillment\.js/);
- assert.match(hub,/Receive pilot stock.*PurePilotIntake.open\(api\)/);
+ assert.doesNotMatch(hub,/Receive pilot stock.*PurePilotIntake.open\(api\)/);
 });

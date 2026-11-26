@@ -10,7 +10,12 @@ const requestEstimate=o=>o.request_data?.checkout?.usd_estimate;
 const priorityOrder=o=>o.source==='commerce'&&['goods','bulk'].includes(o.kind)&&o.priority_fulfillment===true&&typeof o.membership_invoice_id==='string'
  &&/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(o.membership_invoice_id)&&['paid','processing'].includes(o.commerce_status||o.status)&&!o.cancellation_requested_at&&!o.cancellation_status;
 const priorityBadge=()=>el('span','PURE BLACK / Priority','uc-priority-badge');
-let api,root,dlg,orders=[],paging={},page=1,query='',sort='fulfillment_priority',filter='all',epoch=0,detailVersion=0,poll,timer;
+let api,root,dlg,orders=[],paging={},page=1,query='',sort='fulfillment_priority',filter='all',archiveView='current',epoch=0,detailVersion=0,poll,timer;
+const chosen=new Map(),selectionLimit=25;
+const selectable=o=>['commerce','store'].includes(o.source);
+const orderKey=o=>o.source+':'+o.id;
+const identity=o=>({source:o.source,id:o.id});
+const physical=o=>selectable(o)&&o.kind!=='membership';
 const lotus=(view,more='')=>'/api/customer-config?lotus=admin&view='+view+more;
 const send=(url,body,method='POST')=>api(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
 const write=b=>send(lotus('write'),b);
@@ -23,7 +28,68 @@ function form(title,host){const f=el('form',undefined,'uc-action-form');f.append
 function submit(f,text,action){const x=el('button',text,'primary');x.type='submit';f.append(x);f.onsubmit=async ev=>{ev.preventDefault();x.disabled=true;try{await action()}catch(e){msg(e.message,true)}finally{x.disabled=false}}}
 const when=t=>t?new Date(t).toLocaleString():'—';
 const address=a=>[a?.line1,a?.line2,[a?.city,a?.region||a?.state,a?.postal_code].filter(Boolean).join(', '),a?.country].filter(Boolean).join(' · ');
-function close(){window.PurePilotIntake?.close();epoch++;clearInterval(poll);clearTimeout(timer);dlg?.remove();dlg=null;root?.replaceChildren();root=null;api=null;orders=[]}
+function close(){window.PureBulkLabels?.close();epoch++;clearInterval(poll);clearTimeout(timer);dlg?.remove();dlg=null;root?.replaceChildren();root=null;api=null;orders=[];chosen.clear()}
+function toggleOrder(order,selected){
+ const key=orderKey(order);
+ if(selected&&!chosen.has(key)&&chosen.size>=selectionLimit){msg('Select up to '+selectionLimit+' orders at a time.',true);return false;}
+ if(selected)chosen.set(key,order);else chosen.delete(key);
+ return true;
+}
+const selectedOrders=()=>[...chosen.values()];
+async function archiveSelected(){
+ const restoring=archiveView==='archived',action=restoring?'unarchive':'archive';
+ const candidates=selectedOrders().filter(o=>restoring?o.archived:o.archive_eligible);
+ if(!candidates.length||!window.confirm((restoring?'Restore ':'Archive ')+candidates.length+' selected order(s)?'))return;
+ const result=await send('/api/admin-orders',{action,orders:candidates.map(identity)},'PATCH');
+ for(const order of result.orders||[])chosen.delete(orderKey(order));
+ page=1;await load();
+ const reasons={not_closed:'Order still open.',not_found:'Order no longer available.',already_archived:'Order already archived.',already_active:'Order already active.'};
+ const skipped=(result.skipped||[]).map(s=>reasons[s.reason]||s.reason).filter(Boolean);
+ msg((result.updated||0)+' order(s) '+(restoring?'restored.':'archived.')+(skipped.length?' '+skipped.length+' skipped: '+skipped.join(' '):''),skipped.length>0);
+}
+function downloadBlob(file,name){
+ const url=URL.createObjectURL(file),a=el('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+async function downloadSelectedSheet(format){
+ const records=selectedOrders();
+ if(!records.length||records.some(o=>!physical(o)||o.archived))return;
+ const params=new URLSearchParams({view:'bulk-fulfillment-sheet',orders:records.map(orderKey).join(','),format});
+ const file=await api('/api/admin-orders?'+params,{responseType:'blob'});
+ downloadBlob(file,'fulfillment-selected-orders.'+format);
+ msg('Supplier fulfillment sheet downloaded.');
+}
+function selectionBar(){
+ const host=root?.querySelector('[data-order-selection]');if(!host)return;
+ host.replaceChildren();
+ const visible=orders.filter(selectable),items=selectedOrders(),restoring=archiveView==='archived';
+ const label=el('label',undefined,'uc-select-page'),all=el('input');all.type='checkbox';all.setAttribute('aria-label','Select all orders on this page');
+ const visibleCount=visible.filter(o=>chosen.has(orderKey(o))).length;
+ all.checked=visible.length>0&&visibleCount===visible.length;all.indeterminate=visibleCount>0&&visibleCount<visible.length;all.disabled=!visible.length;
+ all.onchange=()=>{
+  const desired=all.checked;
+  if(desired&&chosen.size+visible.length-visibleCount>selectionLimit){msg('Select up to '+selectionLimit+' orders at a time.',true);selectionBar();return;}
+  for(const o of visible)toggleOrder(o,desired);
+  rows();selectionBar();
+ };
+ label.append(all,el('span','Select page'));
+ const count=el('strong',items.length+' selected');count.setAttribute('aria-live','polite');host.append(label,count);
+ if(!items.length)return;
+ const actions=el('div',undefined,'uc-button-row');
+ const archiveCount=items.filter(o=>restoring?o.archived:o.archive_eligible).length;
+ const archive=btn((restoring?'Restore':'Archive')+' eligible ('+archiveCount+')',archiveSelected);
+ archive.disabled=!archiveCount;if(!archiveCount)archive.title='Select completed, refunded or canceled orders.';
+ actions.append(archive);
+ if(!restoring){
+  const ready=items.every(o=>physical(o)&&!o.archived);
+  const pdf=btn('Supplier sheet PDF',()=>downloadSelectedSheet('pdf')),csv=btn('Supplier sheet CSV',()=>downloadSelectedSheet('csv'));
+  pdf.disabled=csv.disabled=!ready;
+  const labels=btn('Bulk shipping labels',()=>window.PureBulkLabels.open({api,orders:selectedOrders()}));
+  labels.disabled=!ready||items.length>10||!window.PureBulkLabels;
+  labels.title='Select up to 10 physical orders to review shipping and postage.';
+  actions.append(pdf,csv,labels);
+ }
+ actions.append(btn('Clear selection',()=>{chosen.clear();rows();selectionBar()}));host.append(actions);
+}
 function rows(){const host=root?.querySelector('[data-unified-list]');if(!host)return;host.replaceChildren();const list=orders;
  if(!list.length){host.append(el('p','No matching checkout orders or subscriptions.','uc-empty'));return}
  for(const o of list){const card=el('article',undefined,'uc-order-row'),identity=el('div',undefined,'uc-order-identity'),sum=el('div',undefined,'uc-order-total');
@@ -31,18 +97,24 @@ function rows(){const host=root?.querySelector('[data-unified-list]');if(!host)r
   if(priorityOrder(o))identity.append(priorityBadge());
   const pendingCad=interacRequest(o),estimate=requestEstimate(o);
   sum.append(el('strong',pendingCad?'CAD quote pending':cash(o.total_cents,o.currency)+(o.source==='research_subscription'?'/mo':'')),el('small',pendingCad&&Number.isSafeInteger(estimate?.total_cents)?cash(estimate.total_cents,'USD')+' USD estimate':orderState(o,o.source==='research_subscription'?o.research_status:o.source==='commerce'?o.commerce_status:o.fulfillment_status)));
-  card.append(identity,sum,btn(o.source==='research_subscription'?'View subscription':pendingCad?'Review CAD order':'Manage order',()=>detail(o),'primary'));host.append(card)}
+  const slot=el('span',undefined,'uc-order-select');
+  if(selectable(o)){
+   const box=el('input');box.type='checkbox';box.checked=chosen.has(orderKey(o));box.setAttribute('aria-label','Select order '+ref(o));
+   box.onchange=()=>{if(!toggleOrder(o,box.checked))box.checked=chosen.has(orderKey(o));selectionBar()};slot.append(box);
+  }
+  card.append(slot,identity,sum,btn(o.source==='research_subscription'?'View subscription':pendingCad?'Review CAD order':'Manage order',()=>detail(o),'primary'));host.append(card)}
 }
-async function load(){if(!api||!root)return;const ticket=++epoch,params=new URLSearchParams({status:'all',page:String(page),page_size:'25',sort,search:query,type:filter});
- try{const result=await api('/api/admin-orders?'+params);if(ticket!==epoch)return;orders=result.orders||[];paging=result.pagination||{};const count=document.getElementById('orders-message');if(count)count.textContent=(paging.total||0)+' orders · use Manage order for payment and fulfillment';root.replaceChildren();
+async function load(){if(!api||!root)return;const ticket=++epoch,params=new URLSearchParams({status:archiveView,page:String(page),page_size:'25',sort,search:query,type:filter});
+ try{const result=await api('/api/admin-orders?'+params);if(ticket!==epoch)return;orders=result.orders||[];for(const order of orders){const key=orderKey(order);if(chosen.has(key))chosen.set(key,order)}paging=result.pagination||{};const count=document.getElementById('orders-message');if(count)count.textContent=(paging.total||0)+' orders · use Manage order for payment and fulfillment';root.replaceChildren();
   const head=el('div',undefined,'uc-header');head.append(el('h2','Orders'));const actions=el('div',undefined,'uc-button-row');
-  if(window.PurePilotIntake)actions.append(btn('Receive pilot stock',()=>window.PurePilotIntake.open(api)));
   actions.append(btn('Refresh',load));head.append(actions);root.append(head);
   const tools=el('div',undefined,'uc-search'),q=el('input');q.type='search';q.placeholder='Search orders or customers';q.setAttribute('aria-label','Search orders');q.value=query;
   q.oninput=()=>{query=q.value;page=1;clearTimeout(timer);timer=setTimeout(()=>{const focused=document.activeElement===q,pos=q.selectionStart;load().then(()=>{if(focused){const replacement=root?.querySelector('.uc-search input');replacement?.focus();replacement?.setSelectionRange(pos,pos)}})},300)};
   const sorting=el('select');for(const [v,t]of [['fulfillment_priority','Fulfillment priority'],['newest','Newest first'],['oldest','Oldest first'],['highest_total','Highest total']]){const option=el('option',t);option.value=v;sorting.append(option)}sorting.value=sort;sorting.setAttribute('aria-label','Sort orders');sorting.onchange=()=>{sort=sorting.value;page=1;load()};
   const types=el('select');for(const [v,t]of [['all','All types'],['goods','Product orders'],['bulk','Bulk orders'],['membership','Membership purchases']]){const option=el('option',t);option.value=v;types.append(option)}types.value=filter;types.setAttribute('aria-label','Filter order type');types.onchange=()=>{filter=types.value;page=1;load()};
-  tools.append(q,sorting,types);root.append(tools);const notice=el('p','','uc-message');notice.setAttribute('data-unified-message','');notice.setAttribute('role','status');root.append(notice);
+  const scope=el('select');for(const [v,t]of [['current','Active orders'],['archived','Archived orders']]){const option=el('option',t);option.value=v;scope.append(option)}scope.value=archiveView;scope.setAttribute('aria-label','Order archive view');scope.onchange=()=>{archiveView=scope.value;chosen.clear();page=1;load()};
+  tools.append(q,sorting,types,scope);root.append(tools);const notice=el('p','','uc-message');notice.setAttribute('data-unified-message','');notice.setAttribute('role','status');root.append(notice);
+  const selections=el('div',undefined,'uc-selection');selections.setAttribute('data-order-selection','');root.append(selections);selectionBar();
   const list=el('div',undefined,'uc-list');list.setAttribute('data-unified-list','');root.append(list);rows();
   const pager=el('div',undefined,'uc-pager'),prev=btn('Previous',()=>{page--;return load()}),next=btn('Next',()=>{page++;return load()});prev.disabled=!paging.has_previous;next.disabled=!paging.has_next;
   pager.append(prev,el('span',`Page ${page} · ${paging.total||0} records`),next);root.append(pager);
