@@ -79,6 +79,10 @@ test('catalog photo cards preserve product navigation, exact USD prices, search,
  const f=await fixture('/shop');
  try{
   const {d,w}=f;
+  const resultGrid=d.querySelector('#ap-catalog-grid');
+  const resultsHeading=d.getElementById(resultGrid.getAttribute('aria-labelledby'));
+  assert.equal(resultsHeading.tagName,'H2');
+  assert.equal(resultsHeading.nextElementSibling,resultGrid);
   const catalog=Array.from(w.AltaStore.catalog),cards=()=>[...d.querySelectorAll('#ap-catalog-grid .ap-product-card')];
   const ids=()=>cards().map(card=>card.dataset.product);
   const search=value=>{const input=d.querySelector('#ap-catalog-query');input.value=value;input.dispatchEvent(new w.Event('input',{bubbles:true}));};
