@@ -154,7 +154,7 @@ test('only offers monthly checkout for eligible complete sets after a positive r
     assert.equal(view.get('[data-pss-subtotal] del').textContent, '$58.95');
     assert.equal(view.get('[data-pss-savings]').textContent, '−$17.60');
     assert.equal(view.get('[data-pss-gift-savings]').textContent, '−$14.95');
-    assert.match(view.get('.pss-totals').textContent, /Express shipping U\.S\. & CanadaFree/);
+    assert.match(view.get('.pss-totals').textContent, /Express shipping U\.S\. & CanadaFREE/);
     assert.deepEqual(Array.from(view.get('[data-pss-timeline]').children, node => node.textContent), ['Month 1', 'Month 2', 'Month 3']);
     assert.equal(view.card('beta').querySelector('.pss-card-price').textContent, '$6.60 /mo');
     assert.doesNotMatch(view.card('beta').textContent, /\$11\.00/);

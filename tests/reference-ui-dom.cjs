@@ -136,7 +136,7 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
   assert.match(paths[0].textContent,/SUBSCRIBE & SAVE/);
   assert.match(paths[1].textContent,/Save up to 60%/);
   assert.match(paths[1].getAttribute('href'),/^\/bulk-orders\?product=/);
-  assert.deepEqual([...d.querySelectorAll('[data-bundle-quantity]')].map(x=>x.dataset.bundleQuantity),['1','2','3','4']);
+  assert.equal(d.querySelector('[data-bundle-quantity]'),null);
   assert.equal(d.querySelector('#ap-detail-quantity').value,'1');d.querySelector('[data-action="detail-add"]').click();assert.equal(w.AltaStore.cart[0].qty,1);const options=d.querySelectorAll('[data-action="detail-size"]');options[1].click();assert.ok(d.querySelector('h1').textContent.includes(options[1].dataset.size));dom.window.close();}
  {const{dom,d,w}=await setup('/bulk-orders');
   assert.equal(d.querySelector('.nl-bulk-count'),null);assert.equal(d.querySelector('#ap-bulk-count'),null);
@@ -167,7 +167,7 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
   assert.equal(d.querySelector('[data-bulk-threshold="10"]').dataset.tierActive,'true');
   qty.value='50';qty.dispatchEvent(new w.Event('input',{bubbles:true}));
   assert.equal(d.querySelector('[data-bulk-threshold="50"]').dataset.tierActive,'true');
-  assert.match(qty.closest('article').querySelector('[data-tier-active="true"]').textContent,/60% off/);
+  assert.match(qty.closest('article').querySelector('[data-bulk-photo-discount]').textContent,/60% off/);
   qty.value='9';qty.dispatchEvent(new w.Event('input',{bubbles:true}));
   assert.equal(d.querySelector('[data-bulk-threshold][data-tier-active="true"]'),null);
   assert.equal(w.AltaStore.cart.length,0);

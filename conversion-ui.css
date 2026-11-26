@@ -361,3 +361,17 @@ body.ap-site .nl-detail [data-campaign-product]:not([hidden]) {
 .rd-referral [data-referral-message]:empty {
   margin: 0;
 }
+
+html:root body.ap-site .ap-announcement.pure-promo-rotating [hidden] { display: none !important; }
+.ap-announcement.pure-promo-rotating .pure-offer-trigger { padding-inline-end: 2rem; }
+.ap-announcement .pure-christmas-slide { gap: clamp(5px, 1vw, 11px); }
+.pure-christmas-slide strong { font-size: clamp(.71rem, 2.5vw, .94rem); white-space: nowrap; }
+.pure-christmas-kicker { color: #ccc; font-size: .72rem; white-space: nowrap; }
+.pure-christmas-slide time { min-width: 9ch; padding: 4px 5px; border: 1px solid #858585; border-radius: 4px; font-size: .69rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ap-announcement .pure-promo-next { position: absolute; inset-block: 0; inset-inline-end: 2px; min-width: 30px; border: 0; background: transparent; color: #fff; font-size: 20px; cursor: pointer; }
+.ap-announcement .pure-promo-next:focus-visible { outline: 2px solid #fff; outline-offset: -3px; }
+@media(max-width: 440px) {
+  .pure-christmas-kicker { display: none; }
+  .ap-announcement.pure-promo-rotating .pure-offer-action { margin-left: 0; }
+  .ap-announcement.pure-promo-rotating .pure-offer-action::after { display: none; }
+}

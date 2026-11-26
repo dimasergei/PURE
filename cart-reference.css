@@ -83,7 +83,7 @@ html[data-display-currency]:not([data-display-currency="USD"]) .nlc-price strong
 .nlc-quantity-row .ap-quantity{margin:0!important}
 /* The two markers share the same merchandise scale as the fill. */
 .nlc-rewards {
-  --reward-earned: #19804b;
+  --reward-earned: #555;
   --reward-pending: #171717;
   position: relative;
   z-index: 2;

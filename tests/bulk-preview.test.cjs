@@ -53,12 +53,12 @@ test('bulk quantities stay in a separate draft and checkout requires ten units p
     setQuantity('10');
     assert.equal(checkout().disabled,false);
     assert.match(document.querySelector('#ap-bulk-summary').textContent,/50% off/);
-    assert.ok(input.closest('article').querySelector('.nl-bulk-current-unit + del'));
+    assert.ok(input.closest('article').querySelector('.nl-bulk-sizes button[aria-pressed=true] del'));
     const line = document.querySelector('.nl-bulk-menu-line-price');
     assert.deepEqual([...line.children].map(child => child.tagName),['STRONG','DEL']);
     assert.equal(document.querySelector('.nl-bulk-estimate-total del').textContent,line.querySelector('del').textContent);
     assert.match(document.querySelector('.nl-bulk-tier-savings strong').textContent,/^−/);
-    assert.equal(document.querySelector('.nl-bulk-included-shipping strong').textContent,'Free');
+    assert.equal(document.querySelector('.nl-bulk-included-shipping strong').textContent,'FREE');
     assert.match(document.querySelector('.nl-bulk-included-shipping small').textContent,/U\.S\./);
     assert.deepEqual(JSON.parse(window.localStorage.getItem('ap-bulk-draft-v2')),[
       {id:'bpc-157',size:input.dataset.bulkSize,qty:10}

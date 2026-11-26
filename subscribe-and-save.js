@@ -13,7 +13,8 @@
     const get = name => root.querySelector('[data-pss-' + name + ']');
     const catalog = new Map(store.catalog
       .filter(product => product.category === 'injectables')
-      .map(product => [product.id, product.variants.filter(variant => Number.isFinite(variant.price) && variant.price > 0)])
+      .map(product => [product.id, product.variants.filter(variant => Number.isFinite(variant.price) && variant.price > 0)
+        .sort((a,b) => (parseFloat(a.size) - parseFloat(b.size)) || a.size.localeCompare(b.size))])
       .filter(([, variants]) => variants.length));
     const findVariant = (id, size) => catalog.get(id)?.find(variant => variant.size === size);
     const esc = store.esc;
@@ -95,15 +96,16 @@
         const product = store.product(id);
         const size = sizes.get(id) || variants[0].size;
         const matched = chosen.filter(item => item.id === id && item.size === size).length;
-        const chips = variants.map(variant =>
-          `<button type="button" data-pss-size="${esc(variant.size)}" aria-pressed="${variant.size === size}">${esc(variant.size)}</button>`
+        const rows = variants.map(variant =>
+          `<button type="button" data-pss-size="${esc(variant.size)}" aria-pressed="${variant.size === size}">
+            <span>${esc(variant.size)}</span><strong class="pss-card-price">${itemPrice(id,variant.size)}${useMonthlyPricing() ? ' <small>/mo</small>' : ''}</strong>
+          </button>`
         ).join('');
         return `<article class="pss-card" data-pss-product="${esc(id)}">
-          <img src="${esc(store.image(product, size))}" alt="" loading="lazy" width="180" height="180">
+          <img src="${esc(store.image(product, size))}" alt="" loading="lazy" width="180" height="225">
           <div class="pss-card-body">
             <h3>${esc(product.name)}</h3>
-            <div class="pss-sizes" role="group" aria-label="Strength for ${esc(product.name)}">${chips}</div>
-            <strong class="pss-card-price">${itemPrice(id, size)}${useMonthlyPricing() ? ' <small>/mo</small>' : ''}</strong>
+            <div class="pss-sizes" role="group" aria-label="Strength for ${esc(product.name)}">${rows}</div>
             <button type="button" class="ap-button pss-pick" data-pss-pick aria-label="Add ${esc(product.name)} ${esc(size)} to your plan"${chosen.length === capacity ? ' disabled' : ''}>${matched ? 'Added ×' + matched + ' · Add again' : 'Add to plan'}</button>
           </div>
         </article>`;

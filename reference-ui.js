@@ -16,7 +16,6 @@
   if(!Number.isInteger(qty)||qty<1||qty>100)return;
   const cents=Math.round(unit*100),tier=window.PureQuantityPricing,rate=tier?.basisPoints(qty)||0,total=(tier?.totalCents(cents,qty)??cents*qty)/100,unitLabel=group.dataset.unitLabel||'vial';
   const format=n=>window.AltaLocale?.price?window.AltaLocale.price(Math.round(n*100),{compact:true}):new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(n);
-  for(const button of group.querySelectorAll('[data-bundle-quantity]'))button.setAttribute('aria-pressed',String(Number(button.dataset.bundleQuantity)===qty));
   const estimate=document.querySelector('[data-bundle-estimate]');
   if(estimate)estimate.innerHTML='<strong>'+format(total)+'</strong> for '+qty+' '+unitLabel+(qty===1?'':'s')+(rate?' <span class="pure-tier-saving">SAVE '+rate/100+'% · '+format(unit*qty-total)+' OFF</span>':'');
   const monthly=document.querySelector('.nl-product-saving-card-member');
@@ -31,12 +30,7 @@
   if(mobile)mobile.innerHTML=format(total)+(rate?' · save '+rate/100+'%':'');
  }
  document.addEventListener('click',event=>{
-  const bundle=event.target.closest('[data-bundle-quantity]');
-  if(bundle){
-   const input=document.getElementById('ap-detail-quantity');
-   if(input){input.value=bundle.dataset.bundleQuantity;input.dispatchEvent(new Event('input',{bubbles:true}));}
-  }
-  if(bundle||event.target.closest('[data-action="detail-quantity"]'))queueMicrotask(updateQuantity);
+  if(event.target.closest('[data-action="detail-quantity"]'))queueMicrotask(updateQuantity);
  });
  document.addEventListener('input',event=>{if(event.target.id==='ap-detail-quantity')updateQuantity();});
  const main=document.getElementById('ap-main');

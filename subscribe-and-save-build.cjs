@@ -38,7 +38,7 @@ const content = `<div data-pss-planner>
         <div><dt>Retail value</dt><dd data-pss-subtotal></dd></div>
         <div class="pss-savings-line" data-pss-monthly-line hidden><dt>Monthly savings (40%)</dt><dd data-pss-savings></dd></div>
         <div class="pss-savings-line" data-pss-gift-line hidden><dt>Bundled reconstitution solution</dt><dd data-pss-gift-savings></dd></div>
-        <div class="pss-savings-line" data-pss-monthly-line hidden><dt>Express shipping <small>U.S. &amp; Canada</small></dt><dd>Free</dd></div>
+        <div class="pss-savings-line" data-pss-monthly-line hidden><dt>Express shipping <small>U.S. &amp; Canada</small></dt><dd>FREE</dd></div>
         <div class="pss-total-final" data-pss-monthly-line hidden><dt>Monthly total</dt><dd data-pss-monthly-total></dd></div>
       </dl>
       <ol class="pss-delivery-timeline" aria-label="Initial monthly deliveries" data-pss-timeline hidden>
