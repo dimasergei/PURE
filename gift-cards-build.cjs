@@ -21,10 +21,12 @@ fs.writeFileSync(path.join(out, 'gift-cards.html'), html);
 const adminPath = path.join(out, 'admin-orders.html');
 const admin = fs.readFileSync(adminPath, 'utf8');
 const hub = '<div id="fulfillment-hub"></div>';
+const adminDocumentClose = /<\/body>(\s*<\/html>\s*)$/;
 if (!admin.includes(hub)) throw new Error('Gift card management requires the orders dashboard.');
+if (!adminDocumentClose.test(admin)) throw new Error('The orders dashboard document closing tags are missing.');
 fs.writeFileSync(adminPath, admin.replace(hub, hub + '<details id="pure-admin-gifts" class="pag"><summary>Gift card orders</summary><div data-admin-gift-list></div></details>')
   .replace('</head>', '<link rel="stylesheet" href="/gift-cards.css?v=2"></head>')
-  .replace('</body>', '<script src="/admin-gift-cards.js?v=2"></script></body>'));
+  .replace(adminDocumentClose, '<script src="/admin-gift-cards.js?v=2"></script></body>$1'));
 for (const file of ['gift-cards.js', 'gift-cards.css', 'admin-gift-cards.js']) fs.copyFileSync(file, path.join(out, file));
 const sitemapPath = path.join(out, 'sitemap.xml');
 const sitemap = fs.readFileSync(sitemapPath, 'utf8');
