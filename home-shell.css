@@ -76,3 +76,5 @@
 .ap-site .ph-benefit-details summary{min-height:48px;padding:14px 0;cursor:pointer;font-weight:700}
 @media(max-width:1190px){.ap-site .ap-header.ap-header-compact .ap-header-actions>.ap-account-dropdown{display:flex}.ap-site .ap-header.ap-header-compact .ap-header-main .ap-account-dropdown>.ap-icon{width:44px;height:44px}.ap-site .ap-header.ap-header-compact .ap-account-dropdown>a>svg{display:block}}
 @media(max-width:390px){.ap-site .ap-header.ap-header-compact .ap-header-actions{gap:0}.ap-site .ap-header.ap-header-compact .ap-header-main{gap:3px}}
+.ap-site .ap-header .ap-brand small{display:block;font-size:8px;font-weight:650;letter-spacing:.08em;white-space:nowrap;color:#303030}
+@media(max-width:390px){.ap-site .ap-header .ap-brand small{font-size:7px;letter-spacing:.05em}}

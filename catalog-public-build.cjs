@@ -6,7 +6,7 @@ const vm = require('node:vm');
 const views = require('./reference-ui-functions.cjs').store;
 const {
   catalog, records, esc, money, img, image, slug, bySize, stock, link,
-  shopForm, shop, archive, reportRows, compareBox, card
+  shopForm, archive, inventoryReports, reportRows, compareBox, card
 } = require('./lib/public-catalog-view.cjs');
 const main = /(<main\b[^>]*\bid=["']ap-main["'][^>]*>)[\s\S]*?<\/main>/i;
 const inject = (html, content) => {
@@ -14,14 +14,17 @@ const inject = (html, content) => {
   return html.replace(main, (_,start) => start + content + '</main>');
 };
 function css(html) {
+  html=html.replace(/<template id="(?:pure-shop-filters|pure-product-library)">[\s\S]*?<\/template>/g,'');
+  if(html.includes('href="/catalog-public.css"'))return html;
   return html.replace('</head>','<link rel="stylesheet" href="/catalog-public.css"><noscript><style>[data-pc-enhance]{display:none!important}</style></noscript></head>');
 }
 function productDocs(p,site) {
   const reports=records.filter(r=>r.product_id===p.id);
+  const published=inventoryReports(new URLSearchParams({product:p.id}));
   const stockNote=p.variants.some(stock)?p.variants.filter(stock).map(v=>esc(v.size)).join(', ')+' confirmed in stock.':'[PLACEHOLDER: confirmed inventory availability by size]';
   return '<section class="ap-container pc-product-library" aria-label="Product specifications and reports"><h2>Product documentation</h2><p>'+esc(site.testing.scope)+'</p>'
     +'<div class="pc-product-facts"><div><h3>Stock status</h3><p>'+stockNote+'</p></div><div><h3>Storage and handling</h3><p>[PLACEHOLDER: approved storage and handling information for this product]</p></div><div><h3>Fulfillment lot and release COA</h3><p>[PLACEHOLDER: inventory-linked lot, test methods, purity and original release COA]</p></div></div>'
-    +(reports.length?'<details class="pc-details"><summary>Supplier sample reports ('+reports.length+')</summary>'+reportRows(reports)+'</details>':'<p>No supplier reference is on file for this catalog product. <a href="/contact">Request documentation</a>.</p>')
+    +published+(reports.length?'<details class="pc-details"><summary>Supplier sample reports ('+reports.length+')</summary>'+reportRows(reports)+'</details>':'<p>No supplier reference is on file for this catalog product. <a href="/contact">Request documentation</a>.</p>')
     +'<details class="pc-details"><summary>How can I match a report to my product?</summary><p>Match the product, size and lot printed on the vial. <a href="'+link('/coas/search',{product:p.id})+'">Find reports for '+esc(p.name)+'</a> or <a href="/contact">ask for the assigned lot record</a>.</p></details></section>';
 }
 function product(p,site,docs) {
@@ -59,7 +62,7 @@ function initialShop(site,filters) {
     const html=renderCard(p,{featured:true,quickAdd:true}).replace('class="pc-compare"','class="pc-compare" data-pc-enhance');
     return i===0?html.replace('loading="lazy"','loading="eager" fetchpriority="high"'):html;
   }).join('');
-  const links=Array.from({length:Math.ceil(products.length/16)},(_,i)=>'<a href="/shop/browse?page='+(i+1)+'">'+(i+1)+'</a>').join('');
+  const links=Array.from({length:Math.ceil(products.length/pageSize)},(_,i)=>'<a href="/shop/browse?page='+(i+1)+'">'+(i+1)+'</a>').join('');
   return render().replace('class="pure-shop-page"','class="pure-shop-page" data-server-shop')
     .replace('id="ap-catalog-grid"></div>',()=> 'id="ap-catalog-grid">'+cards+'</div>')
     .replace('class="ap-toolbar nl-shop-controls"','class="ap-toolbar nl-shop-controls" data-pc-enhance')

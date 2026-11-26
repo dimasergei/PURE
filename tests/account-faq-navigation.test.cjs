@@ -13,7 +13,7 @@ test('desktop and mobile account menus lead to the generated FAQ page',t=>{
  assert.ok((build.match(/href="\/faq">FAQ<\/a>/g)||[]).length>=2);
  assert.match(build,/account=account\.includes\([^\n]+account\.replace\([^\n]+,header\)/);
  const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'pure-faq-'));t.after(()=>fs.rmSync(tmp,{recursive:true,force:true}));
- fs.copyFileSync(path.resolve(__dirname,'../storefront-v2.html'),path.join(tmp,'index.html'));
+ fs.writeFileSync(path.join(tmp,'research-documentation.html'),'<html><head></head><body><main id="pure-policy-main"></main></body></html>');
  buildGuides(tmp,site,homeFaq(site));
  const d=new JSDOM(fs.readFileSync(path.join(tmp,'faq.html'),'utf8')).window.document;
  assert.equal(d.querySelector('main h1').textContent,'Frequently asked questions');

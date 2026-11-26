@@ -11,7 +11,9 @@ test('both desktop account tabs and hover menu have Membership only, with no sep
   const menu=page.window.document.querySelector('#ap-account-menu');
   assert.ok(menu);
   const links=Array.from(menu.querySelectorAll('a')).map(x=>[x.textContent.trim(),x.getAttribute('href')]);
-  assert.ok(links.some(([name,url])=>name==='Membership'&&url==='/account/membership'));
+  const publicShell=page.window.document.querySelector('script[data-pure-site-facts]');
+  const membershipPath=publicShell?'/my-account/membership':'/account/membership';
+  assert.ok(links.some(([name,url])=>name==='Membership'&&url===membershipPath));
   assert.ok(!links.some(([name,url])=>/Member Stack/i.test(name)||/\/account\/stack/.test(url)));
   page.window.close();
  }

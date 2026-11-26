@@ -210,6 +210,11 @@
   let shown=false, pending=false;
   function activePromo(){const p=window.PureSite?.promo;return p?.code&&Date.parse(p.endsAt)>Date.now()?p:null;}
   function exitOffer(event){if(!event.relatedTarget && event.clientY<=0)showOffer();}
+  function suppress(){
+   shown=true;pending=false;
+   try{localStorage.setItem(suppressionKey,String(Date.now()+30*86400000));}catch{}
+  }
+  window.addEventListener('pure:newsletter-subscribed',suppress);
   function retry(){if(pending)window.setTimeout(showOffer,0);}
   document.addEventListener('mouseout',exitOffer);
   document.addEventListener('close',retry,true);
@@ -217,11 +222,11 @@
   document.addEventListener('focusout',retry);
   window.setTimeout(showOffer,15000);
   function showOffer(){
-   if(shown||document.visibilityState==='hidden')return;
+   if(shown)return;
+   if(document.visibilityState==='hidden'){pending=true;return;}
    try{if(Number(localStorage.getItem(suppressionKey))>Date.now())return;}catch{}
    if(document.querySelector('dialog[open]')||document.activeElement?.matches('input,textarea,select')){pending=true;return;}
-   shown=true;pending=false;
-   try{localStorage.setItem(suppressionKey,String(Date.now()+30*86400000));}catch{}
+   suppress();
    document.removeEventListener('mouseout',exitOffer);
    const dialog=document.createElement('dialog');dialog.className='ap-dialog cv-discount-dialog';
    dialog.setAttribute('aria-labelledby','pure-discount-heading');

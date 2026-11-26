@@ -323,6 +323,7 @@
    const promo=window.PureSite?.promo;
    const active=promo && result.code===promo.code && Date.parse(promo.endsAt)>Date.now();
    status.textContent=active?'You’re subscribed. Use '+result.code+' at checkout.':'You’re subscribed to PURE email updates.';
+   window.dispatchEvent(new Event('pure:newsletter-subscribed'));
    form.reset();
   }catch(error){
    status.textContent=error.message;

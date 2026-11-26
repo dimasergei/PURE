@@ -43,5 +43,6 @@ test('the native no-JS form stores cookie consent and redirects only to this sto
   }
   const denied=response();handle({...req,headers:{origin:'https://elsewhere.example'}},denied,params);assert.equal(denied.code,403);
   const fresh=response();handle({method:'GET',headers:{}},fresh,new URLSearchParams('age_gate=prompt'));assert.match(fresh.body,/method="post"/);
+  const filtered=response();handle({method:'GET',headers:{referer:site.origin+'/shop?q=reference'}},filtered,new URLSearchParams('age_gate=prompt&returnTo=/shop'));assert.match(filtered.body,/value="\/shop\?q=reference"/);
   const seen=response();handle({method:'GET',headers:{cookie:'pure_age=21-v1'}},seen,new URLSearchParams('age_gate=prompt'));assert.match(seen.body,/Age confirmed/);assert.doesNotMatch(seen.body,/<form/);
 });

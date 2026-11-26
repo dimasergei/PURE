@@ -42,7 +42,7 @@ function card(product) {
     <span class="ph-sale" data-home-sale hidden></span><h3><a href="${url}">${name}</a></h3><p class="ph-size">${esc(sizes)}</p>
     <p class="ph-price">${multi?'From ':''}<strong data-usd-cents="${prices}"><span class="pure-price-value">${number(prices)}</span></strong></p>
     <div class="ph-card-actions"><button type="button" class="ap-button ap-catalog-action" data-action="${multi?'catalog-options':'add'}" data-id="${esc(product.id)}" ${multi?'aria-haspopup="dialog"':`data-size="${esc(lowest.size)}" data-open-cart`} aria-label="Add ${name} to cart">Add to cart</button>
-    <label><input type="checkbox" data-compare="${esc(product.id)}" aria-label="Compare ${name}"> Compare</label></div></article>`;
+    <label><input type="checkbox" data-compare="${esc(product.id)}" aria-label="Compare ${name}"> Compare</label></div><noscript><a class="ph-text" href="${url}">View sizes and prices</a></noscript></article>`;
 }
 function hero(products) {
   const stage=[products[1],products[3],products[0],products[2],products[4]];
@@ -72,7 +72,7 @@ function renderHomeDocument(html, site) {
     <section class="ph-section ph-wrap"><h2>Order for your lab</h2><div class="ph-programs"><article><h3>Subscribe &amp; Save</h3><p>Choose a recurring order and review your savings and delivery schedule.</p><a href="/subscribe-and-save">Explore subscriptions ↗</a></article><article><h3>Bulk Orders</h3><p>Combine sizes of one compound and see volume pricing before you order.</p><a href="/bulk-orders">Build a bulk order ↗</a></article><article><h3>Partner Program</h3><p>Review program terms and apply for a PURE partner account.</p><a href="/partner-program">Explore partnerships ↗</a></article></div></section>
     <div data-mx-membership-home><section class="ph-section ph-wrap"><h2>Memberships</h2><a class="ph-text" href="/memberships">Compare membership benefits ↗</a></section></div>
     <section class="ph-section ph-wrap ph-faq" id="faq"><h2>Frequently asked questions</h2><div>${faq.map(f=>`<details><summary>${esc(f.question)}</summary><p>${esc(f.answer)}</p></details>`).join('')}</div></section></main>`;
-  return html.replace(/<main\b[^>]*>[\s\S]*?<\/main>/,()=>main).replace('</head>','<script type="application/ld+json">'+JSON.stringify(schema).replace(/</g,'\\u003c')+'</script></head>');
+  return html.replace(/<main\b[^>]*>[\s\S]*?<\/main>/,()=>main).replace('</head>','<noscript><style>.ph-card-actions{display:none!important}</style></noscript><script type="application/ld+json">'+JSON.stringify(schema).replace(/</g,'\\u003c')+'</script></head>');
 }
 function buildHome(out,site) {
   const filename=path.join(out,'index.html');

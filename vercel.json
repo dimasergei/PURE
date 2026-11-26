@@ -13,7 +13,7 @@
       "maxDuration": 60
     },
     "api/customer-config.js": {
-      "includeFiles": "lib/{catalog.json,public-catalog-shell.html}",
+      "includeFiles": "lib/{catalog.json,public-catalog-shell.html,public-site-facts.json}",
       "maxDuration": 60
     }
   },

@@ -30,6 +30,7 @@ function buildSiteFacts(out) {
   const json = JSON.stringify(site).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
   const browserScript = 'window.PureSite=' + json + ';';
   const bootstrap = '<script data-pure-site-facts>' + browserScript + '</script>';
+  fs.writeFileSync(path.join(__dirname, 'lib/public-site-facts.json'), JSON.stringify(site) + '\n');
   fs.writeFileSync(path.join(out, 'site-config.js'), browserScript + '\n');
 
   for (const filename of fs.readdirSync(out, {recursive: true})) {

@@ -23,6 +23,7 @@ const publicFont = '/assets/fonts/archivo-normal-width-weight-variable.woff2';
 // The saved research builder and its legacy program entry are mounted on their own routes.
 const standaloneContent = /^(?:index|shop(?:\/.*)?|product\/[^/]+|coas|faq|learn(?:\/.*)?|about|contact|404)$/;
 const legacyProgramTag = /<script\s+src=(["'])\/(?:research-builder-client|research-checkout-client|program-pages)\.js(?:\?[^"']*)?\1\s*>\s*<\/script>/gi;
+const ageScriptTag = /<script\s+src=(["'])\/age-gate\.js(?:\?[^"']*)?\1\s*>\s*<\/script>/i;
 
 function imagePreload(html, document) {
   if (document.head.querySelector('link[rel~="preload"][as="image"]')) return '';
@@ -53,6 +54,8 @@ function optimizeAssets(out) {
   const sheets = new Map();
   const bundles = new Set();
   const usePublicFont = fs.existsSync(path.join(out, publicFont));
+  const agePath = path.join(out, 'age-gate.js');
+  const ageScript = fs.existsSync(agePath) ? fs.readFileSync(agePath, 'utf8') : '';
 
   function stylesheet(filename, ancestry = []) {
     if (sheets.has(filename)) return sheets.get(filename);
@@ -142,6 +145,10 @@ function optimizeAssets(out) {
       html = html.slice(0, start) + markup + html.slice(end);
     }
     if (preload) html = html.replace('</head>', preload + '</head>');
+    // Open the native dialog at its original position, without blocking parsing on another request.
+    if (ageScript && !/<\/script/i.test(ageScript)) {
+      html = html.replace(ageScriptTag, () => '<script data-pure-age-init>' + ageScript + '</script>');
+    }
     if (standaloneContent.test(name)) html = html.replace(legacyProgramTag, '');
     dom.window.close();
     fs.writeFileSync(file, html);
