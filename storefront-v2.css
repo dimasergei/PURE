@@ -11,42 +11,6 @@
 
 .ap-nmi-express-dialog{width:min(1100px,96vw);max-height:90dvh;overflow:auto}.ap-nmi-modal-body{padding:10px}.ap-cart-express{margin:14px 0;padding:16px 0;border-block:1px solid #e5e5e5}.ap-cart-express .ap-button{width:100%}
 
-/* Homepage offers share the storefront's regular checkout rules. */
-.pure-order-benefits {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin-top: clamp(20px, 4vw, 42px);
-  border: 1px solid #dedede;
-  border-radius: 14px;
-  background: #fff;
-}
-
-.pure-order-benefits article {
-  min-width: 0;
-  padding: clamp(18px, 2.3vw, 28px);
-}
-
-.pure-order-benefits article + article {
-  border-inline-start: 1px solid #dedede;
-}
-
-.pure-order-benefits article > span {
-  display: block;
-  margin-bottom: 6px;
-  color: #555;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.ap-site .pure-order-benefits h2 {
-  margin: 0;
-  color: #111;
-  font-size: clamp(16px, 1.5vw, 20px);
-  line-height: 1.2;
-  letter-spacing: -.02em;
-}
-
-.pure-order-benefits p,
 .pure-home-featured-offer {
   margin: 6px 0 0;
   color: #525252;
@@ -125,26 +89,8 @@
 }
 
 @media (max-width: 700px) {
-  .pure-order-benefits,
   .pure-home-email {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .pure-order-benefits article {
-    display: grid;
-    grid-template-columns: clamp(4.25rem, 18vw, 6rem) minmax(0, 1fr);
-    gap: 12px;
-    padding: 14px;
-  }
-
-  .pure-order-benefits article > div {
-    min-width: 0;
-    overflow-wrap: anywhere;
-  }
-
-  .pure-order-benefits article + article {
-    border-inline-start: 0;
-    border-top: 1px solid #dedede;
   }
 }
 
