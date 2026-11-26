@@ -96,3 +96,23 @@ test('preserves a full plan and prevents cart quantity truncation', () => {
     assert.match(view.get('[data-pss-status]').textContent, /reduce items/);
   } finally { view.close(); }
 });
+
+test('the published storefront router leaves the dedicated plan page mounted', async () => {
+  const dom = new JSDOM(publicPage, { url: 'https://getpurelabs.com/subscribe-and-save', runScripts: 'outside-only' });
+  const { window } = dom;
+  try {
+    window.matchMedia = () => ({ matches: false });
+    window.fetch = async () => ({ ok: true, json: async () => [] });
+    window.HTMLDialogElement.prototype.showModal = function () { this.open = true; };
+    window.HTMLDialogElement.prototype.close = function () { this.open = false; };
+    for (const script of ['products.js', 'product-images.js', 'storefront-v2.js']) {
+      window.eval(fs.readFileSync('public-build/' + script, 'utf8'));
+    }
+    await new Promise(resolve => setTimeout(resolve, 0));
+    window.AltaStore.render();
+    assert.ok(window.document.querySelector('#subscribe-and-save-main [data-pss-planner]'));
+    assert.equal(window.document.querySelector('a.ap-skip').getAttribute('href'), '#subscribe-and-save-main');
+  } finally {
+    window.close();
+  }
+});

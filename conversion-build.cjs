@@ -12,7 +12,7 @@ patch('workspace-v2.js',source=>{
  if(!source.includes(start))throw Error('Workspace render entry point changed; program route ownership could not be installed.');
  return source.replace(start,`${start}
   const programPath=String(path||'').replace(/\\/+$/,'').replace(/\\.html$/,'');
-  const programTitle={'/subscribe-and-save':'Subscribe & Save','/memberships':'PURE Memberships','/research-builder':'PURE Member Stack','/research-checkout':'PURE Member Stack Review'}[programPath];
+  const programTitle={'/memberships':'PURE Memberships','/research-builder':'PURE Member Stack','/research-checkout':'PURE Member Stack Review'}[programPath];
   if(programTitle){document.title=programTitle+' | PURE';return;}`);
 });
 patch('workspace-v2.js',s=>s.replace(' window.AltaWorkspace=',`\n partnerPage=function(){return ${JSON.stringify(partnerPublic.markup)};};\n window.AltaWorkspace=`).replace("async function renderAccountPanel(path,root,auth,user){","async function renderAccountPanel(path,root,auth,user){if(path==='/account/membership')return window.ConversionUI.mountMembership(root,auth);if(path==='/account/partner')return window.ConversionUI.partner(root,auth);"));

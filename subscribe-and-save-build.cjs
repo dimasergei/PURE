@@ -38,7 +38,8 @@ const html = shell
   .replace(/(<meta property="og:title" content=")[^"]*/, `$1${title}`)
   .replace(/(<meta property="og:description" content=")[^"]*/, `$1${description}`)
   .replace(/(<(?:meta property="og:url" content|link rel="canonical" href)=")[^"]*/g, `$1${canonical}`)
-  .replace(layout, `<main id="ap-main">${content}</main>`)
+  .replace('href="#ap-main"', 'href="#subscribe-and-save-main"')
+  .replace(layout, `<main id="subscribe-and-save-main">${content}</main>`)
   .replace('</head>', '<link rel="stylesheet" href="/subscribe-and-save.css?v=1"></head>')
   .replace('</body>', '<script src="/subscribe-and-save.js?v=1"></script></body>');
 fs.writeFileSync(path.join(out, 'subscribe-and-save.html'), html);
