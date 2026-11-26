@@ -9,7 +9,7 @@ test('hosted checkout restores wallet artwork without inventing native wallet or
 test('new checkout offers Card and Crypto plus configured CAD Interac without collecting raw card data',()=>{
  assert.match(js,/\['card','crypto',\.\.\.\(paymentMethods\.some\(m=>paymentKind\(m\)==='interac'\)\?\['interac'\]:\[\]\)\]/);
  assert.match(js,/paymentKind\(m\)&&m\.active!==false/);
- assert.match(js,/available=method&&Array\.isArray\(method\.countries\)&&method\.countries\.includes\(shippingCountry\(\)\)/);
+ assert.match(js,/availableMethods=kind=>paymentMethods\.filter\(m=>paymentKind\(m\)===kind&&Array\.isArray\(m\.countries\)&&m\.countries\.includes\(shippingCountry\(\)\)\)/);
  assert.match(js,/Interac e-Transfer \(CAD\)/);assert.match(js,/Your final CAD total is shown before you place the order/);
  assert.doesNotMatch(js,/Card number|Card code|CVC|Link a new bank account|ByteNFT/);
  assert.match(js,/openHostedPayment/);assert.match(js,/SETUP PENDING/);

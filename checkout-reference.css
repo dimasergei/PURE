@@ -200,7 +200,7 @@ body.ap-checkout-page #account-root{box-shadow:none!important;border:0!important
 .nlx-payment-choice-body{padding:17px 19px;background:#f5f5f5;border-top:1px solid #e5e5e5}
 .nlx-payment-choice-body p{font-size:13px;color:#666;margin:0 0 12px}
 .nlx-payment-choice-body label{display:block;font-size:12px;font-weight:700;margin-bottom:12px}
-.nlx-payment-choice-body input{display:block;width:100%;padding:12px;border:1px solid #d4d4d4;background:#fff;border-radius:10px;margin-top:6px}
+.nlx-payment-choice-body input,.nlx-payment-choice-body select{display:block;width:100%;padding:12px;border:1px solid #d4d4d4;background:#fff;border-radius:10px;margin-top:6px}
 .nlx-payment-choice-body input:disabled{opacity:.65}
 .nlx-payment-choice-body small{font-size:11px;color:#666}
 .nlx-fee-pill{border-radius:18px;background:#111;color:#fff;font-size:11px;padding:4px 10px;white-space:nowrap}

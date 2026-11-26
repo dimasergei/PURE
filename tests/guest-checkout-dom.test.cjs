@@ -130,3 +130,20 @@ test('guest status without its checkout cookie does not open a payment or redire
  assert.equal(w.document.getElementById('native-refresh').hidden,true);
  assert.equal(w.document.getElementById('native-form').hidden,true);
 });
+
+test('guest pay page opens the exact saved Base or Ethereum route without requesting a transfer',async t=>{
+ for(const [provider,label] of [['base_usdc','Base'],['ethereum_usdc','Ethereum']]){
+  const id='80000000-0000-4000-8000-000000000004',w=fixture(t,'/pay.html?invoice='+id+'&guest=1',read('pay.html'));
+  const requests=[];
+  w.fetch=async(url,init)=>{
+   requests.push(init.method);
+   assert.equal(url,'/api/checkout?native=customer&invoice='+id);
+   assert.equal(init.headers.Authorization,undefined);
+   return response({invoice:{guest:true,id,status:'accepted',amount_cents:7200,currency:'USD',expires_at:'2099-01-01'},gateway:{provider,ready:true},crypto:{state:'not_started'}});
+  };
+  w.eval(read('polygon-usdc-pay.js'));w.eval(read('native-pay.js'));await settle();
+  assert.equal(w.document.querySelector('.pure-usdc-payment h2').textContent,'Pay with native USDC on '+label);
+  assert.match(w.document.getElementById('native-status').textContent,/ETH for gas/);
+  assert.deepEqual(requests,['GET']);
+ }
+});

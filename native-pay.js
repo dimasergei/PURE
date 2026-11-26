@@ -18,10 +18,12 @@
   return request(body,token);
  }
  const unavailable=error=>[401,403,404].includes(error.status);
+ const usdcNetwork=provider=>window.DirectCheckout?.usdcNetwork?.(provider);
  async function guestInvoice(){
   try{
    const result=await request();
-   if(result.invoice?.guest!==true||result.invoice.id!==invoice||!['pure_gateway','polygon_usdc'].includes(result.gateway?.provider))throw Error('Guest order access could not be verified.');
+   const provider=result.gateway?.provider;
+   if(result.invoice?.guest!==true||result.invoice.id!==invoice||provider!=='pure_gateway'&&!usdcNetwork(provider))throw Error('Guest order access could not be verified.');
    guest=true;return result;
   }catch(error){if(!unavailable(error))throw error;return null;}
  }
@@ -62,12 +64,13 @@
   }
   if(i.status!=='accepted'){$('native-status').textContent=guest?'This order is unavailable for payment. Contact support with your order reference.':'Accept the final amount in My invoices before paying.';return;}
 
- if(g.provider==='polygon_usdc'){
+ const network=usdcNetwork(g.provider);
+ if(network){
   $('native-billing').hidden=true;$('native-crypto').hidden=true;$('native-widget').hidden=false;$('native-widget').replaceChildren();
   $('native-form').hidden=false;
   if(!window.PureUSDC?.mount){$('native-status').textContent='The wallet payment screen could not load. Refresh your saved order before retrying.';return;}
-  $('native-status').textContent='Pay USDC on Polygon directly from your wallet. You need POL for gas; the exact recipient and amount are shown before signing.';
-  widget=await window.PureUSDC.mount({host:$('native-widget'),auth,guest,invoice:i.id,amount:i.amount_cents,currency:i.currency,ready:g.ready&&Date.parse(i.expires_at)>Date.now(),state:data.crypto});
+  $('native-status').textContent='Pay USDC on '+network.label+' directly from your wallet. You need '+network.gas+' for gas; the exact recipient and amount are shown before signing.';
+  widget=await window.PureUSDC.mount({host:$('native-widget'),auth,guest,invoice:i.id,amount:i.amount_cents,currency:i.currency,ready:g.ready&&Date.parse(i.expires_at)>Date.now(),state:data.crypto,paymentProvider:g.provider});
   return;
  }
  const active=data.attempts.find(a=>a.operation==='sale'&&a.state!=='declined');if(active){$('native-status').textContent=attemptNote(active,g);if(active.state==='redirected'&&active.redirect_url){try{const a=document.createElement('a');a.href=paymentDestination(active.redirect_url,g);a.className='ap-button';a.textContent='Resume the existing payment session ↗';$('native-status').append(document.createElement('br'),a);}catch(error){$('native-status').textContent=error.message+' Contact support before trying again.';}}schedulePoll();return;}

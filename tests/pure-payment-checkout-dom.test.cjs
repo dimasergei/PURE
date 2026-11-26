@@ -5,12 +5,14 @@ const checkout=require('../lib/direct-checkout'),config=require('../config/check
 const tick=()=>new Promise(resolve=>setTimeout(resolve,45));
 const card={id:'11111111-1111-4111-8111-111111111111',kind:'hosted_link',native_provider:'rampex',rampex_provider:'hosted',countries:['US','CA'],currency:'USD',version:2,sale_scope:'goods',label:'Card'};
 const cryptoMethod={...card,id:'22222222-2222-4222-8222-222222222222',native_provider:'polygon_usdc',rampex_provider:null,label:'Crypto'};
+const baseMethod={...cryptoMethod,id:'44444444-4444-4444-8444-444444444444',native_provider:'base_usdc',network_label:'Base'};
+const ethereumMethod={...cryptoMethod,id:'55555555-5555-4555-8555-555555555555',native_provider:'ethereum_usdc',network_label:'Ethereum',countries:['US']};
 const interacMethod={id:'33333333-3333-4333-8333-333333333333',kind:'interac',provider_key:'interac',payment_kind:'interac',currency:'CAD',countries:['CA'],version:3,sale_scope:'goods',label:'Interac e-Transfer'};
-function fixture({cryptoReady=false,interacReady=false,payment={state:'unknown'},country='US',mobile=false,wallet=null,query='',balances={points:0,credit_cents:0},placeResult=null,finalQuotePatch=null,fxPpm=1400000,cadPreviewDelay=0}={}){
+function fixture({cryptoReady=false,otherMethods=[],interacReady=false,payment={state:'unknown'},country='US',mobile=false,wallet=null,query='',balances={points:0,credit_cents:0},placeResult=null,finalQuotePatch=null,fxPpm=1400000,cadPreviewDelay=0}={}){
  const dom=new JSDOM('<main id="root"></main>',{url:'https://getpurelabs.test/checkout'+(query|| (wallet?'?wallet='+wallet:'')),runScripts:'outside-only',virtualConsole:new VirtualConsole()}),w=dom.window;
  const media={matches:mobile,listeners:new Set(),addEventListener(_event,callback){this.listeners.add(callback);},removeEventListener(_event,callback){this.listeners.delete(callback);}};w.matchMedia=()=>media;
  Object.defineProperty(w,'crypto',{value:webcrypto});w.TextEncoder=TextEncoder;w.HTMLElement.prototype.scrollIntoView=()=>{};
- const cart=[{id:'compound',key:'compound:10mg',name:'Compound',size:'10mg',qty:2,price:100}],methods=[card,...(cryptoReady?[cryptoMethod]:[]),...(interacReady?[interacMethod]:[])];
+ const cart=[{id:'compound',key:'compound:10mg',name:'Compound',size:'10mg',qty:2,price:100}],methods=[card,...(cryptoReady?[cryptoMethod]:[]),...otherMethods,...(interacReady?[interacMethod]:[])];
  w.localStorage.setItem('pp-cart',JSON.stringify(cart));
  w.localStorage.setItem('ap-bulk-draft-v2',JSON.stringify(cart));
  w.AltaStore={cart,catalog:[],product:()=>({}),image:()=>'/fixture.webp',normalizeLines:items=>items,read:(key,fallback)=>JSON.parse(w.localStorage.getItem(key)||JSON.stringify(fallback))};
@@ -101,12 +103,56 @@ test('Crypto checkout preserves its discounted order and opens the wallet screen
  const f=fixture({cryptoReady:true});
  try{
   await f.open();await f.paymentStep();change(f,f.root.querySelector('[name=payment_choice][value=crypto]'),true);await tick();consent(f);
+  assert.equal(f.root.querySelector('[data-nlx-crypto-network]'),null);
+  assert.match(f.root.querySelector('[value=crypto]').closest('.nlx-payment-choice').textContent,/Polygon.*POL for gas/);
   f.root.querySelector('[data-nlx-place]').click();await tick();await tick();
   const placed=f.requests.find(r=>r.body.action==='place').body;
   assert.equal(placed.method_id,cryptoMethod.id);assert.equal(placed.delivery.extras[0],'protection');
   assert.equal(f.requests.filter(r=>r.body.action==='pay').length,0,'Only the wallet page can request an explicit transfer');
   const route=await f.w.DirectCheckout.openHostedPayment(f.auth,placed.id,19500,'USD',cryptoMethod);
   assert.equal(route.url,'/pay.html?invoice='+placed.id);
+ }finally{f.dom.window.close();}
+});
+test('mobile Crypto checkout requires an exact eligible network and uses it through order placement',async()=>{
+ const f=fixture({mobile:true,cryptoReady:true,otherMethods:[baseMethod,ethereumMethod]});
+ try{
+  await f.open();await f.paymentStep();
+  const network=f.root.querySelector('[data-nlx-crypto-network]'),place=f.root.querySelector('[data-nlx-place]');
+  assert.equal(network.disabled,true);
+  f.root.querySelector('[name=payment_choice][value=crypto]').click();await tick();consent(f);
+  assert.deepEqual([...network.options].map(option=>option.textContent),['Select a network','Polygon','Base','Ethereum']);
+  assert.equal(place.textContent,'SELECT A CRYPTO NETWORK');
+  assert.equal(place.disabled,true);
+  change(f,network,ethereumMethod.id);await tick();
+  assert.equal(f.requests.at(-1).body.method_id,ethereumMethod.id);
+  change(f,network,baseMethod.id);await tick();
+  assert.equal(f.requests.at(-1).body.method_id,baseMethod.id);
+  assert.equal(place.disabled,false);
+  place.click();await tick();
+  assert.deepEqual(f.requests.filter(r=>r.body.action).map(r=>[r.body.action,r.body.method_id]),[['quote',baseMethod.id],['place',baseMethod.id]]);
+  const saved=f.requests.at(-1).body.id;
+  assert.equal((await f.w.DirectCheckout.openHostedPayment(f.auth,saved,950,'USD',baseMethod)).url,'/pay.html?invoice='+saved);
+ }finally{f.dom.window.close();}
+});
+test('balance checkout submits the selected USDC route only after a network is chosen',async()=>{
+ const f=fixture({query:'?balance=1',country:'CA',otherMethods:[cryptoMethod,baseMethod,ethereumMethod]});
+ try{
+  await f.open();
+  const form=f.root.querySelector('form'),network=form.querySelector('[data-dc-crypto-network]');
+  form.querySelector('[data-step-next="0"]').click();form.querySelector('[data-step-next="1"]').click();
+  assert.equal(network.parentElement.hidden,true);
+  form.querySelector('[data-payment-kind=crypto]').click();await tick();
+  assert.equal(network.parentElement.hidden,false);
+  assert.deepEqual([...network.options].map(option=>option.textContent),['Select a network','Polygon','Base']);
+  form.elements.research_use.checked=true;form.elements.consent.checked=true;
+  await form.onsubmit({preventDefault(){}});
+  assert.equal(f.requests.some(r=>r.body.action==='quote'),false);
+  change(f,network,baseMethod.id);await new Promise(resolve=>setTimeout(resolve,250));
+  await form.onsubmit({preventDefault(){}});
+  assert.equal(f.requests.find(r=>r.body.action==='quote').body.method_id,baseMethod.id);
+  await f.root.querySelector('.dc-summary button').onclick();
+  assert.equal(f.requests.find(r=>r.body.action==='place').body.method_id,baseMethod.id);
+  assert.equal(f.requests.some(r=>r.body.action==='pay'),false);
  }finally{f.dom.window.close();}
 });
 test('a provider return URL alone never confirms payment or permits an unrelated redirect',async()=>{

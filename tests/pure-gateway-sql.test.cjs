@@ -4,7 +4,7 @@
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path');
-const {randomUUID}=require('node:crypto');
+const {createHash,randomBytes,randomUUID}=require('node:crypto');
 const {PGlite}=require(process.env.PGLITE_MODULE||'@electric-sql/pglite');
 const checkout=require('../lib/direct-checkout'),config=require('../config/checkout.json'),delivery=require('../lib/delivery-options');
 const gw=require('../lib/pure-gateway');
@@ -14,6 +14,7 @@ const cardTestMigration='20261125223346_one_use_card_test_coupon.sql';
 const reversalMigration='20261126011403_verified_pure_gateway_reversals.sql';
 const guestMigration='20261126013508_guest_checkout.sql';
 const guestPaymentsMigration='20261126024818_guest_interac_and_crypto.sql';
+const directUsdcNetworksMigration='20261126040000_direct_usdc_networks.sql';
 const tag=gw.configuration({PURE_GATEWAY_URL:'https://pay.example.test'}).account_tag;
 const catalog=[
  {id:'fixture-a',name:'Fixture A',category:'injectables',variants:[{size:'5mg',price:99.99}]},
@@ -378,6 +379,113 @@ test('the pure_gateway card route is registered, priced and settled atomically i
     has_function_privilege('authenticated','public.commerce_apply_pure_gateway_cancellation(uuid,uuid,uuid,text,jsonb,text)','execute') as signed_in,
     has_function_privilege('service_role','public.commerce_apply_pure_gateway_refund(uuid,uuid,text,jsonb,text)','execute') as backend`)).rows;
    assert.deepEqual(roles,{anonymous:false,signed_in:false,backend:true});
+  });
+
+  await t.test('direct USDC extends guest checkout to Base and Ethereum without modifying historical Polygon payments',async t=>{
+   const randomHash=()=> '0x'+randomBytes(32).toString('hex');
+   const recipient='0x'+'a'.repeat(40),payer='0x'+'b'.repeat(40);
+   const networks=[
+    {provider:'polygon_usdc',chain:137,token:'0x3c499c542cef5e3811e1192ce70d8cc03d5c3359',field:'polygon_recipient'},
+    {provider:'base_usdc',chain:8453,token:'0x833589fcd6edb6e08f4c7c32d4f71b54bda02913',field:'base_usdc_recipient'},
+    {provider:'ethereum_usdc',chain:1,token:'0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',field:'ethereum_usdc_recipient'}
+   ];
+   const [polygon,base,ethereum]=networks;
+   const tagFor=(n,receiver=recipient)=>createHash('sha256').update(`${n.provider}:live:${n.chain}:${n.token}:${receiver}`).digest('hex');
+   const configure=(n,changes={})=>rpc(`commerce_configure_${n.provider}_gateway`,[{
+    id:n.id,version:0,provider:n.provider,mode:'live',currency:'USD',sale_scope:'goods',confirmed:true,active:true,
+    account_tag:tagFor(n),[n.field]:recipient,countries:['US','CA'],label:'Native USDC',payee:'PURE',approval_reference:'Isolated USDC receiver approval',...changes
+   },'fixture-admin']);
+   for(const network of networks)network.id=randomUUID();
+   const guest=async n=>{
+    const order=await make({method:n.id,products:[catalog[0]]});
+    order.request.checkout.guest=true;
+    order.earned_points=0;
+    return order;
+   };
+   const authorization=(n,order)=>{
+    const now=Math.floor(Date.now()/1000);
+    return {chain_id:n.chain,token:n.token,recipient,payer,amount_units:String(BigInt(order.total_cents)*10000n),
+     nonce:randomHash(),valid_after:now-60,valid_before:now+900,start_block:'42'};
+   };
+   const create=(n,order,intent=authorization(n,order))=>rpc(`commerce_create_${n.provider}_intent`,[randomUUID(),order.id,order.customer,tagFor(n),intent]);
+   const proof=intent=>({chain_id:intent.chain_id,token:intent.token,recipient:intent.recipient,payer:intent.payer,
+    nonce:intent.nonce,amount_units:String(intent.amount_units),tx_hash:randomHash(),log_index:1,block_number:'43',
+    block_hash:randomHash(),block_timestamp:intent.valid_after+61,finalized_number:'44'});
+   const settle=(n,intent,evidence)=>rpc(`commerce_finish_${n.provider}_payment`,[intent.attempt_id,tagFor(n),evidence]);
+   const cancel=(n,order)=>rpc(`commerce_request_${n.provider}_cancellation`,[order.id,order.customer,'customer:'+order.customer]);
+   const release=(n,intent,block=intent.start_block,timestamp=intent.valid_before+1,unused=true)=>rpc(`commerce_release_${n.provider}_intent`,[intent.attempt_id,tagFor(n),block,timestamp,unused]);
+
+   await configure(polygon);
+   const previous=await guest(polygon);
+   assert.equal((await place(previous)).status,'accepted');
+   const polygonIntent=await create(polygon,previous),polygonProof=proof(polygonIntent);
+   assert.equal((await settle(polygon,polygonIntent,polygonProof)).state,'paid');
+   const polygonRow=await attemptRow(polygonIntent.attempt_id);
+   const checkoutGuards=async()=>(await db.query(`select proname,pg_get_functiondef(oid) definition,proacl::text grants from pg_proc
+    where pronamespace='commerce_internal'::regnamespace and proname in ('validate_membership_checkout','place_membership_checkout') order by proname`)).rows;
+   const originalGuards=await checkoutGuards();
+   await db.exec(read(directUsdcNetworksMigration));
+   const restoredGuards=(await checkoutGuards()).map(row=>({...row,definition:row.definition
+    .replaceAll(",'base_usdc','ethereum_usdc'",'')
+    .replace("method.native_provider in ('polygon_usdc') and is_goods","method.native_provider='polygon_usdc' and is_goods")}));
+   assert.deepEqual(restoredGuards,originalGuards,'guest rules and validation of all existing routes differ only by the two crypto providers');
+   assert.deepEqual(await attemptRow(polygonIntent.attempt_id),polygonRow);
+   assert.equal((await settle(polygon,polygonIntent,polygonProof)).replayed,true);
+   assert.equal((await db.query("select count(*)::int n from commerce_payment_methods where native_provider in ('base_usdc','ethereum_usdc')")).rows[0].n,0);
+
+   for(const n of [base,ethereum])await t.test(`${n.provider} independently admits only approved goods orders and exact receipts`,async()=>{
+    await assert.rejects(configure(n,{account_tag:tagFor(polygon)}),/Invalid direct USDC route/);
+    await assert.rejects(configure(n,{sale_scope:'both'}),/Invalid direct USDC route/);
+    await configure(n,{active:false});
+    await assert.rejects(async()=>place(await guest(n)),/Payment method changed|inactive/);
+    await configure(n,{version:1});
+    const changedWallet='0x'+'c'.repeat(40);
+    await assert.rejects(configure(n,{version:2,[n.field]:changedWallet,account_tag:tagFor(n,changedWallet)}),/different receiving wallet/);
+    const order=await guest(n);
+    assert.deepEqual((await db.query('select id from auth.users where id=$1',[order.customer])).rows,[]);
+    assert.equal(order.pricing.crypto_discount_cents,previous.pricing.crypto_discount_cents,'crypto discount remains the same across chains');
+    assert.equal((await place(order)).status,'accepted');
+    const original=authorization(n,order);
+    for(const unexpected of [{chain_id:polygon.chain},{token:polygon.token},{recipient:payer},{amount_units:'1'}])
+     await assert.rejects(create(n,order,{...original,...unexpected}),/Invalid immutable USDC authorization/);
+    const intent=await create(n,order,original),receipt=proof(intent);
+    assert.equal((await create(n,order)).nonce,original.nonce);
+    const sharedHash={...receipt,tx_hash:polygonProof.tx_hash};
+    await assert.rejects(settle(polygon,intent,sharedHash),/does not match/);
+    for(const delta of [{chain_id:polygon.chain},{token:polygon.token},{amount_units:'1'},{nonce:randomHash()},{finalized_number:'42'}])
+     await assert.rejects(settle(n,intent,{...sharedHash,...delta}),/does not match/);
+    assert.equal((await settle(n,intent,sharedHash)).state,'paid','the identical transaction hash is independent on a different chain');
+    assert.equal((await settle(n,intent,sharedHash)).replayed,true);
+    const [paid]=(await db.query('select count(*)::int n from commerce_receipts where invoice_id=$1',[order.id])).rows;
+    assert.equal(paid.n,1);
+
+    const another=await guest(n);
+    assert.equal((await place(another)).status,'accepted');
+    await assert.rejects(create(n,another,{...authorization(n,another),nonce:original.nonce}),/unique constraint/);
+    const anotherIntent=await create(n,another);
+    await assert.rejects(settle(n,anotherIntent,{...proof(anotherIntent),tx_hash:sharedHash.tx_hash}),/unique constraint/);
+    const otherNetwork=n===base?ethereum:base;
+    await assert.rejects(rpc(`commerce_note_${otherNetwork.provider}_submission`,[anotherIntent.attempt_id,randomHash(),tagFor(n)]),/Unknown payment authorization/);
+    await assert.rejects(cancel(otherNetwork,another),/needs reconciliation/);
+    assert.equal((await cancel(n,another)).cancellation_status,'pending');
+    await assert.rejects(create(n,another),/Cancellation requested/);
+    await assert.rejects(release(n,anotherIntent,42,anotherIntent.valid_before),/cannot safely be released/);
+    await assert.rejects(release(n,anotherIntent,42,anotherIntent.valid_before+1,false),/cannot safely be released/);
+    if(n===base){
+     assert.equal((await release(n,anotherIntent)).status,'void');
+     assert.equal((await release(n,anotherIntent)).replayed,true);
+    }else{
+     assert.equal((await settle(n,anotherIntent,proof(anotherIntent))).state,'review');
+     assert.equal((await load(another.id)).cancellation_status,'review');
+     assert.deepEqual((await db.query('select id from commerce_receipts where invoice_id=$1',[another.id])).rows,[]);
+    }
+    const [privileges]=(await db.query(`select
+     has_function_privilege('authenticated',$1,'execute') as signed_in,
+     has_function_privilege('service_role',$1,'execute') as backend,
+     has_function_privilege('service_role','commerce_internal.finish_direct_usdc_payment(integer,uuid,text,jsonb)','execute') as internal`,
+    [`public.commerce_finish_${n.provider}_payment(uuid,text,jsonb)`])).rows;
+    assert.deepEqual(privileges,{signed_in:false,backend:true,internal:false});
+   });
   });
  }finally{await db.close();}
 });

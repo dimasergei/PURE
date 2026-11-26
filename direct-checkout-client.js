@@ -3,6 +3,11 @@
  const node=(tag,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=String(text);return e;};
  const money=(v,c='USD')=>new Intl.NumberFormat('en-US',{style:'currency',currency:c}).format(v/100);
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const USDC_NETWORKS={polygon_usdc:{label:'Polygon',gas:'POL'},base_usdc:{label:'Base',gas:'ETH'},ethereum_usdc:{label:'Ethereum',gas:'ETH'}};
+ const usdcNetwork=provider=>Object.hasOwn(USDC_NETWORKS,provider)?USDC_NETWORKS[provider]:null;
+ function usdcNetworkOptions(methods,selected){
+  return '<option value="">Select a network</option>'+methods.map(method=>'<option value="'+esc(method.id)+'"'+(method.id===selected?' selected':'')+'>'+esc(method.network_label||usdcNetwork(method.native_provider).label)+'</option>').join('');
+ }
  async function api(auth,body,mode='customer',id){
   const guest=mode==='guest';
   const s=guest?null:await auth.auth.getSession(),token=s?.data?.session?.access_token;
@@ -13,12 +18,28 @@
  }
  function paymentKind(method){
   if(method?.kind==='interac'||method?.provider_key==='interac')return method.kind==='interac'&&method.currency==='CAD'&&!method.native_provider&&method.provider_key==='interac'?'interac':null;
-  return method?.native_provider==='rampex'&&method.rampex_provider==='hosted'||method?.native_provider==='pure_gateway'?'card':method?.native_provider==='polygon_usdc'?'crypto':null;
+  return method?.native_provider==='rampex'&&method.rampex_provider==='hosted'||method?.native_provider==='pure_gateway'?'card':usdcNetwork(method?.native_provider)?'crypto':null;
  }
  const paymentLabel=kind=>kind==='interac'?'Interac e-Transfer (CAD)':kind==='card'?'Card':'Crypto';
  const interacNote='Pay in Canadian dollars by Interac e-Transfer. Your final CAD total is shown before you place the order. Receiving details and your payment reference appear immediately afterward.';
  const validCadQuote=q=>q?.currency==='CAD'&&q.request_only!==true&&typeof q.fx_quote==='string'&&q.fx_quote.length>0&&typeof q.quote==='string'&&q.quote.length>0&&Number.isSafeInteger(q.total_cents)&&q.total_cents>0&&Number.isSafeInteger(q.pricing?.fx_ppm)&&q.pricing.fx_ppm>0;
  function methodAvailable(method,country){return !!paymentKind(method)&&method.active!==false&&Array.isArray(method.countries)&&method.countries.includes(country);}
+ function directCryptoDescription(method,count,bulk){
+  const network=usdcNetwork(method?.native_provider);
+  if(!network)return 'SETUP PENDING — Direct USDC on Polygon becomes available after the receiving address and on-chain confirmation are verified.';
+  const destination=count>1?'on your selected network':'on '+network.label;
+  if(bulk)return 'Pay USDC directly '+destination+'. Your bulk volume savings remain in place; no additional Crypto merchandise discount applies.';
+  const gas=count>1?'the gas token for your selected network':network.gas+' for gas';
+  return 'Pay USDC directly '+destination+' with a compatible browser wallet. You need '+gas+'; verify the exact authorization before signing. Save an extra 5% on merchandise after any applied coupon. Shipping, tax and fees are excluded.';
+ }
+ function directPaymentRows(methods,bulk){
+  return ['card','crypto',...(methods.some(item=>paymentKind(item)==='interac')?['interac']:[])].map(kind=>{
+   const matching=methods.filter(item=>paymentKind(item)===kind),method=matching[0],isCrypto=kind==='crypto';
+   const copy=kind==='interac'?interacNote:kind==='card'?'Secure card-to-crypto checkout. The provider displays fees, conversion rate and final charge before you pay. Cards and digital wallets depend on country, device and eligibility.':directCryptoDescription(method,matching.length,bulk);
+   const picker=isCrypto&&matching.length>1?'<label data-dc-crypto-networks hidden>USDC network<select data-dc-crypto-network disabled></select></label>':'';
+   return '<label class="dc-method"><input type="radio" name="method_id" data-payment-kind="'+kind+'" value="'+esc(!isCrypto?method?.id||'':'')+'" '+(method?'':'disabled data-unavailable="true"')+' required><span><strong>'+paymentLabel(kind)+'</strong><small'+(isCrypto?' data-dc-crypto-description':'')+'>'+copy+'</small></span></label>'+picker;
+  }).join('');
+ }
  function gatewayPaymentUrl(value,origin){
   let url;try{url=new URL(value);}catch{throw Error('The provider returned an invalid payment destination.');}
   if(!origin||url.origin!==origin||url.pathname!=='/pay'||!/^[?]pi=pi_[A-Za-z0-9_]{6,120}$/.test(url.search)||url.username||url.password||url.hash||(url.protocol!=='https:'&&!/^(localhost|127[.]0[.]0[.]1)$/.test(url.hostname)))
@@ -94,7 +115,7 @@
    const methods=data.methods.filter(method=>(method.sale_scope==='both'||method.sale_scope==='goods')&&paymentKind(method)&&(!stack||['card','crypto'].includes(paymentKind(method))));
    const profile=user.user_metadata?.alta_profile||{},address=profile.shipping||{};
    const form=node('form');form.className='ap-form dc-form';form.dataset.bulkOrder=String(bulk);form.dataset.memberStack=String(stack);
-   form.innerHTML=`<section class="dc-section"><span class="dc-kicker">01 · Delivery details</span><h2>Where should we send your order?</h2><p>Free priority shipping at $250 after discounts. See the shipping policy for eligibility. <a href="/account/profile">Manage saved details</a></p><div class="dc-fields"><label>Full name<input name="name" autocomplete="shipping name" maxlength="120" required value="${esc(address.name||user.user_metadata?.full_name||'')}"></label><label>Laboratory / organization (optional)<input name="organization" maxlength="180" autocomplete="shipping organization" value="${esc(address.organization||profile.organization||'')}"></label><label>Street address<input name="line1" autocomplete="shipping address-line1" required minlength="3" maxlength="180" value="${esc(address.line1||'')}"></label><label>Apartment, suite, etc. (optional)<input name="line2" autocomplete="shipping address-line2" maxlength="180" value="${esc(address.line2||'')}"></label><div class="ap-form-row"><label>City<input name="city" required minlength="2" maxlength="80" autocomplete="shipping address-level2" value="${esc(address.city||'')}"></label><label>State<input name="region" required maxlength="80" autocomplete="shipping address-level1" value="${esc(address.region||'')}"></label></div><div class="ap-form-row"><label>ZIP code<input name="postal_code" required minlength="2" maxlength="20" autocomplete="shipping postal-code" value="${esc(address.postal_code||'')}"></label><label>Country<select name="country" autocomplete="shipping country"><option value="US">United States</option></select></label></div><p class="dc-note"><a href="/shipping-policy.html">See delivery estimates and shipping details</a></p></div></section><section class="dc-section"><span class="dc-kicker">02 · Payment</span><h2>Choose how to pay</h2><p>Review the total before placing your order.</p>${['card','crypto',...(methods.some(item=>paymentKind(item)==='interac')?['interac']:[])].map(kind=>{const method=methods.find(item=>paymentKind(item)===kind);return '<label class="dc-method"><input type="radio" name="method_id" data-payment-kind="'+kind+'" value="'+esc(method?.id||'')+'" '+(method?'':'disabled data-unavailable="true"')+' required><span><strong>'+paymentLabel(kind)+'</strong><small>'+(kind==='interac'?interacNote:kind==='card'?'Secure card-to-crypto checkout. The provider displays fees, conversion rate and final charge before you pay. Cards and digital wallets depend on country, device and eligibility.':method?(bulk?'Pay USDC directly on Polygon. Your bulk volume savings remain in place; no additional Crypto merchandise discount applies.':'Pay USDC directly on Polygon with a compatible browser wallet. You need POL for gas; verify the exact authorization before signing. Save an extra 5% on merchandise after any applied coupon. Shipping, tax and fees are excluded.'):'SETUP PENDING — Direct USDC on Polygon becomes available after the receiving address and on-chain confirmation are verified.')+'</small></span></label>';}).join('')}</section><section class="dc-section"><span class="dc-kicker">03 · Review</span><h2>Finish your order</h2><div class="dc-coupon"><label>Coupon code (optional)<input name="coupon" maxlength="40" placeholder="BLACKFRIDAY10" autocomplete="off"></label><small>Use BLACKFRIDAY10 for 10% off merchandise.</small><div class="ap-actions"><button type="button" class="ap-button ap-button-secondary" data-dc-apply-coupon>Apply</button><button type="button" class="ap-button ap-button-secondary" data-dc-remove-coupon hidden>Remove</button></div><p data-dc-coupon-status role="status" aria-live="polite"></p></div><details class="dc-rewards"><summary>Use points or store credit</summary><p class="dc-note">Available: ${Math.max(0,data.balances.points)} points · ${money(data.balances.credit_cents)} store credit.</p><div class="ap-form-row"><label>Points to use<input name="points" type="number" min="0" step="1" max="${Math.max(0,data.balances.points)}" value="0"></label><label>Store credit ($)<input name="credit" type="number" min="0" step="0.01" max="${(data.balances.credit_cents/100).toFixed(2)}" value="0"></label></div><p class="dc-note" data-dc-balance-note>100 points = $1; minimum 100 points. Points apply to merchandise; credit can also cover delivery.</p></details><div class="dc-fields"><label>Order note (optional)<textarea name="note" rows="2" maxlength="1000"></textarea></label><label class="ap-checkbox-label"><input name="research_use" type="checkbox" required> I am 21 or older. Products are for controlled laboratory research only, not human or animal use.</label><label class="ap-checkbox-label"><input name="consent" type="checkbox" required><span>I agree to the <a href="/commercial-terms.html" target="_blank" rel="noopener">checkout terms</a>, <a href="/shipping-policy.html" target="_blank" rel="noopener">shipping policy</a> and <a href="/refund-policy.html" target="_blank" rel="noopener">refund policy</a>.</span></label><button type="submit" class="ap-button">Review order total →</button></div></section>`;
+   form.innerHTML=`<section class="dc-section"><span class="dc-kicker">01 · Delivery details</span><h2>Where should we send your order?</h2><p>Free priority shipping at $250 after discounts. See the shipping policy for eligibility. <a href="/account/profile">Manage saved details</a></p><div class="dc-fields"><label>Full name<input name="name" autocomplete="shipping name" maxlength="120" required value="${esc(address.name||user.user_metadata?.full_name||'')}"></label><label>Laboratory / organization (optional)<input name="organization" maxlength="180" autocomplete="shipping organization" value="${esc(address.organization||profile.organization||'')}"></label><label>Street address<input name="line1" autocomplete="shipping address-line1" required minlength="3" maxlength="180" value="${esc(address.line1||'')}"></label><label>Apartment, suite, etc. (optional)<input name="line2" autocomplete="shipping address-line2" maxlength="180" value="${esc(address.line2||'')}"></label><div class="ap-form-row"><label>City<input name="city" required minlength="2" maxlength="80" autocomplete="shipping address-level2" value="${esc(address.city||'')}"></label><label>State<input name="region" required maxlength="80" autocomplete="shipping address-level1" value="${esc(address.region||'')}"></label></div><div class="ap-form-row"><label>ZIP code<input name="postal_code" required minlength="2" maxlength="20" autocomplete="shipping postal-code" value="${esc(address.postal_code||'')}"></label><label>Country<select name="country" autocomplete="shipping country"><option value="US">United States</option></select></label></div><p class="dc-note"><a href="/shipping-policy.html">See delivery estimates and shipping details</a></p></div></section><section class="dc-section"><span class="dc-kicker">02 · Payment</span><h2>Choose how to pay</h2><p>Review the total before placing your order.</p>${directPaymentRows(methods,bulk)}</section><section class="dc-section"><span class="dc-kicker">03 · Review</span><h2>Finish your order</h2><div class="dc-coupon"><label>Coupon code (optional)<input name="coupon" maxlength="40" placeholder="BLACKFRIDAY10" autocomplete="off"></label><small>Use BLACKFRIDAY10 for 10% off merchandise.</small><div class="ap-actions"><button type="button" class="ap-button ap-button-secondary" data-dc-apply-coupon>Apply</button><button type="button" class="ap-button ap-button-secondary" data-dc-remove-coupon hidden>Remove</button></div><p data-dc-coupon-status role="status" aria-live="polite"></p></div><details class="dc-rewards"><summary>Use points or store credit</summary><p class="dc-note">Available: ${Math.max(0,data.balances.points)} points · ${money(data.balances.credit_cents)} store credit.</p><div class="ap-form-row"><label>Points to use<input name="points" type="number" min="0" step="1" max="${Math.max(0,data.balances.points)}" value="0"></label><label>Store credit ($)<input name="credit" type="number" min="0" step="0.01" max="${(data.balances.credit_cents/100).toFixed(2)}" value="0"></label></div><p class="dc-note" data-dc-balance-note>100 points = $1; minimum 100 points. Points apply to merchandise; credit can also cover delivery.</p></details><div class="dc-fields"><label>Order note (optional)<textarea name="note" rows="2" maxlength="1000"></textarea></label><label class="ap-checkbox-label"><input name="research_use" type="checkbox" required> I am 21 or older. Products are for controlled laboratory research only, not human or animal use.</label><label class="ap-checkbox-label"><input name="consent" type="checkbox" required><span>I agree to the <a href="/commercial-terms.html" target="_blank" rel="noopener">checkout terms</a>, <a href="/shipping-policy.html" target="_blank" rel="noopener">shipping policy</a> and <a href="/refund-policy.html" target="_blank" rel="noopener">refund policy</a>.</span></label><button type="submit" class="ap-button">Review order total →</button></div></section>`;
    const countries=data.config.shipping_countries||['US'],countryNames=new Intl.DisplayNames(['en'],{type:'region'});
    form.elements.country.innerHTML=countries.map(code=>({code,label:countryNames.of(code)||code})).sort((a,b)=>a.label.localeCompare(b.label)).map(({code,label})=>'<option value="'+esc(code)+'">'+esc(label)+'</option>').join('');
    const savedCountry=address.country||localStorage.getItem('ap-shipping-country');
@@ -105,6 +126,8 @@
     deliveryCopy.textContent='US bulk orders include two-day express shipping after dispatch. Other destinations show available rates at checkout.';
    }
    const preferred=options.method||new URLSearchParams(location.search).get('method');
+   const cryptoRadio=form.querySelector('[data-payment-kind=crypto]'),cryptoPicker=form.querySelector('[data-dc-crypto-network]');
+   const cryptoMethods=methods.filter(method=>paymentKind(method)==='crypto');
    function syncBalances(){
     const interac=paymentKind(methods.find(m=>m.id===form.querySelector('[name=method_id]:checked')?.value))==='interac';
     if(!interac)delete form.dataset.fxQuote;
@@ -112,12 +135,26 @@
     form.querySelector('[data-dc-balance-note]').textContent=interac?'Points and store credit are held in USD and cannot be applied to an Interac payment. Choose Card or Crypto to use these balances.':'100 points = $1; minimum 100 points. Points apply to merchandise; credit can also cover delivery.';
    }
    function syncPaymentAvailability(){
-    for(const control of form.querySelectorAll('[name=method_id]')){const method=methods.find(m=>m.id===control.value),available=methodAvailable(method,form.elements.country.value);control.disabled=!available;control.dataset.unavailable=String(!available);if(!available)control.checked=false;}
+    const country=form.elements.country.value,availableCrypto=cryptoMethods.filter(method=>methodAvailable(method,country));
+    const currentCrypto=cryptoRadio.value,network=availableCrypto.find(method=>method.id===currentCrypto)||availableCrypto.find(method=>method.id===preferred);
+    cryptoRadio.value=availableCrypto.length===1?availableCrypto[0].id:network?.id||'';
+    form.querySelector('[data-dc-crypto-description]').textContent=directCryptoDescription(availableCrypto[0]||cryptoMethods[0],availableCrypto.length,bulk);
+    if(cryptoPicker)cryptoPicker.innerHTML=availableCrypto.length>1?usdcNetworkOptions(availableCrypto,cryptoRadio.value):'';
+    for(const control of form.querySelectorAll('[name=method_id]')){
+     const available=control===cryptoRadio?availableCrypto.length>0:methodAvailable(methods.find(m=>m.id===control.value),country);
+     control.disabled=!available;control.dataset.unavailable=String(!available);if(!available)control.checked=false;
+    }
     if(!form.querySelector('[name=method_id]:checked')){const preferredControl=[...form.querySelectorAll('[name=method_id]')].find(control=>!control.disabled&&control.value===preferred)||form.querySelector('[name=method_id]:not(:disabled)');if(preferredControl)preferredControl.checked=true;}
-    syncBalances();
+    syncCryptoPicker();syncBalances();
+   }
+   function syncCryptoPicker(){
+    if(!cryptoPicker)return;
+    const visible=cryptoRadio.checked&&cryptoPicker.options.length>1;
+    cryptoPicker.parentElement.hidden=!visible;cryptoPicker.required=visible;cryptoPicker.disabled=!visible;cryptoPicker.dataset.unavailable=String(!visible);
    }
    syncPaymentAvailability();form.elements.country.addEventListener('change',syncPaymentAvailability);
-   form.addEventListener('change',event=>{if(event.target.name==='method_id')syncBalances();});
+   cryptoPicker?.addEventListener('change',()=>{cryptoRadio.value=cryptoPicker.value;cryptoRadio.dispatchEvent(new Event('change',{bubbles:true}));});
+   form.addEventListener('change',event=>{if(event.target.name==='method_id'){syncCryptoPicker();syncBalances();}});
    const {box:aside,estimate}=cartSummary(cart),layout=node('div');layout.className='dc-layout';
    const review=node('div'),status=node('p');status.className='dc-confirm-status';status.setAttribute('role','status');status.setAttribute('aria-live','polite');aside.append(review,status);layout.append(form,aside);root.append(layout);const steps=checkoutSteps(form,root,data,cart);window.ReadinessUI.enhanceCheckout(form,aside,auth,cart,data);
     if(stack){
@@ -133,6 +170,7 @@
     try{
      const d=Object.fromEntries(new FormData(form));for(const control of form.elements)control.disabled=true;const request={kind:'goods',bulk_order:bulk,...(stack?{research_builder_mode:'member_stack'}:{}),items:cart.map(({id,size,qty})=>({id,size,qty})),address:{line1:d.line1,line2:d.line2,city:d.city,region:d.region,postal_code:d.postal_code,country:d.country},research_use:d.research_use==='on',name:d.name,organization:d.organization,note:d.note,consent:d.consent==='on',method_id:d.method_id,points:stack?0:Number(d.points||0),credit_cents:stack?0:Math.round(Number(d.credit||0)*100),coupon:bulk||stack?'':form.dataset.appliedCoupon||'',delivery:stack?{shipping:stackShipping,extras:[]}:window.ReadinessUI.selection(form),checkout_version:data.config.version};
      const fingerprint=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(request))))).map(x=>x.toString(16).padStart(2,'0')).join('');if(lastFingerprint&&lastFingerprint!==fingerprint){requestId=crypto.randomUUID();sessionStorage.setItem('ap-checkout-id',requestId);}lastFingerprint=fingerprint;sessionStorage.setItem('ap-checkout-fingerprint',fingerprint);
+     if(form.querySelector('[name=method_id]:checked')===cryptoRadio&&!request.method_id)throw Error('Select a USDC network.');
      body={...request,id:requestId,action:'quote',...(form.dataset.fxQuote?{fx_quote:form.dataset.fxQuote}:{})};let q=await api(auth,body);
      const selected=methods.find(m=>m.id===body.method_id),kind=paymentKind(selected);
      if(!methodAvailable(selected,body.address.country))throw Error('This payment method is unavailable for your destination.');
@@ -321,5 +359,5 @@
  }
  async function balance(root,auth,path){return window.ReadinessUI.balance(root,auth,path);}
  async function overview(root,auth,user){return window.ReadinessUI.overview(root,auth,user);}
- window.DirectCheckout={api,checkout,orders,balance,overview,openHostedPayment,paymentKind,methodAvailable,gatewayPaymentUrl};
+ window.DirectCheckout={api,checkout,orders,balance,overview,openHostedPayment,paymentKind,methodAvailable,gatewayPaymentUrl,usdcNetwork,usdcNetworkOptions};
 })();

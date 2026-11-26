@@ -51,13 +51,17 @@
   const locale=window.AltaLocale;
   const checkoutApi=body=>window.DirectCheckout.api(auth,body,guest?'guest':'customer');
   try{[data]=await Promise.all([checkoutApi(),locale?.countryReady]);}catch(err){root.replaceChildren(el('p','nlx-error',err.message));return;}
-  const paymentKind=window.DirectCheckout.paymentKind;
+  const {paymentKind,usdcNetwork,usdcNetworkOptions}=window.DirectCheckout;
   const guestMethodIds=new Set(data.guest_methods||[]);
   const paymentMethods=(data.methods||[]).filter(m=>paymentKind(m)&&m.active!==false&&(!guest||guestMethodIds.has(m.id)));
   if(guest&&!paymentMethods.length){const link=el('a','','Sign in to check out');link.href=signIn;root.replaceChildren(el('p','nlx-error','Guest checkout is temporarily unavailable.'),link);return;}
   const preferred=paymentMethods.find(m=>m.id===(options.method||params.get('method')));
   const walletPreference=!guest&&['apple','google'].includes(params.get('wallet'))?params.get('wallet'):null;
-  const selectedMethod=()=>paymentMethods.find(m=>paymentKind(m)===state.paymentKind&&Array.isArray(m.countries)&&m.countries.includes(shippingCountry()))||null;
+  const availableMethods=kind=>paymentMethods.filter(m=>paymentKind(m)===kind&&Array.isArray(m.countries)&&m.countries.includes(shippingCountry()));
+  const selectedMethod=()=>{
+   const eligible=availableMethods(state.paymentKind);
+   return state.paymentKind==='crypto'&&eligible.length>1?eligible.find(m=>m.id===state.cryptoMethodId)||null:eligible[0]||null;
+  };
   const saved=user?.user_metadata?.alta_profile?.shipping||{},names=(saved.name||user?.user_metadata?.full_name||'').trim().split(/\s+/);
   const nameFirst=names.shift()||'',nameLast=names.join(' ');
   const supported=data.config.shipping_countries||['US'];
@@ -81,7 +85,7 @@
   const state={country,email:user?.email||'',
     membershipAddon:savedAddon,membershipChoice:savedAddon||{plan:'vip',period:'monthly'},
     shipping:'economy',extras:new Set([...(Array.isArray(priorExtras)?priorExtras.filter(x=>x!=='protection'&&isActive(x)):[]),...(isActive('protection')&&wantsProtection(cart)?['protection']:[])]),
-    coupon:initialCoupon(),paymentKind:walletPreference?'card':paymentKind(preferred)||'card',wallet:walletPreference,fxQuote:null,shippingData:null,billingData:null,billingSame:true,note:'',smsOptIn:false};
+    coupon:initialCoupon(),paymentKind:walletPreference?'card':paymentKind(preferred)||'card',cryptoMethodId:paymentKind(preferred)==='crypto'?preferred.id:null,wallet:walletPreference,fxQuote:null,shippingData:null,billingData:null,billingSame:true,note:'',smsOptIn:false};
   if(guest)state.paymentKind=paymentKind(preferred?.countries?.includes(state.country)?preferred:paymentMethods.find(method=>method.countries?.includes(state.country)))||'card';
   else if(state.paymentKind==='interac'&&!preferred?.countries?.includes(state.country))state.paymentKind='card';
   root.classList.add('nlx-checkout-root');document.title='Checkout | PURE';
@@ -460,9 +464,11 @@
    const button=view('[data-nlx-place]',div);if(!button)return;
    const method=selectedMethod();
    all('.nlx-payment-choice',form).forEach(row=>{const chosen=row.querySelector('[name=payment_choice]').value===state.paymentKind;row.querySelector('.nlx-payment-choice-body').hidden=!chosen;row.classList.toggle('nlx-selected',chosen);});
+   const network=view('[data-nlx-crypto-network]',form);
+   if(network)network.disabled=state.paymentKind!=='crypto'||onePayment||!!lastPlaced;
    button.disabled=!(method&&currentPreview&&!loadingPreview&&!onePayment&&!lastPlaced&&form.elements.ruo?.checked&&form.elements.responsibility?.checked);
    const walletName=state.wallet==='apple'?'APPLE PAY':state.wallet==='google'?'GOOGLE PAY':null;
-   const action=method?(state.paymentKind==='interac'?'PLACE ORDER':state.paymentKind==='card'?'CONTINUE TO '+(walletName||'CARD PAYMENT'):'CONTINUE TO CRYPTO PAYMENT'):'PAYMENT UNAVAILABLE';
+   const action=method?(state.paymentKind==='interac'?'PLACE ORDER':state.paymentKind==='card'?'CONTINUE TO '+(walletName||'CARD PAYMENT'):'CONTINUE TO CRYPTO PAYMENT'):state.paymentKind==='crypto'&&network?'SELECT A CRYPTO NETWORK':'PAYMENT UNAVAILABLE';
    button.textContent=action+(isMobile()?'':' · '+currentMoney(currentPreview?.total_cents));
    const card=paymentMethods.find(m=>paymentKind(m)==='card'&&m.countries?.includes(shippingCountry()));
    // The payment-page Card route has no wallet shortcuts: hide them rather than promise a wallet that is not wired up.
@@ -475,14 +481,17 @@
   function paymentLayout(){
    const paymentKinds=guest?[...new Set(paymentMethods.filter(method=>method.countries?.includes(shippingCountry())).map(paymentKind))]:['card','crypto',...(paymentMethods.some(m=>paymentKind(m)==='interac')?['interac']:[])];
    const rows=paymentKinds.map(key=>{
-    const method=paymentMethods.find(m=>paymentKind(m)===key&&Array.isArray(m.countries)&&m.countries.includes(shippingCountry()))||paymentMethods.find(m=>paymentKind(m)===key),available=method&&Array.isArray(method.countries)&&method.countries.includes(shippingCountry());
+    const eligible=availableMethods(key),available=eligible.length>0,method=eligible[0]||paymentMethods.find(m=>paymentKind(m)===key);
+    const network=key==='crypto'?usdcNetwork(method?.native_provider):null;
+    const networkChoice=network&&eligible.length>1?'<label>USDC network<select data-nlx-crypto-network>'+usdcNetworkOptions(eligible,state.cryptoMethodId)+'</select></label>':'';
     const description=key==='interac'?'Pay in Canadian dollars by Interac e-Transfer. Your final CAD total is shown before you place the order. Receiving details and your payment reference appear immediately afterward.':key==='card'&&method?.native_provider==='pure_gateway'
      ? 'Pay securely by card on our encrypted payment page. Your order is confirmed once the payment clears.'
      : key==='card'
      ? 'Secure card-to-crypto checkout. The provider displays its fees, conversion rate and final charge before you pay. Available cards and digital wallets depend on your country, device and provider eligibility.'
-     : method?'Pay USDC directly on Polygon from a compatible browser wallet. You need USDC and POL for gas. Review the exact amount, recipient and authorization before you sign; payment is confirmed on chain before fulfillment.'
+     : networkChoice?'Pay native USDC from a compatible browser wallet. Use USDC and the gas token for your selected network.'
+     : network?'Pay USDC directly on '+network.label+' from a compatible browser wallet. You need USDC and '+network.gas+' for gas. Review the exact amount, recipient and authorization before you sign; payment is confirmed on chain before fulfillment.'
      :'Direct USDC on Polygon is being configured. No wallet transfer is requested until the receiving address and on-chain payment confirmation are verified.';
-    return '<div class="nlx-payment-choice'+(!available?' nlx-payment-pending':'')+'"><label class="nlx-payment-option"><input type="radio" name="payment_choice" value="'+key+'" '+(state.paymentKind===key?'checked ':'')+(!available?'disabled ':'')+'><span>'+(key==='interac'?'Interac e-Transfer (CAD)':key==='card'?(method?.native_provider==='pure_gateway'?'Credit/Debit card':'Card'):'Crypto')+'</span><span class="nlx-payment-state">'+(available?(key==='interac'?'CAD PAYMENT':key==='crypto'?'EXTRA 5% OFF':'SECURE CHECKOUT'):method?'UNAVAILABLE FOR DESTINATION':'SETUP PENDING')+'</span></label><div class="nlx-payment-choice-body" '+(state.paymentKind===key?'':'hidden')+'><p>'+description+'</p>'+(key==='crypto'?'<small>Save an extra 5% on merchandise after any applied coupon. Shipping, tax and fees, including protection, are excluded.</small>':'')+'</div></div>';
+    return '<div class="nlx-payment-choice'+(!available?' nlx-payment-pending':'')+'"><label class="nlx-payment-option"><input type="radio" name="payment_choice" value="'+key+'" '+(state.paymentKind===key?'checked ':'')+(!available?'disabled ':'')+'><span>'+(key==='interac'?'Interac e-Transfer (CAD)':key==='card'?(method?.native_provider==='pure_gateway'?'Credit/Debit card':'Card'):'Crypto')+'</span><span class="nlx-payment-state">'+(available?(key==='interac'?'CAD PAYMENT':key==='crypto'?'EXTRA 5% OFF':'SECURE CHECKOUT'):method?'UNAVAILABLE FOR DESTINATION':'SETUP PENDING')+'</span></label><div class="nlx-payment-choice-body" '+(state.paymentKind===key?'':'hidden')+'><p>'+description+'</p>'+networkChoice+(key==='crypto'?'<small>Save an extra 5% on merchandise after any applied coupon. Shipping, tax and fees, including protection, are excluded.</small>':'')+'</div></div>';
    }).join('');
    return '<section class="nlx-payment"><h2>Choose how to pay</h2><div class="nlx-express-label"><strong>DIGITAL WALLET</strong><span data-nlx-wallet-amount>'+(state.paymentKind==='interac'?'Card payments in USD':usd(currentPreview?.total_cents||0))+'</span></div>'
     +'<div class="nlx-wallets" data-nlx-wallets><button type="button" class="nlx-wallet-button nlx-apple-pay" data-nlx-wallet="apple" aria-label="Choose Apple Pay" aria-pressed="false"><span class="nlx-wallet-lockup"><img class="nlx-wallet-symbol nlx-apple-symbol" src="/assets/payment-brands/apple-mark-clean.svg" alt="" aria-hidden="true" width="20" height="24"><span class="nlx-wallet-wordmark">Pay</span></span></button><span class="nlx-or">or</span><button type="button" class="nlx-wallet-button nlx-google-pay" data-nlx-wallet="google" aria-label="Choose Google Pay" aria-pressed="false"><span class="nlx-wallet-lockup"><img class="nlx-wallet-symbol nlx-google-symbol" src="/assets/payment-brands/google-g-clean.svg" alt="" aria-hidden="true" width="22" height="22"><span class="nlx-wallet-wordmark">Pay</span></span></button></div>'
@@ -519,7 +528,7 @@
     }
     form.elements.country.addEventListener('change',()=>{
      state.country=shippingCountry();
-     if(!selectedMethod()&&(guest||state.paymentKind==='interac')){
+     if(!availableMethods(state.paymentKind).length&&(guest||state.paymentKind==='interac')){
       state.paymentKind=(guest?paymentKind(paymentMethods.find(method=>method.countries?.includes(state.country))):null)||'card';
       state.wallet=null;
      }
@@ -561,6 +570,11 @@
     all('[name=payment_choice]',form).forEach(control=>control.addEventListener('change',()=>{
      if(control.disabled||onePayment||lastPlaced)return;state.paymentKind=control.value;state.wallet=null;invalidate();updatePayment();renderSummary();void refresh();
     }));
+    const network=view('[data-nlx-crypto-network]',form);
+    network?.addEventListener('change',()=>{
+     if(network.disabled||onePayment||lastPlaced)return;
+     state.cryptoMethodId=network.value;invalidate();updatePayment();renderSummary();void refresh();
+    });
     all('[data-nlx-wallet]',form).forEach(control=>control.addEventListener('click',()=>{
      if(control.disabled||onePayment||lastPlaced)return;
      const changed=state.paymentKind!=='card';state.wallet=control.dataset.nlxWallet;state.paymentKind='card';
