@@ -89,6 +89,39 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
   assert.doesNotMatch(bulk.textContent,/BOGO|monthly auto.?billing/i);
   const tiers=[...bulk.querySelectorAll('.pure-home-volume-tiers > div')];
   assert.deepEqual(tiers.map(tier=>tier.textContent),['50% OFF10+ units per compound','60% OFF50+ units per compound']);
+  const bulkRows=[...bulk.querySelectorAll('[data-home-bulk-product]')];
+  assert.equal(bulkRows.length,3);
+  for(const row of bulkRows){
+   const p=w.AltaStore.product(row.dataset.homeBulkProduct);
+   const strengths=[...row.querySelector('[data-home-bulk-size]').options].map(option=>option.value);
+   assert.deepEqual(strengths,[...p.variants].sort((a,b)=>(parseFloat(a.size)-parseFloat(b.size))||a.size.localeCompare(b.size)).map(v=>v.size));
+   assert.ok(row.firstElementChild.querySelector('img[src]'));
+   assert.ok(row.lastElementChild.matches('.pure-home-express-price'));
+  }
+  const id=bulkRows[0].dataset.homeBulkProduct;
+  const bulkRow=()=>bulk.querySelector(`[data-home-bulk-product="${id}"]`);
+  const chooseStrength=index=>{
+   const select=bulkRow().querySelector('[data-home-bulk-size]');
+   select.selectedIndex=index;
+   select.dispatchEvent(new w.Event('change',{bubbles:true}));
+  };
+  const enterQty=qty=>{
+   const input=bulkRow().querySelector('[data-home-bulk-quantity]');
+   input.value=qty;
+   input.dispatchEvent(new w.Event('input',{bubbles:true}));
+  };
+  const addTen=()=>bulkRow().querySelector('[data-home-bulk-step="10"]').click();
+  addTen();
+  addTen();
+  assert.equal(bulkRow().querySelector('[data-home-bulk-quantity]').value,'20');
+  enterQty('6');
+  assert.equal(bulk.querySelector('[data-home-bulk-checkout]').disabled,true);
+  chooseStrength(1);
+  assert.equal(bulkRow().querySelector('[data-home-bulk-quantity]').value,'0');
+  enterQty('4');
+  assert.equal(bulk.querySelector('[data-home-bulk-checkout]').disabled,false);
+  chooseStrength(0);
+  assert.equal(bulkRow().querySelector('[data-home-bulk-quantity]').value,'6');
   dom.window.close();
  }
  {const{dom,d,w}=await setup('/shop');
