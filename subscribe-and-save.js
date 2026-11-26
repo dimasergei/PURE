@@ -80,7 +80,7 @@
 
     function renderFilters() {
       get('filters').innerHTML = ['', ...groups].map(label =>
-        `<button type="button" data-pss-group="${esc(label)}" aria-pressed="${group === label}">${esc(store.publicGroupLabel?.(label) || label || 'All products')}</button>`
+        `<button type="button" data-pss-group="${esc(label)}" aria-pressed="${group === label}">${esc(label || 'All products')}</button>`
       ).join('');
     }
 
@@ -89,12 +89,11 @@
       products.innerHTML = [...catalog].filter(([id, variants]) => {
         const product = store.product(id);
         return (!group || group === product.group) &&
-          [product.name, product.group, store.publicGroupLabel?.(product.group), ...variants.map(variant => variant.size)].join(' ').toLowerCase().includes(query);
+          [product.name, product.group, ...variants.map(variant => variant.size)].join(' ').toLowerCase().includes(query);
       }).map(([id, variants]) => {
         const product = store.product(id);
         const size = sizes.get(id) || variants[0].size;
         const matched = chosen.filter(item => item.id === id && item.size === size).length;
-        const pickLabel = matched ? 'Added ×' + matched + ' · Add again' : 'Add to plan';
         const chips = variants.map(variant =>
           `<button type="button" data-pss-size="${esc(variant.size)}" aria-pressed="${variant.size === size}">${esc(variant.size)}</button>`
         ).join('');
@@ -104,7 +103,7 @@
             <h3>${esc(product.name)}</h3>
             <div class="pss-sizes" role="group" aria-label="Strength for ${esc(product.name)}">${chips}</div>
             <strong class="pss-card-price">${itemPrice(id, size)}${useMonthlyPricing() ? ' <small>/mo</small>' : ''}</strong>
-            <button type="button" class="ap-button pss-pick" data-pss-pick aria-label="${esc(pickLabel)} — ${esc(product.name)} ${esc(size)}"${chosen.length === capacity ? ' disabled' : ''}>${esc(pickLabel)}</button>
+            <button type="button" class="ap-button pss-pick" data-pss-pick aria-label="Add ${esc(product.name)} ${esc(size)} to your plan"${chosen.length === capacity ? ' disabled' : ''}>${matched ? 'Added ×' + matched + ' · Add again' : 'Add to plan'}</button>
           </div>
         </article>`;
       }).join('') || '<p class="pss-empty">No products match your search.</p>';

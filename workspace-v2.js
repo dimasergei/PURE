@@ -24,7 +24,7 @@
  const total=lines=>lines.reduce((n,x)=>n+x.qty*x.price,0);
  function empty(title,body,href,label){return `<div class="ap-empty"><h3>${esc(title)}</h3><p>${esc(body)}</p>${href?`<a class="ap-button ap-button-secondary" href="${href}">${esc(label)} ↗</a>`:''}</div>`;}
  async function authClient(){if(!authPromise)authPromise=(async()=>{if(!window.supabase?.createClient)throw Error('Account service unavailable.');const response=await fetch('/api/customer-config',{cache:'no-store'});if(!response.ok)throw Error('Account service unavailable.');const config=await response.json();return window.supabase.createClient(config.supabaseUrl,config.anonKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:'pkce'}});})();return authPromise;}
- function inquiryForm(type){return '<form method="post" action="/api/customer-config?commerce_form='+esc(type)+'" class="ap-inquiry-form" data-inquiry-type="'+esc(type)+'"><div class="ap-form-grid"><label>Name<input name="name" autocomplete="name" required maxlength="120"></label><label>Email<input name="email" type="email" autocomplete="email" required maxlength="254"></label><label>Organization<input name="organization" autocomplete="organization" maxlength="160"></label><label>Country<input name="country" autocomplete="country-name" maxlength="80"></label><label class="ap-form-wide">Topic<input name="topic" value="'+(type==='bulk'?'Bulk order quote':'General inquiry')+'" maxlength="80"></label><label class="ap-form-wide">Message<textarea name="message" required minlength="10" maxlength="4000" rows="5"></textarea></label><label class="ap-honeypot" aria-hidden="true">Website<input name="website" tabindex="-1" autocomplete="off"></label><label class="ap-form-consent"><input type="checkbox" name="consent" required> PURE may use these details to respond to my inquiry.</label></div><button class="ap-button" type="submit">Send inquiry →</button><p class="ap-form-status" role="status" aria-live="polite"></p></form>';}
+ function inquiryForm(type){return '<form class="ap-inquiry-form" data-inquiry-type="'+esc(type)+'"><div class="ap-form-grid"><label>Name<input name="name" autocomplete="name" required maxlength="120"></label><label>Email<input name="email" type="email" autocomplete="email" required maxlength="254"></label><label>Organization<input name="organization" autocomplete="organization" maxlength="160"></label><label>Country<input name="country" autocomplete="country-name" maxlength="100"></label><label class="ap-form-wide">Topic<input name="topic" value="'+(type==='bulk'?'Bulk order quote':'General inquiry')+'" maxlength="160"></label><label class="ap-form-wide">Message<textarea name="message" required maxlength="5000" rows="5"></textarea></label><label class="ap-honeypot" aria-hidden="true">Website<input name="website" tabindex="-1" autocomplete="off"></label><label class="ap-form-consent"><input type="checkbox" name="consent" required> PURE may use these details to respond to my inquiry.</label></div><button class="ap-button" type="submit">Send inquiry →</button><p class="ap-form-status" role="status" aria-live="polite"></p></form>';}
  function bulkPage(){return heading('Bulk orders','Build a bigger order.<br>Keep the details simple.','Choose quantities across exact product sizes. Review a catalog-price estimate, export your list, or send a bulk quote request to the team.')+`<div class="ap-container ap-workspace-layout"><div><div class="ap-toolbar"><label class="ap-sr" for="ap-bulk-query">Search products or sizes</label><input id="ap-bulk-query" type="search" maxlength="120" value="${esc(bulkQuery)}" placeholder="Search products, sizes, or categories"></div><p class="ap-result-count">${A.catalog.reduce((n,p)=>n+p.variants.length,0)} exact product/size combinations · quantities stay saved on this device</p><div class="ap-bulk-table-wrap"><table class="ap-bulk-table"><thead><tr><th>Compound</th><th>Size</th><th>Unit price</th><th>Qty</th><th>Line total</th></tr></thead><tbody id="ap-bulk-rows"></tbody></table></div><section id="ap-bulk-inquiry" class="ap-panel" hidden style="margin-top:25px"><span class="ap-eyebrow">SEND YOUR SELECTIONS</span><h2>Request a bulk quote.</h2><p class="ap-fine">The selected products and quantities will be sent with your inquiry. Submission does not place an order.</p>${inquiryForm('bulk')}</section></div><aside class="ap-summary"><span class="ap-eyebrow">YOUR BULK REQUEST</span><h2>Every size.<br>Every quantity.</h2><div id="ap-bulk-summary"></div></aside></div>`;}
  function bulkUnits(id){return bulk.filter(x=>x.id===id).reduce((n,x)=>n+x.qty,0);}
  function bulkPriceInfo(price,units,qty){
@@ -70,7 +70,7 @@
    const v=p.variants.find(x=>x.size===size)||p.variants[0],qty=existing.find(x=>x.size===v.size)?.qty||0;
    return `<article class="nl-bulk-product" data-bulk-product="${esc(p.id)}" data-selected="${qty>0}">
     <a class="nl-bulk-image" href="/product/${encodeURIComponent(p.id)}?size=${encodeURIComponent(v.size)}"><img src="${esc(image(p,v.size))}" alt="${esc(p.name+' '+v.size)}" loading="lazy"></a>
-    <div class="nl-bulk-product-body"><span class="ap-eyebrow">${esc(A.publicGroupLabel?.(p.group)||p.group)}</span><h3><a href="/product/${encodeURIComponent(p.id)}?size=${encodeURIComponent(v.size)}">${esc(p.name)}</a></h3>
+    <div class="nl-bulk-product-body"><span class="ap-eyebrow">${esc(p.group)}</span><h3><a href="/product/${encodeURIComponent(p.id)}?size=${encodeURIComponent(v.size)}">${esc(p.name)}</a></h3>
     <div class="nl-bulk-sizes" role="group" aria-label="Choose a strength for ${esc(p.name)}">${p.variants.map(x=>`<button type="button" data-action="bulk-size" data-id="${esc(p.id)}" data-size="${esc(x.size)}" aria-pressed="${x.size===v.size}">${esc(x.size)}</button>`).join('')}</div>
     <div class="nl-bulk-prices">${bulkPriceInfo(v.price,bulkUnits(p.id),qty)}</div><div class="nl-bulk-tier-key" aria-label="Per-product discounts">${tierIndicators(bulkUnits(p.id))}</div>
     <div class="nl-bulk-product-foot"><div class="nl-bulk-quantity-controls">${quantityControls(p.id,v.size,qty,p.name,true)}</div></div><p class="nl-bulk-progress">${tierProgress(bulkUnits(p.id))}</p></div></article>`;
@@ -127,7 +127,7 @@
     <h1>Track Your Order</h1>
     <p>Enter your order details below to get the latest shipment update by email.</p>
    </header>
-   <form method="post" action="/api/customer-config?commerce_form=tracking" class="pure-track-form" id="ap-track-order-form" aria-label="Request an order update">
+   <form method="post" class="pure-track-form" id="ap-track-order-form" aria-label="Request an order update">
     <p class="pure-track-instructions">Enter your order ID and the email you used at checkout. We send status and carrier tracking details to the checkout address.</p>
     <label>Order ID<input name="order_number" type="text" required minlength="4" maxlength="40" pattern="[A-Za-z0-9\\-]{4,40}" autocapitalize="characters" spellcheck="false" autocomplete="off" placeholder="Found in your order confirmation"></label>
     <label>Billing email<input name="email" type="email" required maxlength="254" autocomplete="email" placeholder="Email you used during checkout"></label>
@@ -168,16 +168,6 @@
  }
  function render(path,root){
   if(!root)return;
-  if(root.querySelector('[data-coa-archive], [data-public-catalog]') && ['/coas','/coas/search','/shop/browse'].includes(path)){
-   if(path==='/coas' && location.search){
-    const input=new URLSearchParams(location.search), filters=new URLSearchParams();
-    for(const [oldName,newName] of [['product','product'],['size','size'],['lot','lot'],['q','q'],['query','q'],['date','date'],['lab','lab'],['laboratory','lab'],['supplier','supplier']]){
-     if(input.get(oldName))filters.set(newName,input.get(oldName).slice(0,120));
-    }
-    if(filters.size)location.replace('/coas/search?'+filters);
-   }
-   return;
-  }
   const pageFallback=(title,copy,href,label)=>()=>'<div class="pure-simple-page">'+heading('PURE',title,copy)+'<section class="ap-container ap-section"><a class="ap-button ap-button-secondary" href="'+href+'">'+label+' →</a></section></div>';
   const routes={
    '/bulk-orders':bulkPage,
@@ -196,9 +186,8 @@
     if(variant)linkedVariant={id:p.id,size:variant.size};
    }
   }
-  const renderPage=routes[path];if(root.dataset.commerceRoute!==path)root.innerHTML=renderPage?renderPage():heading('PURE','This page could not be found.','Explore the current catalog.');
+  const renderPage=routes[path];root.innerHTML=renderPage?renderPage():heading('PURE','This page could not be found.','Explore the current catalog.');
   if(path==='/bulk-orders'){
-   const query=$('#ap-bulk-query');if(query)query.value=bulkQuery;
    bulkResults();bulkSummary();
    const sheet=$('#nl-bulk-sheet'),bar=$('[data-action="bulk-open-summary"]'),layout=$('#ap-bulk-catalog');
    if(sheet&&bar&&layout){
@@ -210,7 +199,7 @@
    }
   }
   if(path==='/coas')supplierReferences();
-  if(!document.querySelector('title[data-pure-page-title]'))document.title=({'/bulk-orders':'Bulk Orders','/rewards':'Points & Credit','/coas':'COA Library','/contact':'Contact','/about':'About','/partner-program':'Partner Program','/track-order':'Track Your Order'}[path]||'PURE')+' | PURE';
+  document.title=({'/bulk-orders':'Bulk Orders','/rewards':'Points & Credit','/coas':'COA Library','/contact':'Contact','/about':'About','/partner-program':'Partner Program','/track-order':'Track Your Order'}[path]||'PURE')+' | PURE';
  }
  async function renderAccountPanel(path,root,auth,user){root.innerHTML='<p class="ap-muted">Loading your workspace…</p>';let fresh=user;try{const result=await auth.auth.getUser();if(result.data?.user)fresh=result.data.user;}catch{}const commerce=fresh.app_metadata?.alta_commerce;const data=commerce&&typeof commerce==='object'?commerce:{};
   if(path==='/account/points'||path==='/account/store-credit'){const isPoints=path.endsWith('points'),record=isPoints?data.rewards:data.store_credit;const value=isPoints?record?.points:record?.balance_cents;const valid=Number.isSafeInteger(value)&&value>=0;root.innerHTML=`<div class="ap-panel"><span class="ap-eyebrow">${isPoints?'REWARD POINTS':'ISSUED STORE CREDIT'}</span><div class="ap-plan-price">${valid?(isPoints?String(value):new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(value/100)):'—'}</div><p>${valid?'Your existing balance can be applied at checkout.':'No issued '+(isPoints?'rewards':'store-credit')+' record is available for your account. A missing record is not displayed as an earned balance.'}</p></div><div class="ap-panel" style="margin-top:20px"><h3>Activity</h3>${Array.isArray(record?.events)&&record.events.length?record.events.slice(0,50).map(e=>`<p>${esc(typeof e.description==='string'?e.description:'Account adjustment')} · ${esc(typeof e.date==='string'?e.date:'')}</p>`).join(''):'<p>No issued activity to display.</p>'}</div>`;return;}

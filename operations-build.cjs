@@ -38,8 +38,8 @@ const shell=fs.readFileSync('storefront-v2.html','utf8').replace('</head>','<lin
 function page(html,url,title,description,main,structured){html=html.replace(/<title>[\s\S]*?<\/title>/,'<title>'+esc(title)+'</title>');html=html.replace(/<meta name="description"[^>]*>/,'<meta name="description" content="'+esc(description)+'">');html=html.replace('</head>','<link rel="canonical" href="'+esc(base+url)+'"><meta property="og:title" content="'+esc(title)+'"><meta property="og:description" content="'+esc(description)+'"><meta property="og:url" content="'+esc(base+url)+'"><meta property="og:type" content="website">'+(structured?'<script type="application/ld+json">'+JSON.stringify(structured).replace(/</g,'\\u003c')+'</script>':'')+'</head>');if(main)html=html.replace(/<main id="ap-main">[\s\S]*?<\/main>/,'<main id="ap-main">'+main+'</main>');return html;}
 const routes={
  '/memberships':['PURE Memberships','Explore PURE WHITE and PURE BLACK prepaid memberships, with account benefits and clear terms.'],
- '/research-builder':['PURE Memberships','Review the benefits included with a PURE membership.'],
- '/research-checkout':['PURE Memberships','Sign in to review your active PURE membership and account benefits.'],
+ '/research-builder':['PURE Memberships','Member Stack is unlocked in a paid PURE membership account.'],
+ '/research-checkout':['PURE Memberships','Member Stack is available in an active membership account.'],
  '/shop':['Research Catalog','Browse all PURE research products and exact product-size variants.'],
  '/bulk-orders':['Bulk Orders','Choose strengths, combine units of the same compound and check out with volume pricing.'],
  '/rewards':['Rewards and Credit','Find the account workspaces for issued rewards and store credit.'],

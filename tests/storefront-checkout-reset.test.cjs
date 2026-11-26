@@ -9,7 +9,6 @@ const user={email:'researcher@example.test',user_metadata:{full_name:'Fixture Re
 const tick=()=>new Promise(resolve=>setTimeout(resolve,20));
 function fixture(surface,{legacyCoupon=false,balances={points:0,credit_cents:0},campaign}={}){
  const dom=new JSDOM('<main id="root"></main>',{url:'https://pure-labs.live/'+(surface==='cart'?'shop':'checkout'),runScripts:'outside-only',virtualConsole:new VirtualConsole()}),w=dom.window,requests=[],orderRequests=[];
- w.PureSite=require('../config/site.ts').site;
  let cart=[{id:'fixture',key:'fixture:5mg',name:'Fixture compound',size:'5mg',qty:2,price:80}];
  const products=[{id:'fixture',name:'Fixture compound',variants:[{size:'5mg',price:80}]},{id:'addon',name:'Research add-on',variants:[{size:'10mg',price:30}]}];
  const data={config,delivery_options:delivery,shipping_zones:zones,methods:[card,bank],nmi:null,balances,events:[]};

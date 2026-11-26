@@ -20,11 +20,11 @@ test('account navigation separates prepaid Membership from Monthly orders and ma
   const {window}=new JSDOM(output);
   try{
    const {document}=window;
-   assert.equal(document.querySelectorAll('a[href="/my-account/membership"]').length,1);
+   assert.equal(document.querySelectorAll('a[href="/account/membership"]').length,1);
    const monthly=document.querySelectorAll('a[href="/monthly-orders"]');
    assert.equal(monthly.length,1);
    assert.equal(monthly[0].textContent,'Monthly orders');
-   assert.equal(document.querySelector('a[aria-current="page"]').getAttribute('href'),route.replace('/account','/my-account'));
+   assert.equal(document.querySelector('a[aria-current="page"]').getAttribute('href'),route);
    assert.equal(document.querySelectorAll('#logout').length,1);
    assert.equal(document.querySelector('a[href="/account/subscriptions"],a[href="/account/stack"]'),null);
   }finally{window.close();}
@@ -38,10 +38,10 @@ test('account navigation separates prepaid Membership from Monthly orders and ma
 test('site generation maintains authenticated membership routing and retires the old research pages',()=>{
  const temp=fs.mkdtempSync(path.join(os.tmpdir(),'pure-membership-routing-'));
  try{
-  for(const file of ['products.js','account.html','account.js'])fs.copyFileSync(path.join(root,file),path.join(temp,file));
+  for(const file of ['site-build.cjs','products.js','account.html','account.js'])fs.copyFileSync(path.join(root,file),path.join(temp,file));
   fs.mkdirSync(path.join(temp,'config'),{recursive:true});
   fs.copyFileSync(path.join(root,'config','display-currencies.json'),path.join(temp,'config','display-currencies.json'));
-  const run=spawnSync(process.execPath,[path.join(root,'site-build.cjs')],{cwd:temp,encoding:'utf8'});
+  const run=spawnSync(process.execPath,['site-build.cjs'],{cwd:temp,encoding:'utf8'});
   assert.equal(run.status,0,run.stderr);
   const account=fs.readFileSync(path.join(temp,'account.js'),'utf8');
   assert.match(account,/if\(p==='\/account\/stack'\|\|p==='\/account\/subscriptions'\)return go\('\/account\/membership'\)/);
@@ -52,7 +52,7 @@ test('site generation maintains authenticated membership routing and retires the
   assert.equal(redirect('/research-builder'),'/subscribe-and-save');
   assert.equal(redirect('/research-subscriptions'),'/subscribe-and-save');
   assert.equal(redirect('/research-checkout'),'/memberships');
-  assert.equal(routing.rewrites.find(entry=>entry.source==='/subscribe-and-save/checkout')?.destination,'/monthly-checkout.html');
+  assert.equal(routing.rewrites.find(entry=>entry.source==='/subscribe-and-save/checkout')?.destination,'/monthly-orders.html');
  }finally{fs.rmSync(temp,{recursive:true,force:true});}
 });
 

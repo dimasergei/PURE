@@ -33,8 +33,7 @@
  const giftIcon='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v8h14v-8M12 8v12M12 8H8.5A2.5 2.5 0 1 1 11 5.5L12 8Zm0 0h3.5A2.5 2.5 0 1 0 13 5.5L12 8Z"/></svg>';
  function renderRewards(root,quote,country){
   const panel=root.querySelector('.nlc-rewards');
-  const service=window.PureSite?.shipping.freeServices[country]?.at(-1);
-  const shipping=service?'free '+html(service.replaceAll('_',' '))+' shipping':'';
+  const shipping=country==='US'?'free priority shipping':country==='CA'?'free standard shipping':'';
   const tiers=[
    {kind:'shipping',target:quote.free_shipping_threshold_cents,label:shipping},
    {kind:'recon',target:quote.recon_solution_threshold_cents,label:'free recon solution'},
@@ -121,7 +120,7 @@
    +'<p class="nlc-partner-sign-in" data-nlc-partner-sign-in hidden><a href="/account/login?returnTo=%2Fcheckout">Sign in to check your partner offer</a></p></div>'
    +'<section class="nlc-rewards" aria-label="Cart rewards" hidden><p data-nlc-unlock-copy role="status"></p><div class="nlc-reward-rail"></div></section>'
    +'</div><div class="nlc-cart-checkout cart__checkout" data-testid="cart-fixed-footer">'
-   +'<p class="nlc-delivery-est" data-nlc-estimate><a href="/shipping-policy.html">Estimated delivery</a> · '+html(window.PureSite?.shipping.combinedEstimate||'See the shipping policy for timing')+'</p>'
+   +'<p class="nlc-delivery-est" data-nlc-estimate><a href="/shipping-policy.html">Estimated delivery</a> · 4–10 business days after payment</p>'
    +'<div class="nlc-cart-totals" data-nlc-cart-totals><p role="status">Calculating your order total…</p></div>'
    +'<a class="nlc-proceed" href="/checkout">Proceed to Checkout</a>'
    +'<div class="nlc-wallet-area"><div class="nlc-express" hidden><div class="nlc-pay-divider">OR PAY WITH</div><div class="nlc-wallet-row" data-nlc-wallets>'

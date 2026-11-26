@@ -90,7 +90,7 @@
   }
 
   function page(root, config, embedded) {
-    root.innerHTML = `<section class="mx-membership-page${embedded ? ' mx-membership-embedded' : ''}" aria-labelledby="mx-title"><header class="mx-intro"><div><span class="mx-kicker">PURE MEMBERSHIPS</span><${embedded ? 'h2' : 'h1'} id="mx-title">MORE FROM<br>EVERY ORDER.</${embedded ? 'h2' : 'h1'}></div><div class="mx-intro-copy"><p>Compare prices, shipping and rewards for each PURE membership.</p>${embedded ? '<a href="/memberships">Explore memberships <span aria-hidden="true">↗</span></a>' : '<span class="mx-intro-detail">Monthly or annual access</span>'}</div></header>${embedded ? '' : '<h2 class="ap-sr">Membership plans</h2>'}<div data-mx-comparison></div>${embedded ? '' : faq(config)}</section>`;
+    root.innerHTML = `<section class="mx-membership-page${embedded ? ' mx-membership-embedded' : ''}" aria-labelledby="mx-title"><header class="mx-intro"><div><span class="mx-kicker">PURE MEMBERSHIPS</span><${embedded ? 'h2' : 'h1'} id="mx-title">MORE FROM<br>EVERY ORDER.</${embedded ? 'h2' : 'h1'}></div><div class="mx-intro-copy"><p>Compare prices, shipping and rewards for each PURE membership.</p>${embedded ? '<a href="/memberships">Explore memberships <span aria-hidden="true">↗</span></a>' : '<span class="mx-intro-detail">Monthly or annual access</span>'}</div></header><div data-mx-comparison></div>${embedded ? '' : faq(config)}</section>`;
     mount(root.querySelector('[data-mx-comparison]'),config);
   }
 
@@ -104,10 +104,8 @@
       const root = fullPage ? main : main.querySelector('[data-mx-membership-home]');
       if (root && !root.querySelector('.mx-membership-page')) page(root,config,!fullPage);
     };
-    const prebuilt=fullPage && main.dataset.commerceRoute==='/memberships' && main.querySelector('[data-mx-comparison]');
-    if(prebuilt)mount(prebuilt,config);
-    else render();
-    if (fullPage && !document.querySelector('title[data-pure-page-title]')) document.title = 'PURE Memberships | PURE';
+    render();
+    if (fullPage) document.title = 'PURE Memberships | PURE';
     if (homePage) new MutationObserver(render).observe(main,{childList:true,subtree:true});
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded',boot,{once:true});

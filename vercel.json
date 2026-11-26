@@ -52,7 +52,7 @@
     },
     {
       "source": "/checkout",
-      "destination": "/checkout.html"
+      "destination": "/account.html"
     },
     {
       "source": "/account",
@@ -80,115 +80,15 @@
     },
     {
       "source": "/bulk-orders/checkout",
-      "destination": "/bulk-checkout.html"
+      "destination": "/account.html"
     },
     {
       "source": "/subscribe-and-save/checkout",
-      "destination": "/monthly-checkout.html"
+      "destination": "/monthly-orders.html"
     },
     {
       "source": "/bulk-orders",
       "destination": "/bulk-orders.html"
-    },
-    {
-      "source": "/coas",
-      "has": [
-        {
-          "type": "query",
-          "key": "q"
-        }
-      ],
-      "destination": "/api/customer-config?catalog_view=coas"
-    },
-    {
-      "source": "/coas",
-      "has": [
-        {
-          "type": "query",
-          "key": "query"
-        }
-      ],
-      "destination": "/api/customer-config?catalog_view=coas"
-    },
-    {
-      "source": "/coas",
-      "has": [
-        {
-          "type": "query",
-          "key": "product"
-        }
-      ],
-      "destination": "/api/customer-config?catalog_view=coas"
-    },
-    {
-      "source": "/coas",
-      "has": [
-        {
-          "type": "query",
-          "key": "size"
-        }
-      ],
-      "destination": "/api/customer-config?catalog_view=coas"
-    },
-    {
-      "source": "/coas",
-      "has": [
-        {
-          "type": "query",
-          "key": "lot"
-        }
-      ],
-      "destination": "/api/customer-config?catalog_view=coas"
-    },
-    {
-      "source": "/coas",
-      "has": [
-        {
-          "type": "query",
-          "key": "date"
-        }
-      ],
-      "destination": "/api/customer-config?catalog_view=coas"
-    },
-    {
-      "source": "/coas",
-      "has": [
-        {
-          "type": "query",
-          "key": "lab"
-        }
-      ],
-      "destination": "/api/customer-config?catalog_view=coas"
-    },
-    {
-      "source": "/coas",
-      "has": [
-        {
-          "type": "query",
-          "key": "laboratory"
-        }
-      ],
-      "destination": "/api/customer-config?catalog_view=coas"
-    },
-    {
-      "source": "/coas",
-      "has": [
-        {
-          "type": "query",
-          "key": "supplier"
-        }
-      ],
-      "destination": "/api/customer-config?catalog_view=coas"
-    },
-    {
-      "source": "/coas",
-      "has": [
-        {
-          "type": "query",
-          "key": "page"
-        }
-      ],
-      "destination": "/api/customer-config?catalog_view=coas"
     },
     {
       "source": "/coas",
@@ -266,47 +166,42 @@
     {
       "source": "/research-subscriptions",
       "destination": "/subscribe-and-save",
-      "statusCode": 301
+      "permanent": false
     },
     {
       "source": "/research-checkout.html",
       "destination": "/memberships",
-      "statusCode": 301
+      "permanent": false
     },
     {
       "source": "/research-checkout",
       "destination": "/memberships",
-      "statusCode": 301
+      "permanent": false
     },
     {
       "source": "/research-builder.html",
       "destination": "/subscribe-and-save",
-      "statusCode": 301
+      "permanent": false
     },
     {
       "source": "/research-builder",
       "destination": "/subscribe-and-save",
-      "statusCode": 301
+      "permanent": false
     },
     {
       "source": "/rewards",
-      "destination": "/my-account/points",
-      "statusCode": 301
-    },
-    {
-      "source": "/rewards.html",
-      "destination": "/my-account/points",
-      "statusCode": 301
+      "destination": "/account/points",
+      "permanent": false
     },
     {
       "source": "/offers",
       "destination": "/shop",
-      "statusCode": 301
+      "permanent": true
     },
     {
       "source": "/offers.html",
       "destination": "/shop",
-      "statusCode": 301
+      "permanent": true
     },
     {
       "source": "/account/memberships",
@@ -321,6 +216,11 @@
     {
       "source": "/storefront-v2.html",
       "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/rewards.html",
+      "destination": "/my-account/points",
       "statusCode": 301
     },
     {

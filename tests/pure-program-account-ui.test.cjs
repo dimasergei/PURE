@@ -251,7 +251,7 @@ test('bulk referral links open the builder with the selected strength and partne
 
   const regularCart = [{id:'bpc-157', size:'5mg', qty:2}];
   for (const saved of [false, true]) {
-   const dom = new JSDOM('<main id="ap-main"></main><dialog id="ap-age-dialog" data-cookie="pure_age=confirmed" data-days="30"><form data-pure-consent><input name="returnTo"></form></dialog>', {url:link.value,runScripts:'outside-only'});
+   const dom = new JSDOM('<main id="ap-main"></main><dialog id="ap-age-dialog"></dialog>', {url:link.value,runScripts:'outside-only'});
    visitors.push(dom);
    const w = dom.window, visits = [];
    w.HTMLDialogElement.prototype.showModal = function(){this.open = true;};
@@ -270,7 +270,6 @@ test('bulk referral links open the builder with the selected strength and partne
    w.eval(fs.readFileSync('conversion-ui.js','utf8'));
    w.eval(storefront);
    w.eval(workspace);
-   w.eval(fs.readFileSync('age-gate.js','utf8'));
    await w.PurePartnerVisit;
    await new Promise(resolve=>setImmediate(resolve));
    assert.deepEqual(visits,['OTHER']);

@@ -21,7 +21,7 @@
  }
  function delivery(data,cart=[],bulk=false){
   const options=data.delivery_options||[];
-  return `<h3>Delivery speed</h3><p>${bulk?'US bulk orders include two-day express shipping after dispatch.':esc(window.PureSite?.shipping.freeSummary||'Available shipping services and rates depend on the destination.')}</p><div class="rd-delivery-grid">${options.filter(o=>o.kind==='shipping').map(o=>`<label class="rd-delivery ${!o.enabled?'rd-unavailable':''}"><input type="radio" name="shipping_speed" value="${esc(o.id)}" ${o.id==='economy'?'checked':''} ${!o.enabled?'disabled data-unavailable="true"':''}><strong>${esc(o.label)}</strong><span data-rd-shipping-price="${esc(o.id)}">${money(o.price_cents)}</span><small>${esc(o.description)}</small>${!o.enabled?'<em>Not available yet</em>':''}</label>`).join('')}</div><div class="rd-delivery-extras">${options.filter(o=>o.kind==='extra').map(o=>`<label class="rd-extra ${!o.enabled?'rd-unavailable':''}"><input type="checkbox" name="delivery_extra" value="${esc(o.id)}" ${o.id==='protection'&&o.enabled&&wantsProtection(cart)?'checked ':''}${!o.enabled?'disabled data-unavailable="true"':''}><span><strong>${esc(o.label)}</strong><small>${esc(o.description)}</small>${o.id==='protection'?'<a href="/shipping-protection.html">Shipping protection terms</a>':''}${!o.enabled?'<em>Not available yet</em>':''}</span><b data-rd-extra-price="${esc(o.id)}">${money(o.price_cents)}</b></label>`).join('')}</div>`;
+  return `<h3>Delivery speed</h3><p>${bulk?'US bulk orders include two-day express shipping after dispatch.':'Free priority shipping on merchandise orders of $250 after discounts.'}</p><div class="rd-delivery-grid">${options.filter(o=>o.kind==='shipping').map(o=>`<label class="rd-delivery ${!o.enabled?'rd-unavailable':''}"><input type="radio" name="shipping_speed" value="${esc(o.id)}" ${o.id==='economy'?'checked':''} ${!o.enabled?'disabled data-unavailable="true"':''}><strong>${esc(o.label)}</strong><span data-rd-shipping-price="${esc(o.id)}">${money(o.price_cents)}</span><small>${esc(o.description)}</small>${!o.enabled?'<em>Not available yet</em>':''}</label>`).join('')}</div><div class="rd-delivery-extras">${options.filter(o=>o.kind==='extra').map(o=>`<label class="rd-extra ${!o.enabled?'rd-unavailable':''}"><input type="checkbox" name="delivery_extra" value="${esc(o.id)}" ${o.id==='protection'&&o.enabled&&wantsProtection(cart)?'checked ':''}${!o.enabled?'disabled data-unavailable="true"':''}><span><strong>${esc(o.label)}</strong><small>${esc(o.description)}</small>${o.id==='protection'?'<a href="/shipping-protection.html">Shipping protection terms</a>':''}${!o.enabled?'<em>Not available yet</em>':''}</span><b data-rd-extra-price="${esc(o.id)}">${money(o.price_cents)}</b></label>`).join('')}</div>`;
  }
  function selection(form){return{shipping:form.elements.shipping_speed?.value||'economy',extras:[...form.querySelectorAll('[name=delivery_extra]:checked')].map(x=>x.value)};}
  function syncCheckoutPrices(form,aside,cart,data,quote){
@@ -59,10 +59,6 @@
 
   if(!cart.length||!form.elements.line1)return;
   const bulk=form.dataset.bulkOrder==='true';
-  const shippingNote=form.querySelector('.dc-section > h2 + p');
-  if(!bulk && shippingNote?.firstChild?.nodeType===3 && shippingNote.querySelector('a[href="/account/profile"]')){
-   shippingNote.firstChild.textContent='Enter the shipping address to see available services. ';
-  }
   const optionsById=Object.fromEntries((data.delivery_options||[]).map(option=>[option.id,option]));
   const savedExtras=(()=>{try{return JSON.parse(sessionStorage.getItem(cartKey(cart))||'null');}catch{return null;}})();
   for(const input of form.querySelectorAll('[name=delivery_extra]')){

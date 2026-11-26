@@ -4,11 +4,19 @@
  const catalog=typeof CATALOG==='undefined'?[]:CATALOG;
  const groups=typeof GROUPS==='undefined'?['All']:GROUPS;
  const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+ const age=$('#ap-age-dialog');
+ const minimumAge=window.PureSite?.minimumAge??21;
+ const welcomeCookie='pure_age='+minimumAge+'-v1';
+ let welcomeReady=false;
+ function saveWelcome(){
+  document.cookie=welcomeCookie+'; Max-Age=2592000; Path=/; SameSite=Lax'+(location.protocol==='https:'?'; Secure':'');
+  try{localStorage.removeItem('ap-age-verified');}catch{}
+ }
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const dictionary={
-  en:{shop:'Products',categories:'Categories',bulk:'Bulk Orders',coas:'Lab Testing & COAs',about:'About',contact:'Contact Us',moreNav:'More',partnerNav:'Partner Program',trackNav:'Track Order',rewardsNav:'Rewards & Credit',searchHint:'Search compounds, sizes, and more',heroA:'CUTTING EDGE',heroB:'PURITY',heroText:'Research compounds, product documentation, and straightforward ordering for laboratories and research teams.',explore:'Explore the catalog',collection:'Featured Compounds',catalogTitle:'Find your next compound.',catalogText:'Compare exact sizes and per-unit prices, then add your selections to your cart.',viewAll:'View all compounds',perUnit:'per unit',add:'Add to cart',saved:'Saved',save:'Save product',compare:'Compare',search:'Search compounds',sortName:'Name: A–Z',sortLow:'Price: low to high',sortHigh:'Price: high to low',loadMore:'Show more compounds',noResults:'No matching compounds.',clear:'Clear filters',cart:'Your cart',cartEmpty:'Your cart is waiting for its first compound.',subtotal:'Subtotal',checkoutPaused:'Instant card checkout is not connected. Reviewed invoices are available.',checkoutNote:'Request an invoice for manual fulfillment. Pay only after the final amount and business receiving method are confirmed.',continueShop:'Continue exploring',export:'Export list',remove:'Remove',documentation:'Documentation',delivery:'Shipping & delivery',overview:'Overview',selectedSize:'Selected size',categoryTitle:'Explore by research area.',workspaceTitle:'Built around the way you research.',qualityTitle:'The details matter. Start with the documentation.',faqTitle:'A little clarity goes a long way.',updatesTitle:'Stay in the research loop.',updatesText:'Request product, catalog, and program updates from the PURE team.',updatesButton:'Request updates',requestSent:'Your request was received by our email service.',unavailable:'That information is not available yet.',added:'Added to your cart',compareLimit:'Choose up to four compounds to compare.',bulkCard:'More units. Less busywork.',bulkLead:'Build a quantity matrix across exact product variants and check out in one order.',quote:'Build Order'},
-  fr:{shop:'Produits',moreNav:'Plus',partnerNav:'Partenaires',trackNav:'Suivre une commande',rewardsNav:'Points et crédit',categories:'Catégories',bulk:'Commandes en volume',coas:'Analyses et certificats',about:'À propos',contact:'Contact',searchHint:'Rechercher un composé, un format…',heroA:'Votre recherche.',heroB:'Tout est connecté.',heroText:'Explorez les composés de recherche, préparez votre prochain projet et rassemblez les détails dans votre espace PURE.',explore:'Explorer le catalogue',collection:'Explorer la collection.',catalogTitle:'Trouvez votre prochain composé.',catalogText:'Comparez les formats et les prix unitaires. Enregistrez ou ajoutez vos sélections à une liste de recherche.',viewAll:'Voir tous les composés',perUnit:'par unité',add:'Ajouter au panier',saved:'Enregistré',save:'Enregistrer',compare:'Comparer',search:'Rechercher des composés',sortName:'Nom : A–Z',sortLow:'Prix croissant',sortHigh:'Prix décroissant',loadMore:'Afficher plus de composés',noResults:'Aucun composé correspondant.',clear:'Effacer les filtres',cart:'Votre panier',cartEmpty:'Votre panier attend son premier composé.',subtotal:'Sous-total',checkoutPaused:'Le paiement instantané par carte est indisponible. Demandez une facture.',checkoutNote:'Préparez et enregistrez votre panier. Aucun paiement ne sera effectué.',continueShop:'Continuer à explorer',export:'Exporter la liste',remove:'Retirer',documentation:'Documentation',delivery:'Expédition et livraison',overview:'Présentation',selectedSize:'Format sélectionné',categoryTitle:'Explorer par domaine de recherche.',workspaceTitle:'Conçu pour votre recherche.',qualityTitle:'Les détails comptent. Commencez par la documentation.',faqTitle:'Des réponses à vos questions.',updatesTitle:'Restez informé.',updatesText:'Demandez les nouvelles du catalogue et des programmes PURE.',updatesButton:'Demander les nouvelles',requestSent:'Votre demande a été reçue par notre service de messagerie.',unavailable:'Ces informations ne sont pas encore disponibles.',added:'Ajouté au panier',compareLimit:'Choisissez jusqu’à quatre composés.',bulkCard:'Plus d’unités. Moins de saisie.',bulkLead:'Préparez les quantités par format et envoyez une demande de devis.',quote:'Créer une demande'},
-  es:{shop:'Productos',moreNav:'Más',partnerNav:'Programa de socios',trackNav:'Seguir pedido',rewardsNav:'Puntos y crédito',categories:'Categorías',bulk:'Pedidos al por mayor',coas:'Pruebas y certificados',about:'Acerca de',contact:'Contacto',searchHint:'Buscar compuestos, tamaños y más',heroA:'Su investigación.',heroB:'Todo conectado.',heroText:'Explore compuestos, prepare su próximo proyecto y mantenga los detalles juntos en su espacio PURE.',explore:'Explorar el catálogo',collection:'Explore la colección.',catalogTitle:'Encuentre su próximo compuesto.',catalogText:'Compare tamaños y precios por unidad. Guarde, compare o añada selecciones a su lista de investigación.',viewAll:'Ver todos los compuestos',perUnit:'por unidad',add:'Añadir al carrito',saved:'Guardado',save:'Guardar',compare:'Comparar',search:'Buscar compuestos',sortName:'Nombre: A–Z',sortLow:'Precio: menor a mayor',sortHigh:'Precio: mayor a menor',loadMore:'Mostrar más compuestos',noResults:'No se encontraron compuestos.',clear:'Borrar filtros',cart:'Su carrito',cartEmpty:'Su carrito espera su primer compuesto.',subtotal:'Subtotal',checkoutPaused:'El pago instantáneo con tarjeta no está conectado. Solicite una factura.',checkoutNote:'Puede preparar y guardar su carrito. No se realizará ningún pago.',continueShop:'Seguir explorando',export:'Exportar lista',remove:'Quitar',documentation:'Documentación',delivery:'Envío y entrega',overview:'Descripción',selectedSize:'Tamaño seleccionado',categoryTitle:'Explorar por área de investigación.',workspaceTitle:'Diseñado para su investigación.',qualityTitle:'Los detalles importan. Empiece por la documentación.',faqTitle:'Respuestas para seguir adelante.',updatesTitle:'Manténgase al día.',updatesText:'Solicite novedades de productos, catálogo y programas PURE.',updatesButton:'Solicitar novedades',requestSent:'Nuestro servicio de correo ha recibido su solicitud.',unavailable:'Esta información aún no está disponible.',added:'Añadido al carrito',compareLimit:'Seleccione hasta cuatro compuestos.',bulkCard:'Más unidades. Menos trabajo.',bulkLead:'Prepare cantidades por variante y envíe una solicitud de presupuesto.',quote:'Crear solicitud'}
+  en:{shop:'Products',categories:'Categories',bulk:'Bulk Orders',coas:'Testing',about:'About',contact:'Contact Us',moreNav:'More',partnerNav:'Partner Program',trackNav:'Track Order',rewardsNav:'Rewards & Credit',searchHint:'Search compounds, sizes, and more',heroA:'CUTTING EDGE',heroB:'PURITY',heroText:'Research compounds, product documentation, and straightforward ordering for laboratories and research teams.',explore:'Explore the catalog',collection:'Featured Compounds',catalogTitle:'Find your next compound.',catalogText:'Compare exact sizes and per-unit prices, then add your selections to your cart.',viewAll:'View all compounds',perUnit:'per unit',add:'Add to cart',saved:'Saved',save:'Save product',compare:'Compare',search:'Search compounds',sortName:'Name: A–Z',sortLow:'Price: low to high',sortHigh:'Price: high to low',loadMore:'Show more compounds',noResults:'No matching compounds.',clear:'Clear filters',cart:'Your cart',cartEmpty:'Your cart is waiting for its first compound.',subtotal:'Subtotal',checkoutPaused:'Instant card checkout is not connected. Reviewed invoices are available.',checkoutNote:'Request an invoice for manual fulfillment. Pay only after the final amount and business receiving method are confirmed.',continueShop:'Continue exploring',export:'Export list',remove:'Remove',documentation:'Documentation',delivery:'Shipping & delivery',overview:'Overview',selectedSize:'Selected size',categoryTitle:'Explore by research area.',workspaceTitle:'Built around the way you research.',qualityTitle:'The details matter. Start with the documentation.',faqTitle:'A little clarity goes a long way.',updatesTitle:'Stay in the research loop.',updatesText:'Request product, catalog, and program updates from the PURE team.',updatesButton:'Request updates',requestSent:'Your request was received by our email service.',unavailable:'That information is not available yet.',added:'Added to your cart',compareLimit:'Choose up to four compounds to compare.',bulkCard:'More units. Less busywork.',bulkLead:'Build a quantity matrix across exact product variants and check out in one order.',quote:'Build Order'},
+  fr:{shop:'Produits',moreNav:'Plus',partnerNav:'Partenaires',trackNav:'Suivre une commande',rewardsNav:'Points et crédit',categories:'Catégories',bulk:'Commandes en volume',coas:'Testing',about:'À propos',contact:'Contact',searchHint:'Rechercher un composé, un format…',heroA:'Votre recherche.',heroB:'Tout est connecté.',heroText:'Explorez les composés de recherche, préparez votre prochain projet et rassemblez les détails dans votre espace PURE.',explore:'Explorer le catalogue',collection:'Explorer la collection.',catalogTitle:'Trouvez votre prochain composé.',catalogText:'Comparez les formats et les prix unitaires. Enregistrez ou ajoutez vos sélections à une liste de recherche.',viewAll:'Voir tous les composés',perUnit:'par unité',add:'Ajouter au panier',saved:'Enregistré',save:'Enregistrer',compare:'Comparer',search:'Rechercher des composés',sortName:'Nom : A–Z',sortLow:'Prix croissant',sortHigh:'Prix décroissant',loadMore:'Afficher plus de composés',noResults:'Aucun composé correspondant.',clear:'Effacer les filtres',cart:'Votre panier',cartEmpty:'Votre panier attend son premier composé.',subtotal:'Sous-total',checkoutPaused:'Le paiement instantané par carte est indisponible. Demandez une facture.',checkoutNote:'Préparez et enregistrez votre panier. Aucun paiement ne sera effectué.',continueShop:'Continuer à explorer',export:'Exporter la liste',remove:'Retirer',documentation:'Documentation',delivery:'Expédition et livraison',overview:'Présentation',selectedSize:'Format sélectionné',categoryTitle:'Explorer par domaine de recherche.',workspaceTitle:'Conçu pour votre recherche.',qualityTitle:'Les détails comptent. Commencez par la documentation.',faqTitle:'Des réponses à vos questions.',updatesTitle:'Restez informé.',updatesText:'Demandez les nouvelles du catalogue et des programmes PURE.',updatesButton:'Demander les nouvelles',requestSent:'Votre demande a été reçue par notre service de messagerie.',unavailable:'Ces informations ne sont pas encore disponibles.',added:'Ajouté au panier',compareLimit:'Choisissez jusqu’à quatre composés.',bulkCard:'Plus d’unités. Moins de saisie.',bulkLead:'Préparez les quantités par format et envoyez une demande de devis.',quote:'Créer une demande'},
+  es:{shop:'Productos',moreNav:'Más',partnerNav:'Programa de socios',trackNav:'Seguir pedido',rewardsNav:'Puntos y crédito',categories:'Categorías',bulk:'Pedidos al por mayor',coas:'Testing',about:'Acerca de',contact:'Contacto',searchHint:'Buscar compuestos, tamaños y más',heroA:'Su investigación.',heroB:'Todo conectado.',heroText:'Explore compuestos, prepare su próximo proyecto y mantenga los detalles juntos en su espacio PURE.',explore:'Explorar el catálogo',collection:'Explore la colección.',catalogTitle:'Encuentre su próximo compuesto.',catalogText:'Compare tamaños y precios por unidad. Guarde, compare o añada selecciones a su lista de investigación.',viewAll:'Ver todos los compuestos',perUnit:'por unidad',add:'Añadir al carrito',saved:'Guardado',save:'Guardar',compare:'Comparar',search:'Buscar compuestos',sortName:'Nombre: A–Z',sortLow:'Precio: menor a mayor',sortHigh:'Precio: mayor a menor',loadMore:'Mostrar más compuestos',noResults:'No se encontraron compuestos.',clear:'Borrar filtros',cart:'Su carrito',cartEmpty:'Su carrito espera su primer compuesto.',subtotal:'Subtotal',checkoutPaused:'El pago instantáneo con tarjeta no está conectado. Solicite una factura.',checkoutNote:'Puede preparar y guardar su carrito. No se realizará ningún pago.',continueShop:'Seguir explorando',export:'Exportar lista',remove:'Quitar',documentation:'Documentación',delivery:'Envío y entrega',overview:'Descripción',selectedSize:'Tamaño seleccionado',categoryTitle:'Explorar por área de investigación.',workspaceTitle:'Diseñado para su investigación.',qualityTitle:'Los detalles importan. Empiece por la documentación.',faqTitle:'Respuestas para seguir adelante.',updatesTitle:'Manténgase al día.',updatesText:'Solicite novedades de productos, catálogo y programas PURE.',updatesButton:'Solicitar novedades',requestSent:'Nuestro servicio de correo ha recibido su solicitud.',unavailable:'Esta información aún no está disponible.',added:'Añadido al carrito',compareLimit:'Seleccione hasta cuatro compuestos.',bulkCard:'Más unidades. Menos trabajo.',bulkLead:'Prepare cantidades por variante y envíe una solicitud de presupuesto.',quote:'Crear solicitud'}
  };
  const t=(key,fallback)=>dictionary[window.AltaLocale?.language||'en']?.[key]??window.AltaLocale?.t(key,fallback??dictionary.en[key]??key)??fallback??dictionary.en[key]??key;
  const money=value=>window.AltaLocale?.formatMoney(Number(value)||0)??new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(Number(value)||0);
@@ -17,13 +25,8 @@
  const read=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key)||'null')??fallback;}catch{return memory.get(key)??fallback;}};
  const write=(key,value)=>{memory.set(key,value);try{localStorage.setItem(key,JSON.stringify(value));return true;}catch{return false;}};
  const product=id=>catalog.find(p=>p.id===id);
- const publicGroupLabel=group=>window.PureSite?.catalogGroups?.[group]||group;
- const searchText=p=>[p.name,publicGroupLabel(p.group),p.group,...p.variants.map(v=>v.size)].filter(Boolean).join(' ').toLowerCase();
+ const searchText=p=>[p.name,p.group,...p.variants.map(v=>v.size)].filter(Boolean).join(' ').toLowerCase();
  const image=(p,size)=>{const v=p?.variants.find(v=>v.size===size)||p?.variants[0];const raw=typeof PRODUCT_IMAGES!=='undefined'?PRODUCT_IMAGES[p?.id]?.[v?.size]:null;const fallback=typeof PRODUCT_IMAGE_FALLBACKS!=='undefined'?PRODUCT_IMAGE_FALLBACKS[p?.id]:null;const src=raw||fallback||'/assets/research-vials-pure.webp';return src.startsWith('https://')||src.startsWith('/')?src:'/'+src;};
- function webpProductImage(p,size) {
-  const source=image(p,size);
-  return source.startsWith('/assets/products-pure/') ? source.replace('/assets/products-pure/','/assets/catalog-webp/').replace(/\.svg$/i,'.webp') : source;
- }
  function normalizeLines(input){const lines=new Map();if(!Array.isArray(input))return[];for(const x of input.slice(0,100)){const p=product(x?.id),v=p?.variants.find(v=>v.size===x.size);if(!v||!Number.isSafeInteger(x.qty)||x.qty<1||x.qty>100)continue;const key=p.id+':'+v.size;const previous=lines.get(key);lines.set(key,{key,id:p.id,name:p.name,size:v.size,price:v.price,qty:Math.min(100,(previous?.qty||0)+x.qty)});}return [...lines.values()];}
  let cart=normalizeLines(read('pp-cart',[]));
  let saved=Array.isArray(read('ap-wishlist',[]))?read('ap-wishlist',[]).filter(id=>product(id)):[];
@@ -36,6 +39,7 @@
  const categoryOf=p=>p.category==='supplies'?'Supplies':'Peptides';
  const state={query:'',group:initialCategory==='Reconstitution Solution & Supplies'?'Supplies':groups.includes(initialCategory)&&initialCategory!=='All'?'Peptides':initialCategory,sort:'popular',limit:12,maxPrice:Math.ceil(Math.max(0,...catalog.flatMap(p=>p.variants.map(v=>v.price)))),savedOnly:false};
  let reports=[];
+ let reviewSummary=null;
  let toastTimer;
  function toast(text){const node=$('#ap-toast');if(!node)return;clearTimeout(toastTimer);node.textContent=text;node.hidden=false;toastTimer=setTimeout(()=>{node.hidden=true;},3400);}
  function syncCart(modified=false){if(modified)write('ap-research-cart-origin-v1',null);write('pp-cart',cart);$$('.ap-cart-count').forEach(n=>{const count=cart.reduce((sum,x)=>sum+x.qty,0);n.textContent=String(count);n.hidden=count===0;});if($('#ap-cart-dialog')?.open)renderCart();window.dispatchEvent(new CustomEvent('alta:cart',{detail:{count:cart.length}}));}
@@ -126,35 +130,65 @@
 }
  const heading=(eyebrow,title,description='')=>`<div class="ap-container ap-page-intro"><div class="ap-breadcrumbs"><a href="/">PURE</a><span>/</span><span>${esc(eyebrow)}</span></div><span class="ap-eyebrow">${esc(eyebrow)}</span><h1>${title}</h1>${description?'<p>'+description+'</p>':''}</div>`;
  const featureLinks=()=>'';
+ function homeOffer(){
+  const strip=$('.ap-announcement [data-default-offer]');
+  const code=strip?.querySelector('button[data-copy-offer]')?.dataset.copyOffer;
+  const saving=strip?.querySelector('.pure-offer-buy')?.textContent.trim();
+  return code&&saving?{code,saving}:null;
+ }
+ function homeHeroActions(){
+  return '<div class="ap-actions"><a class="ap-button nl-primary" href="/shop">SHOP NOW</a></div>';
+ }
+ function homeOrderBenefits(){
+  return `<section class="ap-container pure-order-benefits" aria-label="Ordering benefits">
+    <article><span>First order</span><div><h2>Complimentary 3 mL solution</h2><p>Included with an eligible first order at full merchandise price when signed in.</p></div></article>
+    <article><span>${priceMarkup(250,{trimWhole:true})}+</span><div><h2>Free shipping</h2><p>U.S. priority or Canadian standard shipping on eligible merchandise after discounts.</p></div></article>
+    <article><span>${priceMarkup(299,{trimWhole:true})}+</span><div><h2>Complimentary 3 mL solution</h2><p>Included with qualifying merchandise orders at full price.</p></div></article>
+  </section>`;
+ }
+ function homeFeaturedOffer(){
+  const offer=homeOffer();
+  return offer?`<p class="pure-home-featured-offer">${esc(offer.saving)} eligible merchandise with <strong>${esc(offer.code)}</strong> at checkout.</p>`:'';
+ }
+ function homePackaging(){
+  return `<section class="ap-container pure-home-packaging" aria-labelledby="pure-packaging-title">
+    <img src="/assets/pure-packaging-studio.webp" alt="Black PURE carton and matching vial with white lettering on a white background" width="1344" height="816" loading="lazy">
+    <div><h2 id="pure-packaging-title">Packaging &amp; delivery</h2><p>Choose your shipping option at checkout. Look for tracking details in your shipment email after dispatch.</p><a class="ap-button" href="/shop">Shop now</a></div>
+  </section>`;
+ }
+ function homeEmailUpdates(){
+  return `<section class="ap-container pure-home-email" aria-labelledby="pure-home-email-title">
+    <div><h2 id="pure-home-email-title">PURE updates</h2><p>Sign up for product and offer emails and get the current discount code.</p></div>
+    <form class="ap-newsletter-form">
+      <div class="pure-home-email-fields"><label><span class="ap-sr">Email address</span><input type="email" name="email" autocomplete="email" maxlength="254" placeholder="Email address" required></label><button class="ap-button" type="submit">Sign up</button></div>
+      <label class="pure-home-email-consent"><input type="checkbox" name="consent" required> I agree to receive email updates from PURE.</label>
+      <p class="ap-form-status" role="status" aria-live="polite"></p>
+    </form>
+  </section>`;
+ }
+ function homeHighlights(){
+  const check='<svg class="nl-trust-check" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>';
+  const highlights=[
+   '<strong title="Applies to qualifying shipments to the U.S. and Canada after discounts">Free shipping over '+priceMarkup(250,{trimWhole:true})+'</strong>',
+   '<a href="/coas?product=5-amino-1mq&amp;size=50mg" aria-label="99%+ Purity on the linked supplier sample" title="See the purity result for the tested 5-Amino-1MQ sample">99%+ Purity</a>',
+   '<a href="/coas">Verified Lab Testing</a>'
+  ];
+  const rating=reviewSummary?'<p class="nl-trust-rating">'+reviewSummary.rating.toFixed(1)+'/5 · '+reviewSummary.count+' '+(reviewSummary.count===1?'review':'reviews')+'<small>Review credit offered</small></p>':'';
+  return '<div class="nl-trust" aria-label="PURE product and delivery highlights">'+highlights.map(label=>'<div>'+check+'<span>'+label+'</span></div>').join('')+rating+'</div>';
+ }
+ function home() {
+ const featured=['retatrutide','bpc-157','ghk-cu','nad'].map(product).filter(Boolean);
+ featured.push(...catalog.filter(x=>!featured.includes(x)).slice(0,10-featured.length));
+ const hero=['nad','retatrutide','bpc-157','ghk-cu','tirzepatide'].map(product).filter(Boolean);
+ const bulkExamples=[['bpc-157','10mg',10],['ghk-cu','50mg',50]].map(([id,size,qty])=>{const p=product(id);return p?{p,v:p.variants.find(v=>v.size===size)||p.variants[0],qty}:null;}).filter(Boolean);
+ return `<section class="nl-hero"><div class="ap-container nl-hero-inner"><div class="nl-hero-copy"><h1>CUTTING EDGE<br><em>PURITY</em></h1><p class="nl-hero-description">Research compounds, product documentation, and straightforward ordering for laboratories and research teams.</p>${homeHeroActions()}</div><div class="nl-vial-stage" aria-label="Featured PURE products"><svg class="ap-vial-clip" width="0" height="0" aria-hidden="true"><defs><clipPath id="ap-vial-outline" clipPathUnits="objectBoundingBox"><path d="M .296 .127 C .296 .094 .409 .079 .499 .079 C .592 .079 .705 .095 .705 .128 L .705 .168 Q .705 .179 .691 .186 L .691 .239 Q .691 .259 .648 .267 L .648 .311 C .696 .328 .713 .342 .720 .372 L .725 .379 L .727 .824 Q .727 .879 .681 .880 L .319 .880 Q .273 .879 .272 .827 L .277 .379 L .283 .373 C .289 .343 .307 .327 .355 .312 L .355 .268 Q .310 .260 .310 .238 L .310 .187 Q .296 .180 .296 .168 Z"/></clipPath></defs></svg>${hero.map((p,i)=>`<a class="nl-vial nl-vial-${i}" href="/product/${p.id}"><img src="${esc(image(p,p.variants[0].size))}" alt="${esc(p.name+' '+p.variants[0].size)}" ${i===2?'fetchpriority="high"':''}></a>`).join('')}<span class="nl-stage-word" aria-hidden="true">PURE</span></div>${homeHighlights()}</div></section>${homeOrderBenefits()}<section class="ap-container nl-featured"><div class="ap-section-head"><div><span class="ap-eyebrow">THE COLLECTION</span><h2>Featured Compounds</h2>${homeFeaturedOffer()}</div><div class="nl-carousel-controls"><button data-carousel="-1" aria-label="Previous products">‹</button><button data-carousel="1" aria-label="Next products">›</button></div></div><div class="nl-carousel" id="nl-featured">${featured.map(p=>card(p,{featured:true,quickAdd:true})).join('')}</div><div class="nl-center"><a class="ap-button" href="/shop">View All Products</a></div></section>${homePackaging()}<section class="ap-container nl-editorial"><div><span class="nl-capsule">PURE DOCUMENTATION</span><h2>KNOW WHAT’S<br>IN YOUR ORDER.</h2><p>Explore certificates of analysis by product, strength, laboratory or report ID.</p><p class="ap-fine">Request the certificate for your fulfilled lot when you order.</p><a class="ap-button" href="/coas">Explore Testing</a></div><div class="nl-doc-art"><span>PURE</span><strong>Certificate<br>of Analysis</strong><div class="nl-doc-purity"><span class="nl-doc-purity-check" aria-hidden="true">✓</span><span><b>Testing reports</b><small>See available product documentation</small></span></div><div><b>Retatrutide</b> / 60mg</div><hr><div><b>Janoshik</b> / Report ID</div><hr><div><b>PURE</b> / Lot</div><a class="ap-button" href="/coas">View COAS</a></div></section><section class="nl-soft nl-home-bulk" aria-labelledby="nl-home-bulk-title"><div class="ap-container"><article class="ap-feature ap-dark nl-home-bulk-card"><div class="nl-home-bulk-copy"><span class="ap-eyebrow">BULK ORDERS</span><h2 id="nl-home-bulk-title">More units.<br>Less busywork.</h2><p>Select exact strengths and quantities across the catalog. Review every line at regular unit prices, then check out in one order.</p><a class="ap-text-link" href="/bulk-orders">Build your order</a></div><div class="nl-home-bulk-preview"><table class="nl-home-bulk-table"><caption>Example order</caption><thead><tr><th scope="col">Compound / strength</th><th scope="col">Qty</th><th scope="col">Unit price</th></tr></thead><tbody>${bulkExamples.map(({p,v,qty})=>`<tr><td><span class="ap-mini-product"><span class="ap-vial-example"><img src="${esc(image(p,v.size))}" alt="" loading="lazy"></span><span class="nl-home-bulk-product-name">${esc(p.name)}<small>${esc(v.size)}</small></span></span></td><td>${qty}</td><td>${priceMarkup(v.price)}</td></tr>`).join('')}</tbody></table><p class="nl-home-bulk-note">Regular catalog pricing at every quantity.</p></div></article></div></section><section class="ap-container ap-section ap-faq-layout" id="faq"><div><span class="ap-eyebrow">FREQUENTLY ASKED QUESTIONS</span><h2>Have a question?</h2><a class="ap-text-link" href="/contact">Contact Us</a></div><div class="ap-faq">${[['How do I order?','Choose a product and strength, select the number of units, and add them to your cart. Review your order and the available payment methods at checkout.'],['Where can I find a certificate of analysis?','Visit Testing to view available supplier reports. Each report is specific to its stated sample and lot. Request the exact fulfilled-lot report with your order.'],['How do I pay?','Choose an available payment method at checkout. Your order is fulfilled after payment is confirmed.'],['When will my order arrive?','Allow approximately 1–3 business days for processing, followed by 3–7 business days in transit for standard US delivery. Available shipping options and fees are shown at checkout. Check your shipment email for tracking details after dispatch.'],['What does shipment protection cover?','Optional protection covers qualifying loss or transit damage. Review the terms at checkout for eligibility and how to make a claim.'],['Can I track my order?','Use Track Order with your order number and checkout email to request an update.'],['Can I use my existing points or store credit?','Available points and store credit remain visible in your account and can be applied at checkout according to their redemption terms.'],['Are these products for human use?','No. All products are for controlled laboratory research only, not human or animal use. Purchasers must be 21 or older.']].map(([q,a])=>`<details><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join('')}</div></section>${homeEmailUpdates()}`;
+}
  function catalogResults(){
   const lowest=p=>Math.min(...(state.group==='Offers'?eligibleSizes(p):p.variants).map(v=>v.price));
   const list=catalog.filter(p=>(state.group==='All'||(state.group==='Offers'?eligibleSizes(p).length>0:categoryOf(p)===state.group))
    &&(!state.savedOnly||saved.includes(p.id))&&lowest(p)<=state.maxPrice&&searchText(p).includes(state.query.toLowerCase()));
   if(state.sort!=='popular')list.sort((a,b)=>state.sort==='low'?lowest(a)-lowest(b):state.sort==='high'?lowest(b)-lowest(a):a.name.localeCompare(b.name));
   return list;
- }
- // Update the non-image controls in place when the same catalog page is visible.
- // Replacing an already painted product image delays LCP on mobile connections.
- function updateCatalogGrid(grid,html) {
-  const template=document.createElement('template');template.innerHTML=html;
-  const next=Array.from(template.content.children),previous=Array.from(grid.children);
-  const same=previous.length>0 && previous.length===next.length && previous.every((card,i)=>card.dataset.product&&card.dataset.product===next[i].dataset.product);
-  if(!same){grid.replaceChildren(template.content);return;}
-  previous.forEach((card,i)=>{
-   const incoming=next[i],oldPhoto=card.querySelector('.ap-product-image'),newPhoto=incoming.querySelector('.ap-product-image');
-   const oldImg=oldPhoto?.querySelector('img'),newImg=newPhoto?.querySelector('img');
-   if(!oldImg||!newImg){card.replaceWith(incoming);return;}
-   oldPhoto.href=newPhoto.href;
-   if((oldImg.getAttribute('srcset')||oldImg.getAttribute('src'))!==(newImg.getAttribute('srcset')||newImg.getAttribute('src'))){
-    oldImg.srcset=newImg.getAttribute('srcset')||'';oldImg.src=newImg.getAttribute('src');
-   }
-   oldImg.alt=newImg.alt;
-   for(const badge of oldPhoto.querySelectorAll('.pure-card-sale'))badge.remove();
-   const badge=newPhoto.querySelector('.pure-card-sale');if(badge)oldPhoto.prepend(badge);
-   const oldMeta=card.querySelector('.nl-featured-meta'),newMeta=incoming.querySelector('.nl-featured-meta');
-   if(oldMeta&&newMeta&&oldMeta.innerHTML!==newMeta.innerHTML)oldMeta.replaceWith(newMeta);
-  });
-  updateCompare();
  }
  function renderCatalogResults(){
   const grid=$('#ap-catalog-grid');
@@ -179,34 +213,24 @@
   }else{
    const links=state.query.trim()?pageSearchLinks(state.query):'';
    const cards=list.slice(0,state.limit).map(p=>card(p,{featured:true,quickAdd:true})).join('');
-   updateCatalogGrid(grid,(links?`<section class="ap-catalog-help" aria-label="Pages and help"><h3>Pages &amp; help</h3>${links}</section>`:'')+cards||`<div class="ap-empty"><h3>${t('noResults')}</h3><button class="ap-button ap-button-secondary" data-action="clear-filters">${t('clear')}</button></div>`);
+   grid.innerHTML=(links?`<section class="ap-catalog-help" aria-label="Pages and help"><h3>Pages &amp; help</h3>${links}</section>`:'')+cards||`<div class="ap-empty"><h3>${t('noResults')}</h3><button class="ap-button ap-button-secondary" data-action="clear-filters">${t('clear')}</button></div>`;
   }
   more.hidden=list.length<=state.limit;
   $$('[data-filter-group]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.filterGroup===state.group)));
  }
- function refreshHomeOffers(){
-  for(const badge of $$('[data-home-sale]')){
-   const p=product(badge.closest('article').dataset.product);
-   const sizes=p?eligibleSizes(p).map(v=>v.size):[];
-   badge.hidden=sizes.length===0;
-   badge.classList.toggle('pure-card-sale',sizes.length>0);
-   badge.textContent=sizes.length?'Second unit '+window.PureCampaign.discountPercent+'% off · '+sizes.join(', '):'';
-  }
- }
  window.addEventListener('pure:campaign',()=>{
-  refreshHomeOffers();
   if(route()==='/shop'){renderCatalogResults();return;}
   for(const item of $$('#nl-featured .ap-product-card,.ap-related .ap-product-card')){
    const p=product(item.dataset.product);
    if(p)item.outerHTML=card(p,{featured:true,quickAdd:!!item.querySelector('.ap-catalog-actions')});
   }
  });
- function shop(){const shopGroups=shopCategories;return `<section class="ap-container nl-shop"><header class="nl-shop-header"><h1 data-pure-collection-title>All Products</h1><p data-pure-collection-intro>Browse research compounds and available testing reports.</p></header><div class="ap-toolbar nl-shop-controls"><label class="nl-shop-search"><span class="ap-sr">Search products and help</span><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.7"></circle><path d="m16 16 5 5"></path></svg><input id="ap-catalog-query" type="search" placeholder="Search products and help…" value="${esc(state.query)}" maxlength="120"></label><div class="nl-shop-sort"><label class="nl-shop-sort-label" for="ap-catalog-sort">Sort by:</label><select id="ap-catalog-sort"><option value="popular" ${state.sort==='popular'?'selected':''}>Catalog order</option><option value="low" ${state.sort==='low'?'selected':''}>Price: Low to High</option><option value="high" ${state.sort==='high'?'selected':''}>Price: High to Low</option><option value="name" ${state.sort==='name'?'selected':''}>Name: A–Z</option></select></div></div><div class="nl-filter-pills" role="group" aria-label="Product categories">${shopGroups.map(g=>`<button type="button" data-filter-group="${esc(g)}" aria-pressed="${state.group===g}">${esc(g==='All'?'All Products':g)}</button>`).join('')}</div><h2 class="ap-sr" id="ap-catalog-results-title">Catalog products</h2><div class="ap-grid" role="region" aria-labelledby="ap-catalog-results-title" id="ap-catalog-grid"></div><button class="ap-button ap-button-secondary ap-load-more" id="ap-load-more" data-action="more">Load More Products</button></section>`;}
+ function shop(){const shopGroups=shopCategories;return `<section class="ap-container nl-shop"><header class="nl-shop-header"><h1 data-pure-collection-title>All Products</h1><p data-pure-collection-intro>Browse research compounds and available testing reports.</p></header><div class="ap-toolbar nl-shop-controls"><label class="nl-shop-search"><span class="ap-sr">Search products and help</span><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.7"></circle><path d="m16 16 5 5"></path></svg><input id="ap-catalog-query" type="search" placeholder="Search products and help…" value="${esc(state.query)}" maxlength="120"></label><div class="nl-shop-sort"><label class="nl-shop-sort-label" for="ap-catalog-sort">Sort by:</label><select id="ap-catalog-sort"><option value="popular" ${state.sort==='popular'?'selected':''}>Most Popular</option><option value="low" ${state.sort==='low'?'selected':''}>Price: Low to High</option><option value="high" ${state.sort==='high'?'selected':''}>Price: High to Low</option><option value="name" ${state.sort==='name'?'selected':''}>Name: A–Z</option></select></div></div><div class="nl-filter-pills" role="group" aria-label="Product categories">${shopGroups.map(g=>`<button type="button" data-filter-group="${esc(g)}" aria-pressed="${state.group===g}">${esc(g==='All'?'All Products':g)}</button>`).join('')}</div><div class="ap-grid" id="ap-catalog-grid"></div><button class="ap-button ap-button-secondary ap-load-more" id="ap-load-more" data-action="more">Load More Products</button></section>`;}
  function detail(id) {
  const p=product(id);if(!p)return heading('Product','Product not found','Browse the current catalog.')+'<a href="/shop">View products</a>';
  const v=p.variants.find(x=>x.size===(selections[p.id]||new URLSearchParams(location.search).get('size')))||p.variants[0];
  selections[p.id]=v.size;document.title=p.name+' '+v.size+' | PURE';
- return `<div class="ap-container nl-product-breadcrumb"><a href="/">Home</a> / <a href="/shop">Products</a> / ${esc(p.name)}</div><section class="ap-container ap-product-layout nl-detail"><div class="ap-detail-image"><img src="${esc(image(p,v.size))}" alt="${esc(p.name+' '+v.size+' label')}" fetchpriority="high"></div><div class="ap-detail-copy"><span class="ap-eyebrow">${esc(publicGroupLabel(p.group))}</span><h1>${esc(p.name)} <span>(${esc(v.size)})</span></h1><p>${esc(p.blurb)}</p><p data-pure-dispatch-cutoff hidden></p><p data-pure-campaign-countdown data-campaign-product="${esc(p.id+':'+v.size)}" hidden></p><div class="ap-detail-price">${priceMarkup(v.price)} <span class="ap-fine">per unit</span></div><p class="nl-label">Strength: <strong>${esc(v.size)}</strong></p><div class="ap-size-options">${p.variants.map(x=>`<button data-action="detail-size" data-id="${p.id}" data-size="${esc(x.size)}" aria-pressed="${x.size===v.size}">${esc(x.size)}</button>`).join('')}</div><fieldset class="ap-bundle-options" data-unit-price="${v.price}"><legend>Choose your quantity</legend>${[1,2,4].map(q=>`<button type="button" data-bundle-quantity="${q}" aria-pressed="${q===1}"><strong>${q} unit${q===1?'':'s'}</strong><b>${priceMarkup(v.price*q)}</b></button>`).join('')}</fieldset><p class="ap-bundle-estimate" data-bundle-estimate aria-live="polite"></p><div class="ap-actions nl-purchase"><label class="ap-quantity"><span class="ap-sr">Quantity</span><button data-action="detail-quantity" data-step="-1" type="button" aria-label="Decrease quantity">−</button><input id="ap-detail-quantity" type="number" min="1" max="100" value="1" aria-label="Quantity"><button data-action="detail-quantity" data-step="1" type="button" aria-label="Increase quantity">+</button></label><button class="ap-button" data-action="detail-add" data-id="${p.id}" data-size="${esc(v.size)}">Add to Cart</button></div><div class="ap-mobile-purchase"><span>${esc(p.name)} · ${esc(v.size)}<strong data-mobile-total></strong></span><button class="ap-button" data-action="detail-add" data-id="${p.id}" data-size="${esc(v.size)}">Add to Cart</button></div><div class="nl-mini-benefits"><span>✓ Clear unit pricing</span><span>✓ Tracked delivery</span></div><a class="nl-document-link" href="/coas?product=${encodeURIComponent(p.id)}&amp;size=${encodeURIComponent(v.size)}">▤ View testing reports for ${esc(v.size)}</a><div class="ap-detail-tabs"><details open><summary>Description</summary><p>${esc(p.blurb)} ${esc(v.size)}. Laboratory research only. Not for human or animal use.</p></details><details><summary>Shipping & delivery</summary><p>${esc(window.PureSite?.shipping.freeSummary||'Available delivery options and fees are confirmed at checkout.')} <a href="/shipping-policy.html">Shipping policy</a></p></details><details><summary>COAS & supplier documentation</summary><p>Original supplier reports are available where matched to this product and strength. They are not proof of the lot you will receive. Request the fulfilled-lot COA with your order.</p></details></div></div></section><section class="ap-container ap-section"><div class="ap-section-head"><h2>Related Products</h2></div><div class="ap-grid">${catalog.filter(x=>x.id!==p.id&&(x.group===p.group||p.premixed_blend&&x.premixed_blend)).sort((a,b)=>p.premixed_blend?Number(!!b.premixed_blend)-Number(!!a.premixed_blend):0).slice(0,5).map(x=>card(x)).join('')}</div></section>`;
+ return `<div class="ap-container nl-product-breadcrumb"><a href="/">Home</a> / <a href="/shop">Products</a> / ${esc(p.name)}</div><section class="ap-container ap-product-layout nl-detail"><div class="ap-detail-image"><img src="${esc(image(p,v.size))}" alt="${esc(p.name+' '+v.size+' label')}" fetchpriority="high"></div><div class="ap-detail-copy"><span class="ap-eyebrow">${esc(p.group)}</span><h1>${esc(p.name)} <span>(${esc(v.size)})</span></h1><p>${esc(p.blurb)}</p><p data-pure-dispatch-cutoff hidden></p><p data-pure-campaign-countdown data-campaign-product="${esc(p.id+':'+v.size)}" hidden></p><div class="ap-detail-price">${priceMarkup(v.price)} <span class="ap-fine">per unit</span></div><p class="nl-label">Strength: <strong>${esc(v.size)}</strong></p><div class="ap-size-options">${p.variants.map(x=>`<button data-action="detail-size" data-id="${p.id}" data-size="${esc(x.size)}" aria-pressed="${x.size===v.size}">${esc(x.size)}</button>`).join('')}</div><fieldset class="ap-bundle-options" data-unit-price="${v.price}"><legend>Choose your quantity</legend>${[1,2,4].map(q=>`<button type="button" data-bundle-quantity="${q}" aria-pressed="${q===1}"><strong>${q} unit${q===1?'':'s'}</strong><b>${priceMarkup(v.price*q)}</b></button>`).join('')}</fieldset><p class="ap-bundle-estimate" data-bundle-estimate aria-live="polite"></p><div class="ap-actions nl-purchase"><label class="ap-quantity"><span class="ap-sr">Quantity</span><button data-action="detail-quantity" data-step="-1" type="button" aria-label="Decrease quantity">−</button><input id="ap-detail-quantity" type="number" min="1" max="100" value="1" aria-label="Quantity"><button data-action="detail-quantity" data-step="1" type="button" aria-label="Increase quantity">+</button></label><button class="ap-button" data-action="detail-add" data-id="${p.id}" data-size="${esc(v.size)}">Add to Cart</button></div><div class="ap-mobile-purchase"><span>${esc(p.name)} · ${esc(v.size)}<strong data-mobile-total></strong></span><button class="ap-button" data-action="detail-add" data-id="${p.id}" data-size="${esc(v.size)}">Add to Cart</button></div><div class="nl-mini-benefits"><span>✓ Clear unit pricing</span><span>✓ Tracked delivery</span></div><a class="nl-document-link" href="/coas?product=${encodeURIComponent(p.id)}&amp;size=${encodeURIComponent(v.size)}">▤ View testing reports for ${esc(v.size)}</a><div class="ap-detail-tabs"><details open><summary>Description</summary><p>${esc(p.blurb)} ${esc(v.size)}. Laboratory research only. Not for human or animal use.</p></details><details><summary>Shipping & delivery</summary><p>Free priority shipping on merchandise totals of $250 or more after any coupon and before points or store credit. Available delivery options and fees are confirmed at checkout. <a href="/shipping-policy.html">Shipping policy</a></p></details><details><summary>COAS & supplier documentation</summary><p>Original supplier reports are available where matched to this product and strength. They are not proof of the lot you will receive. Request the fulfilled-lot COA with your order.</p></details></div></div></section><section class="ap-container ap-section"><div class="ap-section-head"><h2>Related Products</h2></div><div class="ap-grid">${catalog.filter(x=>x.id!==p.id&&(x.group===p.group||p.premixed_blend&&x.premixed_blend)).sort((a,b)=>p.premixed_blend?Number(!!b.premixed_blend)-Number(!!a.premixed_blend):0).slice(0,5).map(x=>card(x)).join('')}</div></section>`;
 }
  function renderCart() {
  const root=$('#ap-cart-content');if(!root)return;$('#ap-cart-title').textContent='Your Cart';
@@ -237,32 +261,18 @@
    +(links?`<p class="ap-fine" style="margin-top:22px">PAGES &amp; HELP</p>${links}`:'')||'<p class="ap-empty">No matches. Try a product, shipping, or help topic.</p>';
  }
  function updateCompare(){const bar=$('#ap-compare-bar');if(!bar)return;bar.hidden=compared.length===0;bar.innerHTML=`${compared.length} selected <button class="ap-button ap-button-small" data-action="compare-open">Compare compounds ↗</button> <button class="ap-text-button" data-action="compare-clear">Clear</button>`;$$('[data-compare]').forEach(x=>x.checked=compared.includes(x.dataset.compare));}
- function renderCompare(){const rows=compared.map(product).filter(Boolean);$('#ap-compare-content').innerHTML=`<div class="ap-compare-grid" style="--cols:${rows.length||1}">${rows.map(p=>`<div><img src="${esc(image(p,selections[p.id]))}" alt="${esc(p.name)}"><h3>${esc(p.name)}</h3><p>${esc(publicGroupLabel(p.group))}</p><p>${esc(p.blurb)}</p><p>${p.variants.map(v=>esc(v.size)+' · '+priceMarkup(v.price)).join('<br>')}</p><a class="ap-button ap-button-small" href="/product/${p.id}">View product ↗</a></div>`).join('')}</div>`;}
+ function renderCompare(){const rows=compared.map(product).filter(Boolean);$('#ap-compare-content').innerHTML=`<div class="ap-compare-grid" style="--cols:${rows.length||1}">${rows.map(p=>`<div><img src="${esc(image(p,selections[p.id]))}" alt="${esc(p.name)}"><h3>${esc(p.name)}</h3><p>${esc(p.group)}</p><p>${esc(p.blurb)}</p><p>${p.variants.map(v=>esc(v.size)+' · '+priceMarkup(v.price)).join('<br>')}</p><a class="ap-button ap-button-small" href="/product/${p.id}">View product ↗</a></div>`).join('')}</div>`;}
  function validReport(r){if(!r||r.status!=='verified'||r.publication_approved!==true||!product(r.product_id)||!r.lot||!r.report_id||!r.lab_name||!r.reviewer||!r.evidence_reference)return false;try{const u=new URL(r.document_url);return u.origin==='https://getpurelabs.com'&&!u.username&&!u.password;}catch{return false;}}
- function mountProduct(root,id) {
-  const html=detail(id),current=root.querySelector('.ap-product-layout');
-  if(!current){root.innerHTML=html;return;}
-  const next=document.createElement('template');next.innerHTML=html;
-  const layout=next.content.querySelector('.ap-product-layout');
-  const currentPhoto=current.querySelector('.ap-detail-image img'),newPhoto=layout?.querySelector('.ap-detail-image img');
-  if(!currentPhoto||!newPhoto){root.replaceChildren(next.content);return;}
-  const asset=newPhoto.getAttribute('srcset')||newPhoto.getAttribute('src');
-  if((currentPhoto.getAttribute('srcset')||currentPhoto.getAttribute('src'))!==asset){
-   currentPhoto.srcset=newPhoto.getAttribute('srcset')||'';currentPhoto.src=newPhoto.getAttribute('src');
-  }
-  currentPhoto.alt=newPhoto.alt;
-  current.querySelector('.ap-detail-copy').replaceWith(layout.querySelector('.ap-detail-copy'));
-  for(let el=current.nextElementSibling;el;){const following=el.nextElementSibling;el.remove();el=following;}
-  while(layout.nextElementSibling)root.append(layout.nextElementSibling);
- }
- function render(){const root=$('#ap-main');if(!root)return;const r=route();if(root.dataset.commerceRoute===r&&!window.AltaWorkspace)return;if(r==='/'||r==='/index'){refreshHomeOffers();}else if(r==='/shop'){if(!root.querySelector('[data-server-shop]'))root.innerHTML=shop();renderCatalogResults();}else if(r.startsWith('/product/')){let id;try{id=decodeURIComponent(r.slice(9));}catch{id='';}mountProduct(root,id);window.PureCampaign?.mountDispatch(root.querySelector('[data-pure-dispatch-cutoff]'));window.PureCampaign?.mountCountdown(root.querySelector('[data-pure-campaign-countdown]'));}else if(window.AltaWorkspace)window.AltaWorkspace.render(r,root);else if(!root.querySelector('[data-coa-archive],[data-public-catalog]'))root.innerHTML=heading('Research workspace','Loading your workspace…');translateShell();updateCompare();}
+ function render(){const root=$('#ap-main');if(!root)return;const r=route();if(r==='/'||r==='/index'){root.innerHTML=home();}else if(r==='/shop'){root.innerHTML=shop();renderCatalogResults();}else if(r.startsWith('/product/')){let id;try{id=decodeURIComponent(r.slice(9));}catch{id='';}root.innerHTML=detail(id);window.PureCampaign?.mountDispatch(root.querySelector('[data-pure-dispatch-cutoff]'));window.PureCampaign?.mountCountdown(root.querySelector('[data-pure-campaign-countdown]'));}else if(window.AltaWorkspace)window.AltaWorkspace.render(r,root);else root.innerHTML=heading('Research workspace','Loading your workspace…');translateShell();updateCompare();}
  function translateShell(){$$('[data-ap-i18n]').forEach(el=>el.textContent=t(el.dataset.apI18n));}
  async function inquiry(payload){const response=await fetch('/api/customer-config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...payload,request_id:payload.request_id||crypto.randomUUID()})});let result;try{result=await response.json();}catch{throw Error('The inquiry service could not respond. Please try again or email support@getpurelabs.com.');}if(!response.ok||result.received!==true)throw Error(result.error||'Request not sent. Please try again.');return result;}
- window.AltaStore={catalog,groups,shopCategories,publicGroupLabel,categoryOf,$,$$,esc,t,money,priceMarkup,image,product,card,heading,featureLinks,normalizeLines,addItems,adjustQuantity,exportLines,toast,read,write,inquiry,render,get cart(){return [...cart];},get saved(){return [...saved];},get selections(){return selections;},get reports(){return [...reports];},route};
+ window.AltaStore={catalog,groups,shopCategories,categoryOf,$,$$,esc,t,money,priceMarkup,image,product,card,heading,featureLinks,normalizeLines,addItems,adjustQuantity,exportLines,toast,read,write,inquiry,render,get cart(){return [...cart];},get saved(){return [...saved];},get selections(){return selections;},get reports(){return [...reports];},route};
  document.addEventListener('click',event=>{const button=event.target.closest('[data-action]');if(!button)return;const action=button.dataset.action,id=button.dataset.id;
   if(action==='close-dialog'){closeDialog(button);return;}
   if(action==='search'){showDialog('#ap-search-dialog');searchResults();$('#ap-global-search').focus();return;}
   if(action==='cart'){openCart();return;}
+  if(action==='age-confirm'){if(welcomeReady){saveWelcome();age.close();}return;}
+  if(action==='age-exit'){if(welcomeReady)updateAgeText('#ap-age-message','welcomeBlocked','You must be {age}+ and meet any higher local age requirement to enter.');return;}
   if(action==='catalog-options'){openCatalogOptions(product(id));return;}
   if(action==='add'||action==='detail-add'){
    const detail=action==='detail-add';
@@ -320,10 +330,7 @@
    });
    const result=await response.json();
    if(!response.ok||!result.code)throw Error(result.error||'Signup is temporarily unavailable.');
-   const promo=window.PureSite?.promo;
-   const active=promo && result.code===promo.code && Date.parse(promo.endsAt)>Date.now();
-   status.textContent=active?'You’re subscribed. Use '+result.code+' at checkout.':'You’re subscribed to PURE email updates.';
-   window.dispatchEvent(new Event('pure:newsletter-subscribed'));
+   status.textContent='You’re subscribed. Use '+result.code+' at checkout.';
    form.reset();
   }catch(error){
    status.textContent=error.message;
@@ -333,16 +340,50 @@
  });
  $$('#ap-search-dialog,#ap-cart-dialog,#ap-compare-dialog').forEach(d=>d.addEventListener('click',e=>{if(e.target===d){const r=d.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)d.close();}}));
  if($('#year'))$('#year').textContent=String(new Date().getFullYear());
- const mega=$('#ap-mega-content');if(mega)mega.innerHTML=groups.slice(1).map(g=>`<a href="/shop/browse?group=${encodeURIComponent(publicGroupLabel(g))}">${esc(publicGroupLabel(g))}<small>${catalog.filter(p=>p.group===g).length} products <span aria-hidden="true">↗</span></small></a>`).join('');
+ const mega=$('#ap-mega-content');if(mega)mega.innerHTML=groups.slice(1).map(g=>`<a href="/shop?category=${encodeURIComponent(g)}">${esc(t(g,g))}<small>${catalog.filter(p=>p.group===g).length} products <span aria-hidden="true">↗</span></small></a>`).join('');
  if(state.group!=='Offers'&&!shopCategories.includes(state.group))state.group='All';
  window.addEventListener('storage',e=>{if(e.key==='pp-cart'){cart=normalizeLines(read('pp-cart',[]));syncCart();}});
- window.AltaLocale?.onChange(event=>{if(!event||event.reason==='language'){render();renderCart();translateShell();}else window.AltaLocale?.refreshPrices?.(document);});
+ window.AltaLocale?.onChange(event=>{if(!event||event.reason==='language'){render();renderCart();translateShell();if(welcomeReady)renderWelcome();}else window.AltaLocale?.refreshPrices?.(document);});
  render();syncCart();translateShell();
- fetch('/data/verified-coas.json',{cache:'no-store'}).then(r=>r.ok?r.json():[]).catch(()=>[]).then(r=>{reports=Array.isArray(r)?r.filter(validReport):[];if(route()!=='/shop'&&!route().startsWith('/product/'))render();});
+ fetch('/data/verified-coas.json',{cache:'no-store'}).then(r=>r.ok?r.json():[]).catch(()=>[]).then(r=>{reports=Array.isArray(r)?r.filter(validReport):[];render();});
  if(route()==='/'||route()==='/index')fetch('/api/customer-config?reviews=summary').then(r=>r.ok?r.json():null).then(summary=>{
   if(Number.isSafeInteger(summary?.count)&&summary.count>0&&Number.isFinite(summary.rating)&&summary.rating>=1&&summary.rating<=5){
-   const rating=document.querySelector('[data-home-rating]');
-   if(rating){rating.textContent=summary.rating.toFixed(1)+'/5 from '+summary.count+' '+(summary.count===1?'review':'reviews')+'. Review credit offered.';rating.hidden=false;}
+   reviewSummary=summary;
+   render();
   }
  }).catch(()=>{});
+ function updateAgeText(selector,key,fallback){
+  const target=$(selector,age);
+  if(target)target.textContent=t(key,fallback).replaceAll('{age}',String(minimumAge));
+ }
+ function renderWelcome(){
+  updateAgeText('#ap-age-title','welcomeTitle','{age}+ only');
+  updateAgeText('[data-age-rules]','welcomeRules','Confirm you are {age} or older and meet any higher local age requirement.');
+  updateAgeText('[data-age-research]','welcomeResearch','For controlled laboratory research only. Human and veterinary use are prohibited. Purchasers must be 21 or older.');
+  updateAgeText('[data-action="age-confirm"]','welcomeConfirm','Confirm and enter');
+  updateAgeText('[data-action="age-exit"]','welcomeExit','I don’t meet the age requirement');
+  updateAgeText('[data-age-research-link]','welcomeResearchLink','Research-use policy');
+  updateAgeText('[data-age-terms-link]','welcomeTermsLink','Terms and conditions');
+ }
+ if(age&&!/^\/(?:my-account|account)(?:\/|$)/.test(location.pathname)){
+  const prior=read('ap-age-verified',null);
+  // Earlier storefronts recorded the age actually confirmed, including regional
+  // thresholds below 21. Migrate only a confirmation meeting the current floor.
+  const legacy=typeof prior==='string' && /^welcome-[12]:(?:[A-Z]{2}|unknown):(\d{2})$/.exec(prior);
+  const accepted=document.cookie.split(';').some(entry=>entry.trim()===welcomeCookie);
+  if(legacy && Number(legacy[1])>=minimumAge){
+   if(!accepted)saveWelcome();
+   else try{localStorage.removeItem('ap-age-verified');}catch{}
+  }else if(!accepted){
+   welcomeReady=true;
+   age.addEventListener('cancel',event=>event.preventDefault());
+   renderWelcome();
+   const loading=$('[data-age-loading]',age),options=$('[data-age-options]',age);
+   if(loading)loading.hidden=true;
+   if(options)options.hidden=false;
+   $$('button',age).forEach(button=>{button.disabled=false;});
+   if(!age.open)age.showModal();
+   $('[data-action="age-confirm"]',age)?.focus();
+  }
+ }
 })();
