@@ -72,7 +72,33 @@ body.ap-site.ap-auth-page .google-button img.pure-google-mark{
 body.ap-site.ap-auth-page .google-button{display:flex;align-items:center;justify-content:center;gap:12px}
 
 form.dc-form.dc-bulk-checkout {display:grid;align-items:start}
-.dc-bulk-checkout .dc-summary {position:static;grid-row:auto}
-.dc-bulk-checkout .dc-summary .dc-section {padding:18px 0 0;margin-top:18px;border:0;border-top:1px solid #ddd}
+.ap-site .dc-bulk-checkout .dc-summary {
+  position: static;
+  grid-row: auto;
+  container: bulk-summary / inline-size;
+}
+.dc-bulk-checkout .dc-summary > .dc-section {
+  margin: 20px 0 0;
+  padding: clamp(16px, 2vw, 24px);
+  border: 1px solid #e5e5e5;
+  box-shadow: none;
+}
+.dc-bulk-checkout .dc-summary .dc-cart-item {
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  overflow-wrap: anywhere;
+}
+.dc-bulk-checkout [data-dc-line-price] { text-align: right; }
+.dc-bulk-checkout [data-dc-line-price] del {
+  display: block;
+  color: #626262;
+  font-weight: 500;
+}
+.dc-bulk-checkout .dc-summary :is(.dc-fields, .dc-rewards, .ap-form-row, label, label > span, select, textarea) {
+  min-width: 0;
+  max-width: 100%;
+}
+@container bulk-summary (max-width: 380px) {
+  .dc-bulk-checkout .dc-summary .dc-rewards .ap-form-row { grid-template-columns: minmax(0, 1fr); }
+}
 .dc-bulk-details {min-width:0}
 @media(max-width:800px){form.dc-form.dc-bulk-checkout {grid-template-columns:minmax(0,1fr)}}
