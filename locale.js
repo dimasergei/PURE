@@ -120,6 +120,15 @@
   "fr": {
     "ageVerificationTitle": "Vérification de l’âge",
     "ageGateNotice": "À des fins de recherche uniquement",
+    "welcomeLoading": "Vérification de l’âge d’accès pour votre région…",
+    "welcomeTitle": "{age} ans et plus",
+    "welcomeRules": "Confirmez que vous avez au moins {age} ans et que vous respectez tout âge minimal supérieur applicable dans votre région.",
+    "welcomeResearch": "Réservé à la recherche contrôlée en laboratoire. L’usage humain et vétérinaire est interdit. Les acheteurs doivent avoir au moins 21 ans.",
+    "welcomeConfirm": "Confirmer et entrer",
+    "welcomeExit": "Je ne remplis pas les conditions d’âge",
+    "welcomeBlocked": "Vous devez avoir au moins {age} ans et respecter tout âge minimal supérieur applicable dans votre région.",
+    "welcomeResearchLink": "Politique d’utilisation pour la recherche",
+    "welcomeTermsLink": "Conditions générales",
     "ageGateCopy": "Les produits de ce catalogue sont strictement destinés à la recherche en laboratoire in vitro. Ils ne sont pas destinés à la consommation humaine, ni à servir de suppléments ou de médicaments.",
     "ageGateConfirmAge": "En continuant, vous confirmez avoir au moins 21 ans et utiliser ces matériaux uniquement pour la recherche en laboratoire.",
     "ageGateYes": "J’ai 21 ans ou plus",
@@ -181,6 +190,15 @@
   "es": {
     "ageVerificationTitle": "Verificación de edad",
     "ageGateNotice": "Solo para fines de investigación",
+    "welcomeLoading": "Comprobando la edad de acceso para tu región…",
+    "welcomeTitle": "Solo para mayores de {age} años",
+    "welcomeRules": "Confirma que tienes {age} años o más y que cumples cualquier requisito de edad superior aplicable en tu región.",
+    "welcomeResearch": "Solo para investigación controlada en laboratorio. Se prohíbe el uso humano y veterinario. Los compradores deben tener al menos 21 años.",
+    "welcomeConfirm": "Confirmar y entrar",
+    "welcomeExit": "No cumplo el requisito de edad",
+    "welcomeBlocked": "Debes tener al menos {age} años y cumplir cualquier requisito de edad superior aplicable en tu región.",
+    "welcomeResearchLink": "Política de uso para investigación",
+    "welcomeTermsLink": "Términos y condiciones",
     "ageGateCopy": "Los productos de este catálogo están destinados exclusivamente a la investigación de laboratorio in vitro. No son para consumo humano, suplementos ni medicamentos.",
     "ageGateConfirmAge": "Al continuar, confirma que tiene 21 años o más y que utilizará estos materiales únicamente para investigación de laboratorio.",
     "ageGateYes": "Tengo 21 años o más",
@@ -249,7 +267,7 @@
   // prior preference; an explicit Automatic choice is tracked separately now.
   let preference = read("ap-currency-mode", "") === "auto" ? "auto" : currencyPattern.test(storedCurrency) ? "manual" : "auto";
   let currency = preference === "manual" ? storedCurrency : "USD";
-  let suggestedCurrency = "USD", detectedCountry = null;
+  let suggestedCurrency = "USD", detectedCountry = null, welcome = null;
   let language = languages.includes(read("ap-language", "en")) ? read("ap-language", "en") : "en";
   let rateData = null, rateRequest = null, loadingRates = false, expiryTimer = 0;
   const listeners = new Set(), boundControls = new WeakSet(), controlOptions = new WeakMap();
@@ -403,6 +421,10 @@
       const data=await fetchJSON('/api/customer-config?display_locale=country'),supported=codes(data?.supported_currencies);
       if(data?.version!=="display-locale-v1"||data.base!=="USD"||!supported)throw Error("Country suggestion unavailable");
       detectedCountry=typeof data.country==="string"&&/^[A-Z]{2}$/.test(data.country)?data.country:null;
+      const policy=data.welcome;
+      if(Number.isSafeInteger(policy?.version)&&policy.version>0&&Number.isSafeInteger(policy.minimum_age)&&policy.minimum_age>=18&&policy.minimum_age<=30){
+        welcome={version:policy.version,minimum_age:policy.minimum_age};
+      }
       suggestedCurrency=supported.includes(data.suggested_currency)?data.suggested_currency:"USD";
       currencies=supported;
       if(preference==="auto")currency=suggestedCurrency;
@@ -441,5 +463,6 @@
   });
   const countryReady=loadCountry();
   window.AltaLocale.countryReady=countryReady;
+  Object.defineProperty(window.AltaLocale,"welcome",{get:()=>welcome});
   window.AltaLocale.ready=Promise.all([countryReady.then(()=>currency!=="USD"?loadRates():false),currency!=="USD"?loadRates():false]);
 })();

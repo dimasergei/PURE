@@ -4,6 +4,8 @@
  const catalog=typeof CATALOG==='undefined'?[]:CATALOG;
  const groups=typeof GROUPS==='undefined'?['All']:GROUPS;
  const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+ const age=$('#ap-age-dialog');
+ let welcomeKey=null,minimumAge=21;
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const dictionary={
   en:{shop:'Products',categories:'Categories',bulk:'Bulk Orders',coas:'Testing',about:'About',contact:'Contact Us',moreNav:'More',partnerNav:'Partner Program',trackNav:'Track Order',rewardsNav:'Rewards & Credit',searchHint:'Search compounds, sizes, and more',heroA:'CUTTING EDGE',heroB:'PURITY',heroText:'Research compounds, product documentation, and straightforward ordering for laboratories and research teams.',explore:'Explore the catalog',collection:'Featured Compounds',catalogTitle:'Find your next compound.',catalogText:'Compare exact sizes and per-unit prices, then add your selections to your cart.',viewAll:'View all compounds',perUnit:'per unit',add:'Add to cart',saved:'Saved',save:'Save product',compare:'Compare',search:'Search compounds',sortName:'Name: A–Z',sortLow:'Price: low to high',sortHigh:'Price: high to low',loadMore:'Show more compounds',noResults:'No matching compounds.',clear:'Clear filters',cart:'Your cart',cartEmpty:'Your cart is waiting for its first compound.',subtotal:'Subtotal',checkoutPaused:'Instant card checkout is not connected. Reviewed invoices are available.',checkoutNote:'Request an invoice for manual fulfillment. Pay only after the final amount and business receiving method are confirmed.',continueShop:'Continue exploring',export:'Export list',remove:'Remove',documentation:'Documentation',delivery:'Shipping & delivery',overview:'Overview',selectedSize:'Selected size',categoryTitle:'Explore by research area.',workspaceTitle:'Built around the way you research.',qualityTitle:'The details matter. Start with the documentation.',faqTitle:'A little clarity goes a long way.',updatesTitle:'Stay in the research loop.',updatesText:'Request product, catalog, and program updates from the PURE team.',updatesButton:'Request updates',requestSent:'Your request was received by our email service.',unavailable:'That information is not available yet.',added:'Added to your cart',compareLimit:'Choose up to four compounds to compare.',bulkCard:'More units. Less busywork.',bulkLead:'Build a quantity matrix across exact product variants and check out in one order.',quote:'Build Order'},
@@ -194,8 +196,8 @@
   if(action==='search'){showDialog('#ap-search-dialog');searchResults();$('#ap-global-search').focus();return;}
   if(action==='cart'){renderCart();showDialog('#ap-cart-dialog');return;}
   if(action==='menu'){const nav=$('#ap-nav');const open=nav.classList.toggle('ap-open');button.setAttribute('aria-expanded',String(open));return;}
-  if(action==='age-confirm'){write('ap-age-verified',true);$('#ap-age-dialog').close();return;}
-  if(action==='age-exit'){$('#ap-age-message').textContent='This catalog is limited to adults aged 21 and older.';return;}
+  if(action==='age-confirm'){if(welcomeKey){write('ap-age-verified',welcomeKey);age.close();}return;}
+  if(action==='age-exit'){if(welcomeKey)updateAgeText('#ap-age-message','welcomeBlocked','You must be {age}+ and meet any higher local age requirement to enter.');return;}
   if(action==='catalog-options'){openCatalogOptions(product(id));return;}
   if(action==='add'||action==='detail-add'){let qty=action==='detail-add'?Number($('#ap-detail-quantity')?.value):1;if(!Number.isInteger(qty)||qty<1||qty>100){toast('Choose a quantity between 1 and 100.');return;}try{addItems([{id,size:button.dataset.size,qty}]);}catch(e){toast(e.message);}return;}
   if(action==='save'){if(!product(id))return;saved=saved.includes(id)?saved.filter(x=>x!==id):[...saved,id];write('ap-wishlist',saved);$$(`[data-action="save"][data-id="${id}"]`).forEach(b=>{b.setAttribute('aria-pressed',String(saved.includes(id)));b.textContent=b.classList.contains('ap-save')?(saved.includes(id)?'♥':'♡'):(saved.includes(id)?'♥ '+t('saved'):'♡ '+t('save'));});toast(saved.includes(id)?'Saved on this device.':'Removed from saved products.');return;}
@@ -223,7 +225,7 @@
  const mega=$('#ap-mega-content');if(mega)mega.innerHTML=groups.slice(1).map(g=>`<a href="/shop?category=${encodeURIComponent(g)}">${esc(t(g,g))}<small>${catalog.filter(p=>p.group===g).length} products <span aria-hidden="true">↗</span></small></a>`).join('');
  if(state.group!=='Offers'&&!shopCategories.includes(state.group))state.group='All';
  window.addEventListener('storage',e=>{if(e.key==='pp-cart'){cart=normalizeLines(read('pp-cart',[]));syncCart();}});
- window.AltaLocale?.onChange(event=>{if(!event||event.reason==='language'){render();renderCart();translateShell();}else window.AltaLocale?.refreshPrices?.(document);});
+ window.AltaLocale?.onChange(event=>{if(!event||event.reason==='language'){render();renderCart();translateShell();if(welcomeKey)renderWelcome();}else window.AltaLocale?.refreshPrices?.(document);});
  render();syncCart();translateShell();
  fetch('/data/verified-coas.json',{cache:'no-store'}).then(r=>r.ok?r.json():[]).catch(()=>[]).then(r=>{reports=Array.isArray(r)?r.filter(validReport):[];render();});
  if(route()==='/'||route()==='/index')fetch('/api/customer-config?reviews=summary').then(r=>r.ok?r.json():null).then(summary=>{
@@ -232,5 +234,39 @@
    render();
   }
  }).catch(()=>{});
- const age=$('#ap-age-dialog');if(age&&!read('ap-age-verified',false)&&!/^\/(?:my-account|account)(?:\/|$)/.test(location.pathname)){age.addEventListener('cancel',e=>e.preventDefault());age.showModal();}
+ function updateAgeText(selector,key,fallback){
+  const target=$(selector,age);
+  if(target)target.textContent=t(key,fallback).replaceAll('{age}',String(minimumAge));
+ }
+ function renderWelcome(){
+  updateAgeText('#ap-age-title','welcomeTitle','{age}+ only');
+  updateAgeText('[data-age-rules]','welcomeRules','Confirm you are {age} or older and meet any higher local age requirement.');
+  updateAgeText('[data-age-research]','welcomeResearch','For controlled laboratory research only. Human and veterinary use are prohibited. Purchasers must be 21 or older.');
+  updateAgeText('[data-action="age-confirm"]','welcomeConfirm','Confirm and enter');
+  updateAgeText('[data-action="age-exit"]','welcomeExit','I don’t meet the age requirement');
+  updateAgeText('[data-age-research-link]','welcomeResearchLink','Research-use policy');
+  updateAgeText('[data-age-terms-link]','welcomeTermsLink','Terms and conditions');
+ }
+ if(age&&!/^\/(?:my-account|account)(?:\/|$)/.test(location.pathname)){
+  const locale=window.AltaLocale;
+  const prior=read('ap-age-verified',null);
+  age.addEventListener('cancel',event=>event.preventDefault());
+  function showWelcome(){
+   const policy=locale?.welcome;
+   minimumAge=policy?.minimum_age??21;
+   welcomeKey='welcome-'+(policy?.version??1)+':'+(locale?.country??'unknown')+':'+minimumAge;
+   if(prior===welcomeKey){if(age.open)age.close();return;}
+   renderWelcome();
+   const loading=$('[data-age-loading]',age),options=$('[data-age-options]',age);
+   if(loading)loading.hidden=true;
+   if(options)options.hidden=false;
+   $$('button',age).forEach(button=>{button.disabled=false;});
+   if(!age.open)age.showModal();
+   $('[data-action="age-confirm"]',age)?.focus();
+  }
+  if(locale?.countryReady){
+   if(typeof prior!=='string')age.showModal();
+   void locale.countryReady.then(showWelcome,showWelcome);
+  }else showWelcome();
+ }
 })();
