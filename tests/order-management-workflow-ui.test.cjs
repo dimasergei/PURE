@@ -25,6 +25,31 @@ test('received-payment control requires server permission, not merely an unpaid 
  const denied=await setup(t,fixture());assert.equal(denied.form('Confirm received bank payment'),undefined);assert.match(denied.w.document.querySelector('dialog').textContent,/Awaiting confirmed payment/);
  const allowed=await setup(t,fixture('accepted',{manual_payment_allowed:true,payment_method:{label:'US wire'}}));const f=allowed.form('Confirm received bank payment');assert.ok(f);assert.match(f.textContent,/\$122\.55/);assert.match(f.textContent,/US wire/);assert.equal(f.querySelector('input[type=checkbox]').required,true);
 });
+test('accepted card orders can reconcile or cancel without a separate payment dashboard',async t=>{
+ const ctx=await setup(t,fixture('accepted',{card_gateway:true,card_reversals:true,card_attempt:{state:'redirected'}}),body=>
+  body.action==='cancel_order'?{status:'void',payment_state:'canceled'}:{status:'accepted',payment_state:'awaiting_payment'});
+ await ctx.button('Sync Stripe status').onclick();
+ assert.deepEqual(ctx.writes(),[{action:'reconcile_card_order',id,version:7}]);
+ ctx.w.confirm=()=>false;
+ await ctx.button('Cancel unpaid order').onclick();
+ assert.equal(ctx.writes().length,1);
+ ctx.w.confirm=()=>true;
+ await ctx.button('Cancel unpaid order').onclick();
+ assert.deepEqual(ctx.writes()[1],{action:'cancel_order',id,confirm_unpaid:true});
+ assert.match(ctx.w.document.querySelector('dialog [data-unified-message]').textContent,/Stripe payment and PURE order canceled/);
+});
+test('paid card orders confirm the exact amount before an actual Stripe refund',async t=>{
+ const ctx=await setup(t,fixture('paid',{card_gateway:true,card_reversals:true,card_attempt:{state:'paid'}}),()=>({status:'paid',payment_state:'refund_pending'}));
+ assert.equal(ctx.button('Cancel unpaid order'),undefined);
+ assert.equal(ctx.form('Record a completed full refund'),undefined);
+ ctx.w.confirm=()=>false;
+ await ctx.button('Issue full card refund').onclick();
+ assert.equal(ctx.writes().length,0);
+ ctx.w.confirm=message=>{assert.match(message,/\$122\.55 USD.*ORD-TEST91/);return true;};
+ await ctx.button('Issue full card refund').onclick();
+ assert.deepEqual(ctx.writes(),[{action:'refund_card_order',id,version:7,confirm_full_refund:true}]);
+ assert.match(ctx.w.document.querySelector('dialog [data-unified-message]').textContent,/Stripe is processing this refund/);
+});
 test('payment action verifies confirmation and retains receipt across a failed retry',async t=>{
  let attempts=0;const ctx=await setup(t,fixture('accepted',{manual_payment_allowed:true}),()=>{attempts++;if(attempts===1)throw Error('Temporary connection failure');return{saved:true}}),f=ctx.form('Confirm received bank payment');field(f,'bank_reference','BANK-EXAMPLE-123');
  await submit(f);assert.equal(ctx.writes().length,0);assert.match(ctx.w.document.querySelector('[data-unified-message]').textContent||ctx.w.document.querySelector('dialog').textContent,/Verify received funds first/);

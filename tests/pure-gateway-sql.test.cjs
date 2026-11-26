@@ -11,6 +11,7 @@ const gw=require('../lib/pure-gateway');
 const read=name=>fs.readFileSync(path.join(__dirname,'../supabase/migrations',name),'utf8');
 const migration='20261125000100_pure_gateway_card_route.sql';
 const cardTestMigration='20261125223346_one_use_card_test_coupon.sql';
+const reversalMigration='20261126011403_verified_pure_gateway_reversals.sql';
 const tag=gw.configuration({PURE_GATEWAY_URL:'https://pay.example.test'}).account_tag;
 const catalog=[
  {id:'fixture-a',name:'Fixture A',category:'injectables',variants:[{size:'5mg',price:99.99}]},
@@ -245,6 +246,78 @@ test('the pure_gateway card route is registered, priced and settled atomically i
    assert.equal(attempt.amount_cents,100+order.shipping_cents);
    assert.equal(attempt.currency,'USD');
    assert.equal((await place(await make())).status,'accepted');
+  });
+  await db.exec(read(reversalMigration));
+  const reverseFixture=async suffix=>{
+   const order=await payable(),attempt=await begin(order),session='pi_reverse'+suffix,charge='ch_reverse'+suffix;
+   await rpc('commerce_bind_pure_gateway_session',[attempt.id,session,redirect(session),tag]);
+   const canceled={paymentIntentId:session,metadata:{orderId:order.id},status:'canceled',currency:'usd',livemode:true,
+    amount:order.total_cents,amountReceived:0,amountRefunded:0};
+   const refunded={...canceled,status:'succeeded',chargeId:charge,amountReceived:order.total_cents,amountRefunded:order.total_cents,
+    refund:{id:'re_reverse'+suffix,status:'succeeded',amount:order.total_cents,createdAt:'2026-11-26T01:00:00.000Z'}};
+   return {order,attempt,session,charge,canceled,refunded};
+  };
+
+  await t.test('a canceled Stripe intent and its unpaid order close under the same lock',async()=>{
+   const {order,attempt,canceled}=await reverseFixture('cancel1');
+   const actor='customer:'+order.customer;
+   const cancel=(evidence=canceled,account=tag,customer=order.customer,by=actor)=>
+    rpc('commerce_apply_pure_gateway_cancellation',[order.id,attempt.id,customer,account,evidence,by]);
+   for(const [delta,expected] of [[{paymentIntentId:'pi_reversewrong'},/saved order/],
+    [{metadata:{orderId:randomUUID()}},/saved order/],[{livemode:false},/saved order/],
+    [{currency:'cad'},/saved order/],[{amount:canceled.amount+1},/saved order/],
+    [{amountReceived:1},/canceled and unpaid/],[{status:'requires_payment_method'},/canceled and unpaid/]])
+    await assert.rejects(cancel({...canceled,...delta}),expected);
+   await assert.rejects(cancel(canceled,'f'.repeat(64)),/saved order/);
+   await assert.rejects(cancel(canceled,tag,randomUUID(),'admin:unpaid-cancellation'),/Order not found/);
+   assert.equal((await attemptRow(attempt.id)).state,'redirected');
+   assert.equal((await load(order.id)).status,'accepted');
+   const result=await cancel();
+   assert.equal(result.status,'void');assert.equal(result.payment_state,'canceled');
+   assert.equal((await attemptRow(attempt.id)).state,'declined');
+   assert.equal((await cancel()).replayed,true);
+   await assert.rejects(begin(order),/./,'canceling also prevents a new payment attempt');
+   assert.equal((await db.query("select count(*)::int n from commerce_events where invoice_id=$1 and action='card_gateway_cancellation_verified'",[order.id])).rows[0].n,1);
+  });
+
+  await t.test('only full matched Stripe refunds write a receipt, stop fulfillment, and replay safely',async()=>{
+   const {order,attempt,session,charge,refunded}=await reverseFixture('refund1');
+   const refund=(evidence=refunded,account=tag)=>rpc('commerce_apply_pure_gateway_refund',
+    [order.id,attempt.id,account,evidence,'admin:card-reconciliation']);
+   await finish(attempt.id,'pure-gateway-paid:'+session,'approved',charge,order.total_cents,'USD');
+   for(const [delta,expected] of [[{livemode:false},/saved order/],
+    [{amountRefunded:order.total_cents-1},/completed full refund/],
+    [{refund:{...refunded.refund,status:'pending'}},/completed full refund/],
+    [{refund:{...refunded.refund,amount:order.total_cents-1}},/completed full refund/],
+    [{chargeId:'ch_reversewrong'},/verified Stripe payment/]])
+    await assert.rejects(refund({...refunded,...delta}),expected);
+   assert.equal((await load(order.id)).status,'paid');
+   assert.equal((await refund()).status,'refunded');
+   assert.equal((await attemptRow(attempt.id)).state,'refunded');
+   assert.equal((await refund()).replayed,true);
+   await assert.rejects(refund({...refunded,refund:{...refunded.refund,id:'re_reverseconflicting'}}),/Existing refund record/);
+   const receipt=(await db.query("select external_reference,amount_cents from commerce_receipts where invoice_id=$1 and kind='refund'",[order.id])).rows;
+   assert.deepEqual(receipt,[{external_reference:'pure_gateway:refund:'+refunded.refund.id,amount_cents:order.total_cents}]);
+   const current=await load(order.id);
+   await assert.rejects(rpc('commerce_admin_fulfill_order',[order.id,{version:current.version,action:'update_order',status:'processing',note:'Should never resume shipping'}]),/./);
+   assert.equal((await db.query("select count(*)::int n from commerce_events where invoice_id=$1 and action='card_gateway_refund_verified'",[order.id])).rows[0].n,1);
+  });
+
+  await t.test('external refunds can reconcile before payment delivery without queueing a paid confirmation',async()=>{
+   const {order,attempt,session,charge,refunded}=await reverseFixture('refund2');
+   const result=await rpc('commerce_apply_pure_gateway_refund',[order.id,attempt.id,tag,refunded,'verified-gateway:pure_gateway']);
+   assert.equal(result.status,'refunded');
+   const receipts=(await db.query('select kind from commerce_receipts where invoice_id=$1 order by kind',[order.id])).rows;
+   assert.deepEqual(receipts.map(row=>row.kind),['payment','refund']);
+   const notices=(await db.query("select event_action,state from commerce_notifications where invoice_id=$1 and event_action in ('payment_recorded','full_refund_recorded') order by event_action",[order.id])).rows;
+   assert.ok(notices.some(n=>n.event_action==='full_refund_recorded'&&n.state==='queued'));
+   assert.ok(notices.filter(n=>n.event_action==='payment_recorded').every(n=>n.state==='skipped'));
+   assert.equal((await finish(attempt.id,'pure-gateway-paid:'+session,'approved',charge,order.total_cents,'USD')).state,'refunded');
+   const [roles]=(await db.query(`select
+    has_function_privilege('anon','public.commerce_apply_pure_gateway_refund(uuid,uuid,text,jsonb,text)','execute') as anonymous,
+    has_function_privilege('authenticated','public.commerce_apply_pure_gateway_cancellation(uuid,uuid,uuid,text,jsonb,text)','execute') as signed_in,
+    has_function_privilege('service_role','public.commerce_apply_pure_gateway_refund(uuid,uuid,text,jsonb,text)','execute') as backend`)).rows;
+   assert.deepEqual(roles,{anonymous:false,signed_in:false,backend:true});
   });
  }finally{await db.close();}
 });

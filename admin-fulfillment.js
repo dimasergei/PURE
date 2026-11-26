@@ -259,6 +259,34 @@ function fulfillmentQuote(host,id){
   content.replaceChildren(info,terms,grid,note,result);
  });
 }
+function cardActions(pay,row,data){
+ const order=data.order,id=order.id,version=order.version,attempt=data.card_attempt;
+ const statusMessages={awaiting_payment:'Stripe reports that payment is still pending.',paid:'Stripe payment verified.',
+  canceled:'Stripe payment and PURE order canceled.',refund_pending:'Stripe is processing this refund.',
+  refund_review:'Stripe reports a refund that needs review.',refunded:'Full Stripe refund confirmed and recorded in PURE.',
+  review:'The Stripe payment needs review before PURE can update the order.'};
+ const run=async body=>{
+  const result=await write(body);
+  await reload(row);
+  const status=result.payment_state||(result.status==='void'?'canceled':result.status==='refunded'?'refunded':null);
+  msg(statusMessages[status]||'Payment record refreshed.');
+ };
+ if(attempt?.error_code==='pure_gateway_test_payment')
+  pay.append(el('p','This payment was created in Stripe test mode. It needs sandbox verification before the order can be closed.','uc-hint'));
+ if(attempt&&['accepted','paid','processing','shipped','delivered'].includes(order.status))
+  pay.append(btn('Sync Stripe status',()=>run({action:'reconcile_card_order',id,version})));
+ if(order.status==='accepted')pay.append(btn('Cancel unpaid order',async()=>{
+  if(!window.confirm(`Cancel ${ref(row)} and close its unpaid Stripe payment?`))return;
+  await run({action:'cancel_order',id,confirm_unpaid:true});
+ },'uc-danger'));
+ if(['paid','processing','shipped','delivered'].includes(order.status)&&order.total_cents>0&&attempt)
+  pay.append(btn('Issue full card refund',async()=>{
+   const total=cash(order.total_cents,order.currency)+' '+order.currency;
+   if(!window.confirm(`Refund ${total} for ${ref(row)} to the original card? Stripe will process the refund.`))return;
+   await run({action:'refund_card_order',id,version,confirm_full_refund:true});
+  },'uc-danger'));
+}
+
 function commerceActions(host,row,data){const o=data.order,id=o.id,allocations=data.allocations||[],job=data.jobs?.[0];
  const pay=el('section',undefined,'uc-payment');pay.append(el('h3','Payment'));
  if(interacRequest(o)){
@@ -275,7 +303,8 @@ function commerceActions(host,row,data){const o=data.order,id=o.id,allocations=d
  else pay.append(el('p',o.paid_at?'Payment received '+when(o.paid_at)+'.':state(o.status)+'.','uc-hint'));
  if(o.cancellation_status==='pending')pay.append(el('p','Cancellation requested. Checkout and fulfillment are on hold while the wallet authorization expires and payment is checked automatically. Do not send payment.','uc-hint'));
  if(o.cancellation_status==='review')pay.append(el('p','A crypto transfer was received after cancellation was requested. Fulfillment remains on hold. Review the verified payment and arrange any refund before resolving this order.','uc-hint'));
- if(o.status==='accepted'&&o.cancellation_status!=='review')pay.append(btn(o.cancellation_status==='pending'?'Check cancellation':'Cancel unpaid order',async()=>{if(!o.cancellation_status&&!window.confirm('Cancel '+ref(row)+'? Verify no payment was sent.'))return;const result=await write({action:'cancel_order',id,confirm_unpaid:true});if(result.status==='void'){dlg.close();await load();msg(ref(row)+' canceled. No refund was issued.')}else if(['pending','review'].includes(result.cancellation_status)){await reload(row);msg(result.cancellation_status==='pending'?'Cancellation requested. Payment checks continue automatically; do not send payment.':'Payment received. Cancellation needs review; fulfillment remains on hold.')}else throw Error('Cancellation was not confirmed.')},'uc-danger'));
+ if(data.card_reversals)cardActions(pay,row,data);
+ else if(o.status==='accepted'&&o.cancellation_status!=='review')pay.append(btn(o.cancellation_status==='pending'?'Check cancellation':'Cancel unpaid order',async()=>{if(!o.cancellation_status&&!window.confirm('Cancel '+ref(row)+'? Verify no payment was sent.'))return;const result=await write({action:'cancel_order',id,confirm_unpaid:true});if(result.status==='void'){dlg.close();await load();msg(ref(row)+' canceled. No refund was issued.')}else if(['pending','review'].includes(result.cancellation_status)){await reload(row);msg(result.cancellation_status==='pending'?'Cancellation requested. Payment checks continue automatically; do not send payment.':'Payment received. Cancellation needs review; fulfillment remains on hold.')}else throw Error('Cancellation was not confirmed.')},'uc-danger'));
  host.append(pay);
  if(o.kind==='goods'){
   exportSection(host,row,o);
@@ -309,11 +338,11 @@ function commerceActions(host,row,data){const o=data.order,id=o.id,allocations=d
    fields.country.readOnly=true;const note=input(f,'Reason for address change','note','',true);note.minLength=8;
    submit(f,'Save address',async()=>{const address=Object.fromEntries(Object.entries(fields).map(([key,control])=>[key,control.value]));await write({action:'edit_shipping',id,version:o.version,address,note:note.value});await reload(row)})}
   else if(remote&&['paid','processing'].includes(o.status))shipment.append(el('p','Fulfillment has already started. Review the existing shipment before changing its destination.','uc-hint'));host.append(shipment);window.PureShippingLabels?.mount({host,row,api})}
- if(['paid','processing','shipped','delivered'].includes(o.status)){const advanced=el('details',undefined,'uc-history');advanced.append(el('summary','Refund management'));host.append(advanced);const f=form('Record a completed full refund',advanced);f.append(el('p','Complete and verify the refund with the provider first. This records it; it does not return funds.','uc-hint'));
+ if(!data.card_reversals&&['paid','processing','shipped','delivered'].includes(o.status)){const advanced=el('details',undefined,'uc-history');advanced.append(el('summary','Refund management'));host.append(advanced);const f=form('Record a completed full refund',advanced);f.append(el('p','Complete and verify the refund with the provider first. This records it; it does not return funds.','uc-hint'));
   const transaction=input(f,'Provider refund transaction ID','external_reference','',true);transaction.minLength=8;const check=el('label',undefined,'uc-check'),yes=el('input');yes.type='checkbox';yes.required=true;check.append(yes,el('span','I verified the full external refund.'));f.append(check);
   submit(f,'Record verified refund',async()=>{if(!window.confirm('Record the completed external refund? This does not send money.'))return;await write({action:'record_verified_refund',id,version:o.version,confirm_external_refund:true,external_reference:transaction.value});await reload(row)})}
  if(o.status==='void')host.append(el('p','Canceled. Reconcile any late payment before refund or fulfillment.','uc-hint'));
- if(o.status==='refunded')host.append(el('p','Full external refund recorded.','uc-hint'));
+ if(o.status==='refunded')host.append(el('p',data.card_gateway?'Full card refund confirmed.':'Full external refund recorded.','uc-hint'));
  if(o.kind==='membership'&&o.status==='paid')host.append(el('p','Membership purchase recorded. No shipping workflow applies.','uc-hint'))}
 function legacyActions(host,o){exportSection(host,o,o);window.PureShippingLabels?.mount({host,row:o,api});host.append(el('p','Earlier store order. Canceling fulfillment does not issue a refund or stop a provider payment.','uc-hint'));
  const transitions={unfulfilled:['processing','awaiting_supplier','canceled'],processing:['awaiting_supplier','partially_shipped','shipped'],awaiting_supplier:['processing','partially_shipped','shipped'],partially_shipped:['shipped'],shipped:['delivered']};

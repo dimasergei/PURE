@@ -7,7 +7,7 @@ const env={PURE_GATEWAY_ENABLED:'true',PURE_GATEWAY_URL:'https://pay.example.tes
  PURE_GATEWAY_CURRENCIES:'USD',SITE_URL:'https://getpurelabs.com',CHECKOUT_RATE_LIMIT_SECRET:'x'.repeat(40)};
 const config=gw.configuration(env);
 const attempt={id:'91000000-0000-4000-8000-000000000001',invoice_id:'91000000-0000-4000-8000-000000000002',provider:'pure_gateway',operation:'sale',mode:'live',
- account_tag:config.account_tag,amount_cents:12995,currency:'USD',state:'redirected',provider_session_id:'pi_fixture123456',redirect_url:'https://pay.example.test/pay?pi=pi_fixture123456'};
+ method_id:'stripe-fixture',account_tag:config.account_tag,amount_cents:12995,currency:'USD',state:'redirected',provider_session_id:'pi_fixture123456',redirect_url:'https://pay.example.test/pay?pi=pi_fixture123456'};
 const paid={status:'succeeded',amount:12995,currency:'usd',livemode:true,chargeId:'ch_3FixtureCharge01',paidAt:'2026-11-25T01:00:00.000Z',amountRefunded:0,
  metadata:{orderId:attempt.invoice_id,orderNumber:null}};
 const reply=data=>async()=>({ok:true,status:200,json:async()=>data});
@@ -171,6 +171,106 @@ test('a refund reported by the provider is flagged for review and never changes 
  assert.equal(db2.calls[0].args.p_error,'pure_gateway_refund_review');
 });
 const invoice={id:attempt.invoice_id,kind:'goods',status:'accepted',currency:'USD',total_cents:12995,expires_at:new Date(Date.now()+3600000).toISOString(),public_order_number:'P00000123'};
+const reversalsEnv={...env,VERCEL_ENV:'production',PURE_GATEWAY_REVERSALS_ENABLED:'true'};
+const reversalOrder={...invoice,customer_id:'92000000-0000-4000-8000-000000000003',version:2,method_id:'stripe-fixture'};
+const reversalPaid={...paid,paymentIntentId:attempt.provider_session_id,amountReceived:paid.amount};
+const reversalCanceled={...reversalPaid,status:'canceled',amountReceived:0,chargeId:null,paidAt:null};
+const reversalRefund=(status='succeeded',amount=paid.amount)=>({...reversalPaid,amountRefunded:status==='succeeded'?amount:0,
+ refund:{id:'re_fixture000001',status,amount,createdAt:'2026-11-25T01:04:00.000Z'}});
+function reversalDb({attempts=[attempt],order=reversalOrder}={}){
+ const db=dbMock({attempts,invoices:[order],methods:[{native_provider:'pure_gateway'}]});
+ const rpc=db.rpc;
+ db.rpc=async(name,args)=>{
+  if(!name.startsWith('commerce_apply_pure_gateway_'))return rpc(name,args);
+  db.calls.push({name,args});
+  const isRefund=name.endsWith('refund');
+  return {data:{id:order.id,status:isRefund?'refunded':'void',payment_state:isRefund?'refunded':'canceled'}};
+ };
+ return db;
+}
+test('customer card cancellation requires exact bound proof and works only when the staged feature is active',async()=>{
+ const cancel=require('../lib/commerce-cancellation').cancelCheckout;
+ const inactive=reversalDb(),never=async()=>{throw Error('must not contact gateway');};
+ await assert.rejects(cancel(inactive,reversalOrder,{customerId:reversalOrder.customer_id,env,fetchImpl:never}),/in progress or requires review/);
+ assert.equal(inactive.calls.length,0);
+ const opts={customerId:reversalOrder.customer_id,env:reversalsEnv};
+ for(const delta of [{paymentIntentId:'pi_other000000'},{livemode:false},{amount:attempt.amount_cents-1},{currency:'cad'},
+  {metadata:{orderId:'93000000-0000-4000-8000-000000000004'}},{amountReceived:1}]){
+  const db=reversalDb();
+  await assert.rejects(cancel(db,reversalOrder,{...opts,fetchImpl:reply({...reversalCanceled,...delta})}),e=>e.status===409);
+  assert.equal(db.calls.length,0);
+ }
+ for(const state of ['review','unknown','started']){
+  const db=reversalDb({attempts:[{...attempt,state}]});
+  await assert.rejects(cancel(db,reversalOrder,{...opts,fetchImpl:never}),/Sync the order with Stripe/);
+  assert.equal(db.calls.length,0);
+ }
+ const db=reversalDb();
+ const result=await cancel(db,reversalOrder,{...opts,fetchImpl:async(url,req)=>{
+  assert.equal(url,'https://pay.example.test/api/payments/cancel');
+  assert.deepEqual(JSON.parse(req.body),{paymentIntentId:attempt.provider_session_id,orderId:invoice.id,
+   amountCents:invoice.total_cents,currency:'usd',livemode:true,operationId:attempt.id});
+  return reply(reversalCanceled)();
+ }});
+ assert.equal(result.status,'void');
+ assert.equal(result.payment_state,'canceled');
+ assert.deepEqual(db.calls.map(c=>c.name),['commerce_apply_pure_gateway_cancellation']);
+ assert.equal(db.calls[0].args.p_customer,reversalOrder.customer_id);
+});
+
+test('admin refund requires explicit confirmation, refuses new refunds after partial/pending, and records a full provider refund',async()=>{
+ const execute=require('../lib/unified-admin-actions').execute;
+ const order={...reversalOrder,status:'paid'},sale={...attempt,state:'paid',provider_transaction_id:paid.chargeId};
+ const body={action:'refund_card_order',id:order.id,version:order.version,confirm_full_refund:true};
+ const options={env:reversalsEnv,notificationsDispatch:async()=>({accepted:0})};
+ const db=reversalDb({attempts:[sale],order});
+ const disallowed=await execute(db,{...body,confirm_full_refund:false},{...options,fetchImpl:async()=>assert.fail('refund called without confirmation')});
+ assert.equal(disallowed.status,400);
+ assert.equal(db.calls.length,0);
+ const states=[[reversalRefund('pending'),'refund_pending'],[reversalRefund('succeeded',40),'refund_review'],
+  [{...reversalPaid,amountRefunded:paid.amount},'refund_review'],[reversalRefund('failed'),'refund_review']];
+ for(const [facts,expected] of states){
+  const response=await execute(db,body,{...options,fetchImpl:async url=>{
+   assert.equal(url,'https://pay.example.test/api/payments/status');
+   return reply(facts)();
+  }});
+  assert.deepEqual([response.status,response.data.status,response.data.payment_state],[200,'paid',expected]);
+  assert.equal(db.calls.length,0);
+ }
+ const urls=[];
+ const result=await execute(db,body,{...options,fetchImpl:async(url,req)=>{
+  urls.push(url);
+  if(url.endsWith('/status'))return reply(reversalPaid)();
+  assert.equal(JSON.parse(req.body).operationId,attempt.id);
+  return reply(reversalRefund())();
+ }});
+ assert.deepEqual(urls,['https://pay.example.test/api/payments/status','https://pay.example.test/api/payments/refund']);
+ assert.equal(result.data.status,'refunded');
+ assert.deepEqual(db.calls.map(c=>c.name),['commerce_apply_pure_gateway_refund']);
+ assert.equal(db.calls[0].args.p_actor,'admin:card-refund');
+ assert.equal(db.calls[0].args.p_evidence.refund.id,'re_fixture000001');
+});
+
+test('signed external reversals sync an exact refund or unpaid cancellation without asking Stripe to mutate anything',async()=>{
+ const paidOrder={...reversalOrder,status:'paid'},sale={...attempt,state:'paid',provider_transaction_id:paid.chargeId};
+ const never=async()=>assert.fail('signed facts required no gateway request');
+ const trigger=async(db,eventType,payment)=>{
+  const {raw,header}=signed({...ping,eventType,payment});
+  return flow.event(db,raw,{headers:{'x-pure-gateway-signature':header}},reversalsEnv,never,{finish:finisher([])});
+ };
+ const refundDb=reversalDb({attempts:[sale],order:paidOrder});
+ assert.equal((await trigger(refundDb,'refunded',reversalRefund('pending'))).payment_state,'refund_pending');
+ assert.equal(refundDb.calls.length,0);
+ assert.equal((await trigger(refundDb,'refunded',reversalRefund())).refunded,true);
+ assert.equal(refundDb.calls[0].args.p_actor,'verified-gateway:pure_gateway');
+ const cancelDb=reversalDb();
+ assert.equal((await trigger(cancelDb,'canceled',reversalCanceled)).canceled,true);
+ assert.equal(cancelDb.calls[0].args.p_customer,reversalOrder.customer_id);
+ const newer={...attempt,id:'94000000-0000-4000-8000-000000000004',provider_session_id:'pi_newer000000'};
+ const stale=reversalDb({attempts:[newer,{...attempt,state:'declined'}]});
+ assert.equal((await trigger(stale,'canceled',reversalCanceled)).ignored,true);
+ assert.equal(stale.calls.length,0);
+});
 const account={provider:'pure_gateway',mode:'live',account_tag:config.account_tag,countries:['US'],method:{active:true}};
 const body={attempt_id:attempt.id,confirm_amount_cents:12995,confirm_currency:'USD',consent:true,redirect_notice_ack:true};
 const created=async()=>({ok:true,status:200,json:async()=>({paymentIntentId:'pi_fixture123456',payUrl:'https://pay.example.test/pay?pi=pi_fixture123456'})});
