@@ -1,10 +1,17 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs');
 const css=fs.readFileSync('cart-reference.css','utf8');
-test('gift tooltip opens below the icon instead of clipping above cart header',()=>{
- assert.match(css,/\.nlc-reward-tip\s*\{[^}]*top: 18px;[^}]*right: -13px;/s);
+test('gift tooltip opens above the icon into the scroll area instead of under the fixed footer',()=>{
+ assert.match(css,/\.nlc-reward-tip\s*\{[^}]*bottom: 22px;[^}]*right: -13px;/s);
+ assert.match(css,/\.nlc-reward-tip::before\s*\{[^}]*top: 100%;[^}]*border-top-color:/s);
  assert.match(css,/\.nlc-reward-trigger\s*\{[^}]*width: 44px;[^}]*height: 44px;/s);
  assert.match(css,/\.nlc-scrollable-items\{overflow-x:hidden/);
+});
+test('the reward fill turns green when complete and shares the banner shimmer',()=>{
+ const brand=fs.readFileSync('pure-brand.css','utf8');
+ assert.match(css,/\.nlc-reward-meter\[data-complete="true"\] > span\s*\{ background: #19804b;/);
+ assert.match(brand,/\.ap-announcement::before,\s*\.nlc-reward-meter > span::before\s*\{[^}]*animation: pure-announcement-shimmer 5s/s);
+ assert.match(brand,/@media \(prefers-reduced-motion: reduce\)\s*\{[^}]*\.nlc-reward-meter > span::before\s*\{[^}]*animation: none/s);
 });
 test('quantity control uses one capsule with connected pale buttons and white center',()=>{
  assert.match(css,/\.nlc-quantity-row \.ap-quantity\{display:grid!important/);

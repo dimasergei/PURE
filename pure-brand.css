@@ -108,8 +108,7 @@ html:root body.ap-site :is(
   color: #111 !important;
 }
 
-/* Keep the announcement readable while a soft band of light passes behind it.
-   This specificity also restores the effect through the mobile parity layer. */
+/* Share the same shimmer timing and gradient between the announcement and cart rewards. */
 html:root body.ap-site .ap-announcement {
   isolation: isolate;
   overflow: hidden !important;
@@ -124,7 +123,8 @@ html:root body.ap-site .ap-announcement #ap-announcement-text {
   color: #fff;
   animation: none !important;
 }
-html:root body.ap-site .ap-announcement::before {
+html:root body.ap-site .ap-announcement::before,
+.nlc-reward-meter > span::before {
   content: '' !important;
   display: block !important;
   position: absolute;
@@ -143,7 +143,8 @@ html:root body.ap-site .ap-announcement::before {
   48%, 100% { transform: translateX(470%) skewX(-18deg); }
 }
 @media (prefers-reduced-motion: reduce) {
-  html:root body.ap-site .ap-announcement::before {
+  html:root body.ap-site .ap-announcement::before,
+  .nlc-reward-meter > span::before {
     display: none !important;
     animation: none !important;
   }

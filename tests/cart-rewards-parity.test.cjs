@@ -34,6 +34,7 @@ test('the cart advances through both gifts using discounted merchandise cents',a
    const meter=f.root.querySelector('[role=progressbar]'),buttons=f.root.querySelectorAll('.nlc-reward-trigger');
    assert.equal(meter.getAttribute('aria-valuemax'),'299');
    assert.equal(Number(meter.getAttribute('aria-valuenow')),Math.min(merchandise,29900)/100);
+   assert.equal(meter.dataset.complete,String(reconReached));
    assert.equal(parseFloat(meter.firstElementChild.style.width),Math.min(merchandise/29900,1)*100);
    assert.deepEqual(Array.from(buttons,b=>b.dataset.reached),[String(shippingReached),String(reconReached)]);
    assert.equal(parseFloat(buttons[0].parentElement.style.left),250/299*100);

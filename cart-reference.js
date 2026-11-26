@@ -55,7 +55,7 @@
   panel.hidden=false;
   panel.querySelector('[data-nlc-unlock-copy]').innerHTML=status;
   const rail=panel.querySelector('.nlc-reward-rail');
-  rail.innerHTML='<div class="nlc-reward-meter" role="progressbar" aria-label="Cart rewards" aria-valuemin="0" aria-valuemax="'+finalTarget/100+'" aria-valuenow="'+progress/100+'"><span style="width:'+progress/finalTarget*100+'%"></span></div>'+markers;
+  rail.innerHTML='<div class="nlc-reward-meter" data-complete="'+(progress===finalTarget)+'" role="progressbar" aria-label="Cart rewards" aria-valuemin="0" aria-valuemax="'+finalTarget/100+'" aria-valuenow="'+progress/100+'"><span style="width:'+progress/finalTarget*100+'%"></span></div>'+markers;
   rail.querySelector('[role="progressbar"]').setAttribute('aria-valuetext',panel.querySelector('[data-nlc-unlock-copy]').textContent);
   let current=null,pinned=false;
   function show(button){

@@ -113,7 +113,15 @@ html[data-display-currency]:not([data-display-currency="USD"]) .nlc-price strong
   border-radius: 5px;
   background: #e0e0e0;
 }
-.nlc-reward-meter > span { display: block; height: 100%; border-radius: inherit; background: #171717; }
+.nlc-reward-meter > span {
+  position: relative;
+  display: block;
+  height: 100%;
+  overflow: hidden;
+  border-radius: inherit;
+  background: #171717;
+}
+.nlc-reward-meter[data-complete="true"] > span { background: #19804b; }
 .nlc-reward-stop {
   position: absolute;
   top: 50%;
@@ -152,7 +160,7 @@ html[data-display-currency]:not([data-display-currency="USD"]) .nlc-price strong
 .nlc-reward-stop:has(.nlc-reward-trigger[aria-expanded="true"]) { z-index: 1; }
 .nlc-reward-tip {
   position: absolute;
-  top: 18px;
+  bottom: 22px;
   right: -13px;
   z-index: 1;
   box-sizing: border-box;
@@ -170,10 +178,10 @@ html[data-display-currency]:not([data-display-currency="USD"]) .nlc-price strong
 .nlc-reward-tip::before {
   content: "";
   position: absolute;
-  bottom: 100%;
+  top: 100%;
   right: 8px;
   border: 5px solid transparent;
-  border-bottom-color: #171717;
+  border-top-color: #171717;
 }
 .nlc-cart-totals .nlc-first-subtotal{font-size:13px;color:#111}
 .nlc-cart-totals .nlc-first-subtotal strong{font-size:16px;color:#111}
