@@ -32,8 +32,7 @@ for(const file of fs.readdirSync(out,{recursive:true}).filter(f=>f.endsWith('.ht
     html=html.replace(/<link\b[^>]*href=["']\/admin-violet\.css[^"']*["'][^>]*>/gi,'');
     html=html.replace(/href="\/(admin-dashboard|operations)\.css(?:\?[^"]*)?"/g,'href="/$1.css?v=20261117b"');
     html=html.replace('</head>','<link rel="stylesheet" href="/admin-violet.css?v=20261117b">'+iconLinks+'</head>');
-    html=html.replace(/\b(src|href)="\/((?:storefront-v2|workspace-v2|reference-ui|conversion-ui|subscribe-and-save)\.(?:js|css)|(?:pure-bulk-layout|cart-reference)\.css)(?:\?[^"]*)?"/g,'$1="/$2?v=20261126-holiday-layout"');
-  fs.writeFileSync(target,html);continue;
+    fs.writeFileSync(target,html);continue;
   }
   const themeLink=html.includes('href="/brand-theme.css"')?'':'<link rel="stylesheet" href="/brand-theme.css?v=20261123-hero-labels">';
   const mobileLink=html.includes('href="/mobile-parity.css')?'':'<link rel="stylesheet" media="(max-width: 767px)" href="/mobile-parity.css?v=20261126-shop-mobile">';
@@ -80,6 +79,7 @@ for(const file of fs.readdirSync(out,{recursive:true}).filter(f=>f.endsWith('.ht
   html=html.replace(/\b(src|href)="\/(storefront-v2\.(?:js|css))(?:\?[^"]*)?"/g,'$1="/$2?v=20261126-home-polish"');
   html=html.replace(/href="\/((?:pure-bulk-layout|pure-coa|reference-ui|supplier-coas|monthly-orders|subscribe-and-save)\.css)(?:\?[^"]*)?"/g,'href="/$1?v=20261126-builder-polish"');
   html=html.replace(/src="\/((?:workspace-v2|supplier-coas|monthly-orders)\.js)(?:\?[^"]*)?"/g,'src="/$1?v=20261126-builder-polish"');
+  html=html.replace(/\b(src|href)="\/((?:storefront-v2|workspace-v2|reference-ui|conversion-ui|subscribe-and-save)\.(?:js|css)|(?:pure-bulk-layout|cart-reference)\.css)(?:\?[^"]*)?"/g,'$1="/$2?v=20261126-holiday-layout"');
   fs.writeFileSync(target,html);
   count++;
 }
