@@ -68,6 +68,12 @@
  if(network){
   $('native-billing').hidden=true;$('native-crypto').hidden=true;$('native-widget').hidden=false;$('native-widget').replaceChildren();
   $('native-form').hidden=false;
+  if(g.provider==='solana_usdc'){
+   if(!window.PureSolanaUSDC?.mount){$('native-status').textContent='The wallet payment screen could not load. Refresh your saved order.';return;}
+   $('native-status').textContent='Use native USDC on Solana. Confirm the exact amount and network fee in your wallet.';
+   widget=window.PureSolanaUSDC.mount({host:$('native-widget'),api,guest,invoice:i.id,amount:i.amount_cents,currency:i.currency,ready:g.ready&&Date.parse(i.expires_at)>Date.now(),state:data.crypto,destination:g.solana_destination});
+   return;
+  }
   if(!window.PureUSDC?.mount){$('native-status').textContent='The wallet payment screen could not load. Refresh your saved order before retrying.';return;}
   $('native-status').textContent='Pay USDC on '+network.label+' directly from your wallet. You need '+network.gas+' for gas; the exact recipient and amount are shown before signing.';
   widget=await window.PureUSDC.mount({host:$('native-widget'),auth,guest,invoice:i.id,amount:i.amount_cents,currency:i.currency,ready:g.ready&&Date.parse(i.expires_at)>Date.now(),state:data.crypto,paymentProvider:g.provider});

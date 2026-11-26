@@ -3,7 +3,7 @@
  const node=(tag,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=String(text);return e;};
  const money=(v,c='USD')=>new Intl.NumberFormat('en-US',{style:'currency',currency:c}).format(v/100);
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
- const USDC_NETWORKS={polygon_usdc:{label:'Polygon',gas:'POL'},base_usdc:{label:'Base',gas:'ETH'},ethereum_usdc:{label:'Ethereum',gas:'ETH'}};
+ const USDC_NETWORKS={polygon_usdc:{label:'Polygon',gas:'POL'},base_usdc:{label:'Base',gas:'ETH'},ethereum_usdc:{label:'Ethereum',gas:'ETH'},solana_usdc:{label:'Solana',gas:'SOL'}};
  const usdcNetwork=provider=>Object.hasOwn(USDC_NETWORKS,provider)?USDC_NETWORKS[provider]:null;
  function usdcNetworkOptions(methods,selected){
   return '<option value="">Select a network</option>'+methods.map(method=>'<option value="'+esc(method.id)+'"'+(method.id===selected?' selected':'')+'>'+esc(method.network_label||usdcNetwork(method.native_provider).label)+'</option>').join('');
@@ -343,7 +343,7 @@
      if(m.payment_url)actions.append(link('Pay securely',m.payment_url));
      else{actions.append(node('p',m.label+' · '+m.payee));const i=node('pre',m.instructions);i.style.whiteSpace='pre-wrap';actions.append(i);}
     }else if(r.status==='accepted'&&!r.cancellation_status&&!r.payable)actions.append(node('p','Payment unavailable. Contact support or cancel this unpaid order.'));
-    if(r.cancellation_status==='pending')actions.append(node('p','Cancellation requested. Do not send payment. We will finish canceling automatically once the wallet authorization expires and we confirm no payment arrived.'));
+    if(r.cancellation_status==='pending')actions.append(node('p',r.native_provider==='solana_usdc'?'Cancellation requested. Do not send payment. Contact support to review the issued Solana transaction before canceling.':'Cancellation requested. Do not send payment. We will finish canceling automatically once the wallet authorization expires and we confirm no payment arrived.'));
     if(r.cancellation_status==='review')actions.append(node('p','A crypto payment arrived after cancellation was requested. Your order is on hold. Contact support@getpurelabs.com with this order number so we can review the payment.'));
     if(r.checkout_version&&r.status==='accepted'&&r.cancellation_status!=='review'){
      const cancel=node('button',r.cancellation_status==='pending'?'Check cancellation':'Cancel order'),out=node('p');cancel.type='button';cancel.className='ap-button ap-button-secondary';out.setAttribute('role','status');out.className='dc-cancel-feedback';

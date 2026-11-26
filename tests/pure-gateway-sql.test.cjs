@@ -487,5 +487,89 @@ test('the pure_gateway card route is registered, priced and settled atomically i
     assert.deepEqual(privileges,{signed_in:false,backend:true,internal:false});
    });
   });
+
+  await t.test('Solana binds an exact finalized proof to one goods invoice and holds late payments',async()=>{
+   const solana=require('../lib/solana-usdc');
+   const gateway=require('../lib/solana-usdc-checkout');
+   const recipient=solana.createReference();
+   const config=gateway.configuration({SOLANA_USDC_RECIPIENT:recipient,SOLANA_USDC_RPC_URL:'https://primary.example.test',SOLANA_USDC_SECONDARY_RPC_URL:'https://backup.other.test'});
+   const routeId=randomUUID();
+   const originalGuards=(await db.query("select proname,pg_get_functiondef(oid) definition,proacl::text grants from pg_proc where pronamespace='commerce_internal'::regnamespace and proname in ('validate_membership_checkout','place_membership_checkout') order by proname")).rows;
+   await db.exec(read('20261126050000_solana_usdc_checkout.sql'));
+   const guards=(await db.query("select proname,pg_get_functiondef(oid) definition,proacl::text grants from pg_proc where pronamespace='commerce_internal'::regnamespace and proname in ('validate_membership_checkout','place_membership_checkout') order by proname")).rows;
+   assert.deepEqual(guards.map(row=>({...row,definition:row.definition.replaceAll(",'solana_usdc'",'')})),originalGuards);
+   assert.deepEqual((await db.query("select id from commerce_payment_methods where native_provider='solana_usdc'")).rows,[]);
+   const settings={id:routeId,version:0,provider:'solana_usdc',mode:'live',currency:'USD',sale_scope:'goods',confirmed:true,active:true,
+    account_tag:config.account_tag,solana_usdc_recipient:recipient,solana_usdc_recipient_token_account:config.recipient_token_account,
+    countries:['US'],label:'Solana USDC',payee:'Fixture merchant',approval_reference:'Disposable authorization fixture'};
+   const configure=changes=>rpc('commerce_configure_solana_usdc_gateway',[{...settings,...changes},'fixture-admin']);
+   await assert.rejects(configure({sale_scope:'both'}),/Invalid Solana USDC route/);
+   await assert.rejects(configure({solana_usdc_recipient_token_account:solana.createReference()}),/Invalid Solana USDC route/);
+   await configure();
+   async function makeSolanaOrder(){
+    const order=await make({method:routeId,products:[catalog[0]]});
+    order.request.checkout.guest=true;
+    order.earned_points=0;
+    assert.equal((await place(order)).status,'accepted');
+    return order;
+   }
+   const payer=solana.createReference();
+   const authorize=(order,overrides={})=>rpc('commerce_create_solana_usdc_intent',[randomUUID(),order.id,order.customer,config.account_tag,{
+    genesis_hash:solana.GENESIS_HASH,token:solana.TOKEN,recipient,recipient_token_account:config.recipient_token_account,payer,
+    reference:solana.createReference(),amount_units:String(order.total_cents*10000),valid_before:Math.floor(Date.now()/1000)+300,
+    unsigned_transaction:'A'.repeat(416),last_valid_block_height:500,...overrides
+   }]);
+   const note=(intent,signature,invoiceId=intent.invoice_id)=>rpc('commerce_note_solana_usdc_submission',[intent.attempt_id,invoiceId,signature,config.account_tag]);
+   const settle=(intent,evidence)=>rpc('commerce_finish_solana_usdc_payment',[intent.attempt_id,config.account_tag,evidence]);
+   const cancel=order=>rpc('commerce_request_solana_usdc_cancellation',[order.id,order.customer,'customer:'+order.customer]);
+   const evidence=intent=>({genesis_hash:solana.GENESIS_HASH,token:solana.TOKEN,recipient,recipient_token_account:intent.recipient_token_account,
+    payer:intent.payer,payer_token_account:solana.createReference(),reference:intent.reference,amount_units:String(intent.amount_units),
+    tx_signature:'2'.repeat(87),instruction_index:0,slot:420,block_hash:solana.createReference(),block_timestamp:intent.valid_after});
+
+   const order=await makeSolanaOrder();
+   await assert.rejects(authorize(order,{amount_units:'1'}),/Invalid Solana USDC authorization/);
+   const intent=await authorize(order), proof=evidence(intent);
+   assert.equal((await authorize(order)).reference,intent.reference);
+   await assert.rejects(authorize(order,{payer:solana.createReference()}),/wallet already bound/);
+   await assert.rejects(settle(intent,proof),/does not match/);
+   await assert.rejects(finish(intent.attempt_id,'solana-bypass-fixture','approved',proof.tx_signature,order.total_cents,'USD'),/bound finalized Solana proof/);
+   await assert.rejects(note(intent,proof.tx_signature,randomUUID()),/Unknown Solana authorization/);
+   const claim=(saved,order,signature)=>rpc('commerce_claim_solana_usdc_broadcast',[saved.attempt_id,order.id,order.customer,signature,config.account_tag]);
+   assert.equal((await claim(intent,order,proof.tx_signature)).state,'pending');
+   assert.equal((await claim(intent,order,proof.tx_signature)).tx_signature,proof.tx_signature);
+   await assert.rejects(claim(intent,order,'3'.repeat(87)),/already been submitted/);
+   assert.equal((await note(intent,proof.tx_signature)).status,'submitted');
+   await note(intent,'3'.repeat(87));
+   await note(intent,proof.tx_signature);
+   assert.equal((await db.query('select count(*)::int n from commerce_solana_usdc_submissions where attempt_id=$1',[intent.attempt_id])).rows[0].n,2);
+   for(const changes of [{reference:solana.createReference()},{recipient_token_account:solana.createReference()},{amount_units:'1'},
+    {block_timestamp:intent.valid_after-1},{token:solana.createReference()},{genesis_hash:solana.createReference()}])
+    await assert.rejects(settle(intent,{...proof,...changes}),/does not match/);
+   assert.equal((await settle(intent,proof)).state,'paid');
+   assert.equal((await settle(intent,proof)).replayed,true);
+   assert.equal((await db.query("select count(*)::int n from commerce_receipts where invoice_id=$1 and kind='payment'",[order.id])).rows[0].n,1);
+
+   const another=await makeSolanaOrder();
+   await assert.rejects(authorize(another,{reference:intent.reference}),/unique constraint/);
+   const other=await authorize(another), otherProof=evidence(other);
+   await note(other,proof.tx_signature);
+   await assert.rejects(settle(other,otherProof),/unique constraint/);
+   assert.equal((await cancel(another)).cancellation_status,'pending');
+   await assert.rejects(claim(other,another,'3'.repeat(87)),/no longer available for Solana transfer/);
+   await assert.rejects(authorize(another),/no longer payable/);
+   await assert.rejects(rpc('commerce_cancel_checkout',[another.id,another.customer]),/Payment in progress/);
+   const late={...otherProof,block_timestamp:other.valid_before,tx_signature:'4'.repeat(87)};
+   await note(other,late.tx_signature);
+   assert.equal((await settle(other,late)).state,'review');
+   assert.equal((await load(another.id)).cancellation_status,'review');
+   assert.deepEqual((await db.query('select id from commerce_receipts where invoice_id=$1',[another.id])).rows,[]);
+   const untouched=await makeSolanaOrder();
+   assert.equal((await cancel(untouched)).status,'void');
+   const [acl]=(await db.query(`select has_function_privilege('authenticated','public.commerce_finish_solana_usdc_payment(uuid,text,jsonb)','execute') as customer,
+    has_function_privilege('service_role','public.commerce_finish_solana_usdc_payment(uuid,text,jsonb)','execute') as backend,
+    has_table_privilege('anon','public.commerce_solana_usdc_proofs','select') as browser_proofs,
+    has_table_privilege('service_role','public.commerce_solana_usdc_proofs','insert') as direct_insert`)).rows;
+   assert.deepEqual(acl,{customer:false,backend:true,browser_proofs:false,direct_insert:false});
+  });
  }finally{await db.close();}
 });
