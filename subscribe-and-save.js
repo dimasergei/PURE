@@ -22,6 +22,17 @@
     const selection = get('selection');
     const cart = get('cart');
     const search = get('search');
+    const summary = get('summary');
+    const drawer = get('drawer');
+    const mobileReview = get('mobile-review');
+    const mobileContinue = get('mobile-continue');
+    const monthly = get('monthly');
+    const monthlyLines = root.querySelectorAll('[data-pss-monthly-line]');
+    const gift = store.product('bac-3');
+    const giftVariant = gift?.variants.find(variant => variant.size === '3 mL');
+    const giftUnitCents = Number.isFinite(giftVariant?.price) && giftVariant.price > 0
+      ? Math.round(giftVariant.price * 100)
+      : 0;
     const sizes = new Map();
     const saved = store.read(planKey, []);
     const chosen = Array.isArray(saved) ? saved.filter(item => findVariant(item?.id, item?.size)) : [];
@@ -100,32 +111,48 @@
 
     function renderReview() {
       const count = chosen.length;
-      const total = chosen.reduce((sum, item) => sum + Math.round(findVariant(item.id, item.size).price * 100), 0) / 100;
+      const monthlyPricing = useMonthlyPricing();
+      const itemsCents = chosen.reduce((sum, item) => sum + Math.round(findVariant(item.id, item.size).price * 100), 0);
+      const monthlyTotalCents = chosen.reduce((sum, item) => sum + monthlyCents(findVariant(item.id, item.size).price), 0);
+      const includedCount = monthlyPricing ? Math.floor(count / setSize) : 0;
+      const giftCents = giftUnitCents * includedCount;
+      const remaining = capacity - count;
       get('count').textContent = count + ' / ' + capacity;
       get('mobile-count').textContent = count + '/' + capacity;
       get('progress').max = capacity;
       get('progress').value = count;
-      get('subtotal').innerHTML = price(total);
-      const monthly = chosen.reduce((sum, item) => sum + monthlyCents(findVariant(item.id, item.size).price), 0) / 100;
-      get('monthly-total').innerHTML = price(monthly);
-      get('savings').innerHTML = '−' + price(total - monthly);
-      const continueLabel = count && useMonthlyPricing() ? 'Continue · ' + price(monthly) + '/mo' : 'Continue';
-      get('monthly').innerHTML = get('mobile-continue').innerHTML = continueLabel;
-      root.dataset.monthlySizeEligible = String(count <= 60);
-      cart.disabled = !count || count % setSize !== 0;
-      get('monthly').disabled = get('mobile-continue').disabled = !useMonthlyPricing() || cart.disabled;
+      get('subtotal').innerHTML = price((itemsCents + giftCents) / 100);
+      get('monthly-total').innerHTML = price(monthlyTotalCents / 100) + ' <small>/mo</small>';
+      get('savings').innerHTML = (itemsCents ? '−' : '') + price((itemsCents - monthlyTotalCents) / 100);
+      get('gift-savings').innerHTML = giftCents ? '−' + price(giftCents / 100) : 'Included';
+      get('gift-line').hidden = !includedCount;
+      for (const line of monthlyLines) line.hidden = !monthlyPricing;
+      get('timeline').hidden = !monthlyPricing;
+      const amountLabel = 'Continue · ' + price(monthlyTotalCents / 100) + '/mo';
+      const chooseLabel = count ? 'Choose ' + remaining + ' more' : 'Choose four products';
+      monthly.innerHTML = remaining ? chooseLabel : monthlyPricing ? amountLabel : 'Continue';
+      mobileContinue.innerHTML = monthly.hidden ? cart.textContent : monthly.innerHTML;
+      cart.disabled = remaining > 0;
+      monthly.disabled = !monthlyPricing || cart.disabled;
+      mobileContinue.disabled = monthly.hidden ? cart.disabled : monthly.disabled;
       const rows = chosen.map(({ id, size }, index) => {
         const product = store.product(id);
-        return `<li>
+        return `<li class="pss-selected">
           <img width="42" height="48" src="${esc(store.image(product, size))}" alt="">
-          <div><strong>${esc(product.name)}</strong><small>${esc(size)}</small></div>
+          <span class="pss-item-text"><strong>${esc(product.name)}</strong><small>${esc(size)}</small></span>
           <b class="pss-row-price">${itemPrice(id, size)}</b>
           <button type="button" class="pss-remove" data-pss-remove="${index}" aria-label="Remove ${esc(product.name)} ${esc(size)}">×</button>
         </li>`;
       }).join('');
-      const includedCount = Math.floor(count / setSize);
-      const included = includedCount ? `<li class="pss-included"><span>Reconstitution solution · 3 mL${includedCount > 1 ? ' × ' + includedCount : ''}</span><strong>Included monthly</strong></li>` : '';
-      selection.innerHTML = count ? `<ul class="pss-selection">${rows}${included}</ul>` : '<p>Choose four items to build your plan.</p>';
+      const openSlots = Array.from({ length: remaining }, (_, index) =>
+        `<li class="pss-open-slot"><button type="button" data-pss-choose aria-label="Choose a product for selection ${count + index + 1}"><span aria-hidden="true">+</span>Choose a product</button></li>`
+      ).join('');
+      const included = includedCount ? `<li class="pss-included">
+        <img width="42" height="48" src="${esc(store.image(gift, '3 mL'))}" alt="">
+        <span class="pss-item-text"><strong>Reconstitution solution</strong><small>3 mL${includedCount > 1 ? ' × ' + includedCount : ''} · Every delivery</small></span>
+        <span class="pss-gift-label">Included</span>
+      </li>` : '';
+      selection.innerHTML = `<ul class="pss-selection" aria-label="Plan selections">${rows}${openSlots}${included}</ul>`;
     }
 
     function render() {
@@ -164,7 +191,37 @@
       render();
       focusCard(id, '[data-pss-pick]');
     });
+    let focusAfterDrawer = mobileReview;
+    const focusSearch = () => {
+      if (drawer.open) {
+        focusAfterDrawer = search;
+        drawer.close();
+      } else {
+        search.focus();
+      }
+    };
+    mobileReview.addEventListener('click', event => {
+      if (typeof drawer.showModal !== 'function' || drawer.open) return;
+      event.preventDefault();
+      drawer.append(summary);
+      drawer.showModal();
+      get('close').focus();
+    });
+    get('close').addEventListener('click', () => drawer.close());
+    drawer.addEventListener('close', () => {
+      drawer.before(summary);
+      focusAfterDrawer.focus();
+      focusAfterDrawer = mobileReview;
+    });
+    const mobileViewport = window.matchMedia?.('(max-width: 800px)');
+    mobileViewport?.addEventListener?.('change', event => {
+      if (!event.matches && drawer.open) drawer.close();
+    });
     selection.addEventListener('click', event => {
+      if (event.target.closest('[data-pss-choose]')) {
+        focusSearch();
+        return;
+      }
       const remove = event.target.closest('[data-pss-remove]');
       if (!remove) return;
       chosen.splice(Number(remove.dataset.pssRemove), 1);
@@ -172,7 +229,7 @@
       status('Item removed.');
       save();
       render();
-      (selection.querySelector('.pss-remove') || get('search')).focus();
+      (selection.querySelector('.pss-remove') || selection.querySelector('[data-pss-choose]')).focus();
     });
     function orderLines() {
       const items = new Map();
@@ -184,8 +241,8 @@
       }
       return items;
     }
-    get('mobile-continue').addEventListener('click', () => get('monthly').click());
-    get('monthly').addEventListener('click', () => {
+    mobileContinue.addEventListener('click', () => (monthly.hidden ? cart : monthly).click());
+    monthly.addEventListener('click', () => {
       if (!useMonthlyPricing() || cart.disabled) return;
       try {
         sessionStorage.setItem('pure-monthly-builder', JSON.stringify([...orderLines().values()]));
@@ -213,6 +270,13 @@
       }
     });
 
+    function unavailable() {
+      monthly.hidden = true;
+      cart.hidden = false;
+      status('Monthly checkout is unavailable. You can still add these products to your cart.');
+      renderReview();
+    }
+
     renderFilters();
     render();
     if (window.fetch) fetch('/api/customer-config?repeat_orders=status')
@@ -220,10 +284,9 @@
       .then(config => {
         if (config?.available === true) {
           monthlyAvailable = true;
-          root.dataset.monthlyAvailable = 'true';
           render();
-        } else { cart.hidden = false; status('Monthly checkout is unavailable.'); }
-      }).catch(() => { cart.hidden = false; status('Monthly checkout is unavailable.'); });
+        } else unavailable();
+      }).catch(unavailable);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount, { once: true });

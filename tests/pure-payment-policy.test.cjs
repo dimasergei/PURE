@@ -41,48 +41,60 @@ test('only ready hosted Card and configured Crypto are offered; historical Strip
 test('direct crypto gives 5% of merchandise; card conversion receives no crypto discount',async()=>{
  for(const method of [card,cryptoMethod]){
   const record=await checkout.normalize({},user,body(method),catalog),quote=checkout.price(record,method,null,{points:0,credit_cents:0});
-  assert.equal(quote.subtotal_cents,6999);assert.equal(quote.shipping_cents,7495);
-  assert.equal(quote.discount_cents,method===cryptoMethod?540:200);
-  assert.equal(quote.pricing.crypto_discount_cents,method===cryptoMethod?340:0);
-  assert.equal(quote.total_cents,method===cryptoMethod?13954:14294);
+  assert.equal(quote.subtotal_cents,6999);assert.equal(quote.shipping_cents,6995);
+  assert.equal(quote.discount_cents,method===cryptoMethod?350:0);
+  assert.equal(quote.pricing.crypto_discount_cents,method===cryptoMethod?350:0);
+  assert.equal(quote.total_cents,method===cryptoMethod?13644:13994);
   assert.equal(quote.pricing.lines.reduce((total,line)=>total+line.crypto_discount_cents,0),quote.pricing.crypto_discount_cents);
  }
 });
-test('BLACKFRIDAY15 applies first, then Crypto saves 5% of the remaining merchandise; removing the coupon preserves Crypto',async()=>{
- const input={...body(cryptoMethod),coupon:'blackfriday15'},record=await checkout.normalize({},user,input,catalog);
+test('BLACKFRIDAY10 applies first, then Crypto saves 5% of the remaining merchandise; removing the coupon preserves Crypto',async()=>{
+ const input={...body(cryptoMethod),coupon:'blackfriday10'},record=await checkout.normalize({},user,input,catalog);
  const quote=checkout.price(record,cryptoMethod,null,{points:0,credit_cents:0});
- assert.equal(quote.discount_cents,1347);assert.equal(quote.pricing.coupon_discount_cents,1050);assert.equal(quote.pricing.crypto_discount_cents,297);
+ assert.equal(quote.discount_cents,1015);assert.equal(quote.pricing.coupon_discount_cents,700);assert.equal(quote.pricing.crypto_discount_cents,315);
  assert.equal(quote.pricing.crypto_discount_eligible,true);assert.equal(quote.pricing.discount_source,'coupon_crypto');
- assert.deepEqual(quote.pricing.lines.map(line=>line.coupon_discount_cents),[600,450]);
- assert.deepEqual(quote.pricing.lines.map(line=>line.crypto_discount_cents),[170,127]);
- assert.deepEqual(quote.pricing.lines.map(line=>line.discount_cents),[770,577]);
- assert.ok(quote.pricing.lines.every(line=>line.discount_bps===1925&&line.line_total_cents===line.gross_cents-line.coupon_discount_cents-line.crypto_discount_cents));
+ assert.deepEqual(quote.pricing.lines.map(line=>line.coupon_discount_cents),[400,300]);
+ assert.deepEqual(quote.pricing.lines.map(line=>line.crypto_discount_cents),[180,135]);
+ assert.deepEqual(quote.pricing.lines.map(line=>line.discount_cents),[580,435]);
+ assert.ok(quote.pricing.lines.every(line=>line.discount_bps===1450&&line.line_total_cents===line.gross_cents-line.coupon_discount_cents-line.crypto_discount_cents));
  record.request.checkout.coupon='';
  const restored=checkout.price(record,cryptoMethod,null,{points:0,credit_cents:0});
- assert.equal(restored.discount_cents,540);assert.equal(restored.pricing.discount_source,'quantity_crypto');
+ assert.equal(restored.discount_cents,350);assert.equal(restored.pricing.discount_source,'crypto');
 });
-test('the extra Crypto discount stacks to 19.25% with a 15% coupon at regular and bulk quantities; Card keeps the coupon alone',async()=>{
+test('Crypto stacks with the retail coupon at any regular quantity and preserves exclusive bulk tiers',async()=>{
  const cat=[{id:'a',name:'Compound A',variants:[{size:'5mg',price:100}]}];
  for(const method of [cryptoMethod,card])for(const qty of [1,2,5,10,25,50]){
-  const input={...body(method),bulk_order:true,coupon:'BLACKFRIDAY15',items:[{id:'a',size:'5mg',qty}]};
+  const input={...body(method),coupon:'BLACKFRIDAY10',items:[{id:'a',size:'5mg',qty}]};
   const record=await checkout.normalize({},user,input,cat),q=checkout.price(record,method,null,{points:0,credit_cents:0});
-  const gross=10000*qty,rate=qty>=10?2000:1500,base=Math.round(gross*rate/10000),crypto=method===cryptoMethod?Math.round((gross-base)*.05):0;
-  assert.equal(q.pricing.quantity_discount_cents||0,qty>=10?base:0);
-  assert.equal(q.pricing.coupon_discount_cents,qty>=10?0:base);
+  const gross=10000*qty,base=gross*.10,crypto=method===cryptoMethod?(gross-base)*.05:0;
+  assert.equal(q.pricing.quantity_discount_cents||0,0);
+  assert.equal(q.pricing.coupon_discount_cents,base);
   assert.equal(q.pricing.crypto_discount_cents,crypto);
   assert.equal(q.discount_cents,base+crypto);
-  assert.equal(q.shipping_cents,7495);assert.equal(q.tax_cents,0);
-  assert.equal(q.total_cents,10000*qty-q.discount_cents+7495);
+  assert.equal(q.shipping_cents,6995);assert.equal(q.tax_cents,0);
+  assert.equal(q.total_cents,gross-q.discount_cents+6995);
+  const bulkCoupon=await checkout.normalize({},user,{...input,bulk_order:true},cat);
+  assert.throws(()=>checkout.price(bulkCoupon,method,null,{points:0,credit_cents:0}),/cannot be combined/);
+  const bulk=await checkout.normalize({},user,{...input,bulk_order:true,coupon:''},cat);
+  if(qty<10)assert.throws(()=>checkout.price(bulk,method,null,{points:0,credit_cents:0}),/require 10 units/);
+  else{
+   const bulkQuote=checkout.price(bulk,method,null,{points:0,credit_cents:0});
+   const bulkSavings=gross*(qty>=50?.60:.50);
+   assert.equal(bulkQuote.pricing.quantity_discount_cents,bulkSavings);
+   assert.equal(bulkQuote.pricing.coupon_discount_cents,0);
+   assert.equal(bulkQuote.pricing.crypto_discount_cents,0);
+   assert.equal(bulkQuote.total_cents,gross-bulkSavings+6995);
+  }
  }
 });
 test('unauthenticated or unselected cart never receives payment discount; authenticated method preview matches final quote',async()=>{
  const input=body(cryptoMethod),preview={...input,country:input.address.country};
  for(const signed of [false,true]){
   const {response}=await request(preview,'checkout=cart',signed);
-  assert.equal(response.statusCode,200);assert.equal(response.body.discount_cents,signed?540:200);
+  assert.equal(response.statusCode,200);assert.equal(response.body.discount_cents,signed?350:0);
  }
  const {response:unselected}=await request({...preview,method_id:null},'checkout=cart',true);
- assert.equal(unselected.body.discount_cents,200);
+ assert.equal(unselected.body.discount_cents,0);
  const {response:cart}=await request(preview,'checkout=cart');
  const {response:quoted,db}=await request({...input,action:'quote'});
  assert.equal(quoted.statusCode,200);assert.deepEqual(cart.body.pricing,quoted.body.pricing);
@@ -92,7 +104,7 @@ test('unauthenticated or unselected cart never receives payment discount; authen
  assert.equal(stale.statusCode,409);
 });
 test('stacked Crypto discounts exclude delivery fees and use net merchandise for free shipping',async()=>{
- for(const [cents,coupon,shipping] of [[15788,'',1495],[15789,'',0],[18574,'BLACKFRIDAY15',1495],[18575,'BLACKFRIDAY15',0]]){
+ for(const [cents,coupon,shipping] of [[26315,'',1195],[26316,'',0],[29239,'BLACKFRIDAY10',1195],[29240,'BLACKFRIDAY10',0]]){
   const localCatalog=[{id:'a',name:'Compound A',variants:[{size:'5mg',price:cents/100}]}];
   const input={...body(cryptoMethod),coupon,items:[{id:'a',size:'5mg',qty:1}],address:{...body().address,country:'US'},delivery:{shipping:'standard',extras:['protection']}};
   const record=await checkout.normalize({},user,input,localCatalog),quote=checkout.price(record,cryptoMethod,null,{points:0,credit_cents:0});
@@ -103,14 +115,14 @@ test('stacked Crypto discounts exclude delivery fees and use net merchandise for
 test('balance-only or discount-covering redemption suppresses the automatic crypto saving; valid coupon remains usable',async()=>{
  const cat=[{id:'a',name:'Compound A',variants:[{size:'5mg',price:100}]}];
  const input={...body(cryptoMethod),items:[{id:'a',size:'5mg',qty:1}],address:{...body().address,country:'US'},delivery:{shipping:'standard',extras:[]}};
- for(const [credit,coupon,discount,total,suppressed] of [[500,'',500,10495,false],[10995,'',0,500,true],[11495,'',0,0,true],[500,'BLACKFRIDAY15',1925,9070,false],[9570,'BLACKFRIDAY15',1500,425,true],[9995,'BLACKFRIDAY15',1500,0,true]]){
+ for(const [credit,coupon,discount,total,suppressed] of [[500,'',500,10195,false],[10695,'',0,500,true],[11195,'',0,0,true],[500,'BLACKFRIDAY10',1450,9245,false],[9745,'BLACKFRIDAY10',1000,450,true],[10195,'BLACKFRIDAY10',1000,0,true]]){
   const record=await checkout.normalize({},user,{...input,credit_cents:credit,coupon},cat);
   const q=checkout.price(record,cryptoMethod,null,{points:0,credit_cents:20000});
   assert.equal(q.discount_cents,discount);assert.equal(q.total_cents,total);assert.equal(q.pricing.crypto_discount_suppressed_for_balance,suppressed);
  }
- for(const [points,discount,total,suppressed] of [[500,3850,15650,false],[16150,3000,850,true],[17000,3000,0,true]]){
-  const record=await checkout.normalize({},user,{...input,coupon:'BLACKFRIDAY15',items:[{id:'a',size:'5mg',qty:2}],points},cat);
-  const q=checkout.price(record,cryptoMethod,null,{points:20000,credit_cents:0});
+ for(const [points,discount,total,suppressed] of [[500,4350,25150,false],[25650,3000,1350,true],[27000,3000,0,true]]){
+  const record=await checkout.normalize({},user,{...input,coupon:'BLACKFRIDAY10',items:[{id:'a',size:'5mg',qty:3}],points},cat);
+  const q=checkout.price(record,cryptoMethod,null,{points:30000,credit_cents:0});
   assert.equal(q.discount_cents,discount);assert.equal(q.total_cents,total);assert.equal(q.pricing.crypto_discount_suppressed_for_balance,suppressed);
   assert.equal(q.pricing.coupon_discount_cents,3000);
  }

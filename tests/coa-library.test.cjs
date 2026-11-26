@@ -42,12 +42,17 @@ test('duplicate report ids are deduplicated and private review fields are exclud
  assert.equal(published[0].status,undefined);
 });
 test('COA page preserves branded styles, search and honest empty state',()=>{
- const html=fs.readFileSync(path.join(root,'coas.html'),'utf8');
+ const shell=fs.readFileSync(path.join(root,'operations-build.cjs'),'utf8');
+ const storefront=fs.readFileSync(path.join(root,'site-build.cjs'),'utf8');
+ const page=fs.readFileSync(path.join(root,'workspace-v2.js'),'utf8');
+ const supplier=fs.readFileSync(path.join(root,'supplier-coas.js'),'utf8');
  const js=fs.readFileSync(path.join(root,'coa-library.js'),'utf8');
- assert.match(html,/href="\/styles\.css"/);
- assert.match(html,/id="coa-search"/);
- assert.match(html,/id="coa-results"/);
- assert.match(html,/href="\/research-use-policy\.html"/);
+ assert.match(shell,/href="\/supplier-coas\.css"/);
+ assert.match(storefront,/href="\/research-use-policy\.html"/);
+ assert.match(page,/id="ap-coa-query" type="search"/);
+ assert.match(page,/id="ap-supplier-references"/);
+ assert.match(supplier,/No COA report matches these filters/);
+ assert.match(supplier,/A matching product name does not confirm the lot supplied with your order/);
  assert.match(js,/No verified certificates have been published yet/);
  assert.match(js,/publication_approved===true/);
  assert.doesNotMatch(js,/innerHTML\s*=/);

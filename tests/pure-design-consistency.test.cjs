@@ -56,13 +56,19 @@ test('rewards and credit links show balances on account overview, not separate t
  assert.match(ui,/rd-balance-pair/);
  assert.doesNotMatch(ui,/href="\/account\/points">View points/);
 });
-test('homepage branded FAQ and illustrative COA preview preserve links',()=>{
+test('homepage FAQ and featured laboratory sample preserve the real Testing destination',()=>{
  const home=views.store.home.toString(),css=read('pure-brand.css');
+ const reports=JSON.parse(read('data/supplier-coas.json')).reports;
+ const sample=reports.find(report=>report.lot.endsWith('202607-PRO-005'));
+ assert.ok(sample);
+ assert.equal(sample.scope,'supplier_reference');
+ assert.equal(sample.inventory_lot_linked,false);
  assert.match(home,/pure-faq-section/);
  assert.match(home,/pure-faq-list/);
  assert.match(home,/nl-doc-sheet/);
- assert.match(home,/ILLUSTRATIVE PREVIEW/);
- assert.doesNotMatch(home,/99%\+ purity/);
+ assert.match(home,/LAB SAMPLE/);
+ assert.ok(home.includes(sample.lab_name));
+ assert.ok(home.includes(sample.size));
  assert.match(home,/href="\/coas"/);
  assert.match(css,/\.pure-faq-list details\[open\] summary::after/);
  assert.match(css,/\.nl-doc-sheet-row/);

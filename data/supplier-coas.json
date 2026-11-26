@@ -2785,13 +2785,6 @@
         "p99-atl-37551"
       ],
       "status": "supplier_reference_available"
-    },
-    {
-      "product_id": "needles",
-      "product": "Needles 31G 5/16\"",
-      "size": "10pk",
-      "report_ids": [],
-      "status": "exact_report_needed"
     }
   ],
   "supplier_gaps": []

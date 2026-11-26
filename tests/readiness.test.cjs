@@ -11,15 +11,16 @@ test('custom referral codes normalize, reserve promotions and remain signed agai
  assert.equal(partner.customCode(' My-Lab_20 '),'MY-LAB_20');assert.equal(partner.isReferralCode('BOGO'),false);assert.equal(partner.isReferralCode('MYLAB'),true);for(const code of ['BOGO','ADMIN','ab','has spaces','a'.repeat(25)])assert.throws(()=>partner.customCode(code));
  const now=1794410000000,value=partner.cookieToken('MY-LAB_20','fixture-key',now);assert.equal(partner.readCookie('ap_ref='+value,'fixture-key',now),'MY-LAB_20');assert.equal(partner.readCookie('ap_ref='+value.replace('MY-LAB','OTHER'),'fixture-key',now),null);
 });
-test('delivery extras are opt-in, disabled services are rejected, and only standard shipping is waived',()=>{
- assert.equal(delivery.price(undefined,false).total_cents,1495);assert.equal(delivery.price(undefined,true).total_cents,0);
- assert.equal(delivery.price({shipping:'express',extras:[]},false).total_cents,3495);
+test('delivery extras are explicit, unavailable services are rejected, and free shipping applies to eligible services',()=>{
+ assert.equal(delivery.price(undefined,false).total_cents,795);assert.equal(delivery.price(undefined,true).total_cents,0);
+ assert.equal(delivery.price({shipping:'express',extras:[]},false).total_cents,2995);
  assert.equal(delivery.price({shipping:'standard',extras:['protection']},true).total_cents,500);
  assert.throws(()=>delivery.selection({shipping:'standard',extras:['priority','priority']}));
- assert.equal(delivery.price({shipping:'express',extras:['priority','protection']},true).total_cents,4994);
- assert.equal(delivery.price({shipping:'standard',extras:['priority','protection']},false,delivery.defaults,'CA').total_cents,5494);
- assert.equal(delivery.price({shipping:'standard',extras:[]},false,delivery.defaults,'DE').total_cents,5995);
- assert.equal(delivery.price({shipping:'next_day',extras:[]},false,delivery.defaults,'CA').total_cents,6995);
+ assert.equal(delivery.price({shipping:'express',extras:['priority','protection']},true).total_cents,1499);
+ assert.equal(delivery.price({shipping:'standard',extras:['priority','protection']},false,delivery.defaults,'CA').total_cents,3994);
+ assert.equal(delivery.price({shipping:'express',extras:[]},true,delivery.defaults,'CA').total_cents,4995);
+ assert.equal(delivery.price({shipping:'standard',extras:[]},false,delivery.defaults,'DE').total_cents,4995);
+ assert.equal(delivery.price({shipping:'next_day',extras:[]},true,delivery.defaults,'CA').total_cents,6495);
  assert.throws(()=>delivery.price({shipping:'next_day',extras:[]},false,delivery.defaults,'GB'),/unavailable/);
  assert.throws(()=>delivery.price({shipping:'standard',extras:[]},false,delivery.defaults,'IR'),/available/);
 });

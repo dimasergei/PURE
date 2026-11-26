@@ -14,22 +14,23 @@ function fixture({cryptoReady=false,otherMethods=[],interacReady=false,payment={
  Object.defineProperty(w,'crypto',{value:webcrypto});w.TextEncoder=TextEncoder;w.HTMLElement.prototype.scrollIntoView=()=>{};
  const cart=[{id:'compound',key:'compound:10mg',name:'Compound',size:'10mg',qty:2,price:100}],methods=[card,...(cryptoReady?[cryptoMethod]:[]),...otherMethods,...(interacReady?[interacMethod]:[])];
  w.localStorage.setItem('pp-cart',JSON.stringify(cart));
- w.localStorage.setItem('ap-bulk-draft-v2',JSON.stringify(cart));
+ w.localStorage.setItem('ap-bulk-draft-v2',JSON.stringify(cart.map(item=>({...item,qty:10}))));
  w.AltaStore={cart,catalog:[],product:()=>({}),image:()=>'/fixture.webp',normalizeLines:items=>items,read:(key,fallback)=>JSON.parse(w.localStorage.getItem(key)||JSON.stringify(fallback))};
  const data={config,delivery_options:delivery,shipping_zones:zones,methods,balances,events:[]};
  const fx={fx_ppm:fxPpm,source:'Fixture exchange rate',series:'FIXTURE',rate_date:'2026-11-18',quoted_at:'2026-11-18T12:00:00Z',expires_at:'2026-11-18T12:30:00Z',token:'fixture-fx-'+fxPpm};
  const requests=[];
- const quote=body=>{
+ const quote=(body,rate=fx)=>{
   const method=methods.find(m=>m.id===body.method_id)||{kind:'hosted_link',sale_scope:'goods'};
-  const record={kind:'goods',request:{items:body.items.map(item=>({...item,name:'Compound',unit_price_usd_cents:10000})),address:{country:body.country||body.address?.country||country},checkout:{coupon:body.coupon||'',points:body.points||0,credit_cents:body.credit_cents||0,delivery:body.delivery}}};
-  const priced=checkout.price(record,method,null,balances,null,delivery,method.id===interacMethod.id?fx:null);
-  return {...priced,quote:'fixture-verified-quote',free_shipping_threshold_cents:15000,free_shipping_remaining_cents:Math.max(0,15000-priced.subtotal_cents+priced.discount_cents)};
+  const record={kind:'goods',request:{bulk_order:body.bulk_order===true,items:body.items.map(item=>({...item,name:'Compound',unit_price_usd_cents:10000})),address:{country:body.country||body.address?.country||country},checkout:{coupon:body.coupon||'',points:body.points||0,credit_cents:body.credit_cents||0,delivery:body.delivery}}};
+  const priced=checkout.price(record,method,null,balances,null,delivery,method.id===interacMethod.id?rate:null);
+  const threshold=priced.currency==='CAD'?Math.round(config.free_shipping_threshold_cents*rate.fx_ppm/1000000):config.free_shipping_threshold_cents;
+  return {...priced,quote:'fixture-verified-quote',free_shipping_threshold_cents:threshold,free_shipping_remaining_cents:Math.max(0,threshold-priced.subtotal_cents+priced.discount_cents)};
  };
  w.fetch=async(url,options={})=>{
   const body=options.body?JSON.parse(options.body):null;if(body)requests.push({url:String(url),body});
   if(String(url).includes('native=customer'))return{ok:true,json:async()=>payment};
   if(body?.action==='place'){const result=body.method_id===interacMethod.id?{id:body.id,status:'accepted',manual_transfer:true,currency:'CAD',total_cents:quote(body).total_cents}:{id:body.id,status:'accepted'};return{ok:true,json:async()=>placeResult?placeResult(body,w,result):result};}
-  if(body)return{ok:true,json:async()=>{if(cadPreviewDelay&&body.method_id===interacMethod.id&&!body.action)await new Promise(resolve=>setTimeout(resolve,cadPreviewDelay));const current=quote(body),patch=body.action==='quote'?(typeof finalQuotePatch==='function'?finalQuotePatch(body,requests.filter(r=>r.body.action==='quote').length,current):finalQuotePatch):null;return{...current,...patch};}};
+  if(body)return{ok:true,json:async()=>{if(cadPreviewDelay&&body.method_id===interacMethod.id&&!body.action)await new Promise(resolve=>setTimeout(resolve,cadPreviewDelay));const current=quote(body),patch=body.action==='quote'?(typeof finalQuotePatch==='function'?finalQuotePatch(body,requests.filter(r=>r.body.action==='quote').length,current,quote):finalQuotePatch):null;return{...current,...patch};}};
   return{ok:true,json:async()=>data};
  };
  const auth={auth:{getSession:async()=>({data:{session:{access_token:'isolated-dom-checkout-token'}}})}};
@@ -55,7 +56,7 @@ test('regular checkout has two honest choices and one saved-order handoff; unkno
   assert.equal(f.requests.filter(r=>r.body.action==='place').length,1);
   assert.equal(f.requests.filter(r=>r.body.action==='pay').length,1);
   const pay=f.requests.find(r=>r.body.action==='pay').body;
-  assert.equal(pay.confirm_amount_cents,19500);assert.equal(pay.crypto_conversion_consent,true);
+  assert.equal(pay.confirm_amount_cents,21295);assert.equal(pay.crypto_conversion_consent,true);
   assert.equal(place.disabled,true);assert.equal(f.root.querySelector('[data-nlx-extra=protection]').disabled,true);
   assert.ok([...f.root.querySelectorAll('[data-nlx-qty]')].every(control=>control.disabled));
   assert.ok(f.root.querySelector('a[href^="/account/purchases?id="]'));
@@ -69,21 +70,21 @@ test('method and coupon changes requote correctly and preserve explicit shipping
   await f.open();change(f,f.root.querySelector('[data-nlx-extra=protection]'),false);await tick();await tick();
   await f.paymentStep();change(f,f.root.querySelector('[name=payment_choice][value=crypto]'),true);await tick();
   assert.equal(f.root.querySelector('[data-nlx-extra=protection]').checked,false);
-  assert.match(f.root.querySelector('[data-nlx-totals]').textContent,/Quantity savings.*\$10\.00.*Crypto discount \(5%\).*\$9\.50.*\$180\.50/);
+  assert.match(f.root.querySelector('[data-nlx-totals]').textContent,/Crypto discount \(5%\).*\$10\.00.*Shipping\$7\.95.*\$197\.95/);
   assert.deepEqual(f.requests.at(-1).body.delivery.extras,[]);
-  f.root.querySelector('[name=sidebar_coupon]').value='BLACKFRIDAY15';f.root.querySelector('[data-nlx-coupon]').click();await tick();
-  assert.match(f.root.querySelector('[data-nlx-totals]').textContent,/BLACKFRIDAY15 \(15%\).*\$30\.00.*Crypto discount \(5%\).*\$8\.50.*\$161\.50/);
-  assert.match(f.root.querySelector('[data-nlx-quote-note]').textContent,/coupon is applied first, then an extra 5%/);
+  f.root.querySelector('[name=sidebar_coupon]').value='BLACKFRIDAY10';f.root.querySelector('[data-nlx-coupon]').click();await tick();
+  assert.match(f.root.querySelector('[data-nlx-totals]').textContent,/Coupon savings.*\$20\.00.*Crypto discount \(5%\).*\$9\.00.*\$178\.95/);
+  assert.equal(f.requests.at(-1).body.coupon,'BLACKFRIDAY10');
   change(f,f.root.querySelector('[name=payment_choice][value=card]'),true);await tick();
-  assert.match(f.root.querySelector('[data-nlx-totals]').textContent,/BLACKFRIDAY15 \(15%\).*\$30\.00.*\$170\.00/);
+  assert.match(f.root.querySelector('[data-nlx-totals]').textContent,/Coupon savings.*\$20\.00.*\$187\.95/);
   assert.doesNotMatch(f.root.querySelector('[data-nlx-totals]').textContent,/Crypto discount/);
   change(f,f.root.querySelector('[name=payment_choice][value=crypto]'),true);await tick();
-  assert.match(f.root.querySelector('[data-nlx-totals]').textContent,/Crypto discount \(5%\).*\$8\.50.*\$161\.50/);
+  assert.match(f.root.querySelector('[data-nlx-totals]').textContent,/Crypto discount \(5%\).*\$9\.00.*\$178\.95/);
   f.root.querySelector('[data-nlx-remove-coupon]').click();await tick();
   assert.match(f.root.querySelector('[data-nlx-totals]').textContent,/Crypto discount \(5%\)/);
   change(f,f.root.querySelector('[name=payment_choice][value=card]'),true);await tick();
   assert.doesNotMatch(f.root.querySelector('[data-nlx-totals]').textContent,/Crypto discount/);
-  assert.match(f.root.querySelector('[data-nlx-totals]').textContent,/Quantity savings.*\$10\.00.*\$190\.00/);
+  assert.match(f.root.querySelector('[data-nlx-totals]').textContent,/Subtotal\$200\.00.*Shipping\$7\.95.*\$207\.95/);
   assert.equal(f.root.querySelector('[data-nlx-extra=protection]').checked,false);
  }finally{f.dom.window.close();}
 });
@@ -109,7 +110,7 @@ test('Crypto checkout preserves its discounted order and opens the wallet screen
   const placed=f.requests.find(r=>r.body.action==='place').body;
   assert.equal(placed.method_id,cryptoMethod.id);assert.equal(placed.delivery.extras[0],'protection');
   assert.equal(f.requests.filter(r=>r.body.action==='pay').length,0,'Only the wallet page can request an explicit transfer');
-  const route=await f.w.DirectCheckout.openHostedPayment(f.auth,placed.id,19500,'USD',cryptoMethod);
+  const route=await f.w.DirectCheckout.openHostedPayment(f.auth,placed.id,20295,'USD',cryptoMethod);
   assert.equal(route.url,'/pay.html?invoice='+placed.id);
  }finally{f.dom.window.close();}
 });
@@ -195,15 +196,15 @@ test('wallet preference uses hosted Card, removes crypto discount and never bypa
   assert.match(f.root.querySelector('[data-nlx-place]').textContent,/CONTINUE TO GOOGLE PAY/);
   assert.equal(f.root.querySelector('[data-nlx-place]').disabled,true);
   change(f,f.root.querySelector('[name=payment_choice][value=crypto]'),true);await tick();
-  f.root.querySelector('[name=sidebar_coupon]').value='BLACKFRIDAY15';f.root.querySelector('[data-nlx-coupon]').click();await tick();
+  f.root.querySelector('[name=sidebar_coupon]').value='BLACKFRIDAY10';f.root.querySelector('[data-nlx-coupon]').click();await tick();
   assert.match(f.root.querySelector('[data-nlx-totals]').textContent,/Crypto discount/);
   f.root.querySelector('[data-nlx-wallet=apple]').click();await tick();
   assert.equal(f.root.querySelector('[name=payment_choice][value=card]').checked,true);
   assert.doesNotMatch(f.root.querySelector('[data-nlx-totals]').textContent,/Crypto discount/);
-  assert.match(f.root.querySelector('[data-nlx-totals]').textContent,/BLACKFRIDAY15 \(15%\).*\$30\.00.*\$175\.00/);
+  assert.match(f.root.querySelector('[data-nlx-totals]').textContent,/Coupon savings.*\$20\.00.*\$192\.95/);
   assert.equal(f.requests.at(-1).body.method_id,card.id);
   assert.match(f.root.querySelector('[data-nlx-place]').textContent,/CONTINUE TO APPLE PAY/);
-  assert.match(f.root.querySelector('[data-nlx-wallet-note]').textContent,/secure provider checkout if offered/);
+  assert.match(f.root.querySelector('[name=payment_choice][value=card]').closest('.nlx-payment-choice').textContent,/digital wallets depend on your country, device and provider eligibility/);
   assert.equal(f.requests.filter(r=>['quote','place','pay'].includes(r.body.action)).length,0,'Choosing a wallet neither saves an order nor requests payment');
   assert.equal(f.root.querySelector('[data-nlx-place]').disabled,true);
   consent(f);f.root.querySelector('[data-nlx-place]').click();await tick();await tick();
@@ -219,26 +220,26 @@ test('Canadian Interac checkout shows actual CAD totals, preserves coupons, and 
   await f.open();await f.paymentStep();
   assert.deepEqual([...f.root.querySelectorAll('[name=payment_choice]')].map(input=>input.value),['card','crypto','interac']);
   change(f,f.root.querySelector('[name=payment_choice][value=interac]'),true);await tick();
-  f.root.querySelector('[name=sidebar_coupon]').value='BLACKFRIDAY15';f.root.querySelector('[data-nlx-coupon]').click();await tick();
+  f.root.querySelector('[name=sidebar_coupon]').value='BLACKFRIDAY10';f.root.querySelector('[data-nlx-coupon]').click();await tick();
   assert.match(f.root.querySelector('.nlx-summary-head h2').textContent,/CAD/);
-  assert.match(f.root.querySelector('[data-nlx-totals]').textContent,/BLACKFRIDAY15 \(15%\).*CA\$42\.00.*Total \(CAD\)/);
+  assert.match(f.root.querySelector('[data-nlx-totals]').textContent,/Coupon savings.*CA\$28\.00.*Total \(CAD\)/);
   assert.doesNotMatch(f.root.querySelector('[data-nlx-totals]').textContent,/Crypto discount|USD/);
   assert.equal(f.root.querySelector('.nlx-product-price').textContent,'CA$280.00');assert.equal(f.root.querySelector('.nlx-protection-price').textContent,'CA$7.00');
-  assert.equal(f.root.querySelector('[data-nlx-confirm-shipping-price]').textContent,'CA$0.00');
+  assert.equal(f.root.querySelector('[data-nlx-confirm-shipping-price]').textContent,'CA$20.93');
   assert.match(f.root.querySelector('[data-nlx-points]').textContent,/USD points and store credit cannot be applied/);
   assert.equal(f.root.querySelector('[data-nlx-points] a'),null);
-  assert.match(f.root.querySelector('[data-nlx-payment-currency]').textContent,/order total is shown in CAD/);
+  assert.match(f.root.querySelector('[name=payment_choice][value=interac]').closest('.nlx-payment-choice').textContent,/final CAD total is shown before you place the order/);
   assert.doesNotMatch(f.root.textContent,/invoice|request a|USD estimate/i);
-  const place=f.root.querySelector('[data-nlx-place]');assert.equal(place.textContent,'PLACE ORDER · CA$245.00');assert.equal(place.disabled,true);
+  const place=f.root.querySelector('[data-nlx-place]');assert.equal(place.textContent,'PLACE ORDER · CA$279.93');assert.equal(place.disabled,true);
   consent(f);place.click();place.click();await tick();await tick();
   const placed=f.requests.find(r=>r.body.action==='place').body;
-  assert.equal(placed.method_id,interacMethod.id);assert.equal(placed.points,0);assert.equal(placed.credit_cents,0);assert.equal(placed.coupon,'BLACKFRIDAY15');
+  assert.equal(placed.method_id,interacMethod.id);assert.equal(placed.points,0);assert.equal(placed.credit_cents,0);assert.equal(placed.coupon,'BLACKFRIDAY10');
   assert.equal(placed.fx_quote,f.fx.token);assert.equal(f.requests.find(r=>r.body.action==='quote').body.fx_quote,f.fx.token);
   assert.equal(f.requests.filter(r=>r.body.action==='place').length,1);
   assert.equal(f.requests.filter(r=>r.url.includes('native=customer')||r.body.action==='pay').length,0);
   assert.match(f.root.textContent,/order is saved.*Interac payment details/);
   assert.equal(f.w.localStorage.getItem('pp-cart'),null);
-  await assert.rejects(f.w.DirectCheckout.openHostedPayment(f.auth,placed.id,30093,'CAD',interacMethod),/Interac receiving details in My Orders/);
+  await assert.rejects(f.w.DirectCheckout.openHostedPayment(f.auth,placed.id,27993,'CAD',interacMethod),/Interac receiving details in My Orders/);
   assert.equal(f.requests.filter(r=>r.body.action==='pay').length,0);
  }finally{f.dom.window.close();}
 });
@@ -267,7 +268,7 @@ test('a preferred Interac route converts cross-sells, all shipping choices, prio
   assert.equal(f.root.querySelector('[data-nlx-cross-sell-price]').textContent,'CA$42.00');
   f.root.querySelector('[data-nlx-next]').click();await tick();
   const prices=[...f.root.querySelectorAll('.nlx-delivery-price')].map(target=>target.textContent);
-  assert.deepEqual(prices,['FREE','CA$83.93','CA$97.93']);assert.equal(f.root.querySelector('[data-nlx-extra-price=priority]').textContent,'CA$13.99');
+  assert.deepEqual(prices,['CA$20.93','CA$34.93','CA$69.93','CA$90.93']);assert.equal(f.root.querySelector('[data-nlx-extra-price=priority]').textContent,'CA$13.99');
   assert.equal(f.root.querySelector('.nlx-protection-price').textContent,'CA$7.00');
   change(f,f.root.querySelector('[data-nlx-extra=priority]'),true);await new Promise(resolve=>setTimeout(resolve,230));
   assert.match(f.root.querySelector('[data-nlx-totals]').textContent,/Priority ProcessingCA\$13\.99/);
@@ -299,7 +300,7 @@ test('Interac is destination-restricted and switching back restores Card or Cryp
    await f.open();await f.paymentStep();
    const input=f.root.querySelector('[name=payment_choice][value=interac]');assert.equal(input.disabled,country!=='CA');
    if(country==='CA'){
-    change(f,input,true);await tick();assert.equal(f.root.querySelector('[data-nlx-place]').textContent,'PLACE ORDER · CA$273.00');
+    change(f,input,true);await tick();assert.equal(f.root.querySelector('[data-nlx-place]').textContent,'PLACE ORDER · CA$307.93');
     change(f,f.root.querySelector('[name=payment_choice][value=crypto]'),true);await tick();
     assert.match(f.root.querySelector('[data-nlx-totals]').textContent,/Crypto discount \(5%\)/);
     assert.match(f.root.querySelector('[data-nlx-place]').textContent,/CONTINUE TO CRYPTO PAYMENT/);
@@ -347,9 +348,10 @@ test('balance and bulk checkout disable USD redemptions and show every amount in
    assert.equal(form.elements.points.value,'0');assert.equal(form.elements.credit.value,'0');assert.equal(form.elements.points.disabled,true);assert.equal(form.elements.credit.disabled,true);
    assert.match(form.querySelector('[data-dc-balance-note]').textContent,/held in USD and cannot be applied/);
    await new Promise(resolve=>setTimeout(resolve,230));
-   assert.match(f.root.querySelector('.dc-totals').textContent,/Total \(CAD\).*CA\$273\.00/);
-   assert.equal(f.root.querySelector('[data-dc-line-price]').textContent,'CA$280.00');
-   assert.equal(form.querySelector('[data-rd-shipping-price=standard]').textContent,'FREE');
+   const expected=mode==='bulk'?'CA$707.00':'CA$307.93';
+   assert.ok(f.root.querySelector('.dc-totals').textContent.includes('Total (CAD)'+expected));
+   assert.equal(f.root.querySelector('[data-dc-line-price]').textContent,mode==='bulk'?'CA$1,400.00 CA$700.00':'CA$280.00');
+   assert.equal(form.querySelector('[data-rd-shipping-price=standard]').textContent,mode==='bulk'?'FREE':'CA$34.93');
    assert.equal(form.querySelector('[data-rd-extra-price=protection]').textContent,'CA$7.00');
    assert.match(f.root.querySelector('.dc-totals').textContent,/USD points and store credit cannot be applied/);
    form.elements.research_use.checked=true;form.elements.consent.checked=true;await form.onsubmit({preventDefault(){}});
@@ -358,7 +360,7 @@ test('balance and bulk checkout disable USD redemptions and show every amount in
    assert.equal(form.elements.points.disabled,true);
    const request=f.requests.find(r=>r.body.action==='quote').body;assert.equal(request.points,0);assert.equal(request.credit_cents,0);assert.equal(request.bulk_order,mode==='bulk');
    assert.ok(f.requests.filter(r=>r.url.includes('checkout=cart')).every(r=>r.body.bulk_order===(mode==='bulk')));
-   const place=f.root.querySelector('.dc-summary button');assert.equal(place.textContent,'Place order · CA$273.00');await place.onclick();
+   const place=f.root.querySelector('.dc-summary button');assert.equal(place.textContent,'Place order · '+expected);await place.onclick();
    assert.equal(request.fx_quote,f.fx.token);assert.equal(f.requests.find(r=>r.body.action==='place').body.fx_quote,f.fx.token);
    assert.equal(f.requests.filter(r=>r.body.action==='place').length,1);assert.equal(f.requests.find(r=>r.body.action==='place').body.bulk_order,mode==='bulk');assert.equal(f.requests.filter(r=>r.body.action==='pay').length,0);
    assert.equal(f.w.localStorage.getItem(mode==='bulk'?'ap-bulk-draft-v2':'pp-cart'),null);
@@ -379,13 +381,13 @@ test('bulk placement renews an expired rate at the same CAD total before saving 
 
 test('bulk placement with an expired changed rate shows the new CAD price and requires another explicit click',async()=>{
  const f=fixture({country:'CA',interacReady:true,query:'?bulk=1&method='+interacMethod.id,
-  finalQuotePatch:(_body,n,q)=>n>=2?{fx_quote:'new-rate-token',quote:'new-rate-hash',subtotal_cents:30000,shipping_cents:6743,total_cents:36743,pricing:{...q.pricing,fx_ppm:1500000,lines:q.pricing.lines.map(line=>({...line,unit_price_cents:15000,gross_cents:30000,line_total_cents:30000})),delivery:{...q.pricing.delivery,shipping_cents:5993,extras:[{id:'protection',label:'Shipping Protection',amount_cents:750}],extras_cents:750,total_cents:6743}}}:{},
-  placeResult:(_body,_w,result)=>({...result,total_cents:36743})});
+  finalQuotePatch:(body,n,q,quote)=>n>=2?{...quote(body,{...q.pricing.fx,fx_ppm:1500000,token:'new-rate-token'}),quote:'new-rate-hash'}:{},
+  placeResult:(_body,_w,result)=>({...result,total_cents:75750})});
  try{
   await f.open();const form=f.root.querySelector('form');form.querySelector('[data-step-next="0"]').click();form.querySelector('[data-step-next="1"]').click();form.elements.research_use.checked=true;form.elements.consent.checked=true;
   await form.onsubmit({preventDefault(){}});const place=f.root.querySelector('.dc-summary button');await place.onclick();
   assert.equal(f.requests.filter(r=>r.body.action==='place').length,0);assert.match(f.root.textContent,/CAD price has updated/);
-  assert.equal(place.textContent,'Place order · CA$367.43');assert.equal(place.disabled,false);assert.equal(f.root.querySelector('[data-dc-line-price]').textContent,'CA$300.00');
+  assert.equal(place.textContent,'Place order · CA$757.50');assert.equal(place.disabled,false);assert.equal(f.root.querySelector('[data-dc-line-price]').textContent,'CA$1,500.00 CA$750.00');
   assert.equal(f.root.querySelector('a[href^="/account/purchases?id="]'),null);assert.notEqual(f.w.localStorage.getItem('ap-bulk-draft-v2'),null);
   await place.onclick();assert.equal(f.requests.filter(r=>r.body.action==='place').length,1);assert.equal(f.requests.find(r=>r.body.action==='place').body.fx_quote,'new-rate-token');assert.equal(f.w.localStorage.getItem('ap-bulk-draft-v2'),null);
  }finally{f.dom.window.close();}

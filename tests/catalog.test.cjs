@@ -23,11 +23,14 @@ test("USD list prices end in .95 and rise with strength within each product", ()
 });
 
 test("current products and variants remain unique and valid", () => {
-  assert.equal(catalog.length, 46);
-  assert.equal(catalog.reduce((sum, product) => sum + product.variants.length, 0), 85);
-  assert.equal(new Set(catalog.map((product) => product.id)).size, 46);
+  const ids = catalog.map((product) => product.id);
+  assert.equal(catalog.length, 45);
+  assert.equal(catalog.reduce((sum, product) => sum + product.variants.length, 0), 84);
+  assert.equal(new Set(ids).size, ids.length);
+  assert.ok(!ids.includes("needles"), "The withdrawn supplies SKU is not selectable.");
   for (const product of catalog) {
     assert.ok(groups.includes(product.group), product.name);
+    assert.equal(new Set(product.variants.map(variant => variant.size)).size, product.variants.length, product.id);
     for (const variant of product.variants) {
       assert.ok(variant.size);
       assert.ok(Number.isFinite(variant.price) && variant.price > 0);
@@ -72,7 +75,8 @@ test("category cards keep the PURE neutral palette and variants resolve to their
       }
       assert.match(image, /^assets\/products-pure\/[^/]+\.svg$/);
       const svg = readFileSync(resolve(__dirname, "..", image), "utf8");
-      assert.equal(svg.match(/<title[^>]*>([\s\S]*?)<\/title>/)?.[1], `PURE ${product.name} ${variant.size}`);
+      const assetName = product.name === "Reconstitution Solution" ? "Recon Solution" : product.name;
+      assert.equal(svg.match(/<title[^>]*>([\s\S]*?)<\/title>/)?.[1], `PURE ${assetName} ${variant.size}`);
       assert.match(svg, /viewBox="0 0 1081 1455"/);
       const photo = svg.match(/(?:xlink:)?href="data:image\/webp;base64,([^"]+)"/)?.[1];
       assert.ok(photo, `${product.id} ${variant.size} contains its photographic vial frame`);

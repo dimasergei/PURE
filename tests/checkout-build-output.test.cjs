@@ -7,13 +7,14 @@ const { spawnSync } = require('node:child_process');
 
 const projectRoot = path.resolve(__dirname, '..');
 
-test('storefront build emits the Stripe checkout interceptor and preserves Live-mode server validation', () => {
+test('legacy checkout installer injects the Stripe interceptor and preserves Live-mode server validation', () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'altapure-checkout-build-'));
 
   try {
-    for (const file of ['index.html', 'products.js', 'install-store.cjs', 'checkout.js']) {
+    for (const file of ['products.js', 'install-store.cjs', 'checkout.js']) {
       fs.copyFileSync(path.join(projectRoot, file), path.join(tempRoot, file));
     }
+    fs.writeFileSync(path.join(tempRoot, 'index.html'), '<!doctype html><body><form id="checkout-form"><button type="submit">Place request <span>→</span></button></form></body>');
 
     const build = spawnSync(process.execPath, ['install-store.cjs'], {
       cwd: tempRoot,

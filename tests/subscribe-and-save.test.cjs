@@ -19,6 +19,7 @@ function openPlanner(path = '', draft = [], initialCart = [], monthly = false) {
     variants: [{ size: '5mg', price: 10 + index }, { size: '10mg', price: 20 + index }]
   }));
   catalog.push({ id: 'supply', name: 'Supply', category: 'supplies', variants: [{ size: '10mL', price: 50 }] });
+  catalog.push({ id: 'bac-3', name: 'Reconstitution Solution', category: 'supplies', variants: [{ size: '3 mL', price: 14.95 }] });
   const cart = [...initialCart];
   const added = [];
   const esc = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
@@ -27,7 +28,7 @@ function openPlanner(path = '', draft = [], initialCart = [], monthly = false) {
     catalog, cart, esc,
     addItems: items => added.push(...items),
     product: id => catalog.find(product => product.id === id),
-    image: () => '/assets/fixture.webp',
+    image: product => product?.id === 'bac-3' ? '/assets/fixture-gift.webp' : '/assets/fixture.webp',
     priceMarkup: amount => '$' + amount.toFixed(2),
     read: key => JSON.parse(window.localStorage.getItem(key)),
     write: (key, value) => {
@@ -55,7 +56,10 @@ test('preselects the exact linked strength and preserves the locally saved plan'
   try {
     assert.equal(view.get('h1').textContent, 'SUBSCRIBE & SAVE.');
     assert.ok(view.get('aside [data-pss-selection]'));
+    assert.equal(view.get('.pss-benefits').querySelectorAll('li').length, 4);
+    assert.equal(view.get('.pss-benefits a').getAttribute('href'), '/coas');
     assert.equal(view.get('[data-pss-count]').textContent, '2 / 4');
+    assert.equal(view.get('[data-pss-selection]').querySelectorAll('[data-pss-choose]').length, 2);
     assert.equal(view.card('alpha').querySelector('[data-pss-size][aria-pressed="true"]').dataset.pssSize, '10mg');
     assert.equal(view.card('supply'), null);
     assert.deepEqual(view.saved(), [{ id: 'beta', size: '5mg' }, { id: 'alpha', size: '10mg' }]);
@@ -144,16 +148,37 @@ test('only offers monthly checkout for eligible complete sets after a positive r
     await new Promise(resolve => setTimeout(resolve, 0));
     assert.equal(view.get('[data-pss-monthly]').disabled, false);
     assert.equal(view.get('aside [data-pss-monthly]').textContent,'Continue · $26.40/mo');
-    assert.equal(view.get('[data-pss-monthly-total]').textContent, '$26.40');
-    assert.equal(view.get('[data-pss-subtotal]').textContent, '$44.00');
+    assert.equal(view.get('[data-pss-monthly-total]').textContent, '$26.40 /mo');
+    assert.equal(view.get('[data-pss-subtotal]').textContent, '$58.95');
+    assert.equal(view.get('[data-pss-savings]').textContent, '−$17.60');
+    assert.equal(view.get('[data-pss-gift-savings]').textContent, '−$14.95');
+    assert.match(view.get('.pss-totals').textContent, /Express shipping U\.S\. & CanadaFree/);
+    assert.deepEqual(Array.from(view.get('[data-pss-timeline]').children, node => node.textContent), ['Month 1', 'Month 2', 'Month 3']);
     assert.equal(view.card('beta').querySelector('.pss-card-price').textContent, '$6.60 /mo');
     assert.doesNotMatch(view.card('beta').textContent, /\$11\.00/);
     const row = view.get('[data-pss-remove="0"]').closest('li');
     assert.equal(row.querySelector('.pss-row-price').textContent, '$6.60');
     assert.doesNotMatch(row.textContent, /\$11\.00/);
     assert.equal(view.get('[data-pss-selection]').querySelectorAll('.pss-included').length, 1);
+    assert.equal(view.get('.pss-included img').getAttribute('src'), '/assets/fixture-gift.webp');
     view.get('[data-pss-remove="3"]').click();
     assert.equal(view.get('[data-pss-monthly]').disabled, true);
+    assert.equal(view.get('[data-pss-monthly]').textContent, 'Choose 1 more');
+    assert.equal(view.get('[data-pss-gift-line]').hidden, true);
+  } finally { view.close(); }
+});
+
+test('mobile plan review exposes the shared summary and returns to product selection', () => {
+  const view = openPlanner();
+  try {
+    view.get('[data-pss-mobile-review]').click();
+    assert.equal(view.get('[data-pss-drawer]').open, true);
+    assert.ok(view.get('[data-pss-drawer] #pss-plan'));
+    assert.equal(view.get('[data-pss-selection]').querySelectorAll('[data-pss-choose]').length, 4);
+    view.get('[data-pss-choose]').click();
+    assert.equal(view.get('[data-pss-drawer]').open, false);
+    assert.equal(view.get('[data-pss-drawer] #pss-plan'), null);
+    assert.equal(view.window.document.activeElement, view.get('[data-pss-search]'));
   } finally { view.close(); }
 });
 

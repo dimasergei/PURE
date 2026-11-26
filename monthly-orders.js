@@ -21,6 +21,25 @@
     return data;
   };
   const line = (name,value,cls='') => '<div class="line '+cls+'"><span>'+esc(name)+'</span><span>'+esc(value)+'</span></div>';
+  const deliveryTimeline = '<ol class="monthly-deliveries" aria-label="Delivery schedule">'+
+    [1,2,3].map(month=>'<li><span aria-hidden="true">'+month+'</span> Month '+month+'</li>').join('')+'</ol>';
+  function orderItem(item, included = false) {
+    const store = window.AltaStore;
+    const product = store?.product(item.id === 'gift-bac-3' ? 'bac-3' : item.id);
+    const image = product ? store.image(product,item.size) : '';
+    return '<li class="monthly-summary-item'+(included?' monthly-included':'')+'">'+
+      (image?'<img src="'+esc(image)+'" width="52" height="52" alt="">':'<span class="monthly-item-placeholder" aria-hidden="true"></span>')+
+      '<div><strong>'+esc(item.name)+'</strong><small>'+esc(item.size)+' · Qty '+esc(item.qty)+'</small>'+
+      (included?'<small>With every delivery</small>':'')+'</div>'+
+      '<strong class="monthly-item-amount">'+esc(included?'Included':money(item.line_total_cents))+'</strong></li>';
+  }
+  function bundledValue(items) {
+    const recon = window.AltaStore?.product('bac-3');
+    return items.reduce((sum,item)=>{
+      const variant = item.id === 'gift-bac-3' && recon?.variants.find(entry=>entry.size===item.size);
+      return sum+(variant&&Number.isFinite(variant.price)?Math.round(variant.price*100)*item.qty:0);
+    },0);
+  }
   const threeDeliveryPlan = plan => Boolean(overview.builder_terms && plan?.snapshot.terms === overview.builder_terms);
   const hasUnfinishedTerm = () => overview.plans.some(plan => threeDeliveryPlan(plan) && !plan.can_restart);
   const methodLabel=m=>[m.label,m.network_label].filter(Boolean).join(' · ');
@@ -116,19 +135,23 @@
         nameField('City','city',a.city,'address-level2')+nameField('State / province','region',a.region,'address-level1')+nameField('ZIP / postal code','postal_code',a.postal_code,'postal-code');
     };
     root.innerHTML='<a class="monthly-back" href="'+(kind==='builder'?'/subscribe-and-save':'/shop')+'">← Back to '+(kind==='builder'?'Subscribe &amp; Save':'products')+'</a>'+
-      '<form class="monthly-checkout-layout"><div class="monthly-details"><section class="plan-card"><h2>Your monthly plan</h2><div data-plan></div></section>'+
+      '<form class="monthly-checkout-layout"><div class="monthly-details">'+
+      (threeDelivery?'<section class="plan-card"><h2>Your delivery schedule</h2>'+deliveryTimeline+
+        '<p>Pay each monthly invoice separately. Change future selections after the first shipment. You can start another plan after delivery three.</p></section>':'')+
       (plan?'<fieldset><legend>Edit selections</legend><div data-edit-items></div>'+(kind==='builder'?'<button type="button" class="secondary" data-add>Add an item</button>':'')+'</fieldset>':'')+
       '<fieldset><legend>Billing details</legend>'+ (user?'<p>'+esc(user.email)+'</p>':'')+'<div class="fields">'+fields('',billing,previous.billing?.name||previous.name||billing.name||user?.user_metadata?.full_name)+'</div></fieldset>'+
       '<label class="check"><input type="checkbox" name="separate" '+(previous.billing?'checked':'')+'>Ship to a different address</label>'+
       '<fieldset data-shipping><legend>Delivery address</legend><div class="fields">'+fields('ship_',address,previous.name||address.name)+'</div></fieldset></div>'+
-      '<aside class="monthly-checkout-summary"><h2>Order summary</h2>'+
-      (Number.isSafeInteger(overview.protection_cents)?'<label class="check protection"><input name="protection" type="checkbox" '+((plan?plan.snapshot.pricing.delivery.selection.extras.includes('protection'):true)?'checked':'')+'>Shipment protection · '+esc(money(overview.protection_cents))+' <a href="/shipping-protection.html" target="_blank" rel="noopener">Details</a></label>':'')+
-      '<div data-review role="status"></div><fieldset><legend>Payment</legend><div data-methods></div></fieldset>'+
-      (threeDelivery?'<p class="muted">Three monthly deliveries, paid one invoice at a time. Change future selections after your first delivery ships. Your plan ends after delivery three. Any applicable payment fees are shown before you pay. <a href="/commercial-terms.html#subscribe-and-save-plan" target="_blank" rel="noopener">Plan terms</a></p>':'')+
+      '<aside class="monthly-checkout-summary" aria-labelledby="monthly-summary-title"><div class="monthly-summary-heading"><h2 id="monthly-summary-title">Order summary</h2><span data-item-count></span></div>'+
+      (Number.isSafeInteger(overview.protection_cents)?'<div class="protection"><label class="check"><input name="protection" type="checkbox" '+((plan?plan.snapshot.pricing.delivery.selection.extras.includes('protection'):true)?'checked':'')+'><span>Shipment protection</span><strong>'+esc(money(overview.protection_cents))+'</strong></label><a href="/shipping-protection.html" target="_blank" rel="noopener">Coverage details</a></div>':'')+
+      '<ul class="monthly-summary-items" data-plan aria-label="Products in your monthly delivery"></ul>'+
+      '<div class="monthly-summary-pricing" data-review role="status"></div><fieldset><legend>Payment</legend><div data-methods></div></fieldset>'+
+      (threeDelivery?'<p class="monthly-legal">Three monthly deliveries, paid one invoice at a time. Change future selections after your first delivery ships. The plan ends at delivery three. Any applicable fees are shown before payment. <a href="/commercial-terms.html#subscribe-and-save-plan" target="_blank" rel="noopener">Plan terms</a></p>':'')+
       '<label class="check"><input type="checkbox" data-agree required>'+(
         threeDelivery?'I agree to the three-delivery plan and its monthly invoices.':'I agree to receive a monthly invoice until I cancel.')+'</label>'+
       '<label class="check"><input type="checkbox" data-use required>I confirm laboratory research use and accept the <a href="/commercial-terms.html" target="_blank" rel="noopener">checkout terms</a>.</label>'+
-      (user?'<button type="submit" data-confirm disabled>'+esc(plan?'Save changes':'Start my monthly plan')+'</button>':link('/account/login?returnTo='+encodeURIComponent(location.pathname+location.search),'Sign in to start my plan'))+'</aside></form>';
+      (user?'<button type="submit" data-confirm disabled>'+esc(plan?'Save changes':'Start my monthly plan')+'</button>':link('/account/login?returnTo='+encodeURIComponent(location.pathname+location.search),'Sign in to start my plan'))+
+      '<p class="monthly-legal monthly-privacy">See how PURE handles your checkout information in the <a href="/privacy-policy.html" target="_blank" rel="noopener">privacy policy</a>.</p></aside></form>';
     const form=root.querySelector('form'), review=form.querySelector('[data-review]'), confirm=form.querySelector('[data-confirm]');
     const shipping=form.querySelector('[data-shipping]');
     const supplied=(data,prefix)=>Object.fromEntries(['line1','line2','city','region','postal_code','country'].map(n=>[n,data.get(prefix+n)]));
@@ -146,11 +169,16 @@
         const q=await api({action:'preview',kind,items,country:destination(),protection:!!form.elements.protection?.checked},true);
         if(current!==revision)return;
         const p=q.pricing;
-        form.querySelector('[data-plan]').innerHTML=p.lines.map(x=>line(x.qty+' × '+x.name+' · '+x.size,money(x.line_total_cents))).join('')+
-          p.bundled_items.map(x=>line(x.qty+' × '+x.name+' · '+x.size,'Included')).join('')+line('Every month',money(p.subtotal_cents-p.discount_cents),'total');
-        review.innerHTML=line('Retail subtotal',money(p.subtotal_cents))+line('Monthly savings','−'+money(p.discount_cents))+
+        const giftValue = bundledValue(p.bundled_items);
+        const count = p.lines.reduce((sum,item)=>sum+item.qty,0);
+        form.querySelector('[data-item-count]').textContent=count===1?'1 item':count+' items';
+        form.querySelector('[data-plan]').innerHTML=p.lines.map(item=>orderItem(item)).join('')+
+          p.bundled_items.map(item=>orderItem(item,true)).join('');
+        review.innerHTML=line('Retail value',money(p.subtotal_cents+giftValue))+
+          line(kind==='builder'?'Subscribe & Save (40%)':'Monthly savings','−'+money(p.discount_cents))+
+          (giftValue?line('Included 3 mL solution','−'+money(giftValue)):'')+
           line(p.delivery.selection.shipping==='express'?'Express shipping':'Economy shipping',p.delivery.shipping_cents?money(p.delivery.shipping_cents):'Free')+
-          (p.delivery.extras_cents?line('Shipment protection',money(p.delivery.extras_cents)):'')+line('Total (USD)',money(q.total_cents),'total');
+          (p.delivery.extras_cents?line('Shipment protection',money(p.delivery.extras_cents)):'')+line('Per month (USD)',money(q.total_cents),'total');
         displayed=q.total_cents;if(confirm)confirm.disabled=!methods.length;
       }catch(e){if(revision===current)review.textContent=e.message;}
     }

@@ -29,18 +29,22 @@ test('Subscribe & Save checkout discloses the three-delivery term and displays t
   const dom = new JSDOM(html, {url:'https://getpurelabs.com/subscribe-and-save/checkout',runScripts:'outside-only'});
   const w = dom.window;
   const preview = {
-    total_cents: 2400,
+    total_cents: 2900,
     pricing: {
-      lines: [{qty:4,name:'Fixture',size:'S',line_total_cents:2400}],
-      bundled_items: [],
+      lines: [{id:'item',qty:4,name:'Fixture',size:'S',line_total_cents:2400}],
+      bundled_items: [{id:'gift-bac-3',qty:1,name:'Reconstitution Solution',size:'3 mL',line_total_cents:0}],
       subtotal_cents: 4000,
       discount_cents: 1600,
-      delivery: {shipping_cents:0,selection:{shipping:'express'}}
+      delivery: {shipping_cents:0,extras_cents:500,selection:{shipping:'express'}}
     }
   };
   try {
     w.sessionStorage.setItem('pure-monthly-builder', JSON.stringify([{id:'item',size:'S',qty:4}]));
     w.supabase = {createClient:() => ({auth:{getSession:async () => ({data:{session:null}})}})};
+    w.AltaStore = {
+      product:id => ({id,variants:id==='bac-3'?[{size:'3 mL',price:14.95}]:[]}),
+      image:item => '/fixtures/'+item.id+'.webp'
+    };
     w.fetch = async (url, options) => {
       let result;
       if (url.endsWith('config')) result = {supabaseUrl:'https://fixture.supabase.co',anonKey:'test'};
@@ -48,6 +52,7 @@ test('Subscribe & Save checkout discloses the three-delivery term and displays t
       else result = {
         plans: [],
         builder_terms: 'pure-monthly-invoice-v2',
+        protection_cents: 500,
         methods: [{id:'mid',currency:'USD',countries:['US','CA'],label:'Card'}],
         catalog: [{id:'item',name:'Fixture',category:'injectables',variants:[{size:'S'},{size:'L'}]}]
       };
@@ -56,11 +61,26 @@ test('Subscribe & Save checkout discloses the three-delivery term and displays t
     await w.eval(src);
     const plan = w.document.querySelector('[data-plan]');
     const checkout = w.document.querySelector('.monthly-checkout-summary');
-    assert.match(plan.textContent, /4 × Fixture · S\$24\.00/);
+    assert.equal(checkout.querySelector('[data-plan]'),plan);
+    assert.equal(checkout.querySelector('[data-item-count]').textContent,'4 items');
+    const selected = plan.querySelector('.monthly-summary-item');
+    assert.equal(selected.querySelector('img').getAttribute('src'),'/fixtures/item.webp');
+    assert.equal(selected.querySelector('small').textContent,'S · Qty 4');
+    assert.equal(selected.querySelector('.monthly-item-amount').textContent,'$24.00');
+    assert.equal(plan.querySelector('.monthly-included img').getAttribute('src'),'/fixtures/bac-3.webp');
+    assert.match(plan.querySelector('.monthly-included').textContent,/With every deliveryIncluded/);
     assert.equal(plan.querySelector('select'), null);
+    assert.equal(w.document.querySelectorAll('.monthly-deliveries li').length,3);
+    assert.equal(checkout.querySelector('[name=protection]').checked,true);
     assert.match(checkout.textContent, /Three monthly deliveries, paid one invoice at a time/);
     assert.match(checkout.textContent, /Change future selections after your first delivery ships/);
-    assert.match(checkout.textContent, /Express shippingFree/);
+    const review = checkout.querySelector('[data-review]').textContent;
+    assert.match(review, /Retail value\$54\.95/);
+    assert.match(review, /Subscribe & Save \(40%\)−\$16\.00/);
+    assert.match(review, /Included 3 mL solution−\$14\.95/);
+    assert.match(review, /Express shippingFree/);
+    assert.match(review, /Shipment protection\$5\.00/);
+    assert.match(review, /Per month \(USD\)\$29\.00/);
     assert.match(checkout.querySelector('[data-agree]').parentElement.textContent, /three-delivery plan/);
   } finally {
     w.close();

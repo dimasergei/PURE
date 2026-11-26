@@ -1,23 +1,62 @@
 'use strict';
-const test=require('node:test');
-const assert=require('node:assert/strict');
-const fs=require('node:fs');
-const path=require('node:path');
-const root=path.resolve(__dirname,'..');
-test('bulk preview has no checkout, supplier order or payment endpoint',()=>{
- const js=fs.readFileSync(path.join(root,'bulk-preview.js'),'utf8');
- const html=fs.readFileSync(path.join(root,'bulk-orders.html'),'utf8');
- assert.match(html,/No orders can be placed here/);
- assert.match(html,/No bulk discounts, taxes, shipping, duties or payment fees/);
- assert.match(html,/href="\/styles\.css"/);
- assert.match(js,/Number\.isSafeInteger/);
- assert.match(js,/worksheet\.set/);
- assert.doesNotMatch(js,/\bfetch\s*\(/);
- assert.doesNotMatch(js,/location\.assign|window\.open|innerHTML\s*=/);
- assert.doesNotMatch(html,/action="\/api\/checkout"|checkout\.stripe\.com/);
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const {readFileSync} = require('node:fs');
+const {JSDOM} = require('jsdom');
+const {workspace} = require('../reference-ui-functions.cjs');
+const read = file => readFileSync(file, 'utf8');
+
+test('the retired worksheet still validates quantities without requesting an order or payment', () => {
+  const js = read('bulk-preview.js');
+  assert.match(js, /Number\.isSafeInteger/);
+  assert.match(js, /worksheet\.set/);
+  assert.doesNotMatch(js, /\bfetch\s*\(|location\.assign|window\.open|innerHTML\s*=/);
 });
-test('existing storefront includes bulk worksheet link without changing cart',()=>{
- const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
- assert.match(html,/href="\/bulk-orders\.html"/);
- assert.match(html,/id="cart-dialog"/);
+
+test('bulk quantities stay in a separate draft and checkout requires ten units per compound', async () => {
+  const dom = new JSDOM(read('storefront-v2.html'), {url:'https://getpurelabs.com/bulk-orders',runScripts:'outside-only'});
+  const {window} = dom;
+  const {document} = window;
+  const bytes = JSON.stringify([{id:'ghk-cu',size:'50mg',qty:2}]);
+  const requests = [];
+  try {
+    window.localStorage.setItem('ap-age-verified','true');
+    window.localStorage.setItem('pp-cart',bytes);
+    window.matchMedia = () => ({matches:false});
+    window.HTMLElement.prototype.scrollIntoView = () => {};
+    window.HTMLDialogElement.prototype.showModal = function(){this.open = true;};
+    window.HTMLDialogElement.prototype.close = function(){this.open = false;};
+    window.fetch = async (url, options) => {
+      requests.push([String(url),options?.method || 'GET']);
+      return {ok:true,json:async () => []};
+    };
+    const scripts = ['products.js','product-images.js','quantity-pricing.js','storefront-v2.js'].map(read);
+    scripts.push(read('workspace-v2.js').replace(' window.AltaWorkspace=',
+      '\n bulkPage = ' + workspace.bulkPage.toString() + ';\n window.AltaWorkspace='));
+    window.eval(scripts.join('\n'));
+    document.dispatchEvent(new window.Event('DOMContentLoaded'));
+    await new Promise(resolve => setTimeout(resolve,0));
+    assert.ok(document.querySelector('#ap-nav a[href="/bulk-orders"]'));
+    assert.ok(document.querySelector('#ap-cart-dialog'));
+    const savedCart = window.localStorage.getItem('pp-cart');
+    const checkout = () => document.querySelector('[data-action="bulk-checkout"]');
+    const input = document.querySelector('[data-bulk-id="bpc-157"]');
+    const setQuantity = value => {
+      input.value = value;
+      input.dispatchEvent(new window.Event('input',{bubbles:true}));
+    };
+    assert.equal(checkout().disabled,true);
+    setQuantity('9');
+    assert.equal(checkout().disabled,true);
+    setQuantity('10');
+    assert.equal(checkout().disabled,false);
+    assert.match(document.querySelector('#ap-bulk-summary').textContent,/50% off/);
+    assert.deepEqual(JSON.parse(window.localStorage.getItem('ap-bulk-draft-v2')),[
+      {id:'bpc-157',size:input.dataset.bulkSize,qty:10}
+    ]);
+    assert.equal(window.localStorage.getItem('pp-cart'),savedCart);
+    assert.ok(requests.every(([,method]) => method === 'GET'));
+  } finally {
+    window.close();
+  }
 });

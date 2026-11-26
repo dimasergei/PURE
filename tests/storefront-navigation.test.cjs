@@ -1,21 +1,34 @@
-const test = require("node:test");
-const assert = require("node:assert/strict");
-const { readFileSync } = require("node:fs");
-const { resolve } = require("node:path");
+'use strict';
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const {readFileSync} = require('node:fs');
+const {JSDOM} = require('jsdom');
+const read = file => readFileSync(file, 'utf8');
+const home = require('../reference-ui-functions.cjs').store.home.toString();
 
-const html = readFileSync(resolve(__dirname, "../index.html"), "utf8");
-const css = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
-
-test("primary navigation exposes FAQ and targets the real FAQ section", () => {
-  const nav = html.match(/<nav class="top-links"[^>]*>[\s\S]*?<\/nav>/);
-  assert.ok(nav, "primary navigation exists");
-  assert.match(nav[0], /<a href="#faq-section">FAQ<\/a>/);
-  assert.doesNotMatch(nav[0], /href="#faq"|>Help<\/a>/);
-  assert.match(html, /<section class="faq-section" id="faq-section">/);
+test('desktop and mobile navigation expose FAQ and target the live homepage section', () => {
+  const source = read('site-build.cjs');
+  const desktop = source.match(/<header class="ap-header[^"]*">[\s\S]*?<\/header>/)?.[0];
+  const mobile = source.match(/<dialog id="ap-mobile-menu"[\s\S]*?<\/dialog>/)?.[0];
+  assert.ok(desktop && mobile);
+  const dom = new JSDOM(desktop + mobile);
+  try {
+    const {document} = dom.window;
+    for (const menu of ['#ap-nav','#ap-mobile-menu']) {
+      const nav = document.querySelector(menu);
+      assert.ok(nav,menu);
+      const faq = nav.querySelector('a[href="/#faq"]');
+      assert.equal(faq?.textContent,'FAQ');
+    }
+    assert.match(home,/<section [^>]*class="[^"]*pure-faq-section" id="faq">/);
+  } finally {
+    dom.window.close();
+  }
 });
 
-test("bottom FAQ call-to-action remains centered in source styling", () => {
-  assert.match(html, /class="faq-cta faq-cta-centered"/);
-  assert.match(css, /\.faq-cta-centered\s*\{\s*text-align:\s*center;/);
-  assert.match(css, /\.faq-cta-centered \.pill\s*\{\s*margin-inline:\s*auto;/);
+test('the FAQ contact action stays prominent and its mobile introduction is centered', () => {
+  const css = read('pure-brand.css');
+  assert.match(home,/class="pure-faq-cta" href="\/contact">CONTACT US/);
+  assert.match(css,/\.pure-faq-cta\{[^}]*justify-content:center/);
+  assert.match(css,/\.pure-faq-intro\s*\{[^}]*text-align:\s*center/);
 });

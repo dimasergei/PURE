@@ -3,6 +3,8 @@ const {test}=require('node:test'),assert=require('node:assert/strict'),fs=requir
 const path=require('path');
 const base=path.join(__dirname,'..');
 const delivery=require('../config/delivery-options.json'),config=require('../config/checkout.json'),zones=require('../config/shipping-zones.json');
+const {price:deliveryPrice}=require('../lib/delivery-options');
+const threshold=config.free_shipping_threshold_cents;
 const billingData={terms:{conversion:require('../config/conversion.json')},balances:{points:0,credit_cents:0},delivery_options:delivery,shipping_zones:zones,
  config,methods:[{id:'11111111-1111-4111-8111-111111111111',kind:'hosted_link',native_provider:'rampex',rampex_provider:'hosted',countries:['US','CA'],label:'Card'}],nmi:null};
 const user={id:'22222222-2222-4222-8222-222222222222',email:'buyer@example.test',user_metadata:{full_name:'Sample Researcher',alta_profile:{shipping:{name:'Sample Researcher',line1:'123 Research Lane',city:'Miami',region:'FL',postal_code:'33101',country:'US',phone:'305-555-0157'}}}};
@@ -34,13 +36,9 @@ function fixture(ready=false,seedUnselected=false){
   }
   const body=JSON.parse(opt.body);requests.push(body);
   const items=(w.AltaStore.cart||[]),subtotal=items.reduce((n,x)=>x.qty*10000+n,0);
-  const shipping=zones[body.country]||zones.OTHER;
-  const chosen=body.delivery;
-  const charges=(chosen.extras||[]).map(x=>({id:x,label:delivery.find(d=>d.id===x)?.label,amount_cents:delivery.find(d=>d.id===x)?.price_cents}));
-  const shippingCents=body.country==='US'&&chosen.shipping==='standard'&&subtotal>=15000?0:shipping[chosen.shipping];
-  const total=subtotal+shippingCents+charges.reduce((n,x)=>n+x.amount_cents,0);
-  const q={subtotal_cents:subtotal,discount_cents:0,shipping_cents:shippingCents+charges.reduce((n,x)=>n+x.amount_cents,0),
-   total_cents:total,currency:'USD',earned_points:0,free_shipping_threshold_cents:15000,free_shipping_remaining_cents:Math.max(0,15000-subtotal),pricing:{delivery:{shipping_cents:shippingCents,extras:charges}}};
+  const quote=deliveryPrice(body.delivery,subtotal>=threshold,delivery,body.country);
+  const q={subtotal_cents:subtotal,discount_cents:0,shipping_cents:quote.total_cents,
+   total_cents:subtotal+quote.total_cents,currency:'USD',earned_points:0,free_shipping_threshold_cents:threshold,free_shipping_remaining_cents:Math.max(0,threshold-subtotal),pricing:{delivery:quote}};
   quotes.push(q);
   return{ok:true,json:async()=>q};
  };
@@ -64,7 +62,7 @@ test('three-step checkout shows preselected US protection, editable order summar
   assert.equal(countries.value,'US');
   assert.ok([...countries.options].some(x=>x.value==='CA'));
   assert.ok([...countries.options].some(x=>x.value==='GB'));
-  assert.equal(f.quotes.at(-1).total_cents,20500);
+  assert.equal(f.quotes.at(-1).total_cents,21295);
   assert.match(f.root.textContent,/Country \/ Region/);
  }finally{f.dom.window.close();}
 });
@@ -76,20 +74,20 @@ test('Canadian delivery offers next-day service and keeps protection selected wh
   country.value='CA';country.dispatchEvent(new f.w.Event('change',{bubbles:true}));
   await new Promise(r=>setTimeout(r,290));
   assert.equal(f.root.querySelector('[data-nlx-extra="protection"]').checked,true,'Protection remains selected for Canadian destinations');
-  assert.equal(f.quotes.at(-1).total_cents,24495);
+  assert.equal(f.quotes.at(-1).total_cents,21995);
   f.root.querySelector('[data-nlx-next]').click();await wait();
   assert.match(f.root.textContent,/Delivery speed/);
   const nextDay=f.root.querySelector('input[name=delivery_speed][value=next_day]');
   assert.equal(nextDay.disabled,false);
   nextDay.checked=true;nextDay.dispatchEvent(new f.w.Event('change',{bubbles:true}));
   await new Promise(r=>setTimeout(r,260));
-  assert.equal(f.quotes.at(-1).total_cents,27495);
+  assert.equal(f.quotes.at(-1).total_cents,26995);
   assert.equal(f.requests.at(-1).delivery.shipping,'next_day');
-  assert.match(f.root.textContent,/after dispatch.*carrier coverage.*customs clearance/s);
+  assert.match(nextDay.closest('label').textContent,/Next business day after dispatch/i);
   f.root.querySelector('[data-nlx-extra=priority]').checked=true;
   f.root.querySelector('[data-nlx-extra=priority]').dispatchEvent(new f.w.Event('change',{bubbles:true}));
   await new Promise(r=>setTimeout(r,260));
-  assert.equal(f.quotes.at(-1).total_cents,28494);
+  assert.equal(f.quotes.at(-1).total_cents,27994);
   assert.match(f.root.textContent,/Priority Processing/);
   f.root.querySelector('[data-nlx-next]').click();await wait();
   assert.match(f.root.textContent,/Choose how to pay/);
@@ -107,7 +105,7 @@ test('protected line is added/removed from server quote and cart quantities upda
   const protection=f.root.querySelector('[data-nlx-extra=protection]');
   protection.checked=false;protection.dispatchEvent(new f.w.Event('change',{bubbles:true}));
   await new Promise(r=>setTimeout(r,280));
-  assert.equal(f.quotes.at(-1).total_cents,20000);
+  assert.equal(f.quotes.at(-1).total_cents,20795);
   f.root.querySelector('[data-nlx-qty="1"]').click();await new Promise(r=>setTimeout(r,280));
   assert.equal(f.w.AltaStore.cart[0].qty,3);
   assert.equal(f.quotes.at(-1).total_cents,30000);
@@ -150,10 +148,10 @@ test('an existing explicit protection opt-out stays unchecked on checkout entry 
   const box=f.root.querySelector('[data-nlx-extra="protection"]');
   assert.ok(box,'Shipping Protection must be available for eligible US checkout');
   assert.equal(box.checked,false,'A previous checkout opt-out must remain unchecked');
-  assert.equal(f.quotes.at(-1).total_cents,20000);
+  assert.equal(f.quotes.at(-1).total_cents,20795);
   box.checked=true;box.dispatchEvent(new f.w.Event('change',{bubbles:true}));
   await new Promise(resolve=>setTimeout(resolve,250));
   assert.equal(f.root.querySelector('[data-nlx-extra="protection"]').checked,true);
-  assert.equal(f.quotes.at(-1).total_cents,20500);
+  assert.equal(f.quotes.at(-1).total_cents,21295);
  }finally{f.dom.window.close();}
 });
