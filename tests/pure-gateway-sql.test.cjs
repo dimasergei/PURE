@@ -14,7 +14,7 @@ const cardTestMigration='20261125223346_one_use_card_test_coupon.sql';
 const reversalMigration='20261126011403_verified_pure_gateway_reversals.sql';
 const guestMigration='20261126013508_guest_checkout.sql';
 const guestPaymentsMigration='20261126024818_guest_interac_and_crypto.sql';
-const directUsdcNetworksMigration='20261126040000_direct_usdc_networks.sql';
+const directUsdcNetworksMigration='20261126032739_direct_usdc_networks.sql';
 const tag=gw.configuration({PURE_GATEWAY_URL:'https://pay.example.test'}).account_tag;
 const catalog=[
  {id:'fixture-a',name:'Fixture A',category:'injectables',variants:[{size:'5mg',price:99.99}]},

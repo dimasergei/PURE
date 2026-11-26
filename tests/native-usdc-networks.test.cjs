@@ -28,6 +28,36 @@ function settings(route){
  };
 }
 
+test('Base recovers a payment after buyer leaves with sub-second blocks and twenty minutes of finality lag',async()=>{
+ const route=routes[0],env=settings(route),config=native.configuration(env,route.provider);
+ const {db,state}=database(route,config),user={id:state.invoice.customer_id};
+ const origin=60000000,now=Math.floor(Date.now()/1000),lag=1300;
+ const paymentHeight=origin+5*(lag+1790),queries=[];
+ const {chain,fetchImpl}=rpcFixture(route,(result,{method,params})=>{
+  if(method==='eth_getBlockByNumber'&&params[0]!=='finalized'){
+   const height=Number(BigInt(params[0]));
+   if(height===paymentHeight)return chain.canonical;
+   return {number:hex(height),hash:previousHash,timestamp:hex(now-lag+Math.floor((height-origin)/5)),transactions:[]};
+  }
+  if(method==='eth_getLogs'){
+   const [from,to]=[params[0].fromBlock,params[0].toBlock].map(x=>Number(BigInt(x)));
+   queries.push({from,to});
+   assert.ok(to-from<1000);
+   return paymentHeight>=from&&paymentHeight<=to?result:[];
+  }
+  return result;
+ });
+ chain.final={...chain.final,number:hex(origin),timestamp:hex(now-lag)};
+ const created=await native.start(db,state.invoice,state.account,config,{attempt_id:randomUUID(),wallet_address:payer.address,confirm_amount_cents:950,confirm_currency:'USD',consent:true},user,env,fetchImpl);
+ assert.ok(state.intent.valid_after>=now-60);
+ chain.canonical={...chain.canonical,number:hex(paymentHeight),timestamp:hex(now+1790)};
+ chain.final={...chain.final,number:hex(origin+5*(lag+1820)),timestamp:hex(now+1820)};
+ await transfer(chain,created.authorization);
+ assert.equal((await native.confirm(db,state.invoice,state.account,config,{attempt_id:created.intent.attempt_id},user,env,fetchImpl,{dispatch:false})).state,'paid');
+ assert.ok(queries[0].from>origin+6000);
+ assert.ok(queries.at(-1).to<origin+5*(lag+1801));
+});
+
 function database(route,config){
  const state={
   intent:null,calls:[],
