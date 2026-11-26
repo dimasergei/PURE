@@ -23,6 +23,11 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
   assert.equal(link.textContent,'25% off the second unit on eligible pairs');
   assert.equal(d.querySelector('[data-pure-home-campaign]'),null,'no duplicate hero message');
   if(route.includes('/product/')){
+   const reports=d.querySelector('.nl-document-link');
+   const reportUrl=new URL(reports.href);
+   assert.equal(reportUrl.pathname,'/coas');
+   assert.equal(reportUrl.searchParams.get('product'),route.split('?')[0].split('/').at(-1));
+   assert.equal(reportUrl.searchParams.get('size'),'10mg');
    const timer=d.querySelector('[data-campaign-product]');
    assert.equal(timer.hidden,!route.includes('bpc-157'));
    if(!timer.hidden)assert.match(timer.textContent,/25% off the second unit/);
@@ -167,6 +172,24 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
   dom.window.close();
  }
  for(const route of ['/contact','/partner-program','/coas','/rewards','/track-order']){const{dom,d}=await setup(route);assert.ok(d.querySelector('h1'),route);if(route==='/rewards'||route==='/track-order'){assert.ok(d.querySelector('#ap-main a[href="'+(route==='/rewards'?'/account#rewards-and-credit':'/account/purchases')+'"]'),route+' points to the signed-in account page');}else assert.ok(d.querySelector('#ap-main').textContent.trim().length>150,route);dom.window.close();}
+ {
+  const {dom,d}=await setup('/track-order'),main=d.querySelector('#ap-main');
+  const vercel=require('../vercel.json');
+  assert.equal(vercel.rewrites.find(rule=>rule.source==='/track-order')?.destination,'/track-order.html');
+  assert.equal(vercel.redirects.some(rule=>rule.source==='/track-order'),false);
+  assert.match(main.textContent,/shipment email/);
+  assert.match(main.textContent,/browser you used at checkout/);
+  assert.match(main.textContent,/order number and checkout email/);
+  assert.equal(main.querySelector('a[href="/contact"]').textContent,'contact support');
+  assert.equal(main.querySelector('form'),null);
+  dom.window.close();
+  const fallback=new JSDOM(read('public-build/track-order.html'));
+  assert.ok(fallback.window.document.querySelector('#ap-main a[href="/contact"]'));
+  fallback.window.close();
+  const help=await setup('/contact');
+  assert.ok(help.d.querySelector('#ap-main a[href="/track-order"]'));
+  help.dom.window.close();
+ }
  // COAs and Partner Program use PURE's original dark hero and shared bold uppercase display typography.
  {
   const html=read('public-build/index.html'),stylesheet=read('public-build/pure-coa.css');

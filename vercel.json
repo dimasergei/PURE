@@ -67,6 +67,10 @@
       "destination": "/contact.html"
     },
     {
+      "source": "/track-order",
+      "destination": "/track-order.html"
+    },
+    {
       "source": "/partner-program",
       "destination": "/partner-program.html"
     },
@@ -130,11 +134,6 @@
     {
       "source": "/research-builder",
       "destination": "/memberships",
-      "permanent": false
-    },
-    {
-      "source": "/track-order",
-      "destination": "/account/purchases",
       "permanent": false
     },
     {

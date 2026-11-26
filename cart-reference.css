@@ -27,6 +27,7 @@
 .nlc-cart-checkout{flex:none;overflow:visible;margin-top:auto;padding:7px 14px 10px;border-top:1px solid #e5e5e5;background:#fff;box-shadow:0 -8px 20px #0000000c}
 .nlc-coupon{border-top:1px solid #e5e5e5;padding-top:3px}
 .nlc-coupon summary{font-size:12px;font-weight:800;padding:5px 0;cursor:pointer}
+.nlc-partner-sign-in{margin:0;font-size:13px;font-weight:700}.nlc-partner-sign-in a{display:inline-block;padding-block:7px;text-decoration:underline}
 .nlc-coupon>div{display:flex;gap:8px;padding:4px 0}
 .nlc-coupon input{min-width:0;flex:1;height:36px;border:1px solid #d4d4d4;border-radius:24px;padding:10px 14px;font-size:12px}
 .nlc-coupon button{border:1px solid #d4d4d4;border-radius:22px;background:#fff;padding:0 17px;font-size:11px;font-weight:800}

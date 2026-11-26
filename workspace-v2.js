@@ -86,7 +86,10 @@
    '/coas':coaPage,
    '/contact':contactPage,'/partner-program':partnerPage,
    '/about':pageFallback('About PURE','Research compounds and product documentation for laboratory teams.','/shop','Explore the catalog'),
-   '/track-order':pageFallback('Track your order','Sign in to view order status and available tracking information.','/account/purchases','View my orders')
+   '/track-order':()=>`<div class="pure-simple-page">${heading('PURE','Track your order','Check your PURE shipment email for carrier and tracking details after dispatch.')}
+    <section class="ap-container ap-section"><a class="ap-button ap-button-secondary" href="/account/purchases">Sign in to view account orders →</a>
+    <h2>Guest orders</h2><p>Keep your PURE order email for the order number. If a payment is still due, open the link in the pending order email in the browser you used at checkout.</p>
+    <p>If you can’t find the email or need help with an order, <a href="/contact">contact support</a> with your order number and checkout email.</p></section></div>`
   };
   if(path==='/bulk-orders'&&!initialized){
    initialized=true;

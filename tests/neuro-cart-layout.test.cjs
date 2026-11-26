@@ -5,7 +5,7 @@ const wait=()=>new Promise(resolve=>setTimeout(resolve,25));
 function fixture(authorized=false,country='US'){
  const dom=new JSDOM('<div id="cart"><p>Old cart</p></div>',{url:'https://altapurelabs.com/shop',runScripts:'outside-only'}),w=dom.window,requests=[];
  let cart=[{id:'compound',key:'compound:5mg',name:'Research compound',size:'5mg',qty:2,price:50}];
- const catalog=[{id:'compound',name:'Research compound',variants:[{size:'5mg',price:50}]},{id:'extra',name:'Research add-on',variants:[{size:'10mg',price:20}]}];
+ const catalog=[{id:'compound',category:'injectables',name:'Research compound',variants:[{size:'5mg',price:50}]},{id:'bac-3',category:'supplies',name:'Reconstitution Solution',variants:[{size:'3 mL',price:14.95}]}];
  w.AltaStore={get cart(){return cart},catalog,product:id=>catalog.find(p=>p.id===id),image:()=>'/fixture.webp'};
  w.AltaCartNmi={open(){}};w.localStorage.setItem('ap-shipping-country',country);
  w.fetch=async(url,options={})=>{
@@ -22,15 +22,15 @@ test('cart has editable rows, coupon, protection and wallet shortcuts to reviewe
  const f=fixture();try{
   await f.w.AltaCartNmi.offer(f.cart);await wait();
   assert.match(f.cart.textContent,/Research compound/);
-  assert.match(f.cart.textContent,/RECOMMENDED ADD-ONS/);
-  assert.ok(f.cart.querySelector('[data-action="add"][data-id="extra"]'));
+  assert.match(f.cart.textContent,/Optional add-on/);
+  assert.ok(f.cart.querySelector('[data-action="add"][data-id="bac-3"]'));
   assert.ok(f.cart.querySelector('[data-action="cart-quantity"]'));
   assert.ok(f.cart.querySelector('[name=nlc_coupon]'));
   assert.equal(f.cart.querySelector('[name=nlc_protection]'),null,'No shipping protection checkbox or removal action');
   assert.ok(f.cart.querySelector('.nlc-protection-static'),'Shipping protection must appear as a fixed line item');
   assert.doesNotMatch(f.cart.textContent,/OR PAY INSTANTLY/);
   assert.equal(f.cart.querySelector('.nlc-express').hidden,false);
-  assert.ok(f.cart.querySelector('[data-nlc-estimate]').textContent.includes('–'));
+  assert.match(f.cart.querySelector('[data-nlc-cart-totals]').textContent,/Domestic shipping estimate/);
   assert.equal(f.cart.querySelector('[data-nlc-wallet-note]'),null);
   assert.match(f.cart.textContent,/Shipping Protection/);
   assert.match(f.cart.textContent,/Proceed to Checkout/);

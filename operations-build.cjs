@@ -46,10 +46,14 @@ const routes={
  '/about':['About PURE','Learn about the connected PURE laboratory research workspace.'],
  '/contact':['Contact PURE','Submit a documented inquiry for support, product documentation or an existing order.'],
  '/partner-program':['Partner Program','Explore PURE’s referral program for laboratory research organizations, review commission and payout terms, and join through your account.'],
- '/track-order':['Track Your Order','Sign in to see your order and assigned carrier tracking.']
+ '/track-order':['Track Your Order','Check your shipment email or sign in to view tracking for an account order.']
 };
 fs.writeFileSync(path.join(out,'index.html'),page(shell,'/','PURE | Cutting Edge Purity','Research compounds, product documentation, and straightforward ordering for laboratories and research teams.'));
-for(const [url,[title,description]] of Object.entries(routes)){const body='<section class="ap-container ap-page-intro"><h1>'+esc(title)+'</h1><p>'+esc(description)+'</p><a href="/shop">Explore the catalog</a></section>';fs.writeFileSync(path.join(out,url.slice(1)+'.html'),page(shell,url,title+' | PURE',description,body));}
+for(const [url,[title,description]] of Object.entries(routes)){
+ const links=url==='/track-order'?'<a href="/account/purchases">Sign in to view account orders</a><p>For help with a guest order, <a href="/contact">contact support</a> with your order number and checkout email.</p>':'<a href="/shop">Explore the catalog</a>';
+ const body='<section class="ap-container ap-page-intro"><h1>'+esc(title)+'</h1><p>'+esc(description)+'</p>'+links+'</section>';
+ fs.writeFileSync(path.join(out,url.slice(1)+'.html'),page(shell,url,title+' | PURE',description,body));
+}
 fs.mkdirSync(path.join(out,'product'),{recursive:true});
 for(const p of catalog){const sizes=p.variants.map(v=>esc(v.size)).join(', '),url='/product/'+p.id;const main='<section class="ap-container ap-page-intro"><p>'+esc(p.group)+'</p><h1>'+esc(p.name)+'</h1><p>'+esc(p.blurb)+'</p><p>Listed sizes: '+sizes+'.</p><p>For controlled laboratory research only. Review the product and select your quantity to order.</p><a href="/coas?product='+encodeURIComponent(p.id)+'">Product documentation</a></section>';fs.writeFileSync(path.join(out,'product',p.id+'.html'),page(shell,url,p.name+' | PURE',p.blurb+' Sizes: '+p.variants.map(v=>v.size).join(', ')+'.',main,{'@context':'https://schema.org','@type':'Product',name:p.name,description:p.blurb,sku:p.id,brand:{'@type':'Brand',name:'PURE'},url:base+url}));}
 const urls=['/',...Object.keys(routes).filter(url=>!['/research-checkout','/research-builder'].includes(url)),...catalog.map(p=>'/product/'+p.id)];
