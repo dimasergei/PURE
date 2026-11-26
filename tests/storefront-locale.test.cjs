@@ -55,20 +55,20 @@ function assertDocumentIntact(env){
  assert.ok(env.w.document.querySelector('h1'),'page content must survive the html display-currency attribute');
 }
 
-test('generated storefront and account shells expose accessible Automatic/manual selectors in desktop and mobile More',()=>{
+test('generated storefront and account shells expose accessible Automatic/manual selectors in the desktop header and mobile tools',()=>{
  for(const name of ['index.html','account.html']){
   const dom=new JSDOM(shells.get(name));
   try{
    const d=dom.window.document,select=d.getElementById('currency-select');
-   assert.ok(select.closest('#ap-more-menu'));assert.equal(d.querySelectorAll('#currency-select').length,1);
+   assert.ok(select.closest('.ap-header-actions .pure-currency-picker'));assert.equal(d.querySelectorAll('#currency-select').length,1);
    assert.equal(d.querySelector('label[for="currency-select"]').textContent,'Display currency');
    assert.deepEqual([...select.options].map(option=>option.value),['auto',...supported]);
    const status=d.getElementById(select.getAttribute('aria-describedby'));
    assert.equal(status.getAttribute('role'),'status');assert.equal(status.getAttribute('aria-live'),'polite');
    const mobile=d.getElementById('mobile-currency-select');
-   assert.ok(mobile.closest('dialog:not([open]) details'));
+   assert.ok(mobile.closest('dialog:not([open]) .ap-mobile-menu-currency'));
    assert.deepEqual([...mobile.options].map(option=>option.value),['auto',...supported]);
-   assert.equal(d.querySelectorAll('#ap-more-menu [data-currency-status]').length,1);
+   assert.equal(d.querySelectorAll('.ap-header-actions [data-currency-status]').length,1);
    assert.equal(d.querySelectorAll('#ap-mobile-menu [data-currency-status]').length,1);
    assert.ok(d.querySelector('link[href="/pure-currency.css"]'));assert.equal(d.getElementById('currency-status').dataset.displayCurrency,'note');
    assert.doesNotMatch(select.textContent,/[\u{1F1E6}-\u{1F1FF}]/u,'currencies use readable names, not flag-only labels');
@@ -211,11 +211,12 @@ test('currency changes preserve inputs, focus, saved cart state, and full docume
  }finally{env.dom.window.close();}
 });
 
-test('manual currency selection in More preserves the open disclosure and keyboard focus',async()=>{
+test('compact native selector updates both price labels and preserves keyboard focus',async()=>{
  const env=await initialized({html:shells.get('index.html'),navigation:true});
  try{
-  const {w}=env,select=w.document.getElementById('currency-select'),panel=w.document.getElementById('ap-more-menu');select.focus();assert.equal(panel.hidden,false);
-  select.value='GBP';select.dispatchEvent(new w.Event('change',{bubbles:true}));await tick();assert.equal(w.AltaLocale.currency,'GBP');assert.equal(panel.hidden,false);assert.strictEqual(w.document.activeElement,select);assert.equal(w.localStorage.getItem('ap-currency'),'GBP');
+  const {w}=env,select=w.document.getElementById('currency-select');select.focus();
+  const controls=[...w.document.querySelectorAll('.pure-currency-picker [data-display-currency]')];assert.deepEqual(controls.map(node=>node.textContent),['CAD','CAD']);
+  select.value='GBP';select.dispatchEvent(new w.Event('change',{bubbles:true}));await tick();assert.equal(w.AltaLocale.currency,'GBP');assert.deepEqual(controls.map(node=>node.textContent),['GBP','GBP']);assert.strictEqual(w.document.activeElement,select);assert.equal(w.localStorage.getItem('ap-currency'),'GBP');
   const arrow=new w.KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true,cancelable:true});select.dispatchEvent(arrow);assert.equal(arrow.defaultPrevented,false,'native select navigation is not hijacked by menu link navigation');assertDocumentIntact(env);
  }finally{env.dom.window.close();}
 });

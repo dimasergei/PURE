@@ -3,6 +3,9 @@
   --monthly-muted: #555;
   --monthly-soft: #f6f6f6;
   --monthly-ink: #111;
+  --monthly-savings: #145c3d;
+  --monthly-savings-border: #cfe5d6;
+  --monthly-savings-soft: #eff8f1;
   box-sizing: border-box;
   color: var(--monthly-ink);
   width: min(860px, calc(100% - clamp(28px, 6vw, 72px)));
@@ -194,10 +197,32 @@
   white-space: nowrap;
 }
 
+.monthly-main .monthly-summary-plan {
+  display: grid;
+  gap: 10px;
+  margin: 1rem 0;
+}
+
+.monthly-main .monthly-set {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--monthly-border);
+  border-radius: 10px;
+}
+
+.monthly-main .monthly-set h3 {
+  margin: 0 0 8px;
+  color: #454545;
+  font-size: .75rem;
+  font-weight: 750;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
 .monthly-main .monthly-summary-items {
   display: grid;
   gap: 6px;
-  margin: 1rem 0;
+  margin: 0;
   padding: 0;
   list-style: none;
 }
@@ -236,12 +261,29 @@
 }
 
 .monthly-main .monthly-summary-item.monthly-included {
-  background: var(--monthly-soft);
+  margin-top: 3px;
+  border-color: var(--monthly-savings-border);
+  background: var(--monthly-savings-soft);
+  color: var(--monthly-savings);
 }
 
-.monthly-main .monthly-item-amount {
+.monthly-main .monthly-price-stack {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
   text-align: right;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.monthly-main :is(.monthly-price-stack, .retail-value) del {
+  color: var(--monthly-muted);
+  font-weight: 550;
+  text-decoration-thickness: 1px;
+}
+
+.monthly-main .monthly-price-stack del {
+  font-size: .77rem;
 }
 
 .monthly-main .monthly-summary-pricing {
@@ -254,6 +296,11 @@
 
 .monthly-main .monthly-summary-pricing .total {
   margin-top: 4px;
+}
+
+.monthly-main .monthly-summary-pricing .monthly-savings {
+  color: var(--monthly-savings);
+  font-weight: 650;
 }
 
 .monthly-main .monthly-deliveries {

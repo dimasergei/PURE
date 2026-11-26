@@ -75,6 +75,10 @@ for(const file of fs.readdirSync(out,{recursive:true}).filter(f=>f.endsWith('.ht
   html=html.replace(/\b(src|href)="\/((?:storefront-v2|reference-ui|cart-reference)\.(?:js|css)|(?:storefront-navigation|pure-bulk-layout)\.css)(?:\?[^"]*)?"/g,'$1="/$2?v=20261126-shop-mobile"');
   html=html.replace(/src="\/storefront-v2\.js(?:\?[^"]*)?"/g,'src="/storefront-v2.js?v=20261126-packaging-studio"');
   html=html.replace(/href="\/account-experience\.css(?:\?[^"]*)?"/g,'href="/account-experience.css?v=20261126-bulk-summary"');
+  html=html.replace(/href="\/((?:storefront-navigation|pure-currency)\.css)(?:\?[^"]*)?"/g,'href="/$1?v=20261126-compact-menu"');
+  html=html.replace(/\b(src|href)="\/(storefront-v2\.(?:js|css))(?:\?[^"]*)?"/g,'$1="/$2?v=20261126-home-polish"');
+  html=html.replace(/href="\/((?:pure-bulk-layout|pure-coa|reference-ui|supplier-coas|monthly-orders|subscribe-and-save)\.css)(?:\?[^"]*)?"/g,'href="/$1?v=20261126-builder-polish"');
+  html=html.replace(/src="\/((?:workspace-v2|supplier-coas|monthly-orders)\.js)(?:\?[^"]*)?"/g,'src="/$1?v=20261126-builder-polish"');
   fs.writeFileSync(target,html);
   count++;
 }

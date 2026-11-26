@@ -12,10 +12,9 @@ const content = `<div data-pss-planner>
       <h1>SUBSCRIBE &amp; SAVE.</h1>
       <p>Choose four products and your preferred strengths for three monthly deliveries. Receive a separate invoice each month.</p>
       <ul class="pss-benefits" aria-label="Subscribe &amp; Save benefits">
-        <li><strong>40% off</strong><span>On your selections each month</span></li>
-        <li><strong>3 mL included</strong><span>Reconstitution solution with each delivery</span></li>
-        <li><a href="/coas"><strong>View testing</strong><span>Browse available certificates of analysis</span></a></li>
-        <li><strong>Free express</strong><span>For U.S. and Canadian addresses</span></li>
+        <li class="pss-benefit-savings"><span>Monthly savings</span><strong>40% off</strong><small>Every product in your plan</small></li>
+        <li><span>Reconstitution solution</span><strong>3 mL bundled</strong><small>One vial per set in every delivery</small></li>
+        <li><span>U.S. &amp; Canada</span><strong>Free express shipping</strong><small>With every monthly delivery</small></li>
       </ul>
     </div>
   </section>
@@ -37,9 +36,9 @@ const content = `<div data-pss-planner>
       <div data-pss-selection></div>
       <dl class="pss-totals">
         <div><dt>Retail value</dt><dd data-pss-subtotal></dd></div>
-        <div data-pss-monthly-line hidden><dt>Monthly savings (40%)</dt><dd data-pss-savings></dd></div>
-        <div data-pss-gift-line hidden><dt>Bundled reconstitution solution</dt><dd data-pss-gift-savings></dd></div>
-        <div data-pss-monthly-line hidden><dt>Express shipping <small>U.S. &amp; Canada</small></dt><dd>Free</dd></div>
+        <div class="pss-savings-line" data-pss-monthly-line hidden><dt>Monthly savings (40%)</dt><dd data-pss-savings></dd></div>
+        <div class="pss-savings-line" data-pss-gift-line hidden><dt>Bundled reconstitution solution</dt><dd data-pss-gift-savings></dd></div>
+        <div class="pss-savings-line" data-pss-monthly-line hidden><dt>Express shipping <small>U.S. &amp; Canada</small></dt><dd>Free</dd></div>
         <div class="pss-total-final" data-pss-monthly-line hidden><dt>Monthly total</dt><dd data-pss-monthly-total></dd></div>
       </dl>
       <ol class="pss-delivery-timeline" aria-label="Initial monthly deliveries" data-pss-timeline hidden>
@@ -69,8 +68,8 @@ const html = shell
   .replace(/(<(?:meta property="og:url" content|link rel="canonical" href)=")[^"]*/g, `$1${canonical}`)
   .replace('href="#ap-main"', 'href="#subscribe-and-save-main"')
   .replace(layout, `<main id="subscribe-and-save-main">${content}</main>`)
-  .replace('</head>', '<link rel="stylesheet" href="/subscribe-and-save.css?v=6"></head>')
-  .replace('</body>', '<script src="/subscribe-and-save.js?v=5"></script></body>');
+  .replace('</head>', '<link rel="stylesheet" href="/subscribe-and-save.css?v=7"></head>')
+  .replace('</body>', '<script src="/subscribe-and-save.js?v=6"></script></body>');
 fs.writeFileSync(path.join(out, 'subscribe-and-save.html'), html);
 for (const asset of ['subscribe-and-save.css', 'subscribe-and-save.js']) fs.copyFileSync(asset, path.join(out, asset));
 const sitemapPath = path.join(out, 'sitemap.xml');

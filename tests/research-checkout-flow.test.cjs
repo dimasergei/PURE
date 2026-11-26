@@ -26,12 +26,13 @@ const response=(data,ok=true)=>({ok,json:async()=>data});
 const change=(window,input)=>input.dispatchEvent(new window.Event('change',{bubbles:true}));
 const settle=()=>new Promise(resolve=>setImmediate(resolve));
 
-function setup(t,{draft=items,signedIn=true,respond,withLocale=false,plans=[]}={}){
+function setup(t,{draft=items,draftOrder,signedIn=true,respond,withLocale=false,plans=[]}={}){
   const pathname='/subscribe-and-save/checkout';
   const {window:w}=new JSDOM(checkoutHTML,{url:'https://getpurelabs.com'+pathname,runScripts:'outside-only'});
   t.after(()=>w.close());
   const document=w.document,calls=[];
   if(draft!==null)w.sessionStorage.setItem('pure-monthly-builder',JSON.stringify(draft));
+  if(draftOrder)w.sessionStorage.setItem('pure-monthly-builder-order',JSON.stringify(draftOrder));
   w.localStorage.setItem('pp-cart',regularCart);
   w.supabase={createClient:()=>({auth:{getSession:async()=>signedIn?identity:{data:{session:null}}}})};
   w.fetch=async(url,options)=>{
@@ -83,6 +84,22 @@ test('monthly checkout reopens the selected draft with a static strength and a o
   assert.ok(env.find('a[href="/subscribe-and-save"]'));
   assert.deepEqual(env.actions().map(body=>body.action),['preview']);
   assert.equal(env.w.localStorage.getItem('pp-cart'),regularCart);
+});
+
+test('checkout keeps the selected set order while using the aggregated server quote',async t=>{
+  const draft = items.map(item => ({...item, qty:2}));
+  const draftOrder = [...items,...items];
+  const env=setup(t,{draft,draftOrder});
+  await env.render();
+  const sets=[...env.find('[data-plan]').querySelectorAll('.monthly-set')];
+  assert.deepEqual(sets.map(set=>set.querySelector('h3').textContent),['Set 1','Set 2']);
+  for(const set of sets){
+    assert.deepEqual([...set.querySelectorAll('.monthly-summary-item:not(.monthly-included) div > strong')].map(name=>name.textContent),
+      catalog.map(product=>product.name));
+    assert.equal(set.querySelectorAll('.monthly-included').length,1);
+    assert.equal(set.querySelector('.monthly-summary-item del').textContent,'$70.00');
+  }
+  assert.deepEqual(env.actions()[0].items,draft);
 });
 
 test('an absent or invalid saved draft offers the planner without exposing invoice controls',async t=>{

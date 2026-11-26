@@ -86,146 +86,183 @@ html:root body.ap-site .pure-coa-page .ap-coa-results-heading p { font-size: 15p
 html:root body.ap-site .pure-coa-page .ap-coa-results-heading a { font-size: 13px; }
 html:root body.ap-site .pure-coa-page .ap-supplier-coa-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 22px;
-  align-items: stretch;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  border: 1px solid #dedede;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 6px 20px #00000006;
 }
 html:root body.ap-site .pure-coa-page .ap-coa-card {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: minmax(140px, 16%) minmax(0, 1fr);
+  align-items: center;
+  gap: 17px;
   min-width: 0;
-  overflow: hidden;
-  padding: 0;
-  border: 1px solid #dedede;
-  border-radius: 18px;
-  background: #fff;
-  box-shadow: 0 3px 12px #00000004;
-}
-html:root body.ap-site .pure-coa-page .pure-coa-card-head {
-  min-width: 0;
-  padding: 20px 22px;
-  border: 0;
-  background: #161616;
-  color: #fff;
-}
-html:root body.ap-site .pure-coa-card-head .ap-pill {
-  padding: 0;
+  padding: 16px 18px;
   border: 0;
   border-radius: 0;
   background: transparent;
-  color: #bfbfbf;
-  font-size: 11px;
-  letter-spacing: .11em;
+  box-shadow: none;
 }
-html:root body.ap-site .pure-coa-card-head h2 {
-  margin: 12px 0 0;
-  color: #fff;
-  font-size: 22px;
-  line-height: 1.25;
+html:root body.ap-site .pure-coa-page .ap-coa-card + .ap-coa-card {
+  border-top: 1px solid #e4e4e4;
+}
+html:root body.ap-site .pure-coa-page .pure-coa-row-title {
+  margin: 0;
+  border-inline-start: 2px solid #171717;
+  padding-inline-start: 11px;
+  color: #111;
+  font-size: clamp(14px, 1.25vw, 18px);
+  font-weight: 800;
+  line-height: 1.3;
+  letter-spacing: -.025em;
   overflow-wrap: anywhere;
 }
-.pure-coa-card-body {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
+html:root body.ap-site .pure-coa-card-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 181px;
+  gap: 17px;
+  align-items: center;
   min-width: 0;
-  padding: 20px 22px 22px;
 }
-html:root body.ap-site .pure-coa-card-body dl {
-  grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr);
-  gap: 13px 18px;
-  margin: 0 0 22px;
-  font-size: 13px;
-  line-height: 1.5;
+html:root body.ap-site .pure-coa-card-body .pure-coa-row-meta {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.2fr) minmax(0, 1.15fr) 75px minmax(0, 1.45fr);
+  gap: 8px 13px;
+  align-items: start;
+  margin: 0;
 }
+.pure-coa-row-meta > div { min-width: 0; }
 html:root body.ap-site .pure-coa-card-body dt {
-  color: #666;
-  font-size: 13px;
-  line-height: 1.5;
-  text-transform: none;
-  letter-spacing: 0;
+  margin-bottom: 3px;
+  color: #565656;
+  font-size: 10px;
+  font-weight: 750;
+  line-height: 1.25;
+  text-transform: uppercase;
+  letter-spacing: .07em;
 }
 html:root body.ap-site .pure-coa-card-body dd {
   min-width: 0;
   margin: 0;
+  color: #202020;
+  font-size: 12px;
   font-weight: 600;
+  line-height: 1.35;
   overflow-wrap: anywhere;
 }
 html:root body.ap-site .pure-coa-card-body .ap-actions {
   display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  justify-content: flex-start;
-  gap: 10px;
-  width: 100%;
-  margin-top: auto;
-  padding-top: 18px;
-  border-top: 1px solid #e8e8e8;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
 }
 html:root body.ap-site .pure-coa-card-body .ap-actions .ap-button {
+  display: inline-flex;
   flex: none;
-  width: 100%;
-  min-height: 48px;
-  font-size: 13px;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  margin: 0;
+  padding: 0 13px;
+  border-radius: 9px;
+  font-size: 11px;
+  line-height: 1.25;
+  white-space: nowrap;
 }
 html:root body.ap-site .pure-coa-card-body .ap-actions .ap-coa-original-link {
+  padding: 0 9px;
+}
+html:root body.ap-site .pure-coa-card-body .ap-actions :is(.ap-coa-original-link,.ap-text-link) {
   box-sizing: border-box;
   display: inline-flex;
   flex: none;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  width: 100%;
-  min-height: 46px;
+  min-width: 42px;
+  min-height: 42px;
   margin: 0;
-  padding: 11px 16px;
+  gap: 7px;
   border: 1px solid #d2d2d2;
-  border-radius: 12px;
+  border-radius: 9px;
   background: #f8f8f8;
   color: #171717;
-  font-family: Archivo, Arial, sans-serif;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: .055em;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 750;
   line-height: 1.25;
   text-align: center;
   text-decoration: none;
-  text-transform: uppercase;
   transition: background-color .18s ease, border-color .18s ease;
 }
-html:root body.ap-site .pure-coa-card-body .ap-actions .ap-coa-original-link:hover {
+html:root body.ap-site .pure-coa-card-body .ap-actions :is(.ap-coa-original-link,.ap-text-link):hover {
   border-color: #a7a7a7;
   background: #f0f0f0;
-  color: #101010;
   text-decoration: none;
 }
 html:root body.ap-site .pure-coa-card-body .ap-actions .ap-coa-original-link svg {
-  display: block;
-  flex: 0 0 17px;
-  width: 17px;
-  height: 17px;
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
   fill: none;
   stroke: currentColor;
   stroke-width: 1.7;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-html:root body.ap-site .pure-coa-card-body .ap-actions > .ap-text-link {
-  align-self: center;
-  margin: 4px 0 0;
-  font-size: 12px;
-  overflow-wrap: anywhere;
-}
-@media (prefers-reduced-motion: reduce) {
-  html:root body.ap-site .pure-coa-card-body .ap-actions .ap-coa-original-link {
-    transition: none;
-  }
+.pure-coa-verify-arrow { font-size: 17px; line-height: 1; }
+.pure-coa-action-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 html:root body.ap-site .pure-coa-card-body .nl-coa-copy {
-  min-height: 28px;
-  margin: 4px 0 0 6px;
-  padding: 5px 8px;
-  font-size: 11px;
+  min-height: 22px;
+  margin-block-start: 4px;
+  padding: 2px 6px;
+  font-size: 10px;
+}
+@media (max-width: 1080px) {
+  html:root body.ap-site .pure-coa-page .ap-coa-card {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+}
+@media (max-width: 820px) {
+  html:root body.ap-site .pure-coa-card-body {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+  .pure-coa-action-label {
+    position: static;
+    width: auto;
+    height: auto;
+    clip-path: none;
+  }
+  html:root body.ap-site .pure-coa-card-body .ap-actions :is(.ap-coa-original-link,.ap-text-link) {
+    padding: 0 9px;
+  }
+}
+@media (max-width: 570px) {
+  html:root body.ap-site .pure-coa-page .ap-coa-card { padding: 14px 12px; }
+  html:root body.ap-site .pure-coa-card-body .pure-coa-row-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  html:root body.ap-site .pure-coa-card-body .ap-actions :is(.ap-button,.ap-coa-original-link,.ap-text-link) {
+    min-height: 44px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html:root body.ap-site .pure-coa-card-body .ap-actions :is(.ap-coa-original-link,.ap-text-link) {
+    transition: none;
+  }
 }
 html:root body.ap-site .pure-coa-page .ap-coa-missing {
   background: #fff;
@@ -245,7 +282,6 @@ html:root body.ap-site .pure-coa-page #ap-supplier-references > .ap-fine {
   outline-offset: 3px;
 }
 @media (max-width: 1100px) {
-  html:root body.ap-site .pure-coa-page .ap-supplier-coa-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   html:root body.ap-site .pure-coa-page .ap-coa-hero-inner { grid-template-columns: minmax(0, 1fr) 180px; gap: 20px; }
   .pure-coa-hero-art svg { width: 160px; height: 160px; }
   .pure-coa-hero-art .pure-wordmark { width: 140px; height: 33px; }
@@ -257,15 +293,11 @@ html:root body.ap-site .pure-coa-page #ap-supplier-references > .ap-fine {
   .pure-coa-hero-art { display: none; }
   html:root body.ap-site .pure-coa-page .ap-coa-library { margin-top: -22px; }
   html:root body.ap-site .pure-coa-page .ap-coa-search-panel { padding: 20px; border-radius: 14px; }
-  html:root body.ap-site .pure-coa-page .ap-supplier-coa-grid { grid-template-columns: minmax(0, 1fr); gap: 18px; }
   html:root body.ap-site .pure-coa-page .ap-coa-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 12px; }
   html:root body.ap-site .pure-coa-page .ap-coa-controls > label:first-child { grid-column: 1 / -1; }
   html:root body.ap-site .pure-coa-page #ap-coa-reset { grid-column: 1 / -1; min-height: 42px; }
   html:root body.ap-site .pure-coa-page .ap-coa-controls select { font-size: 16px; }
   html:root body.ap-site .pure-coa-page .ap-coa-results-heading { gap: 8px; margin: 22px 0 18px; }
-  html:root body.ap-site .pure-coa-page .pure-coa-card-head { padding: 20px; }
-  .pure-coa-card-body { padding: 20px; }
-  html:root body.ap-site .pure-coa-card-body dl { grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); }
 }
 
 /* Same PURE editorial scale as Products, Contact and Partner. Existing filters and report viewer remain unchanged. */
@@ -277,8 +309,6 @@ html:root body.ap-site .pure-coa-page .pure-coa-hero-copy .ap-eyebrow:before{con
 html:root body.ap-site .pure-coa-page .pure-coa-hero-copy h1{max-width:18ch;font-size:clamp(43px,5vw,72px);line-height:1.04;letter-spacing:-.06em;font-weight:900;color:#fff;margin:19px 0 20px}
 html:root body.ap-site .pure-coa-page .pure-coa-hero-copy p{font-size:16px;line-height:1.65;color:#dedede}
 html:root body.ap-site .pure-coa-page .ap-coa-search-panel{border-radius:20px;box-shadow:0 14px 40px #0000000b}
-html:root body.ap-site .pure-coa-page .ap-coa-card{border-radius:17px;box-shadow:0 8px 24px #00000008;transition:box-shadow .18s,border-color .18s}
-html:root body.ap-site .pure-coa-page .ap-coa-card:hover{border-color:#bfbfbf;box-shadow:0 14px 34px #00000012}
 html:root body.ap-site .pure-coa-page .ap-coa-results-heading p{font-weight:700}
 @media(max-width:640px){html:root body.ap-site .pure-coa-page .ap-coa-hero-inner{padding-top:42px;padding-bottom:49px}html:root body.ap-site .pure-coa-page .pure-coa-hero-copy h1{font-size:clamp(35px,9.3vw,52px)}html:root body.ap-site .pure-coa-page .pure-coa-hero-copy p{font-size:14px}}
 
