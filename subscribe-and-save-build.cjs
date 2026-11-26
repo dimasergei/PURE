@@ -4,13 +4,13 @@ const path = require('node:path');
 
 const out = 'public-build';
 const title = 'Subscribe &amp; Save | PURE';
-const description = 'Build sets of four products and save your selections for your next order.';
+const description = 'Choose four products and their strengths for your PURE Subscribe &amp; Save plan.';
 const canonical = 'https://getpurelabs.com/subscribe-and-save';
 const content = `<div data-pss-planner>
   <section class="pss-hero">
     <div class="ap-container">
       <h1>SUBSCRIBE &amp; SAVE.</h1>
-      <p>Build your next order in sets of four. Choose your products and strengths to save 40% each month.</p>
+      <p>Choose four products and their strengths to save 40% on each of three monthly deliveries.</p>
     </div>
   </section>
   <div class="ap-container pss-layout">
@@ -25,12 +25,12 @@ const content = `<div data-pss-planner>
       <h2 id="pss-plan-title">Your plan</h2>
       <div class="pss-progress"><span data-pss-count></span> selected<progress aria-label="Selections in plan" value="0" max="4" data-pss-progress></progress></div>
       <div data-pss-selection></div>
-      <div class="pss-next" data-pss-next hidden><strong data-pss-completed></strong><button type="button" data-pss-another></button></div>
       <div class="pss-total"><span>Retail value</span><strong data-pss-subtotal></strong></div>
       <div class="pss-total pss-monthly-price"><span>Monthly savings (40%)</span><strong data-pss-savings></strong></div>
       <div class="pss-total pss-monthly-price"><span>Per month</span><strong data-pss-monthly-total></strong></div>
       <button type="button" class="ap-button" data-pss-monthly disabled>Continue</button>
       <button type="button" class="ap-button" data-pss-cart hidden disabled>Add plan to cart</button>
+      <p class="pss-plan-note">Pay one invoice per month. Free express shipping in the U.S. and Canada. Change future selections after your first delivery ships. Start another plan after delivery three. <a href="/commercial-terms.html#subscribe-and-save-plan">Plan terms</a></p>
       <p role="status" data-pss-review-status></p>
     </aside>
     <div class="pss-mobile-bar"><a href="#pss-plan">Your plan <span data-pss-mobile-count></span></a><button class="ap-button" data-pss-mobile-continue type="button" disabled>Continue</button></div>
@@ -49,8 +49,8 @@ const html = shell
   .replace(/(<(?:meta property="og:url" content|link rel="canonical" href)=")[^"]*/g, `$1${canonical}`)
   .replace('href="#ap-main"', 'href="#subscribe-and-save-main"')
   .replace(layout, `<main id="subscribe-and-save-main">${content}</main>`)
-  .replace('</head>', '<link rel="stylesheet" href="/subscribe-and-save.css?v=3"></head>')
-  .replace('</body>', '<script src="/subscribe-and-save.js?v=3"></script></body>');
+  .replace('</head>', '<link rel="stylesheet" href="/subscribe-and-save.css?v=4"></head>')
+  .replace('</body>', '<script src="/subscribe-and-save.js?v=4"></script></body>');
 fs.writeFileSync(path.join(out, 'subscribe-and-save.html'), html);
 for (const asset of ['subscribe-and-save.css', 'subscribe-and-save.js']) fs.copyFileSync(asset, path.join(out, asset));
 const sitemapPath = path.join(out, 'sitemap.xml');

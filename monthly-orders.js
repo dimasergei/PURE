@@ -21,6 +21,8 @@
     return data;
   };
   const line = (name,value,cls='') => '<div class="line '+cls+'"><span>'+esc(name)+'</span><span>'+esc(value)+'</span></div>';
+  const threeDeliveryPlan = plan => Boolean(overview.builder_terms && plan?.snapshot.terms === overview.builder_terms);
+  const hasUnfinishedTerm = () => overview.plans.some(plan => threeDeliveryPlan(plan) && !plan.can_restart);
   const methodLabel=m=>[m.label,m.network_label].filter(Boolean).join(' · ');
   const paymentOptions=(methods,selected)=>methods.map((m,i)=>'<label class="payment-option"><input type="radio" name="method" required value="'+esc(m.id)+'" '+((selected?m.id===selected:i===0)?'checked':'')+'>'+esc(methodLabel(m))+'</label>').join('');
   function renderPayment(data) {
@@ -45,12 +47,20 @@
     overview = await api();
     root.innerHTML = '<h2>Your invoice plans</h2>'+(overview.plans.length ? overview.plans.map(plan=>{
       const s=plan.snapshot,active=plan.status==='active';
+      const threeDelivery=threeDeliveryPlan(plan);
       const action=(id,label)=>'<button type="button" class="secondary" data-action="'+id+'">'+label+'</button>';
-      return '<article data-id="'+esc(plan.id)+'"><h2>'+esc(s.kind==='builder'?'Monthly builder':'Monthly product order')+' · '+esc(plan.status)+'</h2>'+
+      const actions=threeDelivery
+        ? (plan.can_edit?action('edit','Change future selections'):'')+
+          (plan.can_cancel?action('cancel','Cancel plan'):'')+
+          (plan.status==='completed'&&!hasUnfinishedTerm()?link('/subscribe-and-save','Start another plan'):'')
+        : (plan.status==='canceled'?'':action('edit','Change plan')+(active?action('skip','Skip next month')+action('pause','Pause'):action('resume','Resume'))+action('cancel','Cancel plan'));
+      return '<article data-id="'+esc(plan.id)+'"><h2>'+esc(s.kind==='builder'?'Subscribe & Save':'Monthly product order')+' · '+esc(plan.status)+'</h2>'+
         '<p>'+esc(s.request.items.map(x=>x.qty+' × '+x.name+' '+x.size).join(', '))+'</p>'+line('Monthly total (USD)',money(s.total_cents))+
-        (active?line('Next invoice',when(plan.next_due_at)):'')+(plan.pause_reason?'<p>'+esc(plan.pause_reason)+'</p>':'')+
+        (threeDelivery?line('Deliveries completed',plan.delivered_count+' of 3'):'')+
+        (active&&plan.next_due_at?line('Next invoice',when(plan.next_due_at)):'')+(plan.pause_reason?'<p>'+esc(plan.pause_reason)+'</p>':'')+
         '<div class="actions">'+link('/account/purchases?id='+encodeURIComponent(plan.invoice_id),'Latest order')+
-        (plan.status==='canceled'?'':action('edit','Change plan')+(active?action('skip','Skip next month')+action('pause','Pause'):action('resume','Resume'))+action('cancel','Cancel plan'))+'</div></article>';
+        actions+'</div>'+
+        (threeDelivery&&plan.status!=='completed'&&plan.status!=='canceled'?'<p class="muted">For help with your plan or to request early cancellation, <a href="/contact">contact PURE support</a>.</p>':'')+'</article>';
     }).join(''):'<p>You have no monthly invoice plans.</p>')+'<p><a href="/shop">Return to catalog</a></p>';
     root.onclick=async event=>{
       const btn=event.target.closest('button[data-action]');
@@ -74,9 +84,18 @@
   }
   async function formView(plan) {
     const kind=plan?.snapshot.kind||(builderRoute?'builder':'product');
+    const threeDelivery=kind==='builder'&&(!plan||threeDeliveryPlan(plan));
+    if (threeDelivery&&!overview.builder_terms) {
+      root.textContent='Monthly checkout is updating. Refresh and try again.';
+      return;
+    }
+    if (!plan&&threeDelivery&&hasUnfinishedTerm()) {
+      root.innerHTML='<p>Finish your current Subscribe &amp; Save plan before starting another.</p>'+link('/monthly-orders','View your plan');
+      return;
+    }
     let items=initialItems(plan);
     if (!Array.isArray(items)||!items.length||items.some(i=>!catalog.some(p=>p.id===i.id && p.variants.some(v=>v.size===i.size)))) {
-      root.innerHTML='<p>Choose your items to start a monthly order.</p>'+link(kind==='builder'?'/research-builder':'/shop','Choose items');return;
+      root.innerHTML='<p>Choose your items to start a monthly order.</p>'+link(kind==='builder'?'/subscribe-and-save':'/shop','Choose items');return;
     }
     const previous=plan?.snapshot.request||{};
     const profile=user?.user_metadata?.alta_profile||{};
@@ -105,7 +124,9 @@
       '<aside class="monthly-checkout-summary"><h2>Order summary</h2>'+
       (Number.isSafeInteger(overview.protection_cents)?'<label class="check protection"><input name="protection" type="checkbox" '+((plan?plan.snapshot.pricing.delivery.selection.extras.includes('protection'):true)?'checked':'')+'>Shipment protection · '+esc(money(overview.protection_cents))+' <a href="/shipping-protection.html" target="_blank" rel="noopener">Details</a></label>':'')+
       '<div data-review role="status"></div><fieldset><legend>Payment</legend><div data-methods></div></fieldset>'+
-      '<label class="check"><input type="checkbox" data-agree required>I agree to receive a monthly invoice until I cancel.</label>'+
+      (threeDelivery?'<p class="muted">Three monthly deliveries, paid one invoice at a time. Change future selections after your first delivery ships. Your plan ends after delivery three. Any applicable payment fees are shown before you pay. <a href="/commercial-terms.html#subscribe-and-save-plan" target="_blank" rel="noopener">Plan terms</a></p>':'')+
+      '<label class="check"><input type="checkbox" data-agree required>'+(
+        threeDelivery?'I agree to the three-delivery plan and its monthly invoices.':'I agree to receive a monthly invoice until I cancel.')+'</label>'+
       '<label class="check"><input type="checkbox" data-use required>I confirm laboratory research use and accept the <a href="/commercial-terms.html" target="_blank" rel="noopener">checkout terms</a>.</label>'+
       (user?'<button type="submit" data-confirm disabled>'+esc(plan?'Save changes':'Start my monthly plan')+'</button>':link('/account/login?returnTo='+encodeURIComponent(location.pathname+location.search),'Sign in to start my plan'))+'</aside></form>';
     const form=root.querySelector('form'), review=form.querySelector('[data-review]'), confirm=form.querySelector('[data-confirm]');
@@ -181,15 +202,16 @@
     form.onsubmit=async event=>{
       event.preventDefault();if(!user||saving||displayed===null||!form.reportValidity())return;
       const data=new FormData(form),sep=form.elements.separate.checked,prefix=sep?'ship_':'';
-      const request={id,kind,items,name:data.get(prefix+'name'),address:supplied(data,prefix),method_id:data.get('method'),protection:!!form.elements.protection?.checked,
+      const request={id,kind,items,...(plan?{version:plan.version}:{}),...(threeDelivery?{plan_terms:overview.builder_terms}:{}),name:data.get(prefix+'name'),address:supplied(data,prefix),method_id:data.get('method'),protection:!!form.elements.protection?.checked,
         ...(sep?{billing:{name:data.get('name'),address:supplied(data,'')}}:{})};
       const expected=displayed; saving=true;
       const controls=Array.from(form.elements).filter(el=>!el.disabled); controls.forEach(el=>el.disabled=true);
       status.textContent='Preparing your invoice…';
       try{
         const q=await api({...request,action:'quote'});
+        if(threeDelivery&&q.terms!==overview.builder_terms)throw Error('Refresh checkout and review the current plan terms.');
         if(q.total_cents!==expected){controls.forEach(el=>el.disabled=false);await refresh();throw Error('Your total changed. Review it and submit again.');}
-        const saved=await api({...request,action:plan?'change':'enroll',version:plan?.version,quote:q.quote,terms:q.terms,consent:true,research_use:true});
+        const saved=await api({...request,action:plan?'change':'enroll',quote:q.quote,terms:q.terms,consent:true,research_use:true});
         if(!plan) sessionStorage.removeItem(key);
         if(!saved.invoice_id){location.assign('/monthly-orders');return;}
         const invoicePath='/monthly-orders?invoice='+encodeURIComponent(saved.invoice_id);
@@ -216,6 +238,10 @@
     catalog=overview.catalog;
     const plan=params.has('edit')?overview.plans.find(p=>p.id===params.get('edit')&&p.status!=='canceled'):null;
     if(params.has('edit')&&!plan) throw Error('This plan is unavailable.');
+    if(threeDeliveryPlan(plan)&&!plan.can_edit) {
+      root.innerHTML='<p>You can edit future selections after your first shipment and before the final invoice.</p>'+link('/monthly-orders','View your plan');
+      return;
+    }
     await formView(plan);
   }catch(error){root.replaceChildren();status.textContent=error.message;}
   finally{root.removeAttribute('aria-busy');}
