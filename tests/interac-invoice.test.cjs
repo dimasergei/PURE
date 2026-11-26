@@ -24,6 +24,7 @@ test('reviewed CAD invoice converts catalog units, preserves saved coupon, and c
  const db=database(),out=await issueInvoice(db,input);
  assert.equal(out.currency,'CAD');assert.equal(out.fx_ppm,1375000);assert.equal(out.subtotal_cents,8250);assert.equal(out.discount_cents,1238);
  assert.equal(out.pricing.coupon_code,'BLACKFRIDAY15');assert.equal(out.pricing.coupon_discount_cents,1238);assert.equal(out.pricing.lines[0].line_total_cents,7012);
+ assert.equal(out.pricing.promotion_version,'blackfriday15-2026-11-v1');assert.equal(out.pricing.lines[0].discount_reason,'coupon_blackfriday15');
  assert.equal(out.pricing.delivery_tax.taxes[0].taxable_cents,8012);assert.equal(out.tax_cents,1042);assert.equal(out.shipping_cents,1000);assert.equal(out.total_cents,9054);
  assert.equal(out.checkout_version,undefined);assert.equal(out.payment_url,null);assert.equal(out.pricing.payment_discount,undefined);assert.equal(out.pricing.crypto_discount_cents,undefined);assert.equal(db.calls.length,0);
  const issued=await issueInvoice(db,{...input,action:'issue',expected_total_cents:9054});assert.equal(issued.total_cents,9054);assert.equal(db.calls.length,0);
@@ -37,6 +38,11 @@ test('invoice pricing uses only the saved valid coupon; client discount fields c
  assert.equal(regular.discount_cents,0);assert.equal(regular.tax_cents,1203);assert.equal(regular.total_cents,10453);
  const stale=structuredClone(invoice);stale.request_data.checkout.coupon='RETIRED';
  await assert.rejects(issueInvoice(database(stale),input),e=>e.status===400&&/coupon/i.test(e.message));
+ const current=structuredClone(invoice);delete current.request_data.checkout.request_only;
+ await assert.rejects(issueInvoice(database(current),input),e=>e.status===400&&/coupon/i.test(e.message));
+ current.request_data.checkout.coupon='BLACKFRIDAY10';
+ const currentQuote=await issueInvoice(database(current),input);
+ assert.equal(currentQuote.discount_cents,825);assert.equal(currentQuote.pricing.coupon_code,'BLACKFRIDAY10');
 });
 
 test('CAD Interac requires an explicit fixed rate and current invoice/method/total review',async()=>{

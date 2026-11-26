@@ -32,7 +32,11 @@
   const delivery=current?.pricing?.delivery;
   for(const target of form.querySelectorAll('[data-rd-shipping-price]')){
    const id=target.dataset.rdShippingPrice,enabled=(data.delivery_options||[]).some(option=>option.id===id&&option.enabled);
-   target.textContent=!enabled?'Unavailable':delivery?.selection?.shipping===id?delivery.shipping_cents===0?'FREE':money(delivery.shipping_cents,currency):fromUsd(rates[id]);
+   const free=current?.free_shipping_remaining_cents===0&&(
+    ['economy','standard'].includes(id)&&['US','CA'].includes(country)||id==='express'&&country==='US');
+   if(!enabled||!Number.isSafeInteger(rates[id]))target.textContent='Unavailable';
+   else if(delivery?.selection?.shipping===id)target.textContent=delivery.shipping_cents===0?'FREE':money(delivery.shipping_cents,currency);
+   else target.textContent=free?'FREE':fromUsd(rates[id]);
   }
   for(const target of form.querySelectorAll('[data-rd-extra-price]')){
    const id=target.dataset.rdExtraPrice,extra=delivery?.extras?.find(item=>item.id===id),configured=(data.delivery_options||[]).find(item=>item.id===id);

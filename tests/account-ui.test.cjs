@@ -6,12 +6,13 @@ const { resolve } = require("node:path");
 const read = (path) => readFileSync(resolve(__dirname, "..", path), "utf8");
 
 test("storefront header orders Search, Account, then Cart", () => {
-  const html = read("index.html");
-  const search = html.indexOf('id="open-search"');
-  const account = html.indexOf('href="/account" aria-label="Account"');
-  const cart = html.indexOf('id="open-cart"');
+  const html = read("site-build.cjs");
+  const actions = html.slice(html.indexOf('<div class="ap-header-actions">'), html.indexOf('const footer='));
+  const search = actions.indexOf('data-action="search"');
+  const account = actions.indexOf('href="/my-account" aria-label="My account"');
+  const cart = actions.indexOf('data-action="cart"');
   assert.ok(search >= 0 && account > search && cart > account);
-  assert.match(html.slice(account, cart), /<svg[\s\S]*?<circle cx="12" cy="8"/);
+  assert.match(actions.slice(account, cart), /<svg[\s\S]*?<circle cx="12" cy="8"/);
 });
 
 test("order detail shipping address uses real line breaks, not literal backslash-n", () => {

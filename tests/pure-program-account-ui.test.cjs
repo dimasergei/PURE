@@ -32,7 +32,7 @@ test('active BLACK account discloses credit qualification, BAC gift and priority
   const card=env.root.querySelector('.cv-member-black');
   assert.match(card.textContent,/PURE BLACK/);
   assert.match(card.textContent,/10%/);
-  assert.match(card.textContent,/US\$50 monthly credit after a qualifying US\$150\+ order/);
+  assert.match(card.textContent,/\$50 monthly credit after a qualifying \$150\+ order/);
   assert.doesNotMatch(card.textContent,/Issued once per UTC calendar month|before points or store credit/);
   const creditTerms=card.querySelector('.mx-benefit-footnote');assert.ok(creditTerms);
   assert.equal(creditTerms.getAttribute('href'),'/membership-terms.html#pure-black-credit');
@@ -78,46 +78,79 @@ test('expired or revoked membership cannot appear as an active paid tier',async(
     env.dom.window.close();
   }
 });
-test('account API failures do not fabricate tier or subscription state',async()=>{
-  const env=setup({error:'Sign in again to view this account.'},{ok:false});
-  await env.w.ConversionUI.mountMembership(env.root,auth);
-  assert.match(env.root.querySelector('[role="alert"]').textContent,/Sign in again/);
-  assert.equal(env.root.querySelector('.cv-member-status'),null);
-  await env.w.ConversionUI.subscriptions(env.root,auth);
-  assert.match(env.root.querySelector('[role="alert"]').textContent,/Sign in again/);
-  assert.equal(env.root.querySelector('.cv-research-empty'),null);
-  env.dom.window.close();
+function setupMonthly(payload,{ok=true}={}) {
+  const html=fs.readFileSync('monthly-orders.html','utf8');
+  const source=fs.readFileSync('monthly-orders.js','utf8');
+  const dom=new JSDOM(html,{url:'https://pure.example/monthly-orders',runScripts:'outside-only'});
+  const w=dom.window,calls=[];
+  w.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:{
+    access_token:'fixture_account_token_123456',user:{id:'fixture-owner',email:'owner@example.test'}
+  }}})}})};
+  w.fetch=async(url,options)=>{
+    calls.push({url,options});
+    if(url==='/api/customer-config')return {ok:true,json:async()=>({supabaseUrl:'https://fixture.supabase.co',anonKey:'test'})};
+    return {ok,json:async()=>payload};
+  };
+  return {w,calls,root:w.document.getElementById('monthly-content'),render:()=>w.eval(source)};
+}
+
+test('account API failures do not fabricate membership or monthly order state',async()=>{
+  const membership=setup({error:'Sign in again to view this account.'},{ok:false});
+  const monthly=setupMonthly({error:'Invoice plans could not be loaded.'},{ok:false});
+  try {
+    await membership.w.ConversionUI.mountMembership(membership.root,auth);
+    assert.match(membership.root.querySelector('[role="alert"]').textContent,/Sign in again/);
+    assert.equal(membership.root.querySelector('.cv-member-status'),null);
+    await monthly.render();
+    assert.match(monthly.w.document.querySelector('#monthly-status').textContent,/Invoice plans could not be loaded/);
+    assert.equal(monthly.root.querySelector('article'),null);
+    assert.doesNotMatch(monthly.root.textContent,/You have no monthly invoice plans/);
+  }finally{membership.w.close();monthly.w.close();}
 });
-test('empty research account introduces paid monthly invoices',async()=>{
-  const env=setup({subscriptions:[],subscription_available:false,one_time_available:true});
-  await env.w.ConversionUI.subscriptions(env.root,auth);
-  assert.equal(env.root.querySelector('.cv-research-heading h2').textContent,'AUTO-STACK™');
-  assert.match(env.root.querySelector('.cv-research-heading a').textContent,/Open Auto-Stack™/);
-  assert.match(env.root.textContent,/No paid Auto-Stack™ plan is linked to your account/);
-  assert.match(env.root.textContent,/Each month is paid by a new Card or Crypto invoice/);
-  assert.match(env.root.querySelector('.cv-program-note').textContent,/Each month is paid by a new Card or Crypto invoice/);
-  assert.doesNotMatch(env.root.querySelector('.cv-program-note').textContent,/automatic billing/);
-  assert.match(env.root.querySelector('.cv-program-note').textContent,/Edit future selections or cancel anytime/);
-  assert.equal(env.root.querySelector('.cv-research-plan'),null);
-  assert.ok(env.root.querySelector('a[href="/research-builder"]'));
-  assert.equal(env.calls[0].url,'/api/customer-config?research_builder=1&scope=mine');
-  assert.ok(env.calls.every(call=>call.options.method==='GET'));
-  env.dom.window.close();
+
+test('account with no monthly invoices states that no plans exist',async()=>{
+  const env=setupMonthly({plans:[],builder_terms:'pure-monthly-invoice-v2'});
+  try {
+    await env.render();
+    assert.equal(env.root.querySelector('h2').textContent,'Your invoice plans');
+    assert.match(env.root.textContent,/You have no monthly invoice plans/);
+    assert.equal(env.root.querySelector('article'),null);
+    assert.ok(env.root.querySelector('a[href="/shop"]'));
+    assert.equal(env.calls[1].url,'/api/customer-config?repeat_orders=1');
+    assert.equal(env.calls[1].options.method,'GET');
+    assert.equal(env.calls[1].options.cache,'no-store');
+    assert.equal(env.calls[1].options.headers.Authorization,'Bearer fixture_account_token_123456');
+  }finally{env.w.close();}
 });
-test('research plan and cycle history come from account records, without unsupported billing mutations',async()=>{
-  const env=setup({subscriptions:[{id:'fixture-plan',status:'active',monthly_cents:24000,paid_cycles:2,minimum_paid_cycles:3,first_delivery_shipped_at:'2026-01-02T00:00:00Z',next_billing_at:'2026-03-01T00:00:00Z',lines:[{id:'fixture',name:'<script>unsafe</script>',size:'5 mg',qty:1}],actions:[],research_subscription_cycles:[{cycle_number:1,amount_cents:24000,status:'shipped',paid_at:'2026-01-01T00:00:00Z',shipped_at:'2026-01-02T00:00:00Z',tracking_number:'TRACK-123'},{cycle_number:2,amount_cents:24000,status:'paid',paid_at:'2026-02-01T00:00:00Z'}]}]});
-  await env.w.ConversionUI.subscriptions(env.root,auth);
-  assert.match(env.root.textContent,/\$240\.00/);
-  assert.equal(env.root.querySelector('.cv-research-details dd').textContent,'2','history shows paid cycles without presenting a legacy minimum as a current requirement');
-  assert.doesNotMatch(env.root.textContent,/initial cycles|third delivery|follow the first shipment/);
-  assert.match(env.root.querySelector('.cv-plan-support').textContent,/Pay the next month by a new invoice/);
-  assert.match(env.root.textContent,/TRACK-123/);
-  assert.equal(env.root.querySelectorAll('.cv-cycle-history li').length,2);
-  assert.equal(env.root.querySelector('script'),null);
-  assert.equal(env.root.querySelectorAll('[data-cv-renew],[data-cv-edit],[data-cv-cancel]').length,3);
-  assert.equal(env.root.querySelector('a[href="/contact"]'),null);
-  assert.ok(env.calls.every(call=>call.options.method==='GET'));
-  env.dom.window.close();
+
+test('monthly plan history displays verified account state and only permitted actions',async()=>{
+  const terms='pure-monthly-invoice-v2';
+  const snapshot={kind:'builder',terms,total_cents:24000,request:{items:[
+    {id:'fixture',name:'<script>unsafe</script>',size:'5 mg',qty:4}
+  ]}};
+  const completed={id:'completed-plan',status:'completed',invoice_id:'second-invoice',snapshot,
+    can_edit:false,can_cancel:false,can_restart:true,delivered_count:3};
+  const active={id:'active-plan',status:'active',invoice_id:'active-invoice',snapshot,
+    can_edit:true,can_cancel:false,can_restart:false,delivered_count:1,next_due_at:'2099-12-01T00:00:00Z'};
+  const env=setupMonthly({plans:[active,completed],builder_terms:terms});
+  const finished=setupMonthly({plans:[completed],builder_terms:terms});
+  try {
+    await env.render();
+    const plan=env.root.querySelector('[data-id="active-plan"]');
+    assert.match(plan.textContent,/\$240\.00/);
+    assert.match(plan.textContent,/1 of 3/);
+    assert.match(plan.textContent,/Next invoice/);
+    assert.ok(plan.querySelector('a[href="/account/purchases?id=active-invoice"]'));
+    assert.ok(plan.querySelector('a[href="/contact"]'));
+    assert.equal(env.root.querySelector('script'),null);
+    assert.deepEqual([...plan.querySelectorAll('button[data-action]')].map(button=>button.dataset.action),['edit']);
+    assert.equal(env.root.querySelector('a[href="/subscribe-and-save"]'),null,'An unfinished plan prevents starting another.');
+    assert.ok(env.calls.every(call=>!call.options?.body));
+    await finished.render();
+    assert.match(finished.root.textContent,/3 of 3/);
+    assert.match(finished.root.querySelector('a[href="/subscribe-and-save"]').textContent,/Start another plan/);
+    assert.equal(finished.root.querySelector('button[data-action]'),null);
+  }finally{env.w.close();finished.w.close();}
 });
 
 test('partners can copy the commission disclosure beside their referral link',async()=>{

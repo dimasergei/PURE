@@ -5,6 +5,8 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const {JSDOM,VirtualConsole}=require('jsdom');
 const currencyConfig=require('../config/display-currencies.json');
+const checkoutConfig=require('../config/checkout.json');
+const {coupon,coupon_discount_bps:couponBps}=checkoutConfig.promotions;
 const views=require('../reference-ui-functions.cjs');
 const read=file=>fs.readFileSync(file,'utf8');
 const settle=()=>new Promise(resolve=>setTimeout(resolve,0));
@@ -37,9 +39,9 @@ async function fixture(route,{workspace=false,cart=[]}={}){
   if(target.includes('checkout=cart')){
    const body=JSON.parse(options.body);requests.push(body);
    const subtotal=body.items.reduce((sum,line)=>sum+Math.round(w.AltaStore.product(line.id).variants.find(v=>v.size===line.size).price*100)*line.qty,0);
-   const coupon=body.coupon==='BLACKFRIDAY15'?body.coupon:'',discount=coupon?Math.round(subtotal*.15):0;
+   const appliedCoupon=body.coupon===coupon?coupon:'',discount=appliedCoupon?Math.round(subtotal*couponBps/10000):0;
    return {ok:true,json:async()=>({currency:'USD',subtotal_cents:subtotal,discount_cents:discount,total_cents:subtotal-discount,tax_cents:0,
-    pricing:{coupon_code:coupon,coupon_discount_cents:discount,delivery:{shipping_cents:0,extras:[]}}})};
+    pricing:{coupon_code:appliedCoupon,coupon_discount_cents:discount,delivery:{shipping_cents:0,extras:[]}}})};
   }
   return {ok:true,json:async()=>[]};
  };
@@ -62,10 +64,10 @@ test('local display refresh preserves product strength, quantity and canonical U
   assert.equal(d.getElementById('ap-detail-quantity'),input);
   assert.equal(input.value,'7');assert.equal(d.querySelector('h1'),heading);
   assert.equal(w.AltaStore.selections['bpc-157'],'10mg');
-  assert.match(d.querySelector('.ap-detail-price').textContent,/CAD/);
+  assert.match(d.querySelector('.ap-detail-price').textContent,/CA\$/);
   assert.equal(d.querySelector('[data-mobile-total] [data-usd-cents]').getAttribute('data-usd-cents'),String(Math.round(unit*100)*7));
   await w.AltaLocale.setCurrency('JPY');await settle();
-  assert.equal(input.value,'7');assert.match(d.querySelector('.ap-detail-price').textContent,/JPY/);
+  assert.equal(input.value,'7');assert.match(d.querySelector('.ap-detail-price').textContent,/[¥￥]/);
   d.querySelector('.nl-purchase [data-action="detail-add"]').click();
   assert.deepEqual(JSON.parse(JSON.stringify(w.AltaStore.cart)).map(({id,size,qty,price})=>({id,size,qty,price})),[{id:'bpc-157',size:'10mg',qty:7,price:unit}]);
   assert.equal(w.localStorage.getItem('ap-shipping-country'),null);
@@ -84,7 +86,7 @@ test('local display refresh preserves bulk quantities, search and draft contents
   assert.equal(d.getElementById('ap-bulk-query'),search);assert.equal(search.value,'BPC');
   assert.equal(d.querySelector('[data-bulk-id="bpc-157"]'),input);assert.equal(input.value,'10');
   assert.equal(w.localStorage.getItem('ap-bulk-draft-v2'),before);
-  assert.match(d.querySelector('.nl-bulk-estimate-total').textContent,/CAD/);
+  assert.match(d.querySelector('.nl-bulk-estimate-total').textContent,/CA\$/);
   await w.AltaLocale.setCurrency('USD');await settle();
   assert.equal(input.value,'10');assert.equal(w.localStorage.getItem('ap-bulk-draft-v2'),before);
   assert.doesNotMatch(d.querySelector('.nl-bulk-estimate-total').textContent,/CAD|≈/);
@@ -96,18 +98,18 @@ test('cart display currency changes preserve the coupon and exact quote request 
  try{
   const {w,d,requests}=f,root=d.getElementById('ap-cart-content');
   w.eval(read('cart-reference.js'));await w.AltaCartNmi.offer(root);
-  const coupon=root.querySelector('[name="nlc_coupon"]');coupon.value='BLACKFRIDAY15';root.querySelector('[data-nlc-apply]').click();
+  const couponInput=root.querySelector('[name="nlc_coupon"]');couponInput.value=coupon;root.querySelector('[data-nlc-apply]').click();
   for(let i=0;i<4;i++)await settle();
-  assert.equal(requests.length,2);assert.equal(requests[1].coupon,'BLACKFRIDAY15');
+  assert.equal(requests.length,2);assert.equal(requests[1].coupon,coupon);
   const before=JSON.stringify(requests),savedCart=w.localStorage.getItem('pp-cart');
   await w.AltaLocale.setCurrency('CAD');await settle();
-  assert.equal(root.querySelector('[name="nlc_coupon"]'),coupon);assert.equal(coupon.value,'BLACKFRIDAY15');
+  assert.equal(root.querySelector('[name="nlc_coupon"]'),couponInput);assert.equal(couponInput.value,coupon);
   assert.match(root.querySelector('.nlc-proceed').textContent,/CA\$/);
   await w.AltaLocale.setCurrency('JPY');await settle();
   assert.equal(JSON.stringify(requests),before);assert.equal(w.localStorage.getItem('pp-cart'),savedCart);
   assert.ok(requests.every(body=>body.country==='US'&&body.method_id===null&&!('currency' in body)&&!('display_currency' in body)));
   assert.equal(root.querySelector('.nlc-proceed').getAttribute('href'),'/checkout');
-  assert.match(root.querySelector('[data-nlc-coupon-status]').textContent,/BLACKFRIDAY15 applied/);
+  assert.equal(root.querySelector('[data-nlc-coupon-status]').textContent,coupon+' applied.');
  }finally{await f.close();}
 });
 
@@ -115,11 +117,12 @@ test('homepage free-shipping threshold follows display FX without changing the U
  const f=await fixture('/');
  try{
   const {w,d}=f,trust=d.querySelector('.nl-trust');
-  assert.match(trust.textContent,/Free shipping over \$150/);
+  const usd=checkoutConfig.free_shipping_threshold_cents/100;
+  assert.ok(trust.textContent.includes('Free shipping over $'+usd));
   await w.AltaLocale.setCurrency('CAD');await settle();
-  assert.match(trust.textContent,/Free shipping over CA\$210\.00/);
+  assert.ok(trust.textContent.includes('Free shipping over CA$'+(usd*1.4).toFixed(2)));
   assert.doesNotMatch(trust.textContent,/≈|US shipping/);
   await w.AltaLocale.setCurrency('USD');await settle();
-  assert.match(trust.textContent,/Free shipping over \$150/);
+  assert.ok(trust.textContent.includes('Free shipping over $'+usd));
  }finally{await f.close();}
 });

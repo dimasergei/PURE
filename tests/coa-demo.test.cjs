@@ -17,13 +17,13 @@ test('demo samples contain no report, lab, URL or analytical claim',()=>{
   assert.equal(sample.test_results,undefined);
  }
 });
-test('demo UI is visually separated from verified certificates and never links to a sample PDF',()=>{
- const html=fs.readFileSync(path.join(root,'coas.html'),'utf8');
+test('demonstration records stay off the Testing page and the legacy sample renderer never links to a PDF',()=>{
+ const publicShell=fs.readFileSync(path.join(root,'site-build.cjs'),'utf8');
+ const page=fs.readFileSync(path.join(root,'workspace-v2.js'),'utf8');
  const js=fs.readFileSync(path.join(root,'coa-demo.js'),'utf8');
- assert.match(html,/DEMONSTRATION ONLY · NOT LABORATORY DOCUMENTATION/);
- assert.match(html,/not supplier reports, not tested batches/);
- assert.match(html,/id="coa-demo-results"/);
- assert.match(html,/id="coa-results"/);
+ assert.doesNotMatch(publicShell,/coa-demo\.js|coa-demo-samples/);
+ assert.doesNotMatch(page,/coa-demo-results|coa-demo-samples/);
+ assert.match(page,/id="ap-supplier-references"/);
  assert.match(js,/sample\.status!=='sample_only'/);
  assert.match(js,/DEMO ONLY — NOT A COA/);
  assert.doesNotMatch(js,/createElement\('a'\)|innerHTML\s*=/);

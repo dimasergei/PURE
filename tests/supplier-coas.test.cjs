@@ -4,7 +4,9 @@ const data=require('../data/supplier-coas.json');
 test('every published supplier report has an exact catalog variant and explicit provenance',()=>{
  const vm=require('node:vm'),context={};vm.runInNewContext(fs.readFileSync('products.js','utf8')+';globalThis.catalog=CATALOG;',context);const catalog=context.catalog;const ids=new Set();
  for(const r of data.reports){assert(validReport(r),r.id);assert(!ids.has(r.id));ids.add(r.id);assert(catalog.find(p=>p.id===r.product_id)?.variants.some(v=>v.size===r.size),r.id);assert.match(r.sha256,/^[a-f0-9]{64}$/);assert(r.report_client&&r.lab_name&&r.publisher);assert.equal(r.inventory_lot_linked,false);}
- assert.equal(data.coverage.length,catalog.reduce((n,p)=>n+p.variants.length,0));
+ const catalogKeys=catalog.flatMap(p=>p.variants.map(v=>JSON.stringify([p.id,v.size]))).sort();
+ const coverageKeys=data.coverage.map(c=>JSON.stringify([c.product_id,c.size])).sort();
+ assert.deepEqual(coverageKeys,Array.from(catalogKeys));
  for(const c of data.coverage)assert.deepEqual(c.report_ids,data.reports.filter(r=>r.product_id===c.product_id&&r.size===c.size).map(r=>r.id));
 });
 test('strength filtering cannot reuse a 5mg report for a 10mg selection',()=>{

@@ -13,7 +13,7 @@ const catalog=[{id:'fixture-product',name:'Fixture product',variants:[{size:'5mg
 const fx={fx_ppm:1375000,source:'Bank of Canada',series:'FXUSDCAD',rate_date:'2026-11-17',quoted_at:'2026-11-18T07:00:00.000Z',expires_at:'2026-11-18T07:30:00.000Z',token:'fixture-signed-rate-token'};
 const body={id,kind:'goods',method_id:mid,consent:true,research_use:true,checkout_version:config.version,name:'Fixture Researcher',organization:'Fixture Lab',
  items:[{id:'fixture-product',size:'5mg',qty:1}],address:{line1:'123 Fixture Street',city:'Fixture City',region:'ON',postal_code:'N2L 1A1',country:'CA'},
- delivery:{shipping:'standard',extras:['protection']},coupon:'BLACKFRIDAY15',points:0,credit_cents:0};
+ delivery:{shipping:'standard',extras:['protection']},coupon:'BLACKFRIDAY10',points:0,credit_cents:0};
 function database({methods=[interac],balance={points:1000,credit_cents:5000},invoices=[],onMethodsRead=null}={}){
  const state={methods:structuredClone(methods),balance:structuredClone(balance),invoices:structuredClone(invoices),delivery:structuredClone(require('../config/delivery-options.json')),methodReads:0};
  const calls=[],reads=[];
@@ -79,17 +79,19 @@ test('inactive, wrong currency, wrong provider, native hybrids and membership-on
 });
 
 test('Interac quote has exact CAD products, coupon and separately rounded delivery components at a signed rate',async()=>{
- const {res,db}=await call({...body,action:'quote',coupon:' blackFriday15 '});
+ const {res,db}=await call({...body,action:'quote',coupon:' blackFriday10 '});
  assert.equal(res.code,200);assert.equal(res.body.currency,'CAD');assert.equal(res.body.payment_currency,'CAD');assert.equal(res.body.request_only,undefined);assert.equal(res.body.manual_transfer,true);
- assert.equal(res.body.subtotal_cents,13750);assert.equal(res.body.discount_cents,2063);assert.equal(res.body.shipping_cents,6181);assert.equal(res.body.tax_cents,0);assert.equal(res.body.total_cents,17868);
+ assert.equal(res.body.subtotal_cents,13750);assert.equal(res.body.discount_cents,1375);assert.equal(res.body.shipping_cents,4119);assert.equal(res.body.tax_cents,0);assert.equal(res.body.total_cents,16494);
  assert.equal(res.body.pricing.lines[0].unit_price_cents,13750);assert.equal(res.body.pricing.lines[0].unit_price_usd_cents,10000);
- assert.equal(res.body.pricing.delivery.currency,'CAD');assert.equal(res.body.pricing.delivery.shipping_cents,5493);assert.equal(res.body.pricing.delivery.extras[0].amount_cents,688);
+ assert.equal(res.body.pricing.delivery.currency,'CAD');assert.equal(res.body.pricing.delivery.shipping_cents,3431);assert.equal(res.body.pricing.delivery.extras[0].amount_cents,688);
  assert.equal(res.body.pricing.fx_ppm,1375000);assert.equal(res.body.pricing.fx.token,undefined);assert.equal(res.body.fx_quote,fx.token);
- assert.deepEqual(res.body.pricing.usd_basis,{currency:'USD',subtotal_cents:10000,coupon_discount_cents:1500,membership_discount_cents:0,merchandise_cents:8500});
- assert.equal(res.body.pricing.coupon_code,'BLACKFRIDAY15');assert.equal(res.body.pricing.crypto_discount_cents,0);assert.equal(res.body.pricing.payment_discount,undefined);
+ assert.deepEqual(res.body.pricing.usd_basis,{currency:'USD',subtotal_cents:10000,coupon_discount_cents:1000,membership_discount_cents:0,merchandise_cents:9000});
+ assert.equal(res.body.pricing.coupon_code,'BLACKFRIDAY10');assert.equal(res.body.pricing.crypto_discount_cents,0);assert.equal(res.body.pricing.payment_discount,undefined);
  assert.equal(res.body.points_redeemed,0);assert.equal(res.body.credit_redeemed_cents,0);assert.equal(res.body.earned_points,0);
  assert.match(res.body.quote,/^[a-f0-9]{64}$/);assert.equal(db.calls.length,0);
- const {res:regular}=await call({...body,action:'quote',coupon:''},{db});assert.equal(regular.body.discount_cents,0);assert.equal(regular.body.total_cents,19931);
+ const {res:regular}=await call({...body,action:'quote',coupon:''},{db});assert.equal(regular.body.discount_cents,0);assert.equal(regular.body.total_cents,17869);
+ const {res:retired}=await call({...body,action:'quote',coupon:'BLACKFRIDAY15'},{db});
+ assert.equal(retired.code,400);assert.match(retired.body.error,/coupon code is not available/);
  assert.deepEqual(db.state.balance,{points:1000,credit_cents:5000});
 });
 
@@ -101,31 +103,33 @@ test('USD points or credit, non-Canadian destinations and disabled delivery are 
  const {res}=await call({...body,action:'quote'},{db});assert.equal(res.code,400);assert.equal(db.calls.length,0);
 });
 
-test('placement atomically accepts an unpaid CAD order with server identity, product prices, coupon, delivery and bulk intent',async t=>{
+test('placement atomically accepts an unpaid CAD bulk order at the exclusive bulk price',async t=>{
  let notifications=0;t.mock.method(require('../lib/invoice-notifications'),'dispatch',async()=>{notifications++;throw Error('This isolated checkout fixture must not dispatch messages.');});
- const db=database(),input={...body,bulk_order:true,coupon:' blackfriday15 ',items:[{...body.items[0],qty:10,price:.01,unit_price_usd_cents:1}],
+ const db=database(),input={...body,bulk_order:true,coupon:'',items:[{...body.items[0],qty:10,price:.01,unit_price_usd_cents:1}],
   customer_id:'forged',customer_email:'forged@example.test',currency:'CAD',total_cents:1,checkout_version:config.version,
   preferred_payment:{method_id:'forged',provider_key:'rampex',currency:'USD'},request:{checkout:{coupon:'FAKE',payment_kind:'crypto'}},payment_kind:'crypto',pricing:{discount_cents:999999},status:'paid'};
+ const {res:combined}=await call({...input,action:'quote',coupon:'BLACKFRIDAY10'},{db});
+ assert.equal(combined.code,400);assert.match(combined.body.error,/Bulk pricing cannot be combined/);assert.equal(db.calls.length,0);
  const {res:q}=await call({...input,action:'quote'},{db});assert.equal(q.code,200);
  const {res,fxCalls}=await call({...input,action:'place',quote:q.body.quote,fx_quote:q.body.fx_quote},{db});assert.equal(res.code,201);assert.equal(res.body.status,'accepted');assert.equal(res.body.request_only,undefined);assert.equal(res.body.manual_transfer,true);assert.equal(res.body.currency,'CAD');assert.equal(res.body.total_cents,q.body.total_cents);assert.equal(fxCalls[0].strict,true);
  assert.equal(db.calls.length,1);const saved=db.calls[0].args.p_data;
  assert.equal(saved.customer_id,uid);assert.equal(saved.customer_email,'customer@example.test');assert.equal(saved.consent,true);
  for(const field of ['payment_snapshot','paid_at','status','request_only'])assert.equal(saved[field],undefined,field);
- assert.equal(saved.checkout_version,checkout.INTERAC_VERSION);assert.equal(saved.currency,'CAD');assert.equal(saved.total_cents,110688);assert.equal(saved.pricing.currency,'CAD');
+ assert.equal(saved.checkout_version,checkout.INTERAC_VERSION);assert.equal(saved.currency,'CAD');assert.equal(saved.total_cents,69438);assert.equal(saved.pricing.currency,'CAD');
  assert.equal(saved.request.items[0].unit_price_usd_cents,10000);assert.equal(saved.request.items[0].qty,10);assert.equal(saved.request.bulk_order,true);
  assert.deepEqual(saved.request.preferred_payment,{method_id:mid,provider_key:'interac',label:interac.label,currency:'CAD'});
  assert.equal(saved.request.checkout.payment_kind,'interac');assert.equal(saved.request.checkout.request_only,undefined);assert.equal(saved.request.checkout.payment_method_version,3);
- assert.equal(saved.request.checkout.coupon,'BLACKFRIDAY15');assert.equal(saved.request.checkout.points,0);assert.equal(saved.request.checkout.credit_cents,0);assert.deepEqual(saved.request.checkout.delivery,body.delivery);
- assert.equal(saved.request.checkout.usd_estimate,undefined);assert.deepEqual(saved.pricing.usd_basis,{currency:'USD',subtotal_cents:100000,coupon_discount_cents:0,membership_discount_cents:0,merchandise_cents:80000});
+ assert.equal(saved.request.checkout.coupon,'');assert.equal(saved.request.checkout.points,0);assert.equal(saved.request.checkout.credit_cents,0);assert.deepEqual(saved.request.checkout.delivery,body.delivery);
+ assert.equal(saved.request.checkout.usd_estimate,undefined);assert.deepEqual(saved.pricing.usd_basis,{currency:'USD',subtotal_cents:100000,coupon_discount_cents:0,membership_discount_cents:0,merchandise_cents:50000});
  assert.equal(saved.request.checkout.input_digest,(await checkout.normalize({},user,input,catalog)).digest);assert.match(saved.digest,/^[a-f0-9]{64}$/);
  assert.equal(db.state.invoices[0].checkout_version,checkout.INTERAC_VERSION);assert.deepEqual(db.state.balance,{points:1000,credit_cents:5000});assert.equal(notifications,1,'A failed mocked post-commit email attempt cannot fail or undo placement');
  db.state.methods[0].active=false;
- const {res:again,fxCalls:replayedFx}=await call({...input,action:'place',quote:q.body.quote,fx_quote:'expired-token'},{db});assert.equal(again.code,200);assert.equal(again.body.replayed,true);assert.equal(again.body.manual_transfer,true);assert.equal(again.body.total_cents,110688);assert.equal(db.calls.length,1);assert.equal(replayedFx.length,0);
+ const {res:again,fxCalls:replayedFx}=await call({...input,action:'place',quote:q.body.quote,fx_quote:'expired-token'},{db});assert.equal(again.code,200);assert.equal(again.body.replayed,true);assert.equal(again.body.manual_transfer,true);assert.equal(again.body.total_cents,69438);assert.equal(db.calls.length,1);assert.equal(replayedFx.length,0);
  const {res:conflict}=await call({...input,action:'place',quote:q.body.quote,fx_quote:q.body.fx_quote,note:'Changed after submitting'},{db});assert.equal(conflict.code,409);assert.equal(db.calls.length,1);
 });
 
 test('changed cart, delivery, coupon, catalog, request reference or method version invalidates the quoted request',async()=>{
- for(const change of [{body:{items:[{...body.items[0],qty:2}]}},{body:{coupon:''}},{body:{bulk_order:true}},
+ for(const change of [{body:{items:[{...body.items[0],qty:2}]}},{body:{coupon:''}},
   {body:{delivery:{shipping:'express',extras:[]}}},{body:{id:'a0000000-0000-4000-8000-000000000009'}},
   {body:{quote:'0'.repeat(64)}},{catalog:[{...catalog[0],variants:[{size:'5mg',price:101}]}]},{method:{version:4}},{method:{active:false}}]){
   const db=database(),{res:q}=await call({...body,action:'quote'},{db});
@@ -133,6 +137,10 @@ test('changed cart, delivery, coupon, catalog, request reference or method versi
   const {res}=await call({...body,action:'place',quote:q.body.quote,fx_quote:q.body.fx_quote,...change.body},{db,cat:change.catalog||catalog});
   assert.equal(res.code,409,JSON.stringify(change));assert.equal(db.calls.length,0);
  }
+ const db=database(),retail={...body,items:[{...body.items[0],qty:10}],coupon:''};
+ const {res:q}=await call({...retail,action:'quote'},{db});assert.equal(q.code,200);
+ const {res}=await call({...retail,action:'place',bulk_order:true,quote:q.body.quote,fx_quote:q.body.fx_quote},{db});
+ assert.equal(res.code,409);assert.equal(db.calls.length,0);
 });
 
 test('receiving method is revalidated just before request creation',async()=>{

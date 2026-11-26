@@ -13,13 +13,13 @@ function invoice(currency='USD'){
   request_data:{items:[{id:'a',size:'5mg',qty:1}]},commerce_receipts:[{kind:'payment',currency,amount_cents:14501}],commerce_partner_commissions:null,commerce_fulfillment_items:[]};
 }
 test('all catalog variants and mixed paid, BOGO and gift quantities use one settled order in invoice currency',()=>{
- assert.equal(variants.length,85);
+ assert.equal(new Set(variants.map(({id,size})=>id+":"+size)).size,variants.length);
  const order=invoice('CAD');
  order.request_data.items=variants;
  order.pricing.bogo_campaign={free_units:[variants[0],variants[2]]};
  order.pricing.bundled_items=[{id:'gift-bac-3',size:'3 mL',qty:1,line_total_cents:0}];
  order.commerce_partner_commissions={status:'pending',amount_cents:1500};
- assert.deepEqual(orderBasis(order),{available:true,currency:'CAD',receipts_cents:11651,commission_cents:2071,commission_usd_cents:1500,paid_units:85,free_units:3});
+ assert.deepEqual(orderBasis(order),{available:true,currency:'CAD',receipts_cents:11651,commission_cents:2071,commission_usd_cents:1500,paid_units:variants.length,free_units:3});
  order.currency='USD';order.commerce_receipts[0].currency='USD';
  assert.equal(orderBasis(order).commission_cents,1500);
 });

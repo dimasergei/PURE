@@ -10,7 +10,13 @@ const content = `<div data-pss-planner>
   <section class="pss-hero">
     <div class="ap-container">
       <h1>SUBSCRIBE &amp; SAVE.</h1>
-      <p>Choose four products and their strengths to save 40% on each of three monthly deliveries.</p>
+      <p>Choose four products and your preferred strengths for three monthly deliveries. Receive a separate invoice each month.</p>
+      <ul class="pss-benefits" aria-label="Subscribe &amp; Save benefits">
+        <li><strong>40% off</strong><span>On your selections each month</span></li>
+        <li><strong>3 mL included</strong><span>Reconstitution solution with each delivery</span></li>
+        <li><a href="/coas"><strong>View testing</strong><span>Browse available certificates of analysis</span></a></li>
+        <li><strong>Free express</strong><span>For U.S. and Canadian addresses</span></li>
+      </ul>
     </div>
   </section>
   <div class="ap-container pss-layout">
@@ -21,19 +27,33 @@ const content = `<div data-pss-planner>
       <p role="status" class="pss-status" data-pss-status></p>
       <div class="pss-grid" data-pss-products></div>
     </section>
-    <aside id="pss-plan" class="pss-summary" aria-labelledby="pss-plan-title">
-      <h2 id="pss-plan-title">Your plan</h2>
-      <div class="pss-progress"><span data-pss-count></span> selected<progress aria-label="Selections in plan" value="0" max="4" data-pss-progress></progress></div>
+    <aside id="pss-plan" class="pss-summary" aria-labelledby="pss-plan-title" data-pss-summary>
+      <div class="pss-summary-header">
+        <h2 id="pss-plan-title">Your plan</h2>
+        <span class="pss-count"><span data-pss-count></span> selected</span>
+        <button class="pss-close" type="button" data-pss-close aria-label="Close plan summary">×</button>
+      </div>
+      <progress class="ap-sr" aria-label="Selections in plan" value="0" max="4" data-pss-progress></progress>
       <div data-pss-selection></div>
-      <div class="pss-total"><span>Retail value</span><strong data-pss-subtotal></strong></div>
-      <div class="pss-total pss-monthly-price"><span>Monthly savings (40%)</span><strong data-pss-savings></strong></div>
-      <div class="pss-total pss-monthly-price"><span>Per month</span><strong data-pss-monthly-total></strong></div>
-      <button type="button" class="ap-button" data-pss-monthly disabled>Continue</button>
-      <button type="button" class="ap-button" data-pss-cart hidden disabled>Add plan to cart</button>
-      <p class="pss-plan-note">Pay one invoice per month. Free express shipping in the U.S. and Canada. Change future selections after your first delivery ships. Start another plan after delivery three. <a href="/commercial-terms.html#subscribe-and-save-plan">Plan terms</a></p>
+      <dl class="pss-totals">
+        <div><dt>Retail value</dt><dd data-pss-subtotal></dd></div>
+        <div data-pss-monthly-line hidden><dt>Monthly savings (40%)</dt><dd data-pss-savings></dd></div>
+        <div data-pss-gift-line hidden><dt>Bundled reconstitution solution</dt><dd data-pss-gift-savings></dd></div>
+        <div data-pss-monthly-line hidden><dt>Express shipping <small>U.S. &amp; Canada</small></dt><dd>Free</dd></div>
+        <div class="pss-total-final" data-pss-monthly-line hidden><dt>Monthly total</dt><dd data-pss-monthly-total></dd></div>
+      </dl>
+      <ol class="pss-delivery-timeline" aria-label="Initial monthly deliveries" data-pss-timeline hidden>
+        <li>Month 1</li>
+        <li>Month 2</li>
+        <li>Month 3</li>
+      </ol>
+      <button type="button" class="ap-button pss-continue" data-pss-monthly disabled>Choose four products</button>
+      <button type="button" class="ap-button pss-continue" data-pss-cart hidden disabled>Add plan to cart</button>
+      <p class="pss-plan-note">Change future selections after your first delivery ships. Your plan ends after delivery three and you can start another. Any applicable payment fees are shown before you pay. <a href="/commercial-terms.html#subscribe-and-save-plan">Plan terms</a> · <a href="/refund-policy.html">Refund policy</a></p>
       <p role="status" data-pss-review-status></p>
     </aside>
-    <div class="pss-mobile-bar"><a href="#pss-plan">Your plan <span data-pss-mobile-count></span></a><button class="ap-button" data-pss-mobile-continue type="button" disabled>Continue</button></div>
+    <dialog id="pss-plan-drawer" class="pss-plan-drawer" aria-labelledby="pss-plan-title" data-pss-drawer></dialog>
+    <div class="pss-mobile-bar"><a href="#pss-plan" aria-haspopup="dialog" aria-controls="pss-plan-drawer" data-pss-mobile-review>View plan <span data-pss-mobile-count></span></a><button class="ap-button" data-pss-mobile-continue type="button" disabled>Choose four products</button></div>
     <noscript><p>Enable JavaScript to build a plan or <a href="/shop">browse products</a>.</p></noscript>
   </div>
 </div>`;
@@ -49,8 +69,8 @@ const html = shell
   .replace(/(<(?:meta property="og:url" content|link rel="canonical" href)=")[^"]*/g, `$1${canonical}`)
   .replace('href="#ap-main"', 'href="#subscribe-and-save-main"')
   .replace(layout, `<main id="subscribe-and-save-main">${content}</main>`)
-  .replace('</head>', '<link rel="stylesheet" href="/subscribe-and-save.css?v=4"></head>')
-  .replace('</body>', '<script src="/subscribe-and-save.js?v=4"></script></body>');
+  .replace('</head>', '<link rel="stylesheet" href="/subscribe-and-save.css?v=5"></head>')
+  .replace('</body>', '<script src="/subscribe-and-save.js?v=5"></script></body>');
 fs.writeFileSync(path.join(out, 'subscribe-and-save.html'), html);
 for (const asset of ['subscribe-and-save.css', 'subscribe-and-save.js']) fs.copyFileSync(asset, path.join(out, asset));
 const sitemapPath = path.join(out, 'sitemap.xml');

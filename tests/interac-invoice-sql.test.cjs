@@ -44,10 +44,12 @@ test('isolated PostgreSQL preserves CAD Interac request, review, acceptance and 
   async function request(){
    const record=await checkout.normalize({}, {id:uid,email:'fixture@example.test'},{
     id:randomUUID(),kind:'goods',name:'Fixture researcher',method_id:methodId,checkout_version:config.version,consent:true,research_use:true,
-    coupon:'BLACKFRIDAY15',items:[{id:'a',size:'5mg',qty:2},{id:'b',size:'10mg',qty:1}],
+    items:[{id:'a',size:'5mg',qty:2},{id:'b',size:'10mg',qty:1}],
     address:{line1:'123 Fixture Street',city:'Fixture City',region:'ON',postal_code:'N2L 1A1',country:'CA'},
     delivery:{shipping:'standard',extras:[]}
    },catalog);
+   // This row represents a request saved before the current public coupon went live.
+   Object.assign(record.request.checkout,{coupon:'BLACKFRIDAY15',payment_kind:'interac',request_only:true});
    record.request.preferred_payment={method_id:methodId,provider_key:'interac',label:'Interac e-Transfer',currency:'CAD'};
    delete record.digest;record.digest=createHash('sha256').update(JSON.stringify(record)).digest('hex');
    const created=await rpc('commerce_request_invoice',[JSON.stringify(record)]);
