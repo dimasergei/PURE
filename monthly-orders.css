@@ -379,6 +379,11 @@
 }
 
 @media (max-width: 800px) {
+  .monthly-main :is(.fields, .item-edit) :is(input, select),
+  .monthly-main select.method {
+    font-size: max(16px, 1rem);
+  }
+
   .monthly-main .monthly-checkout-layout {
     grid-template-columns: minmax(0, 1fr);
   }

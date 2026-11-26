@@ -531,6 +531,31 @@
     padding: 9px;
   }
 
+  .pss-filters button,
+  .pss-sizes button,
+  .pss-open-slot button {
+    min-height: 44px;
+  }
+
+  .pss-sizes button,
+  .pss-close,
+  .pss-remove {
+    min-width: 44px;
+  }
+
+  .pss-selected {
+    grid-template-columns: 40px minmax(0, 1fr) auto 44px;
+  }
+
+  .pss-plan-drawer {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  body:has(.pss-plan-drawer[open]) {
+    overflow: hidden;
+  }
+
   .pss-filters {
     flex-wrap: nowrap;
     overflow-x: auto;
@@ -577,7 +602,11 @@
 
   .pss-mobile-bar .ap-button {
     min-height: 44px;
-    padding-inline: 10px;
+    display: block;
+    padding: 8px 10px;
     font-size: .82rem;
+    line-height: 1.25;
+    letter-spacing: normal;
+    text-align: center;
   }
 }

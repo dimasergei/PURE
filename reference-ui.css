@@ -1069,7 +1069,8 @@ html[data-display-currency]:not([data-display-currency="USD"]) body.ap-site :is(
  .ap-site .pure-shop-page #ap-catalog-grid .nl-featured-meta { text-align:center; justify-items:center; }
  .ap-site .pure-shop-page #ap-catalog-grid .nl-featured-price { text-align:center; }
  .ap-site .pure-shop-page #ap-catalog-grid .ap-catalog-actions { width:100%; grid-template-columns:1fr; }
- .ap-site .pure-shop-page #ap-catalog-grid .ap-catalog-actions .ap-button { min-height:38px; border-radius:24px; font-size:.8125rem; }
+ .ap-site .pure-shop-page #ap-catalog-grid .ap-catalog-actions .ap-button { min-height:44px; border-radius:24px; font-size:.8125rem; }
+ .ap-site .pure-shop-page #ap-catalog-grid .ap-catalog-actions > .ap-catalog-view { background:#fff!important; color:#111!important; }
 }
 .ap-site .ap-catalog-options {
  padding:20px; border:1px solid #ddd; border-radius:18px; background:#fff; color:#111;
@@ -1106,15 +1107,18 @@ html[data-display-currency]:not([data-display-currency="USD"]) body.ap-site :is(
 .ap-site .ap-related .ap-catalog-actions { display:grid; grid-template-columns:1fr; gap:6px; grid-column:1/-1; }
 .ap-site .ap-related .ap-catalog-actions .ap-button { width:100%; min-height:38px; font-size:.8125rem; }
 @media(max-width:800px) {
- body.ap-site .ap-mobile-purchase { display:grid; gap:6px; padding:7px 12px max(9px,env(safe-area-inset-bottom)); }
+ .ap-site .ap-product-layout.nl-detail { grid-template-columns:minmax(0,1fr); }
+ .ap-site .nl-detail .ap-detail-copy { min-width:0; }
+ html:root body.ap-site .nl-detail .ap-size-options button { min-height:44px; }
+ body.ap-site .ap-mobile-purchase { display:grid; grid-template-columns:minmax(0,1fr); gap:6px; padding:7px 12px max(9px,env(safe-area-inset-bottom)); }
  body.ap-site .ap-mobile-purchase[data-in-view=true] { display:none; }
  .ap-mobile-price,.ap-mobile-controls { display:flex; align-items:center; justify-content:space-between; gap:9px; min-width:0; }
  .ap-mobile-price { font-weight:700; font-size:.8125rem; }
  .ap-mobile-price strong { text-align:right; }
  .ap-mobile-sizes { flex:1; min-width:0; scrollbar-width:none; }
- .ap-mobile-sizes button { flex:none; min-height:38px; min-width:43px; padding:6px 10px; font:inherit; font-size:.75rem; font-weight:700; background:#fff; color:#111; border:1px solid #d3d3d3; border-radius:24px; }
+ .ap-mobile-sizes button { flex:none; min-height:44px; min-width:44px; padding:6px 10px; font:inherit; font-size:.75rem; font-weight:700; background:#fff; color:#111; border:1px solid #d3d3d3; border-radius:24px; }
  .ap-mobile-sizes button[aria-pressed=true] { background:#111; color:#fff; }
- .ap-mobile-controls>.ap-button { flex:none; min-width:72px; min-height:40px; }
+ .ap-mobile-controls>.ap-button { flex:none; min-width:72px; min-height:44px; }
  .ap-site .ap-related .nl-carousel>article { flex-basis:min(42vw,210px); }
 }
 .ap-card-price-line { display:inline-flex; align-items:baseline; gap:4px; flex-wrap:wrap; }

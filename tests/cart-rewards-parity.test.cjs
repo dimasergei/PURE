@@ -24,6 +24,7 @@ test('the cart advances through both gifts using discounted merchandise cents',a
   [24999,'Add $0.01 for free priority shipping.',false,false],
   [25000,'Add $49.00 for free recon solution.',true,false],
   [25001,'Add $48.99 for free recon solution.',true,false],
+  [26970,'Add $29.30 for free recon solution.',true,false],
   [29899,'Add $0.01 for free recon solution.',true,false],
   [29900,'Free priority shipping + recon solution unlocked.',true,true],
   [29901,'Free priority shipping + recon solution unlocked.',true,true],
@@ -34,7 +35,8 @@ test('the cart advances through both gifts using discounted merchandise cents',a
    const meter=f.root.querySelector('[role=progressbar]'),buttons=f.root.querySelectorAll('.nlc-reward-trigger');
    assert.equal(meter.getAttribute('aria-valuemax'),'299');
    assert.equal(Number(meter.getAttribute('aria-valuenow')),Math.min(merchandise,29900)/100);
-   assert.equal(meter.dataset.complete,String(reconReached));
+   const earnedCents=reconReached?bacMinimum:shippingReached?shipping:0;
+   assert.equal(parseFloat(meter.style.getPropertyValue('--earned-width')),earnedCents/bacMinimum*100);
    assert.equal(parseFloat(meter.firstElementChild.style.width),Math.min(merchandise/29900,1)*100);
    assert.deepEqual(Array.from(buttons,b=>b.dataset.reached),[String(shippingReached),String(reconReached)]);
    assert.equal(parseFloat(buttons[0].parentElement.style.left),250/299*100);
@@ -49,6 +51,12 @@ test('milestone labels follow destination eligibility',async()=>{
    assert.equal(f.root.querySelectorAll('.nlc-reward-trigger').length,count);
    assert.match(f.root.querySelector('[data-nlc-unlock-copy]').textContent,new RegExp(expected));
    assert.doesNotMatch(f.root.querySelector('.nlc-rewards').textContent,/priority shipping/i);
+  }finally{f.close();}
+ }
+ for(const [subtotal,width] of [[26970,'0%'],[29900,'100%']]){
+  const f=await fixture(subtotal,0,'GB');
+  try{
+   assert.equal(f.root.querySelector('[role=progressbar]').style.getPropertyValue('--earned-width'),width);
   }finally{f.close();}
  }
 });

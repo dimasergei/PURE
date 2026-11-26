@@ -45,8 +45,10 @@
   const next=tiers.find(tier=>subtotal<tier.target);
   const rewards=shipping&&tiers.length===2?shipping+' + recon solution':tiers[tiers.length-1].label;
   const status=next?'Add <strong>'+money(next.target-subtotal)+'</strong> for <strong>'+next.label+'</strong>.':'<strong>'+rewards[0].toUpperCase()+rewards.slice(1)+'</strong> unlocked.';
+  let earnedTarget=0;
   const markers=tiers.map(tier=>{
    const reached=subtotal>=tier.target;
+   if(reached)earnedTarget=tier.target;
    const label=tier.kind==='recon'&&shipping?shipping+' + recon solution':tier.label;
    const title=label[0].toUpperCase()+label.slice(1);
    const id='nlc-reward-'+tier.kind;
@@ -55,7 +57,7 @@
   panel.hidden=false;
   panel.querySelector('[data-nlc-unlock-copy]').innerHTML=status;
   const rail=panel.querySelector('.nlc-reward-rail');
-  rail.innerHTML='<div class="nlc-reward-meter" data-complete="'+(progress===finalTarget)+'" role="progressbar" aria-label="Cart rewards" aria-valuemin="0" aria-valuemax="'+finalTarget/100+'" aria-valuenow="'+progress/100+'"><span style="width:'+progress/finalTarget*100+'%"></span></div>'+markers;
+  rail.innerHTML='<div class="nlc-reward-meter" style="--earned-width:'+earnedTarget/finalTarget*100+'%" role="progressbar" aria-label="Cart rewards" aria-valuemin="0" aria-valuemax="'+finalTarget/100+'" aria-valuenow="'+progress/100+'"><span style="width:'+progress/finalTarget*100+'%"></span></div>'+markers;
   rail.querySelector('[role="progressbar"]').setAttribute('aria-valuetext',panel.querySelector('[data-nlc-unlock-copy]').textContent);
   let current=null,pinned=false;
   function show(button){

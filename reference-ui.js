@@ -47,7 +47,7 @@
   const action=main?.querySelector('.nl-purchase'),bar=main?.querySelector('.ap-mobile-purchase');
   if(!action||!bar||typeof IntersectionObserver==='undefined')return;
   purchaseObserver=new IntersectionObserver(([entry])=>{
-   bar.dataset.inView=String(entry.isIntersecting||entry.boundingClientRect.top>0);
+   bar.dataset.inView=String(entry.isIntersecting);
   });
   purchaseObserver.observe(action);
  }

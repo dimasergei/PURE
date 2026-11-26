@@ -1,7 +1,7 @@
 /* PURE mobile-only storefront refinement. Desktop rules are not changed.
    Loaded only for viewport widths at or below 767px after the shared theme. */
 @media screen and (max-width: 767px) {
-  html { scroll-padding-top: 116px; }
+  html { scroll-padding-top: 104px; }
   body.ap-site { overflow-x: clip; }
   .ap-site .ap-header.ap-header-compact {
     position: sticky !important;
@@ -17,14 +17,14 @@
     box-sizing: border-box;
     width: 100% !important;
     max-width: 100% !important;
-    min-height: 72px !important;
-    height: 72px !important;
+    min-height: 60px !important;
+    height: 60px !important;
     padding: 0 14px !important;
     gap: 8px !important;
   }
   .ap-site .ap-header-compact .ap-header-main:has(.ap-nav.ap-open) {
     height: auto !important;
-    min-height: 72px !important;
+    min-height: 60px !important;
     padding-bottom: 10px !important;
   }
   .ap-site .ap-header-compact .ap-brand {
@@ -40,8 +40,8 @@
     min-width: 0;
   }
   .ap-site .ap-header-compact .ap-header-actions .ap-icon {
-    width: 30px;
-    height: 38px;
+    width: 44px;
+    height: 44px;
     flex: 0 0 auto;
   }
   .ap-site .ap-header-compact .ap-menu-toggle {
@@ -49,7 +49,7 @@
     align-items: center;
     justify-content: center;
     font-size: 0 !important;
-    width: 34px !important;
+    width: 44px !important;
   }
   .ap-site .ap-header-compact .ap-menu-toggle::before {
     content: "";
@@ -82,8 +82,8 @@
     gap: 8px;
   }
   .ap-site .nl-featured .nl-carousel-controls button {
-    width: 36px;
-    height: 36px;
+    width: 44px;
+    height: 44px;
     flex: none;
   }
   .ap-site .nl-featured .nl-carousel {
@@ -139,20 +139,23 @@
     font-size: 10px !important;
     line-height: 1.35;
   }
-  .ap-site .nl-featured .nl-carousel .nl-card-actions {
+  #nl-featured .ap-catalog-actions {
     display: grid;
-    grid-template-columns: minmax(0,1fr) minmax(0,1fr);
-    gap: 9px;
-    width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
   }
-  .ap-site .nl-featured .nl-carousel .nl-card-actions > :is(a,button) {
-    box-sizing: border-box;
-    width: 100% !important;
-    min-height: 42px !important;
-    padding: 9px 5px !important;
-    font-size: 11px !important;
-    white-space: nowrap;
-    border-radius: 24px !important;
+  #nl-featured .ap-catalog-actions > .ap-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    min-height: 44px;
+    padding: 8px 6px;
+    font-size: .8125rem;
+    line-height: 1.2;
+    text-align: center;
+    white-space: normal;
+    border-radius: 8px;
   }
 }
 
@@ -181,7 +184,8 @@
   .ap-site .ap-announcement::before,
   .ap-site .ap-announcement::after { content: none !important; display: none !important; }
   .ap-site .ap-announcement #ap-announcement-text { position: static; display: block; width: auto; max-width: 100%; margin: 0; padding: 0; font-size: inherit; color: #fff; animation: none !important; }
-  /* Fill the viewport below the 40px announcement and 73px header. The
+  .ap-site .nl-hero { --pure-site-chrome-height: 101px; }
+  /* Fill the viewport below the announcement and header. The
      flexible middle row gives shorter screens smaller, complete vials. */
   .ap-site .nl-hero .nl-hero-inner {
     width: calc(100% - 32px);

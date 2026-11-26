@@ -7,9 +7,16 @@ test('gift tooltip opens above the icon into the scroll area instead of under th
  assert.match(css,/\.nlc-reward-trigger\s*\{[^}]*width: 44px;[^}]*height: 44px;/s);
  assert.match(css,/\.nlc-scrollable-items\{overflow-x:hidden/);
 });
-test('the reward fill turns green when complete and shares the banner shimmer',()=>{
+test('each earned section and gift share a green color while locked rewards stay black',()=>{
+ assert.match(css,/--reward-earned:\s*#19804b/);
+ assert.match(css,/--reward-pending:\s*#171717/);
+ assert.match(css,/\.nlc-reward-meter\s*\{[^}]*background: var\(--reward-pending\)/s);
+ assert.match(css,/\.nlc-reward-meter::before\s*\{[^}]*width: var\(--earned-width, 0%\);[^}]*background: var\(--reward-earned\)/s);
+ assert.match(css,/\.nlc-reward-trigger > span\s*\{[^}]*background: var\(--reward-pending\)/s);
+ assert.match(css,/\.nlc-reward-trigger\[data-reached="true"\] > span\s*\{[^}]*background: var\(--reward-earned\)/s);
+});
+test('the reward bar shares the banner shimmer and honors reduced motion',()=>{
  const brand=fs.readFileSync('pure-brand.css','utf8');
- assert.match(css,/\.nlc-reward-meter\[data-complete="true"\] > span\s*\{ background: #19804b;/);
  assert.match(brand,/\.ap-announcement::before,\s*\.nlc-reward-meter > span::before\s*\{[^}]*animation: pure-announcement-shimmer 5s/s);
  assert.match(brand,/@media \(prefers-reduced-motion: reduce\)\s*\{[^}]*\.nlc-reward-meter > span::before\s*\{[^}]*animation: none/s);
 });

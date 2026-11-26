@@ -69,7 +69,7 @@ const html = shell
   .replace(/(<(?:meta property="og:url" content|link rel="canonical" href)=")[^"]*/g, `$1${canonical}`)
   .replace('href="#ap-main"', 'href="#subscribe-and-save-main"')
   .replace(layout, `<main id="subscribe-and-save-main">${content}</main>`)
-  .replace('</head>', '<link rel="stylesheet" href="/subscribe-and-save.css?v=5"></head>')
+  .replace('</head>', '<link rel="stylesheet" href="/subscribe-and-save.css?v=6"></head>')
   .replace('</body>', '<script src="/subscribe-and-save.js?v=5"></script></body>');
 fs.writeFileSync(path.join(out, 'subscribe-and-save.html'), html);
 for (const asset of ['subscribe-and-save.css', 'subscribe-and-save.js']) fs.copyFileSync(asset, path.join(out, asset));
