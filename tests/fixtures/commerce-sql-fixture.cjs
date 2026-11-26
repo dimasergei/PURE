@@ -3,11 +3,12 @@
 // network/scheduler facilities, which financial fixtures never invoke.
 const fs=require('node:fs'),path=require('node:path');
 const read=name=>fs.readFileSync(path.join(__dirname,'../../supabase/migrations',name),'utf8');
-async function base(db){
+async function base(db,{notifications=false}={}){
  await db.exec('create role anon;create role authenticated;create role service_role;create schema auth;create table auth.users(id uuid primary key);create schema commerce_internal;');
  for(const file of [
   '20261110040926_manual_invoice_commerce.sql','20261110074742_payment_provider_options.sql','20261110164316_native_gateway_checkout.sql',
-  '20261111013606_peptidepay_invoice_sessions.sql','20261111025932_direct_checkout_balances.sql','20261111163930_conversion_memberships_partners.sql',
+  '20261111013606_peptidepay_invoice_sessions.sql',...(notifications?['20261110061306_invoice_notification_outbox.sql']:[]),
+  '20261111025932_direct_checkout_balances.sql','20261111163930_conversion_memberships_partners.sql',
   '20261111174353_partner_settings_supplier_queue.sql','20261111195957_unified_supplier_fulfillment.sql','20261111210000_single_supplier_per_order.sql',
   '20261112211215_rampex_order_payment_mapping.sql','20261112221052_rampex_multi_hosted.sql','20261113003946_rampex_stripe_only.sql',
   '20261113030240_safe_checkout_cancellation.sql','20261114211235_platinum_membership_benefits.sql','20261115090000_research_subscriptions.sql',
