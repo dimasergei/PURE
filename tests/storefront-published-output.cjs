@@ -39,6 +39,13 @@ const forbiddenCopy=/\bBOGO\b|buy\s+more.{0,15}get\s+more|shop\s+the\s+(?:BOGO\s
 let pages=0;
 for(const file of fs.readdirSync(out,{recursive:true}).filter(f=>f.endsWith('.html'))){
  const html=fs.readFileSync(path.join(out,file),'utf8'),dom=new JSDOM(html),doc=dom.window.document;
+ const brand=doc.querySelector('header.ap-header a.ap-brand');
+ if(brand?.querySelector('small')){
+  const visible=brand.textContent.trim().replace(/\s+/g,' ');
+  assert.equal(visible,'PURE RESEARCH, RECONSIDERED.',file+' header separates its visible wordmark and tagline');
+  assert.ok(brand.getAttribute('aria-label')?.toLowerCase().includes(visible.toLowerCase()),file+' includes the visible label in the home link name');
+ }
+
  const bundles = [...doc.querySelectorAll('link[rel="stylesheet"][href^="/pure-styles-"]')];
  const fontPreloads = [...doc.querySelectorAll('link[rel="preload"][as="font"]')];
  assert.equal(fontPreloads.length,1,'One local font preload: '+file);
