@@ -156,6 +156,15 @@
    cryptoPicker?.addEventListener('change',()=>{cryptoRadio.value=cryptoPicker.value;cryptoRadio.dispatchEvent(new Event('change',{bubbles:true}));});
    form.addEventListener('change',event=>{if(event.target.name==='method_id'){syncCryptoPicker();syncBalances();}});
    const {box:aside,estimate}=cartSummary(cart),layout=node('div');layout.className='dc-layout';
+   if(bulk){
+    root.querySelector('.dc-heading h1').textContent='Complete your bulk order';
+    const note=node('p','Bulk pricing applies to this order. Your regular cart stays saved for later.');
+    root.querySelector('.dc-heading').append(note);
+    aside.querySelector('h2').textContent='Bulk order summary';
+    const edit=link('Change quantities','/bulk-orders');
+    edit.className='ap-text-link';
+    aside.insertBefore(edit,estimate);
+   }
    const review=node('div'),status=node('p');status.className='dc-confirm-status';status.setAttribute('role','status');status.setAttribute('aria-live','polite');aside.append(review,status);layout.append(form,aside);root.append(layout);const steps=checkoutSteps(form,root,data,cart);window.ReadinessUI.enhanceCheckout(form,aside,auth,cart,data);
     if(stack){
       form.querySelectorAll('[name=shipping_speed]').forEach(input=>{input.checked=input.value===stackShipping;input.disabled=input.value!==stackShipping;input.closest('label')?.toggleAttribute('hidden',input.value!==stackShipping);});

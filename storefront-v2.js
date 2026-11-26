@@ -37,7 +37,18 @@
  let toastTimer;
  function toast(text){const node=$('#ap-toast');if(!node)return;clearTimeout(toastTimer);node.textContent=text;node.hidden=false;toastTimer=setTimeout(()=>{node.hidden=true;},3400);}
  function syncCart(modified=false){if(modified)write('ap-research-cart-origin-v1',null);write('pp-cart',cart);$$('.ap-cart-count').forEach(n=>{const count=cart.reduce((sum,x)=>sum+x.qty,0);n.textContent=String(count);n.hidden=count===0;});if($('#ap-cart-dialog')?.open)renderCart();window.dispatchEvent(new CustomEvent('alta:cart',{detail:{count:cart.length}}));}
- function addItems(input){const valid=normalizeLines(input);if(valid.length!==input.length)throw Error('Invalid product selection.');const merged=normalizeLines([...cart,...valid]);cart=merged;syncCart(true);toast(t('added'));}
+ function addItems(input){
+  const valid=normalizeLines(input);
+  if(!Array.isArray(input)||valid.length!==input.length)throw Error('Invalid product selection.');
+  const merged=new Map(cart.map(line=>[line.key,line]));
+  for(const line of valid){
+   const qty=(merged.get(line.key)?.qty||0)+line.qty;
+   if(qty>100)throw Error('A cart line can contain up to 100 units.');
+   merged.set(line.key,{...line,qty});
+  }
+  if(merged.size>60&&merged.size>cart.length)throw Error('A cart can contain up to 60 different items.');
+  cart=[...merged.values()];syncCart(true);toast(t('added'));
+ }
  function adjustQuantity(key,delta){if(typeof key!=='string'||!Number.isSafeInteger(delta)||Math.abs(delta)!==1)return false;const found=cart.some(x=>x.key===key);if(!found)return false;cart=normalizeLines(cart.map(x=>x.key===key?{...x,qty:Math.max(0,Math.min(100,x.qty+delta))}:x).filter(x=>x.qty>0));syncCart(true);return true;}
  function showDialog(id){const d=$(id);if(d&&!d.open)d.showModal();}
  function openCart(){renderCart();showDialog('#ap-cart-dialog');}
@@ -54,15 +65,27 @@
   if(!window.PureCampaign?.eligible?.(p.id,v.size))return '';
   return '<span class="pure-card-sale">Second unit '+esc(window.PureCampaign.discountPercent)+'% off</span>';
  }
+ function purchaseLabel(id){
+  return cart.some(line=>line.id===id)?t('addMore','Add more'):t('add');
+ }
  function catalogCardAction(p,v){
   const choose=p.variants.length>1;
-  const label=t('add');
+  const label=purchaseLabel(p.id);
   const url='/product/'+encodeURIComponent(p.id)+'?size='+encodeURIComponent(v.size);
   return `<div class="ap-catalog-actions">
    <a class="ap-button ap-button-secondary ap-catalog-view" href="${url}" aria-label="${esc('View more · '+p.name)}">View More</a>
    <button type="button" class="ap-button ap-catalog-action" data-action="${choose?'catalog-options':'add'}" data-id="${esc(p.id)}" ${choose?'aria-haspopup="dialog"':`data-size="${esc(v.size)}" data-open-cart`} aria-label="${esc(label+' · '+p.name)}">${esc(label)}</button>
   </div>`;
  }
+ window.addEventListener('alta:cart',()=>{
+  for(const button of $$('.ap-catalog-action')){
+   const p=product(button.dataset.id);
+   if(!p)continue;
+   const label=purchaseLabel(p.id);
+   button.textContent=label;
+   button.setAttribute('aria-label',label+' · '+p.name);
+  }
+ });
  function openCatalogOptions(p){
   if(!p)return;
   const variants=state.group==='Offers'?eligibleSizes(p):p.variants;
@@ -70,15 +93,19 @@
   const dialog=document.createElement('dialog');
   dialog.className='ap-dialog ap-catalog-options';
   dialog.setAttribute('aria-labelledby','ap-catalog-options-title');
-  dialog.innerHTML=`<div class="ap-dialog-head"><h2 id="ap-catalog-options-title">${esc(p.name)}</h2><button type="button" data-action="close-dialog" aria-label="Close options">×</button></div>
-    <form><label>Strength <select name="size" required autofocus><option value="">Choose a strength</option>${variants.map(v=>`<option value="${esc(v.size)}">${esc(v.size+' · '+money(v.price))}</option>`).join('')}</select></label>
-    <p role="status" hidden></p><button type="submit" class="ap-button">${esc(t('add'))}</button></form>`;
-  const form=$('form',dialog),size=form.elements.size,status=$('[role=status]',dialog);
-  form.addEventListener('submit',event=>{
-   event.preventDefault();
-   if(!form.reportValidity())return;
-   try{addItems([{id:p.id,size:size.value,qty:1}]);}
-   catch(error){status.textContent=error.message;status.hidden=false;return;}
+  dialog.innerHTML=`<div class="ap-dialog-head"><div><h2 id="ap-catalog-options-title">${esc(p.name)}</h2><p>Choose a size</p></div><button type="button" data-action="close-dialog" aria-label="Close options">×</button></div>
+   <div class="ap-quick-sizes">${variants.map(v=>`<button type="button" data-quick-size="${esc(v.size)}" aria-label="${esc('Add '+p.name+' '+v.size+' to cart')}"><span>${esc(v.size)}</span><strong>${priceMarkup(v.price,{trimWhole:true})}</strong><i aria-hidden="true">+</i></button>`).join('')}</div><p role="status" hidden></p>`;
+  dialog.addEventListener('click',event=>{
+   const choice=event.target.closest('[data-quick-size]');
+   if(!choice){
+    if(event.target===dialog){
+     const bounds=dialog.getBoundingClientRect();
+     if(event.clientX<bounds.left||event.clientX>bounds.right||event.clientY<bounds.top||event.clientY>bounds.bottom)dialog.close();
+    }
+    return;
+   }
+   try{addItems([{id:p.id,size:choice.dataset.quickSize,qty:1}]);}
+   catch(error){const status=$('[role=status]',dialog);status.textContent=error.message;status.hidden=false;return;}
    dialog.close();
    openCart();
   });
@@ -112,7 +139,7 @@
  featured.push(...catalog.filter(x=>!featured.includes(x)).slice(0,10-featured.length));
  const hero=['nad','retatrutide','bpc-157','ghk-cu','tirzepatide'].map(product).filter(Boolean);
  const bulkExamples=[['bpc-157','10mg',10],['ghk-cu','50mg',50]].map(([id,size,qty])=>{const p=product(id);return p?{p,v:p.variants.find(v=>v.size===size)||p.variants[0],qty}:null;}).filter(Boolean);
- return `<section class="nl-hero"><div class="ap-container nl-hero-inner"><div class="nl-hero-copy"><h1>CUTTING EDGE<br><em>PURITY</em></h1><p class="nl-hero-description">Research compounds, product documentation, and straightforward ordering for laboratories and research teams.</p><div class="ap-actions"><a class="ap-button nl-primary" href="/shop">SHOP NOW</a></div></div><div class="nl-vial-stage" aria-label="Featured PURE products"><svg class="ap-vial-clip" width="0" height="0" aria-hidden="true"><defs><clipPath id="ap-vial-outline" clipPathUnits="objectBoundingBox"><path d="M .296 .127 C .296 .094 .409 .079 .499 .079 C .592 .079 .705 .095 .705 .128 L .705 .168 Q .705 .179 .691 .186 L .691 .239 Q .691 .259 .648 .267 L .648 .311 C .696 .328 .713 .342 .720 .372 L .725 .379 L .727 .824 Q .727 .879 .681 .880 L .319 .880 Q .273 .879 .272 .827 L .277 .379 L .283 .373 C .289 .343 .307 .327 .355 .312 L .355 .268 Q .310 .260 .310 .238 L .310 .187 Q .296 .180 .296 .168 Z"/></clipPath></defs></svg>${hero.map((p,i)=>`<a class="nl-vial nl-vial-${i}" href="/product/${p.id}"><img src="${esc(image(p,p.variants[0].size))}" alt="${esc(p.name+' '+p.variants[0].size)}" ${i===2?'fetchpriority="high"':''}></a>`).join('')}<span class="nl-stage-word" aria-hidden="true">PURE</span></div>${homeHighlights()}</div></section><section class="ap-container nl-featured"><div class="ap-section-head"><div><span class="ap-eyebrow">THE COLLECTION</span><h2>Featured Compounds</h2></div><div class="nl-carousel-controls"><button data-carousel="-1" aria-label="Previous products">‹</button><button data-carousel="1" aria-label="Next products">›</button></div></div><div class="nl-carousel" id="nl-featured">${featured.map(p=>card(p,{featured:true})).join('')}</div><div class="nl-center"><a class="ap-button" href="/shop">View All Products</a></div></section><section class="ap-container nl-editorial"><div><span class="nl-capsule">PURE DOCUMENTATION</span><h2>KNOW WHAT’S<br>IN YOUR ORDER.</h2><p>Explore certificates of analysis by product, strength, laboratory or report ID.</p><p class="ap-fine">Request the certificate for your fulfilled lot when you order.</p><a class="ap-button" href="/coas">Explore COAS</a></div><div class="nl-doc-art"><span>PURE</span><strong>Certificate<br>of Analysis</strong><div class="nl-doc-purity"><span class="nl-doc-purity-check" aria-hidden="true">✓</span><span><b>Testing reports</b><small>See available product documentation</small></span></div><div><b>Retatrutide</b> / 60mg</div><hr><div><b>Janoshik</b> / Report ID</div><hr><div><b>PURE</b> / Lot</div><a class="ap-button" href="/coas">View COAS</a></div></section><section class="nl-soft nl-home-bulk" aria-labelledby="nl-home-bulk-title"><div class="ap-container"><article class="ap-feature ap-dark nl-home-bulk-card"><div class="nl-home-bulk-copy"><span class="ap-eyebrow">BULK ORDERS</span><h2 id="nl-home-bulk-title">More units.<br>Less busywork.</h2><p>Select exact strengths and quantities across the catalog. Review every line at regular unit prices, then check out in one order.</p><a class="ap-text-link" href="/bulk-orders">Build your order</a></div><div class="nl-home-bulk-preview"><table class="nl-home-bulk-table"><caption>Example order</caption><thead><tr><th scope="col">Compound / strength</th><th scope="col">Qty</th><th scope="col">Unit price</th></tr></thead><tbody>${bulkExamples.map(({p,v,qty})=>`<tr><td><span class="ap-mini-product"><span class="ap-vial-example"><img src="${esc(image(p,v.size))}" alt="" loading="lazy"></span><span class="nl-home-bulk-product-name">${esc(p.name)}<small>${esc(v.size)}</small></span></span></td><td>${qty}</td><td>${priceMarkup(v.price)}</td></tr>`).join('')}</tbody></table><p class="nl-home-bulk-note">Regular catalog pricing at every quantity.</p></div></article></div></section><section class="ap-container ap-section ap-faq-layout" id="faq"><div><span class="ap-eyebrow">FREQUENTLY ASKED QUESTIONS</span><h2>Have a question?</h2><a class="ap-text-link" href="/contact">Contact Us</a></div><div class="ap-faq">${[['How do I order?','Choose a product and strength, select the number of units, and add them to your cart. Review your order and the available payment methods at checkout.'],['Where are the COAS?','Open COAS to view original supplier reports. Each report is specific to its stated sample and lot. Request the exact fulfilled-lot report with your order.'],['How do I pay?','Choose an available payment method at checkout. Your order is fulfilled after payment is confirmed.'],['When will my order arrive?','Allow approximately 1–3 business days for processing, followed by 3–7 business days in transit for standard US delivery. Available shipping options and fees are shown at checkout. Check your shipment email for tracking details after dispatch.'],['Can I use my existing points or store credit?','Available points and store credit remain visible in your account and can be applied at checkout according to their redemption terms.'],['Are these products for human use?','No. All products are for controlled laboratory research only, not human or animal use. Purchasers must be 21 or older.']].map(([q,a])=>`<details><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join('')}</div></section>`;
+ return `<section class="nl-hero"><div class="ap-container nl-hero-inner"><div class="nl-hero-copy"><h1>CUTTING EDGE<br><em>PURITY</em></h1><p class="nl-hero-description">Research compounds, product documentation, and straightforward ordering for laboratories and research teams.</p><div class="ap-actions"><a class="ap-button nl-primary" href="/shop">SHOP NOW</a></div></div><div class="nl-vial-stage" aria-label="Featured PURE products"><svg class="ap-vial-clip" width="0" height="0" aria-hidden="true"><defs><clipPath id="ap-vial-outline" clipPathUnits="objectBoundingBox"><path d="M .296 .127 C .296 .094 .409 .079 .499 .079 C .592 .079 .705 .095 .705 .128 L .705 .168 Q .705 .179 .691 .186 L .691 .239 Q .691 .259 .648 .267 L .648 .311 C .696 .328 .713 .342 .720 .372 L .725 .379 L .727 .824 Q .727 .879 .681 .880 L .319 .880 Q .273 .879 .272 .827 L .277 .379 L .283 .373 C .289 .343 .307 .327 .355 .312 L .355 .268 Q .310 .260 .310 .238 L .310 .187 Q .296 .180 .296 .168 Z"/></clipPath></defs></svg>${hero.map((p,i)=>`<a class="nl-vial nl-vial-${i}" href="/product/${p.id}"><img src="${esc(image(p,p.variants[0].size))}" alt="${esc(p.name+' '+p.variants[0].size)}" ${i===2?'fetchpriority="high"':''}></a>`).join('')}<span class="nl-stage-word" aria-hidden="true">PURE</span></div>${homeHighlights()}</div></section><section class="ap-container nl-featured"><div class="ap-section-head"><div><span class="ap-eyebrow">THE COLLECTION</span><h2>Featured Compounds</h2></div><div class="nl-carousel-controls"><button data-carousel="-1" aria-label="Previous products">‹</button><button data-carousel="1" aria-label="Next products">›</button></div></div><div class="nl-carousel" id="nl-featured">${featured.map(p=>card(p,{featured:true,quickAdd:true})).join('')}</div><div class="nl-center"><a class="ap-button" href="/shop">View All Products</a></div></section><section class="ap-container pure-home-packaging" aria-labelledby="pure-packaging-title"><img src="/assets/hero-lab-pure.webp" alt="PURE vial beside its black carton" width="900" height="560" loading="lazy"><div><h2 id="pure-packaging-title">Packaging &amp; delivery</h2><p>See shipping options for your destination and how to track your parcel after dispatch.</p><a class="ap-button" href="/shipping-policy.html">Shipping details</a></div></section><section class="ap-container nl-editorial"><div><span class="nl-capsule">PURE DOCUMENTATION</span><h2>KNOW WHAT’S<br>IN YOUR ORDER.</h2><p>Explore certificates of analysis by product, strength, laboratory or report ID.</p><p class="ap-fine">Request the certificate for your fulfilled lot when you order.</p><a class="ap-button" href="/coas">Explore Testing</a></div><div class="nl-doc-art"><span>PURE</span><strong>Certificate<br>of Analysis</strong><div class="nl-doc-purity"><span class="nl-doc-purity-check" aria-hidden="true">✓</span><span><b>Testing reports</b><small>See available product documentation</small></span></div><div><b>Retatrutide</b> / 60mg</div><hr><div><b>Janoshik</b> / Report ID</div><hr><div><b>PURE</b> / Lot</div><a class="ap-button" href="/coas">View COAS</a></div></section><section class="nl-soft nl-home-bulk" aria-labelledby="nl-home-bulk-title"><div class="ap-container"><article class="ap-feature ap-dark nl-home-bulk-card"><div class="nl-home-bulk-copy"><span class="ap-eyebrow">BULK ORDERS</span><h2 id="nl-home-bulk-title">More units.<br>Less busywork.</h2><p>Select exact strengths and quantities across the catalog. Review every line at regular unit prices, then check out in one order.</p><a class="ap-text-link" href="/bulk-orders">Build your order</a></div><div class="nl-home-bulk-preview"><table class="nl-home-bulk-table"><caption>Example order</caption><thead><tr><th scope="col">Compound / strength</th><th scope="col">Qty</th><th scope="col">Unit price</th></tr></thead><tbody>${bulkExamples.map(({p,v,qty})=>`<tr><td><span class="ap-mini-product"><span class="ap-vial-example"><img src="${esc(image(p,v.size))}" alt="" loading="lazy"></span><span class="nl-home-bulk-product-name">${esc(p.name)}<small>${esc(v.size)}</small></span></span></td><td>${qty}</td><td>${priceMarkup(v.price)}</td></tr>`).join('')}</tbody></table><p class="nl-home-bulk-note">Regular catalog pricing at every quantity.</p></div></article></div></section><section class="ap-container ap-section ap-faq-layout" id="faq"><div><span class="ap-eyebrow">FREQUENTLY ASKED QUESTIONS</span><h2>Have a question?</h2><a class="ap-text-link" href="/contact">Contact Us</a></div><div class="ap-faq">${[['How do I order?','Choose a product and strength, select the number of units, and add them to your cart. Review your order and the available payment methods at checkout.'],['Where can I find a certificate of analysis?','Visit Testing to view available supplier reports. Each report is specific to its stated sample and lot. Request the exact fulfilled-lot report with your order.'],['How do I pay?','Choose an available payment method at checkout. Your order is fulfilled after payment is confirmed.'],['When will my order arrive?','Allow approximately 1–3 business days for processing, followed by 3–7 business days in transit for standard US delivery. Available shipping options and fees are shown at checkout. Check your shipment email for tracking details after dispatch.'],['What does shipment protection cover?','Optional protection covers qualifying loss or transit damage. Review the terms at checkout for eligibility and how to make a claim.'],['Can I track my order?','Use Track Order with your order number and checkout email to request an update.'],['Can I use my existing points or store credit?','Available points and store credit remain visible in your account and can be applied at checkout according to their redemption terms.'],['Are these products for human use?','No. All products are for controlled laboratory research only, not human or animal use. Purchasers must be 21 or older.']].map(([q,a])=>`<details><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join('')}</div></section><section class="ap-container pure-home-close"><h2>Explore the catalog.</h2><div><a class="ap-button" href="/shop">View all products</a><a href="/about">About PURE</a></div></section>`;
 }
  function catalogResults(){
   const lowest=p=>Math.min(...(state.group==='Offers'?eligibleSizes(p):p.variants).map(v=>v.price));
@@ -151,9 +178,9 @@
  }
  window.addEventListener('pure:campaign',()=>{
   if(route()==='/shop'){renderCatalogResults();return;}
-  for(const item of $$('#nl-featured .ap-product-card')){
+  for(const item of $$('#nl-featured .ap-product-card,.ap-related .ap-product-card')){
    const p=product(item.dataset.product);
-   if(p)item.outerHTML=card(p,{featured:true});
+   if(p)item.outerHTML=card(p,{featured:true,quickAdd:!!item.querySelector('.ap-catalog-actions')});
   }
  });
  function shop(){const shopGroups=shopCategories;return `<section class="ap-container nl-shop"><header class="nl-shop-header"><h1 data-pure-collection-title>All Products</h1><p data-pure-collection-intro>Browse research compounds and available testing reports.</p></header><div class="ap-toolbar nl-shop-controls"><label class="nl-shop-search"><span class="ap-sr">Search products and help</span><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.7"></circle><path d="m16 16 5 5"></path></svg><input id="ap-catalog-query" type="search" placeholder="Search products and help…" value="${esc(state.query)}" maxlength="120"></label><div class="nl-shop-sort"><label class="nl-shop-sort-label" for="ap-catalog-sort">Sort by:</label><select id="ap-catalog-sort"><option value="popular" ${state.sort==='popular'?'selected':''}>Most Popular</option><option value="low" ${state.sort==='low'?'selected':''}>Price: Low to High</option><option value="high" ${state.sort==='high'?'selected':''}>Price: High to Low</option><option value="name" ${state.sort==='name'?'selected':''}>Name: A–Z</option></select></div></div><div class="nl-filter-pills" role="group" aria-label="Product categories">${shopGroups.map(g=>`<button type="button" data-filter-group="${esc(g)}" aria-pressed="${state.group===g}">${esc(g==='All'?'All Products':g)}</button>`).join('')}</div><div class="ap-grid" id="ap-catalog-grid"></div><button class="ap-button ap-button-secondary ap-load-more" id="ap-load-more" data-action="more">Load More Products</button></section>`;}
@@ -215,7 +242,19 @@
    return;
   }
   if(action==='save'){if(!product(id))return;saved=saved.includes(id)?saved.filter(x=>x!==id):[...saved,id];write('ap-wishlist',saved);$$(`[data-action="save"][data-id="${id}"]`).forEach(b=>{b.setAttribute('aria-pressed',String(saved.includes(id)));b.textContent=b.classList.contains('ap-save')?(saved.includes(id)?'♥':'♡'):(saved.includes(id)?'♥ '+t('saved'):'♡ '+t('save'));});toast(saved.includes(id)?'Saved on this device.':'Removed from saved products.');return;}
-  if(action==='detail-size'){selections[id]=button.dataset.size;const u=new URL(location.href);u.searchParams.set('size',button.dataset.size);history.replaceState(null,'',u);render();return;}
+  if(action==='detail-size'){
+   const qty=$('#ap-detail-quantity')?.value||'1';
+   const fromSticky=!!button.closest('.ap-mobile-purchase');
+   selections[id]=button.dataset.size;
+   const u=new URL(location.href);u.searchParams.set('size',button.dataset.size);history.replaceState(null,'',u);
+   render();
+   const input=$('#ap-detail-quantity');
+   if(input){input.value=qty;input.dispatchEvent(new Event('input',{bubbles:true}));}
+   const current=$(fromSticky?'.ap-mobile-purchase [aria-pressed="true"]':'.ap-size-options [aria-pressed="true"]');
+   current?.focus({preventScroll:true});
+   if(fromSticky&&current)current.parentElement.scrollLeft=Math.max(0,current.offsetLeft-current.parentElement.offsetLeft-16);
+   return;
+  }
   if(action==='detail-quantity'){const input=$('#ap-detail-quantity');input.value=String(Math.max(1,Math.min(100,(Number(input.value)||1)+Number(button.dataset.step))));return;}
   if(action==='cart-remove'){cart=cart.filter(x=>x.key!==button.dataset.key);syncCart(true);return;}
   if(action==='cart-quantity'){cart=cart.map(x=>x.key===button.dataset.key?{...x,qty:Math.max(0,Math.min(100,x.qty+Number(button.dataset.step)))}:x).filter(x=>x.qty>0);syncCart(true);return;}

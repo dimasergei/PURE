@@ -23,15 +23,15 @@ function fixture(t,{items=[line(compound)],products=[compound,solution,largerSol
  return {root,requests,render:()=>w.AltaCartNmi.offer(root)};
 }
 
-test('cart offers one optional catalog supply with the size, unit price and existing add action',async t=>{
+test('cart lists optional supply sizes with their catalog price and existing add action',async t=>{
  const f=fixture(t);
  const pending=f.render();
  assert.equal(f.root.querySelector('[data-nlc-add-on]').hidden,true);
  await pending;
  const panel=f.root.querySelector('[data-nlc-add-on]');
  assert.equal(panel.hidden,false);
- assert.equal(panel.querySelector('h3').textContent,'Optional add-on');
- assert.equal(panel.querySelectorAll('.nlc-rec').length,1);
+ assert.equal(panel.querySelector('h3').textContent,'Optional add-ons');
+ assert.equal(panel.querySelectorAll('.nlc-rec').length,2);
  assert.match(panel.textContent,/Reconstitution SolutionExtra 3 mL vial \$14\.95/);
  assert.equal(panel.querySelector('[data-action="add"][data-id="bac-3"][data-size="3 mL"]').textContent,'Add to cart');
  assert.deepEqual(f.requests.map(request=>request.items),[[{id:'compound',size:'5mg',qty:1}]]);
@@ -50,7 +50,7 @@ test('cart offers returning to checkout after partner eligibility sign-in and ke
 for(const [description,options] of [
  ['either supply size is already selected',{items:[line(compound),line(largerSolution)]}],
  ['the quote includes the supply as a gift',{bundled:[{id:'gift-bac-3',name:solution.name,size:'3 mL'}]}],
- ['the exact supply is absent from the catalog',{products:[compound,largerSolution]}],
+ ['no supply is in the catalog',{products:[compound]}],
  ['the cart cannot accept another line',{items:Array.from({length:60},(_,index)=>line(compound,index+'mg'))}],
  ['a cart quote is unavailable',{unavailable:true}],
 ])test('cart omits the optional add-on when '+description,async t=>{

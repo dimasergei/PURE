@@ -77,16 +77,26 @@
   const store=window.AltaStore;
   const alreadyIncluded=items.some(item=>solutionIds.has(item.id))||
    (quote.pricing?.bundled_items||[]).some(item=>item.id==='gift-bac-3');
-  const product=store.product('bac-3');
-  const variant=product?.variants?.find(item=>item.size==='3 mL');
-  // The public catalog lists purchasable variants. Supplier availability is confirmed at fulfillment.
-  const show=items.length<60&&!alreadyIncluded&&items.some(item=>store.product(item.id)?.category==='injectables')&&
-   product?.category==='supplies'&&Number.isFinite(variant?.price)&&variant.price>0;
-  panel.hidden=!show;
-  panel.innerHTML=show?'<h3>Optional add-on</h3><div class="nlc-rec-track"><div class="nlc-rec">'
-   +'<img src="'+html(store.image(product,variant.size))+'" alt=""><div><strong>'+html(product.name)+'</strong>'
+  const supplies=[];
+  if(items.length<60&&!alreadyIncluded&&items.some(item=>store.product(item.id)?.category==='injectables')){
+   for(const id of solutionIds){
+    const product=store.product(id);
+    if(product?.category!=='supplies')continue;
+    for(const variant of product.variants||[]){
+     if(Number.isFinite(variant.price)&&variant.price>0)supplies.push({product,variant});
+    }
+   }
+  }
+  panel.hidden=!supplies.length;
+  if(!supplies.length){panel.replaceChildren();return;}
+  const controls=supplies.length>1?'<div class="nlc-rec-controls"><button type="button" aria-label="Previous add-on" data-rec-step="-1">‹</button><button type="button" aria-label="Next add-on" data-rec-step="1">›</button></div>':'';
+  panel.innerHTML='<header><h3>Optional add-ons</h3>'+controls+'</header><div class="nlc-rec-track">'+supplies.map(({product,variant})=>
+   '<div class="nlc-rec"><img src="'+html(store.image(product,variant.size))+'" alt=""><div><strong>'+html(product.name)+'</strong>'
    +'<div class="nlc-rec-prices">Extra '+html(variant.size)+' vial <b>'+money(Math.round(variant.price*100))+'</b></div>'
-   +'<button data-action="add" data-id="'+html(product.id)+'" data-size="'+html(variant.size)+'" type="button" aria-label="Add '+html(product.name)+' '+html(variant.size)+' to cart">Add to cart</button></div></div></div>':'';
+   +'<button data-action="add" data-id="'+html(product.id)+'" data-size="'+html(variant.size)+'" type="button" aria-label="Add '+html(product.name)+' '+html(variant.size)+' to cart">Add to cart</button></div></div>').join('')+'</div>';
+  const rail=panel.querySelector('.nlc-rec-track');
+  for(const button of panel.querySelectorAll('[data-rec-step]'))button.onclick=()=>rail.scrollBy({left:Number(button.dataset.recStep)*rail.clientWidth,behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
+
  }
  async function offer(root){
   if(!root?.isConnected)return;
@@ -96,7 +106,7 @@
   root.innerHTML='<div class="nlc-scrollable-items cart__body" data-testid="cart-product-scroll">'
    +'<section class="nlc-cart-lines">'+items.map(x=>
     '<div class="nlc-line"><img src="'+html(window.AltaStore.image(window.AltaStore.product(x.id),x.size))+'" alt="">'
-    +'<div class="nlc-name"><div class="nlc-product-title"><strong>'+html(x.name)+'</strong><span class="nlc-size">– '+html(x.size)+'</span></div>'
+    +'<div class="nlc-name"><div class="nlc-product-title"><a href="/product/'+encodeURIComponent(x.id)+'?size='+encodeURIComponent(x.size)+'"><strong>'+html(x.name)+'</strong></a><span class="nlc-size">– '+html(x.size)+'</span></div>'
     +'<div class="nlc-product-actions"><div class="nlc-quantity-row"><div class="ap-quantity"><button type="button" data-action="cart-quantity" data-key="'+html(x.key)+'" data-step="-1" aria-label="Decrease '+html(x.name)+' quantity">−</button>'
     +'<input value="'+x.qty+'" readonly aria-label="Quantity"><button type="button" data-action="cart-quantity" data-key="'+html(x.key)+'" data-step="1" aria-label="Increase '+html(x.name)+' quantity">+</button></div></div>'
     +'<span class="nlc-unit-bonus" data-bonus-product="'+html(x.id)+'" data-bonus-size="'+html(x.size)+'" hidden></span>'
@@ -108,6 +118,7 @@
    +'<p class="nlc-partner-sign-in" data-nlc-partner-sign-in hidden><a href="/account/login?returnTo=%2Fcheckout">Sign in to check your partner offer</a></p></div>'
    +'<section class="nlc-rewards" aria-label="Cart rewards" hidden><p data-nlc-unlock-copy role="status"></p><div class="nlc-reward-rail"></div></section>'
    +'</div><div class="nlc-cart-checkout cart__checkout" data-testid="cart-fixed-footer">'
+   +'<p class="nlc-delivery-est" data-nlc-estimate><a href="/shipping-policy.html">Estimated delivery</a> · 4–10 business days after payment</p>'
    +'<div class="nlc-cart-totals" data-nlc-cart-totals><p role="status">Calculating your order total…</p></div>'
    +'<a class="nlc-proceed" href="/checkout">Proceed to Checkout</a>'
    +'<div class="nlc-wallet-area"><div class="nlc-express" hidden><div class="nlc-pay-divider">OR PAY WITH</div><div class="nlc-wallet-row" data-nlc-wallets>'

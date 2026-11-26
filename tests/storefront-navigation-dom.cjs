@@ -20,7 +20,7 @@ trigger.dispatchEvent(new w.Event('pointerdown',{bubbles:true}));trigger.dispatc
 trigger.dispatchEvent(new w.Event('pointerdown',{bubbles:true}));trigger.dispatchEvent(new w.MouseEvent('click',{bubbles:true,detail:1}));assert.equal(more.hidden,true);
 const account=d.querySelector('[aria-controls="ap-account-menu"]');account.focus();assert.equal(d.querySelector('#ap-account-menu').hidden,false);assert.equal(more.hidden,true);
 trigger.focus();assert.equal(d.querySelector('#ap-account-menu').hidden,true);assert.equal(more.hidden,false);
-for(const file of ['account.html','shop.html','coas.html','contact.html','partner-program.html','track-order.html','memberships.html','research-builder.html','membership-terms.html']){const page=new JSDOM(read('public-build/'+file));const header=page.window.document.querySelector('header');assert.ok(header?.querySelector('#ap-more-menu'),file);assert.equal(header.querySelector('a[href="/about"]'),null,file);assert.equal(header.querySelectorAll('#ap-nav').length,1,file);assert.ok(page.window.document.querySelector('script[src="/storefront-navigation.js?v=20261126-retention"]'),file);const scripts=[...page.window.document.scripts].map(s=>s.getAttribute('src'));assert.ok(scripts.indexOf('/storefront-navigation.js?v=20261126-retention')<scripts.findIndex(src=>src?.startsWith('/storefront-v2.js')),file+' handles submenu Escape before mobile navigation');page.window.close();}
+for(const file of ['account.html','shop.html','coas.html','contact.html','partner-program.html','track-order.html','memberships.html','research-builder.html','membership-terms.html']){const page=new JSDOM(read('public-build/'+file));const header=page.window.document.querySelector('header');assert.ok(header?.querySelector('#ap-more-menu'),file);assert.equal(header.querySelector('a[href="/about"]'),null,file);assert.equal(header.querySelectorAll('#ap-nav').length,1,file);assert.ok(page.window.document.querySelector('script[src="/storefront-navigation.js?v=20261126-mobile-storefront"]'),file);const scripts=[...page.window.document.scripts].map(s=>s.getAttribute('src'));assert.ok(scripts.indexOf('/storefront-navigation.js?v=20261126-mobile-storefront')<scripts.findIndex(src=>src?.startsWith('/storefront-v2.js')),file+' handles submenu Escape before mobile navigation');page.window.close();}
 assert.match(read('public-build/storefront-v2.js'),/coas:'Testing'/);
 assert.doesNotMatch(read('public-build/storefront-v2.js'),/FIND YOUR FOCUS/);
 dom.window.close();
@@ -36,7 +36,7 @@ for(const file of ['index.html','account.html','shop.html','subscribe-and-save.h
  const menu=d.getElementById('ap-mobile-menu'),toggle=d.querySelector('[aria-controls="ap-mobile-menu"]');
  assert.equal(menu.open,false,file);
  assert.equal(toggle.getAttribute('aria-expanded'),'false',file);
- assert.deepEqual([...menu.querySelector('nav').children].map(node=>node.matches('details')?node.querySelector('summary').textContent:node.textContent),['Products','Subscribe & Save','Bulk Orders','Testing','Contact Us','More','Account'],file);
+ assert.deepEqual([...menu.querySelector('nav').children].map(node=>node.matches('details')?node.querySelector('summary').textContent:node.textContent),['Products','Subscribe & Save','Bulk Orders','Testing','Contact Us','More','Account','Cart'],file);
  assert.ok(menu.querySelector('details a[href="/memberships"]'),file);
  assert.ok(menu.querySelector('details a[href="/track-order"]'),file);
  toggle.click();

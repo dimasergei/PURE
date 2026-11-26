@@ -54,3 +54,22 @@ const page = shell
 
 fs.writeFileSync(path.join(out, 'spin-and-save.html'), page);
 for (const file of ['spin-save.js', 'spin-save.css']) fs.copyFileSync(file, path.join(out, file));
+
+const shortcut = `<a class="spin-save-shortcut" href="/gift-cards" data-spin-shortcut>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 11.5h15V21h-15zM3 7.5h18v4H3zM12 7.5V21"/><path d="M12 7.5H8a2.75 2.75 0 1 1 2.4-4.1L12 7.5Zm0 0h4a2.75 2.75 0 1 0-2.4-4.1L12 7.5Z"/></svg>
+  <span>Gift Cards</span>
+</a>`;
+const storefrontPages = [
+  'index', 'shop', 'bulk-orders', 'coas', 'partner-program', 'contact', 'about', 'track-order',
+  'memberships', 'subscribe-and-save', 'rewards'
+].map(name => name + '.html');
+const productPages = fs.readdirSync(path.join(out, 'product'))
+  .filter(name => name.endsWith('.html'))
+  .map(name => path.join('product', name));
+for (const name of [...storefrontPages, ...productPages]) {
+  const target = path.join(out, name);
+  const html = fs.readFileSync(target, 'utf8')
+    .replace('</head>', '<link rel="stylesheet" href="/spin-save.css?v=2"></head>')
+    .replace('</body>', shortcut + '<script defer src="/spin-save.js?v=2"></script></body>');
+  fs.writeFileSync(target, html);
+}

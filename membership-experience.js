@@ -34,7 +34,7 @@
       const fee = plan[`${period}_cents`];
       const payable = enabled && Number.isSafeInteger(fee) && fee > 0;
       const tier = id === 'vip' ? 'white' : id === 'elite' ? 'black' : 'member';
-      const badge = current ? 'YOUR CURRENT TIER' : pending?.plan === id ? pending.expired || pending.requires_review ? 'NEEDS ATTENTION' : 'AWAITING PAYMENT' : id === 'vip' ? 'EVERYDAY ADVANTAGE' : id === 'elite' ? 'THE COMPLETE MEMBERSHIP' : 'YOUR STARTING POINT';
+      const badge = current ? 'YOUR CURRENT TIER' : pending?.plan === id ? pending.expired || pending.requires_review ? 'NEEDS ATTENTION' : 'AWAITING PAYMENT' : '';
       let action;
       if (free) action = `<a class="mx-choose mx-choose-secondary" href="${options.context === 'account' ? '/shop' : '/account/signup'}">${options.context === 'account' ? 'Explore the catalog' : 'Create a free account'}<span aria-hidden="true">↗</span></a>`;
       else if (active) action = `<p class="mx-current-note">${current ? 'Your benefits are active.' : 'Choose a new tier after your current paid term ends.'}</p>`;
@@ -42,16 +42,16 @@
       else if (payable) action = `<a class="mx-choose" href="/checkout?plan=${id}&period=${period}">Choose ${displayName(id)}<span aria-hidden="true">↗</span></a>`;
       else action = '<button class="mx-choose" type="button" disabled>Enrollment unavailable</button>';
       return `<article class="mx-card mx-card-${tier} mx-card-${id}" data-membership-tier="${id}"${current ? ' aria-label="'+displayName(id)+', current tier"' : ''}>
-        <div class="mx-card-top"><span class="mx-tier-label">${badge}</span></div>
+        ${badge ? '<div class="mx-card-top"><span class="mx-tier-label">'+badge+'</span></div>' : ''}
         <h3>${displayName(id)}</h3>
-        <p class="mx-description">${free ? 'A place for every research order.' : id === 'vip' ? 'More value in your regular research routine.' : 'Our highest level of savings and account benefits.'}</p>
+        <p class="mx-description">${free ? 'Track orders and manage your account.' : id === 'vip' ? 'Shipping, savings and early access.' : 'Priority fulfillment and additional account credit.'}</p>
         <div class="mx-price">${free ? 'Free' : Number.isSafeInteger(fee) ? price(fee) : '—'}${free ? '' : `<span class="mx-price-period">/ ${period === 'annual' ? 'year' : 'month'}</span>`}</div>
         <p class="mx-billing-note">${free ? 'No membership fee.' : recurring ? `Renews ${period === 'annual' ? 'annually' : 'monthly'} until canceled.` : `${period === 'annual' ? '12-month' : 'Monthly'} access · pay each term separately.`}</p>
-        ${action}
         <div class="mx-feature-groups">${['Savings & rewards','Shipping & fulfillment','Account benefits'].map(group=>{
           const rows=benefits(config,id).filter(benefit=>benefit.group===group);
           return rows.length?`<section><h4>${esc(group)}</h4><ul class="mx-features">${rows.map(row => `<li${row.strong ? ' class="mx-feature-emphasis"' : ''}><span class="mx-check" aria-hidden="true">✓</span><span>${esc(row.text)}${row.creditTerms ? '<a class="mx-benefit-footnote" href="/membership-terms.html#pure-black-credit" aria-label="Read the PURE BLACK monthly credit terms"><span aria-hidden="true">†</span></a>' : ''}</span></li>`).join('')}</ul></section>`:'';
         }).join('')}</div>
+        ${action}
       </article>`;
     }).join('')}</div>`;
   }
@@ -68,13 +68,14 @@
   function faq(config) {
     const recurring = billingMode(config) === 'automatic_recurring';
     const answers = [
+      ['Does billing monthly or annually change my benefits?', 'The benefits are the same for both billing periods. The annual option changes the price and length of access.'],
       ['When do my benefits start?', 'Your benefits begin when your membership payment is confirmed. Sign in to the same account at checkout so your tier, eligible discount and rewards can be applied.'],
       ['How does monthly or annual billing work?', recurring ? 'Choose monthly or annual recurring billing. The exact price, renewal schedule and cancellation terms are shown before payment and in your account.' : 'Choose monthly or annual access, and pay a new invoice when the term ends. Annual access costs approximately 20% less than twelve monthly payments.'],
       ['How does the PURE BLACK monthly credit work?', 'After a qualifying paid product order with at least $150 of eligible merchandise after discounts, $50 is added to your account for a future order. It is issued once per UTC calendar month. Points and store credit do not reduce that qualifying merchandise amount.'],
       ['Can I buy a membership with my product order?', 'Membership checkout is a separate purchase. Your product cart is saved, and you can return to it after membership payment is confirmed. Eligible member benefits then apply to your order.'],
       ['What happens when my paid term ends?', 'Your account, order history and existing reward balances remain available. Paid tier benefits end with the membership term. You can choose another membership from your account.']
     ];
-    return `<section class="mx-faq" aria-labelledby="mx-faq-heading"><div><span class="mx-kicker">THE DETAILS</span><h2 id="mx-faq-heading">Membership,<br>made clear.</h2><a href="/membership-terms.html">Read membership terms <span aria-hidden="true">↗</span></a></div><div class="mx-faq-list">${answers.map(([question,answer]) => `<details><summary>${esc(question)}<span aria-hidden="true">+</span></summary><p>${esc(answer)}</p></details>`).join('')}</div></section>`;
+    return `<section class="mx-faq" aria-labelledby="mx-faq-heading"><div><span class="mx-kicker">THE DETAILS</span><h2 id="mx-faq-heading">Membership FAQ</h2><a href="/membership-terms.html">Read membership terms <span aria-hidden="true">↗</span></a></div><div class="mx-faq-list">${answers.map(([question,answer]) => `<details><summary>${esc(question)}<span aria-hidden="true">+</span></summary><p>${esc(answer)}</p></details>`).join('')}</div></section>`;
   }
 
   function mount(root, config, options = {}) {
@@ -89,7 +90,7 @@
   }
 
   function page(root, config, embedded) {
-    root.innerHTML = `<section class="mx-membership-page${embedded ? ' mx-membership-embedded' : ''}" aria-labelledby="mx-title"><header class="mx-intro"><div><span class="mx-kicker">PURE MEMBERSHIPS</span><${embedded ? 'h2' : 'h1'} id="mx-title">MORE FROM<br>EVERY ORDER.</${embedded ? 'h2' : 'h1'}></div><div class="mx-intro-copy"><p>A clear choice for your research routine. Choose the tier that fits, with eligible savings and benefits linked to your account.</p>${embedded ? '<a href="/memberships">Explore memberships <span aria-hidden="true">↗</span></a>' : '<span class="mx-intro-detail">THREE TIERS. ONE PURE STANDARD.</span>'}</div></header><div data-mx-comparison></div>${embedded ? '' : faq(config)}</section>`;
+    root.innerHTML = `<section class="mx-membership-page${embedded ? ' mx-membership-embedded' : ''}" aria-labelledby="mx-title"><header class="mx-intro"><div><span class="mx-kicker">PURE MEMBERSHIPS</span><${embedded ? 'h2' : 'h1'} id="mx-title">MORE FROM<br>EVERY ORDER.</${embedded ? 'h2' : 'h1'}></div><div class="mx-intro-copy"><p>Compare prices, shipping and rewards for each PURE membership.</p>${embedded ? '<a href="/memberships">Explore memberships <span aria-hidden="true">↗</span></a>' : '<span class="mx-intro-detail">Monthly or annual access</span>'}</div></header><div data-mx-comparison></div>${embedded ? '' : faq(config)}</section>`;
     mount(root.querySelector('[data-mx-comparison]'),config);
   }
 

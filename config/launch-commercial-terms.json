@@ -26,6 +26,6 @@
   "invoice_expiry_hours": 24,
   "rewards_earning_enabled": true,
   "affiliate_commissions_enabled": true,
-  "gift_cards_enabled": false,
+  "gift_cards_enabled": true,
   "memberships_enabled": true
 }

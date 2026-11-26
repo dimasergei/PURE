@@ -81,3 +81,20 @@
 .mx-feature-groups h4 { margin: 0 0 9px; color: inherit; font-size: 12px; font-weight: 800; }
 .mx-feature-groups .mx-features { margin: 0; padding: 0; border: 0; gap: 8px; }
 .mx-card-black .mx-feature-groups { border-color: #3f3f3f; }
+
+.mx-card .mx-feature-groups { flex: 1; margin: 4px 0 20px; }
+.mx-card .mx-choose { justify-content: center; }
+.mx-card .mx-choose span[aria-hidden] { display: none; }
+.mx-card .mx-description { min-height: 0; }
+@media (max-width: 700px) {
+  .mx-intro,.mx-intro-copy { text-align: center; margin-inline: auto; }
+  .mx-intro { gap: 12px; }
+  .mx-intro-detail { display: none; }
+  .mx-card > h3,.mx-card > p,.mx-card-top { text-align: center; }
+  .mx-card-top,.mx-price { justify-content: center; }
+  .mx-card > h3 { margin-bottom: 6px; }
+  .mx-card .mx-description { margin-bottom: 14px; }
+  .mx-feature-groups .mx-features { gap: 6px; }
+  .mx-feature-groups section { padding-top: 11px; }
+  .mx-card .mx-billing-note { margin-bottom: 14px; }
+}

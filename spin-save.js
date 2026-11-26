@@ -1,10 +1,22 @@
 (() => {
   'use strict';
 
-  const root = document.querySelector('#spin-save-main');
-  if (!root) return;
-
   const endpoint = '/api/customer-config?spin_save';
+  const root = document.querySelector('#spin-save-main');
+  if (!root) {
+    const shortcut = document.querySelector('[data-spin-shortcut]');
+    if (!shortcut) return;
+    const label = shortcut.querySelector('span');
+    async function updateShortcut() {
+      let active = false;
+      try { active = (await json(endpoint)).active === true; } catch {}
+      shortcut.href = active ? '/spin-and-save' : '/gift-cards';
+      label.textContent = active ? 'Spin & Save' : 'Gift Cards';
+    }
+    updateShortcut();
+    window.addEventListener('pageshow', event => { if (event.persisted) updateShortcut(); });
+    return;
+  }
   const find = name => root.querySelector('[data-spin-' + name + ']');
   const state = find('state');
   const form = find('form');

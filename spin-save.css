@@ -103,3 +103,47 @@
     transition: none;
   }
 }
+
+.ap-site .spin-save-shortcut {
+  position: fixed;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: calc(1rem + env(safe-area-inset-bottom));
+  z-index: 35;
+  display: grid;
+  place-items: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 50%;
+  background: #111;
+  color: #fff;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 20%);
+}
+.spin-save-shortcut svg { width: 1.4rem; height: 1.4rem; }
+.spin-save-shortcut span {
+  position: absolute;
+  right: calc(100% + .55rem);
+  padding: .5rem .75rem;
+  border-radius: .5rem;
+  background: #111;
+  color: #fff;
+  font: 600 .875rem/1.2 Archivo, Arial, sans-serif;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+}
+.spin-save-shortcut:hover { background: #333; color: #fff; }
+.spin-save-shortcut:focus-visible { outline: 2px solid #111; outline-offset: 3px; }
+.spin-save-shortcut:is(:hover, :focus-visible) span { opacity: 1; }
+
+body:has(dialog[open], #ap-toast:not([hidden]), #ap-compare-bar:not([hidden])) .spin-save-shortcut,
+body:has(#pure-gift-main) .spin-save-shortcut[href="/gift-cards"] { display: none; }
+
+@media (max-width: 1050px) {
+  body:has(.nl-bulk-mobile-bar) .spin-save-shortcut { display: none; }
+}
+@media (max-width: 800px) {
+  body:has(input:focus, textarea:focus, select:focus, .ap-mobile-purchase) .spin-save-shortcut { display: none; }
+}
+@media (max-width: 700px) {
+  body:has(.pss-preview) .spin-save-shortcut { display: none; }
+}

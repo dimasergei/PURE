@@ -8,10 +8,12 @@ const planner = fs.readFileSync('subscribe-and-save.js', 'utf8');
 const publicPage = fs.readFileSync('public-build/subscribe-and-save.html', 'utf8');
 const planKey = 'pure-subscribe-plan-v1';
 
-function openPlanner(path = '', draft = [], initialCart = []) {
+function openPlanner(path = '', draft = [], initialCart = [], monthly = false) {
   const dom = new JSDOM(publicPage, { url: 'https://getpurelabs.com/subscribe-and-save' + path, runScripts: 'outside-only' });
   const { window } = dom;
   const { document } = window;
+  window.HTMLDialogElement.prototype.showModal = function () { this.open = true; };
+  window.HTMLDialogElement.prototype.close = function () { this.open = false; this.dispatchEvent(new window.Event('close')); };
   const catalog = ['alpha', 'beta', 'gamma', 'delta', 'epsilon'].map((id, index) => ({
     id, name: 'Fixture ' + id, category: 'injectables', group: 'Fixture group',
     variants: [{ size: '5mg', price: 10 + index }, { size: '10mg', price: 20 + index }]
@@ -20,6 +22,7 @@ function openPlanner(path = '', draft = [], initialCart = []) {
   const cart = [...initialCart];
   const added = [];
   const esc = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+  window.fetch = async url => ({ ok: true, json: async () => ({ available: monthly && url.endsWith('repeat_orders=status') }) });
   window.AltaStore = {
     catalog, cart, esc,
     addItems: items => added.push(...items),
@@ -51,9 +54,9 @@ test('preselects the exact linked strength and preserves the locally saved plan'
   const view = openPlanner('?product=alpha&size=10mg', [{ id: 'beta', size: '5mg' }, { id: 'supply', size: '10mL' }]);
   try {
     assert.equal(view.get('h1').textContent, 'SUBSCRIBE & SAVE.');
-    assert.match(view.get('.pss-plan-note').textContent, /Automatic renewals are unavailable/);
+    assert.match(view.get('.pss-plan-note').textContent, /Confirm each order/);
     assert.equal(view.get('[data-pss-count]').textContent, '2 / 4');
-    assert.equal(view.card('alpha').querySelector('select').value, '10mg');
+    assert.equal(view.card('alpha').querySelector('[data-pss-size][aria-pressed="true"]').dataset.pssSize, '10mg');
     assert.equal(view.card('supply'), null);
     assert.deepEqual(view.saved(), [{ id: 'beta', size: '5mg' }, { id: 'alpha', size: '10mg' }]);
     assert.equal(view.get('[data-pss-cart]').disabled, true);
@@ -68,7 +71,8 @@ test('changes the chosen strength and adds exactly four product variants through
     for (const id of ['alpha', 'beta', 'gamma', 'delta']) view.pick(id);
     assert.equal(view.get('[data-pss-count]').textContent, '4 / 4');
     assert.equal(view.card('epsilon').querySelector('[data-pss-pick]').disabled, true);
-    const select = view.card('alpha').querySelector('select');
+    assert.equal(view.get('[data-pss-dialog]').open, true);
+    const select = view.get('[data-pss-edit="0"]');
     select.value = '10mg';
     select.dispatchEvent(new view.window.Event('change', { bubbles: true }));
     assert.equal(view.get('[data-pss-subtotal]').textContent, '$56.00');
@@ -78,7 +82,7 @@ test('changes the chosen strength and adds exactly four product variants through
       { id: 'alpha', size: '10mg', qty: 1 }, { id: 'beta', size: '5mg', qty: 1 },
       { id: 'gamma', size: '5mg', qty: 1 }, { id: 'delta', size: '5mg', qty: 1 }
     ]);
-    view.get('[data-pss-remove="alpha"]').click();
+    view.get('[data-pss-remove="0"]').click();
     assert.equal(view.get('[data-pss-cart]').disabled, true);
     assert.equal(view.saved().length, 3);
   } finally { view.close(); }
@@ -94,6 +98,57 @@ test('preserves a full plan and prevents cart quantity truncation', () => {
     assert.deepEqual(view.added, []);
     assert.equal(view.opened(), 0);
     assert.match(view.get('[data-pss-status]').textContent, /reduce items/);
+  } finally { view.close(); }
+});
+
+test('builds additional sets with repeated variants and consolidates them for the cart', () => {
+  const view = openPlanner();
+  try {
+    for (let i = 0; i < 4; i++) view.pick('alpha');
+    assert.equal(view.get('[data-pss-count]').textContent, '4 / 4');
+    view.get('[data-pss-another]').click();
+    assert.equal(view.get('[data-pss-dialog]').open, false);
+    assert.equal(view.get('[data-pss-count]').textContent, '4 / 8');
+    view.card('alpha').querySelector('[data-pss-size="10mg"]').click();
+    view.pick('alpha');
+    assert.equal(view.get('[data-pss-cart]').disabled, true);
+    for (let i = 0; i < 3; i++) view.pick('beta');
+    assert.equal(view.get('[data-pss-count]').textContent, '8 / 8');
+    assert.equal(view.get('[data-pss-subtotal]').textContent, '$93.00');
+    assert.equal(view.get('[data-pss-monthly]').hidden, true);
+    assert.equal(view.get('[data-pss-selection]').querySelectorAll('.pss-set').length, 2);
+    const restored = openPlanner('', view.saved());
+    try {
+      assert.equal(restored.get('[data-pss-subtotal]').textContent, '$93.00');
+      restored.get('[data-pss-cart]').click();
+      assert.deepEqual(JSON.parse(JSON.stringify(restored.added)), [
+        { id: 'alpha', size: '5mg', qty: 4 }, { id: 'alpha', size: '10mg', qty: 1 }, { id: 'beta', size: '5mg', qty: 3 }
+      ]);
+    } finally { restored.close(); }
+  } finally { view.close(); }
+});
+
+test('guards combined cart quantities when a selected variant repeats', () => {
+  const draft = Array.from({ length: 4 }, () => ({ id: 'alpha', size: '5mg' }));
+  const view = openPlanner('', draft, [{ key: 'alpha:5mg', qty: 97 }]);
+  try {
+    view.get('[data-pss-cart]').click();
+    assert.deepEqual(view.added, []);
+    assert.match(view.get('[data-pss-status]').textContent, /reduce items/);
+  } finally { view.close(); }
+});
+
+test('only offers monthly checkout for eligible complete sets after a positive readiness response', async () => {
+  const draft = Array.from({ length: 4 }, () => ({ id: 'beta', size: '5mg' }));
+  const view = openPlanner('', draft, [], true);
+  try {
+    await new Promise(resolve => setTimeout(resolve, 0));
+    assert.equal(view.get('[data-pss-monthly]').hidden, false);
+    assert.equal(view.get('[data-pss-monthly-total]').textContent, '$26.40');
+    assert.equal(view.get('[data-pss-review-total]').textContent, '$44.00');
+    assert.equal(view.get('[data-pss-selection]').querySelectorAll('.pss-included').length, 1);
+    view.get('[data-pss-remove="3"]').click();
+    assert.equal(view.get('[data-pss-monthly]').hidden, true);
   } finally { view.close(); }
 });
 

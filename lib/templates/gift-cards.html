@@ -1,0 +1,60 @@
+<main id="pure-gift-main" class="pgc">
+  <div class="ap-container pgc-layout">
+    <aside class="pgc-aside" aria-label="Gift card preview">
+      <div class="pgc-card"><span class="pgc-brand" aria-hidden="true">PURE</span><div class="pgc-card-foot"><span>GIFT CARD</span><strong data-gift-preview>$100</strong></div></div>
+      <p class="pgc-caption">Digital gift card · USD</p>
+    </aside>
+    <section class="pgc-details">
+      <h1>PURE GIFT CARD.</h1>
+      <p class="pgc-intro" data-gift-intro>Choose an amount for yourself or send a gift to someone else.</p>
+      <form data-gift-form>
+        <fieldset><legend>Amount <small>(USD)</small></legend>
+          <div class="pgc-presets" aria-label="Gift card amounts">
+            <button type="button" data-value="25" aria-pressed="false">$25</button><button type="button" data-value="50" aria-pressed="false">$50</button><button type="button" data-value="100" aria-pressed="true">$100</button>
+            <button type="button" data-value="250" aria-pressed="false">$250</button><button type="button" data-value="500" aria-pressed="false">$500</button><button type="button" data-value="1000" aria-pressed="false">$1,000</button>
+          </div>
+          <label for="pgc-range" class="ap-sr">Adjust gift card amount in dollars</label><input id="pgc-range" name="range" type="range" min="25" max="1000" value="100" step="1">
+          <label for="pgc-amount">Custom amount <small>($25–$1,000)</small></label>
+          <input id="pgc-amount" name="amount" type="number" min="25" max="1000" step="0.01" value="100" inputmode="decimal" required>
+        </fieldset>
+        <fieldset><legend>Who is it for?</legend>
+          <div class="pgc-mode">
+            <label><input type="radio" name="mode" value="gift" checked><span>Send as a gift</span></label>
+            <label><input type="radio" name="mode" value="self"><span>For myself</span></label>
+          </div>
+          <div data-gift-recipient>
+            <label for="pgc-recipient">Recipient’s name <small>(optional)</small></label><input id="pgc-recipient" name="recipient" maxlength="80">
+            <label for="pgc-email">Recipient’s email</label><input id="pgc-email" name="recipientEmail" type="email" autocomplete="off" maxlength="254">
+            <label for="pgc-confirm">Confirm recipient’s email</label><input id="pgc-confirm" name="confirmEmail" type="email" autocomplete="off" maxlength="254">
+            <label for="pgc-note">Gift message <small>(optional)</small></label><textarea id="pgc-note" name="note" maxlength="250" rows="3"></textarea>
+          </div>
+          <label for="pgc-date">Send on <small>(UTC)</small></label><input id="pgc-date" name="sendDate" type="date" required>
+        </fieldset>
+        <label class="pgc-consent"><input required name="consent" type="checkbox"><span data-gift-consent>I confirm the amount, recipient and delivery date.</span></label>
+        <p class="pgc-caption" data-gift-terms></p>
+        <a data-gift-login class="pgc-submit" href="/account/login?returnTo=%2Fgift-cards" target="_blank" rel="noopener">Sign in to continue</a>
+        <button data-gift-submit class="pgc-submit" type="submit" hidden>Continue</button>
+        <div class="pgc-state" data-gift-status role="status"></div>
+        <a data-gift-requests href="/account/requests" hidden>View support requests</a>
+        <noscript><p>For gift card assistance, email <a href="mailto:support@getpurelabs.com">support@getpurelabs.com</a>.</p></noscript>
+      </form>
+      <a class="pgc-account-link" href="#gift-card-account">View or claim a gift card</a>
+    </section>
+  </div>
+  <section id="gift-card-account" class="ap-container pgc-account" aria-labelledby="pgc-account-heading">
+    <h2 id="pgc-account-heading">Your gift cards</h2>
+    <p data-gift-account-status aria-live="polite">Sign in with the email used for your purchase or gift.</p>
+    <a data-gift-account-login href="/account/login?returnTo=%2Fgift-cards" target="_blank" rel="noopener">Sign in to view gift cards</a>
+    <button class="pgc-secondary" type="button" data-gift-refresh hidden>Refresh gift cards</button>
+    <div data-gift-account-list></div>
+  </section>
+  <section class="ap-container pgc-faq"><h2>Gift card questions</h2><div>
+    <details><summary>How do I send a gift?</summary><p>Choose the amount, enter and confirm the recipient’s email, and select a send date. Your order shows the USD payment instructions when purchasing is available.</p></details>
+    <details><summary>When can the recipient claim it?</summary><p>After PURE confirms payment and the selected date arrives, the recipient can claim the gift here using a verified PURE account with the matching email address.</p></details>
+    <details><summary>What if they don’t have an account?</summary><p>They can create an account with the address you entered, verify their email and return to this page.</p></details>
+    <details><summary>Can they spend part of it?</summary><p>Claiming adds the gift amount to their PURE store credit. They can apply available credit at an eligible checkout and keep the rest for a later purchase.</p></details>
+    <details><summary>Can I schedule a gift?</summary><p>Choose today or a date up to 28 days ahead. Dates use UTC. The gift can be claimed once payment is confirmed and the date arrives.</p></details>
+    <details><summary>What if I entered the wrong email?</summary><p>Contact support@getpurelabs.com with the order reference and the correct address.</p></details>
+    <details><summary>Can I use a coupon or account credit to buy a gift card?</summary><p>Gift cards are funded separately by USD bank transfer for their full face value.</p></details>
+    <a href="/account#rewards-and-credit">View store credit</a></div></section>
+</main>

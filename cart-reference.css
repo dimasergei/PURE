@@ -508,3 +508,15 @@ html[data-display-currency]:not([data-display-currency="USD"]) .nlc-price strong
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+
+.ap-cart-dialog .nlc-scrollable-items { display:flex; flex-direction:column; }
+.ap-cart-dialog .nlc-scrollable-items>section,.ap-cart-dialog .nlc-cart-options { flex-shrink:0; }
+.ap-cart-dialog .nlc-cart-lines { flex:1 0 auto; }
+.ap-cart-dialog .nlc-name a { color:inherit; text-decoration:none; }
+.ap-cart-dialog .nlc-name a:hover { text-decoration:underline; }
+.ap-cart-dialog .nlc-recs>header { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:6px; }
+.ap-cart-dialog .nlc-recs>header h3 { margin:0!important; }
+.nlc-rec-controls { display:flex; gap:4px; }
+.nlc-rec-controls button { border:1px solid #ccc; background:#fff; color:#111; font-size:18px; width:32px; height:32px; border-radius:50%; cursor:pointer; }
+.ap-cart-dialog .nlc-delivery-est { white-space:normal; flex-wrap:wrap; line-height:1.4; text-align:center; font-size:.75rem; }
+.nlc-delivery-est a { color:#111; font-weight:700; text-underline-offset:2px; }

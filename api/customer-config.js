@@ -2,6 +2,9 @@
 module.exports=async(req,res)=>{
  res.setHeader('Cache-Control','no-store');res.setHeader('X-Content-Type-Options','nosniff');
  const url=new URL(req.url||'/api/customer-config','https://account.internal');
+ if(url.searchParams.has('gift_order'))return require('../lib/gift-orders').handle(req,res,url.searchParams.get('gift_order'));
+ if(url.searchParams.get('gift_card')==='request')return require('../lib/gift-card-inquiry').handle(req,res);
+ if(url.searchParams.has('repeat_orders'))return require('../lib/repeat-orders').handle(req,res);
  if(url.searchParams.has('spin_save'))return require('../lib/spin-save').handle(req,res);
  if(url.searchParams.get('track_order')==='request')return require('../lib/track-order').handle(req,res);
  if(url.searchParams.has('display_locale'))return require('../lib/display-locale').handle(req,res,url.searchParams);

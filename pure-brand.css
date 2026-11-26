@@ -348,3 +348,22 @@ html:root body.ap-site.ap-account-site .rd-points .rd-balance-note{margin:12px 0
 @media(max-width:767px){html:root body.ap-site .nl-editorial .nl-doc-art{min-height:0;padding:25px 22px;gap:20px;transform:rotate(-1deg);border-radius:18px}html:root body.ap-site .nl-editorial .nl-doc-art:hover{transform:rotate(0deg)}html:root body.ap-site .nl-doc-heading>strong{font-size:36px}html:root body.ap-site .nl-doc-sheet{padding:15px 17px}html:root body.ap-site .nl-doc-bottom{flex-wrap:wrap}html:root body.ap-site .pure-faq-intro{padding:27px 24px}html:root body.ap-site .pure-faq-intro h2{font-size:40px}html:root body.ap-site .pure-faq-list{padding:8px 19px}html:root body.ap-site .pure-faq-list summary{padding:17px 0;font-size:14px}}
 @media(max-width:370px){html:root body.ap-site .nl-doc-edition{font-size:8px}html:root body.ap-site .nl-doc-bottom>a{width:100%;justify-content:center}}
 @media(prefers-reduced-motion:reduce){html:root body.ap-site .nl-editorial .nl-doc-art,html:root body.ap-site .nl-doc-bottom>a,html:root body.ap-site .pure-faq-cta{transition:none}}
+
+.pure-home-packaging { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center; margin-block: 42px; }
+.pure-home-packaging img { display: block; width: 100%; height: auto; aspect-ratio: 1.65; object-fit: cover; border-radius: 18px; }
+.pure-home-packaging h2,.pure-home-close h2 { margin: 0 0 12px; font-size: clamp(1.8rem,3.2vw,3rem); line-height: 1.05; letter-spacing: -.04em; }
+.pure-home-packaging p { max-width: 35ch; margin: 0 0 20px; line-height: 1.55; }
+.pure-home-close { text-align: center; border-top: 1px solid #ddd; padding-block: 42px 58px; }
+.pure-home-close > div { display: flex; gap: 18px; flex-wrap: wrap; justify-content: center; align-items: center; }
+#nl-featured .nl-featured-meta .ap-catalog-actions { grid-column: 1/-1; width: 100%; }
+@media(max-width:700px) {
+  .pure-home-packaging { grid-template-columns: 1fr; gap: 18px; text-align: center; }
+  .pure-home-packaging p { margin-inline: auto; }
+  html:root body.ap-site .pure-faq-intro { min-height: auto; background: transparent; text-align: center; padding: 12px 0; }
+  html:root body.ap-site .pure-faq-intro::before { content: none; }
+  html:root body.ap-site .pure-faq-intro h2 { color: #111; }
+  html:root body.ap-site .pure-faq-intro p { margin-inline: auto; color: #555; }
+  html:root body.ap-site .pure-faq-list { padding: 0; border: 0; background: transparent; gap: 8px; }
+  html:root body.ap-site .pure-faq-list details { border: 1px solid #dedede; border-radius: 12px; padding-inline: 16px; background: #fafafa; }
+  html:root body.ap-site .pure-faq-list details:last-child { border-bottom: 1px solid #dedede; }
+}

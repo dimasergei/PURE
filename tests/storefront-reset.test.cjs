@@ -13,7 +13,7 @@ function referenceSource(file,scope,anchor){
  assert.ok(source.includes(anchor),file+' exposes the reference view insertion point');
  return source.replace(anchor,Object.entries(views).map(([name,fn])=>'\n '+name+' = '+fn.toString()+';\n').join('')+anchor);
 }
-async function fixture(route,{workspace=false,cart=[],reviews=null,catalogFixture=null}={}){
+async function fixture(route,{workspace=false,cart=[],reviews=null,catalogFixture=null,monthlyAvailable=false}={}){
  const errors=[],vc=new VirtualConsole();vc.on('jsdomError',e=>errors.push(e.message));
  const dom=new JSDOM(read('storefront-v2.html'),{url:'https://getpurelabs.com'+route,runScripts:'outside-only',virtualConsole:vc}),w=dom.window;
  w.localStorage.setItem('ap-age-verified','true');w.matchMedia=()=>({matches:false});
@@ -21,7 +21,7 @@ async function fixture(route,{workspace=false,cart=[],reviews=null,catalogFixtur
  w.HTMLElement.prototype.scrollIntoView=()=>{};
  w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};
  w.HTMLDialogElement.prototype.close=function(){this.open=false;};
- w.fetch=async url=>({ok:true,json:async()=>String(url).includes('reviews=summary')?reviews:String(url).includes('/data/supplier-coas.json')?require('../data/supplier-coas.json'):[]});
+ w.fetch=async url=>({ok:true,json:async()=>String(url).includes('repeat_orders=status')?{available:monthlyAvailable}:String(url).includes('reviews=summary')?reviews:String(url).includes('/data/supplier-coas.json')?require('../data/supplier-coas.json'):[]});
  const scripts=['products.js','product-images.js','quantity-pricing.js'].map(read);
  if(catalogFixture)scripts.push('CATALOG.splice(0,CATALOG.length,...'+JSON.stringify(catalogFixture)+');');
  // The production build replaces these views inside the storefront closure.
@@ -32,7 +32,7 @@ async function fixture(route,{workspace=false,cart=[],reviews=null,catalogFixtur
  await settle();
  return{w,d:w.document,errors,async close(){await settle();assert.deepEqual(errors,[],route);dom.window.close();}};
 }
-test('homepage keeps the announcement, five-vial hero and product links without purchase controls',async()=>{
+test('homepage keeps the announcement, five-vial hero and product links with quick buy',async()=>{
  const f=await fixture('/');
  try{
   const {d,w}=f,hero=d.querySelector('.nl-hero');
@@ -54,7 +54,8 @@ test('homepage keeps the announcement, five-vial hero and product links without 
   assert.equal(featured.length,10);
   for(const card of featured){
    const p=w.AltaStore.product(card.dataset.product);assert.ok(p);
-   assert.equal(card.querySelectorAll('select,button,input,[data-action]').length,0,'featured cards navigate to a product before choosing a strength or purchasing');
+   assert.equal(card.querySelectorAll('select,input').length,0,'strength choices stay in the picker');
+   assert.ok(card.querySelector('.ap-catalog-action'));
    const photo=card.querySelector('a.ap-product-image');assert.ok(photo?.querySelector('img'));
    const target=new URL(photo.getAttribute('href'),w.location.href);
    assert.equal(target.pathname,'/product/'+p.id);
@@ -185,10 +186,9 @@ test('catalog adds single variants directly and asks for an explicit choice on c
   assert.ok(dialog.open);
   assert.equal(drawer.open,false,'the cart stays closed until a strength is chosen');
   assert.equal(dialog.querySelector('h2').textContent,'Fixture multiple');
-  dialog.querySelector('[type=submit]').click();
-  assert.deepEqual(cart(),[['fixture-single','Small',1]],'an unspecified option does not add an item');
-  dialog.querySelector('select').value='Large';
-  dialog.querySelector('[type=submit]').click();
+  assert.deepEqual([...dialog.querySelectorAll('[data-quick-size]')].map(x=>x.dataset.quickSize),['Small','Large']);
+  assert.deepEqual(cart(),[['fixture-single','Small',1]],'opening the picker does not add an item');
+  dialog.querySelector('[data-quick-size="Large"]').click();
   assert.equal(dialog.open,false);
   assert.ok(drawer.open,'adding the chosen strength opens the cart');
   assert.deepEqual(cart(),[['fixture-single','Small',1],['fixture-multiple','Large',1]]);
@@ -217,7 +217,7 @@ test('product page shows only Subscribe & Save and bulk savings paths, with regu
  try{
   const {d,w}=f,product=w.AltaStore.product('retatrutide');
   assert.equal(d.querySelector('#ap-detail-quantity').value,'1');
-  assert.equal(d.querySelectorAll('[data-bundle-quantity]').length,0);
+  assert.deepEqual([...d.querySelectorAll('[data-bundle-quantity]')].map(x=>x.dataset.bundleQuantity),['1','2','3','4']);
   const offers=[...d.querySelectorAll('.nl-product-saving-card')];
   assert.equal(offers.length,2);
   assert.match(offers[0].getAttribute('href'),/^\/subscribe-and-save\?product=/);
@@ -232,6 +232,27 @@ test('product page shows only Subscribe & Save and bulk savings paths, with regu
   d.querySelector('[data-action="detail-add"]').click();
   assert.equal(w.AltaStore.cart[0].qty,10);assert.equal(w.AltaStore.cart[0].price,price);
   assert.doesNotMatch(d.querySelector('.ap-detail-copy').textContent,/BOGO|additional free/i);
+ }finally{await f.close();}
+});
+
+test('mobile size selection retains the quantity and opens the correctly priced cart or monthly order',async()=>{
+ const f=await fixture('/product/retatrutide',{monthlyAvailable:true});
+ try{
+  const {w,d}=f;
+  d.querySelector('[data-bundle-quantity="3"]').click();
+  d.querySelectorAll('.ap-mobile-sizes button')[1].click();
+  await settle();
+  const variant=w.AltaStore.product('retatrutide').variants[1];
+  const month=new URL(d.querySelector('.nl-product-saving-card-member').href);
+  assert.equal(month.pathname,'/monthly-orders');
+  assert.equal(month.searchParams.get('size'),variant.size);
+  assert.equal(month.searchParams.get('qty'),'3');
+  assert.equal(d.querySelector('#ap-detail-quantity').value,'3');
+  assert.equal(d.querySelector('.ap-mobile-sizes [aria-pressed=true]').textContent,variant.size);
+  d.querySelector('.ap-mobile-controls [data-action=detail-add]').click();
+  assert.equal(w.AltaStore.cart[0].size,variant.size);
+  assert.equal(w.AltaStore.cart[0].qty,3);
+  assert.equal(d.querySelector('#ap-cart-dialog').open,true);
  }finally{await f.close();}
 });
 
@@ -336,5 +357,35 @@ test('COA page filters original reports by product, strength, laboratory and cro
   assert.equal(cards().length,1);assert.match(cards()[0].textContent,/Janoshik Analytical/);
   assert.equal(d.querySelector('#ap-supplier-references').getAttribute('aria-busy'),'false');
   assert.match(d.querySelector('#ap-supplier-references').textContent,/request the exact fulfilled-lot COA/);
+ }finally{await f.close();}
+});
+
+test('bulk order sheet tracks tier changes across strengths and restores the same summary on close',async()=>{
+ const f=await fixture('/bulk-orders',{workspace:true});
+ try{
+  const {d,w}=f,bar=d.querySelector('[data-action="bulk-open-summary"]'),sheet=d.getElementById('nl-bulk-sheet');
+  const card=[...d.querySelectorAll('[data-bulk-product]')].find(item=>item.querySelectorAll('[data-action="bulk-size"]').length>1);
+  const id=card.dataset.bulkProduct,first=card.querySelector('[data-bulk-id]');
+  first.value='49';first.dispatchEvent(new w.Event('input',{bubbles:true}));
+  assert.match(card.querySelector('.nl-bulk-progress').textContent,/Add 1 more/);
+  card.querySelectorAll('[data-action="bulk-size"]')[1].click();
+  const chosen=d.querySelector('[data-bulk-product="'+id+'"]');
+  chosen.querySelector('[data-delta="1"]').click();
+  assert.match(chosen.querySelector('.nl-bulk-progress').textContent,/60% off applied/);
+  assert.match(bar.textContent,/50 units/);
+  bar.click();
+  assert.equal(sheet.open,true);assert.equal(bar.getAttribute('aria-expanded'),'true');
+  assert.equal(sheet.querySelector('.nl-bulk-rate-badge').textContent,'60% off');
+  const minus=sheet.querySelector('[data-delta="-1"]');
+  minus.focus();minus.click();
+  assert.match(bar.textContent,/49 units/);
+  assert.equal(sheet.querySelector('.nl-bulk-rate-badge').textContent,'50% off');
+  assert.equal(d.activeElement.dataset.delta,'-1');
+  assert.equal(sheet.querySelector('[data-action="bulk-checkout"]').disabled,false);
+  sheet.querySelector('[data-action="bulk-close-summary"]').click();
+  sheet.dispatchEvent(new w.Event('close'));
+  assert.equal(sheet.open,false);assert.equal(bar.getAttribute('aria-expanded'),'false');
+  assert.ok(d.querySelector('#ap-bulk-catalog > .nl-bulk-summary #ap-bulk-summary'));
+  assert.equal(d.querySelectorAll('#ap-bulk-summary').length,1);
  }finally{await f.close();}
 });

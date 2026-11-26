@@ -1,155 +1,259 @@
-/* A locally saved selection that uses the regular PURE cart for each reorder. */
+/* Saved sets use the regular PURE cart for each order. */
 (() => {
   'use strict';
-
   const planKey = 'pure-subscribe-plan-v1';
-  const limit = 4;
+  const setSize = 4;
 
   function mount() {
     const root = document.querySelector('[data-pss-planner]');
     const store = window.AltaStore;
     if (!root || !store || root.dataset.ready) return;
     root.dataset.ready = 'true';
+    const get = name => root.querySelector('[data-pss-' + name + ']');
     const catalog = new Map(store.catalog
       .filter(product => product.category === 'injectables')
       .map(product => [product.id, product.variants.filter(variant => Number.isFinite(variant.price) && variant.price > 0)])
       .filter(([, variants]) => variants.length));
-    const products = root.querySelector('[data-pss-products]');
-    const selection = root.querySelector('[data-pss-selection]');
-    const progress = root.querySelector('[data-pss-count]');
-    const subtotal = root.querySelector('[data-pss-subtotal]');
-    const cart = root.querySelector('[data-pss-cart]');
-    const search = root.querySelector('[data-pss-search]');
-    const status = root.querySelector('[data-pss-status]');
-    const chosen = new Map();
-    const sizes = new Map();
-    const price = amount => store.priceMarkup(amount, { trimWhole: true });
     const findVariant = (id, size) => catalog.get(id)?.find(variant => variant.size === size);
+    const esc = store.esc;
+    const price = amount => store.priceMarkup(amount, { trimWhole: true });
+    const monthlyCents = amount => Math.round(Math.round(amount * 100) * 0.6);
+    const products = get('products');
+    const selection = get('selection');
+    const dialog = get('dialog');
+    const cart = get('cart');
+    const search = get('search');
+    const sizes = new Map();
     const saved = store.read(planKey, []);
-    if (Array.isArray(saved)) {
-      for (const item of saved.slice(0, limit)) {
-        if (findVariant(item?.id, item?.size)) chosen.set(item.id, item.size);
-      }
-    }
-    const storePlan = () => store.write(planKey, [...chosen].map(([id, size]) => ({ id, size })));
-    const savedMessage = () => storePlan() ? 'Plan saved on this device.' : 'Selections are available for this visit. Your browser blocked saving.';
-    const params = new URLSearchParams(location.search);
-    const incomingId = params.get('product');
-    const incomingSize = params.get('size');
-    if (incomingId || incomingSize) {
-      if (!findVariant(incomingId, incomingSize)) {
-        status.textContent = 'That product or strength is unavailable for this plan.';
-      } else {
-        sizes.set(incomingId, incomingSize);
-        if (chosen.has(incomingId) || chosen.size < limit) {
-          chosen.set(incomingId, incomingSize);
-          status.textContent = savedMessage();
-        } else {
-          search.value = store.product(incomingId).name;
-          status.textContent = 'Your plan is full. Remove a product to add this selection.';
-        }
-      }
-      const cleanUrl = new URL(location.href);
-      cleanUrl.searchParams.delete('product');
-      cleanUrl.searchParams.delete('size');
-      history.replaceState(null, '', cleanUrl);
+    const chosen = Array.isArray(saved) ? saved.filter(item => findVariant(item?.id, item?.size)) : [];
+    for (const item of chosen) sizes.set(item.id, item.size);
+    const minimumSlots = () => Math.max(setSize, Math.ceil(chosen.length / setSize) * setSize);
+    let capacity = minimumSlots();
+    let group = '';
+    let monthlyAvailable = false;
+    const groups = [...new Set([...catalog.keys()].map(id => store.product(id).group).filter(Boolean))];
+
+    function status(message) {
+      get('status').textContent = message;
+      get('review-status').textContent = message;
     }
 
-    function renderSummary() {
-      const rows = [...chosen];
-      progress.textContent = rows.length + ' / ' + limit;
-      cart.disabled = rows.length !== limit;
-      subtotal.innerHTML = price(rows.reduce((sum, [id, size]) => sum + findVariant(id, size).price, 0));
-      selection.innerHTML = rows.map(([id, size]) => {
-        const name = store.esc(store.product(id).name);
-        return `<li><span><strong>${name}</strong><small>${store.esc(size)} · Qty 1</small></span><button type="button" class="pss-remove" data-pss-remove="${store.esc(id)}" aria-label="Remove ${name}">×</button></li>`;
-      }).join('') || '<li>Choose four different products.</li>';
+    function save() {
+      if (!store.write(planKey, chosen)) status('Your browser could not save this plan on this device.');
+    }
+
+    const params = new URL(location.href);
+    const incomingId = params.searchParams.get('product');
+    const incomingSize = params.searchParams.get('size');
+    if (incomingId || incomingSize) {
+      if (!findVariant(incomingId, incomingSize)) {
+        status('That product or strength is unavailable for this plan.');
+      } else {
+        sizes.set(incomingId, incomingSize);
+        if (chosen.length < capacity) {
+          chosen.push({ id: incomingId, size: incomingSize });
+          save();
+        } else {
+          search.value = store.product(incomingId).name;
+          status('Your plan is full. Open your plan to start another set or remove an item.');
+        }
+      }
+      params.searchParams.delete('product');
+      params.searchParams.delete('size');
+      history.replaceState(null, '', params);
+    }
+
+    function renderFilters() {
+      get('filters').innerHTML = ['', ...groups].map(label =>
+        `<button type="button" data-pss-group="${esc(label)}" aria-pressed="${group === label}">${esc(label || 'All products')}</button>`
+      ).join('');
     }
 
     function renderProducts() {
       const query = search.value.trim().toLowerCase();
       products.innerHTML = [...catalog].filter(([id, variants]) => {
         const product = store.product(id);
-        return [product.name, product.group, ...variants.map(variant => variant.size)].join(' ').toLowerCase().includes(query);
+        return (!group || group === product.group) &&
+          [product.name, product.group, ...variants.map(variant => variant.size)].join(' ').toLowerCase().includes(query);
       }).map(([id, variants]) => {
         const product = store.product(id);
-        const name = store.esc(product.name);
-        const size = chosen.get(id) || sizes.get(id) || variants[0].size;
-        const picked = chosen.has(id);
-        const options = variants.map(variant =>
-          `<option value="${store.esc(variant.size)}"${variant.size === size ? ' selected' : ''}>${store.esc(variant.size)}</option>`
+        const size = sizes.get(id) || variants[0].size;
+        const matched = chosen.filter(item => item.id === id && item.size === size).length;
+        const chips = variants.map(variant =>
+          `<button type="button" data-pss-size="${esc(variant.size)}" aria-pressed="${variant.size === size}">${esc(variant.size)}</button>`
         ).join('');
-        return `<article class="pss-card" data-pss-product="${store.esc(id)}">
-          <img src="${store.esc(store.image(product, size))}" alt="" loading="lazy" width="160" height="180">
+        return `<article class="pss-card" data-pss-product="${esc(id)}">
+          <img src="${esc(store.image(product, size))}" alt="" loading="lazy" width="180" height="180">
           <div class="pss-card-body">
-            <h3>${name}</h3>
-            <label><span class="ap-sr">Strength for ${name}</span><select data-pss-size>${options}</select></label>
-            <strong data-pss-price>${price(findVariant(id, size).price)}</strong>
-            <button type="button" class="ap-button${picked ? ' ap-button-secondary' : ''}" data-pss-pick aria-pressed="${picked}" aria-label="${picked ? 'Remove' : 'Select'} ${name}"${!picked && chosen.size === limit ? ' disabled' : ''}>${picked ? 'Selected' : 'Select'}</button>
+            <h3>${esc(product.name)}</h3>
+            <div class="pss-sizes" role="group" aria-label="Strength for ${esc(product.name)}">${chips}</div>
+            <div class="pss-prices"><span class="pss-monthly-price">${price(monthlyCents(findVariant(id, size).price) / 100)} <small>/mo</small></span><strong class="pss-list-price">${price(findVariant(id, size).price)}</strong></div>
+            <button type="button" class="ap-button pss-pick" data-pss-pick aria-label="Add ${esc(product.name)} ${esc(size)} to your plan"${chosen.length === capacity ? ' disabled' : ''}>${matched ? 'Added ×' + matched + ' · Add again' : 'Add to plan'}</button>
           </div>
         </article>`;
-      }).join('') || '<p>No products match your search.</p>';
+      }).join('') || '<p class="pss-empty">No products match your search.</p>';
     }
 
-    function updatePlan() {
-      renderSummary();
-      renderProducts();
-      status.textContent = savedMessage();
+    function renderReview() {
+      const count = chosen.length;
+      const total = chosen.reduce((sum, item) => sum + Math.round(findVariant(item.id, item.size).price * 100), 0) / 100;
+      get('count').textContent = count + ' / ' + capacity;
+      get('drawer-count').textContent = count + ' of ' + capacity + ' selected';
+      get('progress').max = capacity;
+      get('progress').value = count;
+      get('subtotal').innerHTML = price(total);
+      get('review-total').innerHTML = price(total);
+      const monthly = chosen.reduce((sum, item) => sum + monthlyCents(findVariant(item.id, item.size).price), 0) / 100;
+      get('monthly-total').innerHTML = price(monthly);
+      get('monthly').innerHTML = 'Review monthly invoices · ' + price(monthly);
+      get('preview-monthly').innerHTML = price(monthly);
+      root.dataset.monthlySizeEligible = String(count <= 60);
+      cart.disabled = !count || count % setSize !== 0;
+      get('monthly').hidden = !monthlyAvailable || cart.disabled || count > 60;
+      const groups = [];
+      for (let start = 0; start < count; start += setSize) {
+        const rows = chosen.slice(start, start + setSize).map(({ id, size }, offset) => {
+          const product = store.product(id);
+          const variants = catalog.get(id);
+          const label = variants.length === 1 ? `<small>${esc(size)}</small>` :
+            `<select data-pss-edit="${start + offset}" aria-label="Strength for ${esc(product.name)}, item ${start + offset + 1}">${variants.map(v => `<option value="${esc(v.size)}"${v.size === size ? ' selected' : ''}>${esc(v.size)}</option>`).join('')}</select>`;
+          return `<li><img width="42" height="48" src="${esc(store.image(product, size))}" alt=""><div><strong>${esc(product.name)}</strong>${label}</div><span class="pss-row-price"><b class="pss-monthly-price">${price(monthlyCents(findVariant(id, size).price) / 100)}</b><b class="pss-list-price">${price(findVariant(id, size).price)}</b></span><button type="button" class="pss-remove" data-pss-remove="${start + offset}" aria-label="Remove ${esc(product.name)} ${esc(size)}">×</button></li>`;
+        }).join('');
+        const included = count >= start + setSize ? '<li class="pss-included"><span>Reconstitution solution · 3 mL</span><strong>Included monthly</strong></li>' : '';
+        groups.push(`<section class="pss-set"><h3>Set ${start / setSize + 1}</h3><ul class="pss-selection">${rows}${included}</ul></section>`);
+      }
+      selection.innerHTML = groups.join('') || '<p>Choose four items to build your first set.</p>';
+      get('next').hidden = count !== capacity;
+      get('completed').textContent = 'Set ' + count / setSize + ' complete';
+      get('another').textContent = 'Start set ' + (count / setSize + 1);
     }
+
+    function render() {
+      renderProducts();
+      renderReview();
+    }
+
+    function focusCard(id, selector) {
+      [...products.querySelectorAll('[data-pss-product]')].find(card => card.dataset.pssProduct === id)?.querySelector(selector)?.focus({ preventScroll: true });
+    }
+
+    function openReview() {
+      if (!dialog.open) dialog.showModal();
+    }
+    // Browsers do not automatically restore button focus after a DOM redraw.
+    dialog.addEventListener('close', () => get('view').focus({ preventScroll: true }));
+    dialog.addEventListener('click', event => {
+      if (event.target.closest('[data-pss-close]') || event.target === dialog) dialog.close();
+    });
+    get('view').addEventListener('click', openReview);
+    get('another').addEventListener('click', () => {
+      if (chosen.length !== capacity) return;
+      capacity += setSize;
+      status('');
+      render();
+      dialog.close();
+    });
 
     search.addEventListener('input', renderProducts);
-    products.addEventListener('change', event => {
-      if (!event.target.matches('[data-pss-size]')) return;
-      const article = event.target.closest('[data-pss-product]');
-      const id = article.dataset.pssProduct;
-      const size = event.target.value;
-      const variant = findVariant(id, size);
-      if (!variant) return;
-      sizes.set(id, size);
-      article.querySelector('img').src = store.image(store.product(id), size);
-      article.querySelector('[data-pss-price]').innerHTML = price(variant.price);
-      if (!chosen.has(id)) return;
-      chosen.set(id, size);
-      renderSummary();
-      status.textContent = savedMessage();
+    get('filters').addEventListener('click', event => {
+      const button = event.target.closest('[data-pss-group]');
+      if (!button) return;
+      group = button.dataset.pssGroup;
+      for (const option of get('filters').children) option.setAttribute('aria-pressed', String(option === button));
+      renderProducts();
     });
     products.addEventListener('click', event => {
-      const button = event.target.closest('[data-pss-pick]');
-      if (!button) return;
-      const article = button.closest('[data-pss-product]');
-      const id = article.dataset.pssProduct;
-      const size = article.querySelector('[data-pss-size]').value;
-      if (chosen.has(id)) chosen.delete(id);
-      else if (chosen.size < limit && findVariant(id, size)) chosen.set(id, size);
-      else return;
-      updatePlan();
-      [...products.querySelectorAll('[data-pss-product]')].find(card => card.dataset.pssProduct === id)?.querySelector('[data-pss-pick]').focus();
+      const button = event.target.closest('button');
+      const card = button?.closest('[data-pss-product]');
+      if (!card) return;
+      const id = card.dataset.pssProduct;
+      if (button.hasAttribute('data-pss-size')) {
+        sizes.set(id, button.dataset.pssSize);
+        renderProducts();
+        focusCard(id, '[aria-pressed="true"]');
+        return;
+      }
+      if (!button.hasAttribute('data-pss-pick') || chosen.length >= capacity) return;
+      const size = sizes.get(id) || catalog.get(id)[0].size;
+      chosen.push({ id, size });
+      status(store.product(id).name + ' ' + size + ' added to your plan.');
+      save();
+      render();
+      if (chosen.length === capacity) openReview();
+      else focusCard(id, '[data-pss-pick]');
+    });
+    selection.addEventListener('change', event => {
+      const select = event.target.closest('[data-pss-edit]');
+      if (!select) return;
+      const item = chosen[Number(select.dataset.pssEdit)];
+      if (!item || !findVariant(item.id, select.value)) return;
+      item.size = select.value;
+      sizes.set(item.id, item.size);
+      status('Strength updated.');
+      save();
+      render();
+      selection.querySelector('[data-pss-edit="' + select.dataset.pssEdit + '"]')?.focus();
     });
     selection.addEventListener('click', event => {
       const remove = event.target.closest('[data-pss-remove]');
-      if (!remove || !chosen.delete(remove.dataset.pssRemove)) return;
-      updatePlan();
-      (selection.querySelector('button') || search).focus();
+      if (!remove) return;
+      chosen.splice(Number(remove.dataset.pssRemove), 1);
+      capacity = minimumSlots();
+      status('Item removed.');
+      save();
+      render();
+      (selection.querySelector('.pss-remove') || get('close')).focus();
+    });
+    function orderLines() {
+      const items = new Map();
+      for (const { id, size } of chosen) {
+        const key = id + ':' + size;
+        const row = items.get(key) || { id, size, qty: 0 };
+        row.qty++;
+        items.set(key, row);
+      }
+      return items;
+    }
+    get('monthly').addEventListener('click', () => {
+      if (!monthlyAvailable || cart.disabled || chosen.length > 60) return;
+      try {
+        sessionStorage.setItem('pure-monthly-builder', JSON.stringify([...orderLines().values()]));
+      } catch {
+        status('Allow this site to save your selection to review monthly invoices.');
+        return;
+      }
+      location.assign('/monthly-orders?builder=1');
     });
     cart.addEventListener('click', () => {
-      if (chosen.size !== limit) return;
-      const items = [...chosen].map(([id, size]) => ({ id, size, qty: 1 }));
+      if (!chosen.length || chosen.length % setSize !== 0) return;
+      const items = orderLines();
       const existing = new Map(store.cart.map(item => [item.key, item.qty]));
-      const keys = items.map(item => item.id + ':' + item.size);
-      if (new Set([...existing.keys(), ...keys]).size > 60 || keys.some(key => (existing.get(key) || 0) >= 100)) {
-        status.textContent = 'Remove or reduce items in your cart before adding the plan.';
+      if (new Set([...existing.keys(), ...items.keys()]).size > 60 ||
+          [...items].some(([key, item]) => (existing.get(key) || 0) + item.qty > 100)) {
+        status('Remove or reduce items in your plan or cart before adding the plan.');
         return;
       }
       try {
-        store.addItems(items);
-        status.textContent = 'Plan added to your cart.';
+        store.addItems([...items.values()]);
+        status('Plan added to your cart.');
+        if (dialog.open) dialog.close();
         document.querySelector('.ap-header [data-action="cart"]')?.click();
       } catch (error) {
-        status.textContent = error.message;
+        status(error.message);
       }
     });
-    renderSummary();
-    renderProducts();
+
+    renderFilters();
+    render();
+    if (window.fetch) fetch('/api/customer-config?repeat_orders=status')
+      .then(response => response.ok ? response.json() : null)
+      .then(config => {
+        if (config?.available === true) {
+          monthlyAvailable = true;
+          root.dataset.monthlyAvailable = 'true';
+          get('monthly').hidden = cart.disabled || chosen.length > 60;
+        }
+      }).catch(() => {});
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount, { once: true });

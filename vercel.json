@@ -67,6 +67,14 @@
       "destination": "/contact.html"
     },
     {
+      "source": "/monthly-orders",
+      "destination": "/monthly-orders.html"
+    },
+    {
+      "source": "/gift-cards",
+      "destination": "/gift-cards.html"
+    },
+    {
       "source": "/track-order",
       "destination": "/track-order.html"
     },

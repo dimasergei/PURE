@@ -76,9 +76,11 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
    assert.equal(card.querySelector('.nl-featured-meta h3').textContent,p.name);
    assert.match(card.querySelector('.nl-featured-price').textContent,/^\$[\d,]+(?:\.\d{2})?$/);
    assert.equal(new URL(photo.href).pathname,'/product/'+p.id);
-   assert.equal(card.querySelector('button,select,.nl-card-actions,.nl-size-label'),null);
+   assert.equal(card.querySelector('select,.nl-size-label'),null);
+   assert.ok(card.querySelector('.ap-catalog-action'));
+   assert.equal(card.querySelector('.ap-catalog-view').href,photo.href);
    assert.equal(photo.contains(card.querySelector('.nl-featured-meta')),false,'name and price are outside the image');
-   assert.doesNotMatch(card.textContent,/per unit|View More|Add to Cart|\(\d+\s*mg\)/i);
+   assert.doesNotMatch(card.textContent,/per unit|\(\d+\s*mg\)/i);
   }
   const bulk=d.querySelector('.nl-home-bulk');
   const memberships=d.querySelector('[data-mx-membership-home]');assert.ok(d.querySelector('.nl-editorial').nextElementSibling===memberships,'membership comparison follows documentation');assert.equal(memberships.querySelectorAll('.mx-card').length,3);assert.ok(memberships.nextElementSibling===bulk,'bulk ordering follows membership comparison');
@@ -140,7 +142,7 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
   assert.match(paths[0].textContent,/SUBSCRIBE & SAVE/);
   assert.match(paths[1].textContent,/Save up to 60%/);
   assert.match(paths[1].getAttribute('href'),/^\/bulk-orders\?product=/);
-  assert.equal(d.querySelectorAll('[data-bundle-quantity]').length,0);
+  assert.deepEqual([...d.querySelectorAll('[data-bundle-quantity]')].map(x=>x.dataset.bundleQuantity),['1','2','3','4']);
   assert.equal(d.querySelector('#ap-detail-quantity').value,'1');d.querySelector('[data-action="detail-add"]').click();assert.equal(w.AltaStore.cart[0].qty,1);const options=d.querySelectorAll('[data-action="detail-size"]');options[1].click();assert.ok(d.querySelector('h1').textContent.includes(options[1].dataset.size));dom.window.close();}
  {const{dom,d,w}=await setup('/bulk-orders');
   assert.equal(d.querySelector('.nl-bulk-count'),null);assert.equal(d.querySelector('#ap-bulk-count'),null);

@@ -41,8 +41,14 @@
   for(const target of aside.querySelectorAll('[data-dc-line-price]')){
    const [id,size]=JSON.parse(target.dataset.dcLinePrice),item=cart.find(line=>line.id===id&&line.size===size),quoted=current?.pricing?.lines?.find(line=>line.id===id&&line.size===size&&line.qty===item?.qty);
    target.textContent=Number.isSafeInteger(quoted?.gross_cents)?money(quoted.gross_cents,currency):currency==='USD'&&item?money(Math.round(item.price*100)*item.qty):'Calculating…';
+   if(form.dataset.bulkOrder==='true'&&Number.isSafeInteger(quoted?.line_total_cents)&&quoted.line_total_cents<quoted.gross_cents){
+    const retail=document.createElement('del');
+    retail.textContent=money(quoted.gross_cents,currency);
+    target.replaceChildren(retail,document.createTextNode(' '+money(quoted.line_total_cents,currency)));
+   }
   }
-  const heading=aside.querySelector('h2');if(heading)heading.textContent=currency==='CAD'?'Your order · CAD':'Your order';
+  const heading=aside.querySelector('h2'),label=form.dataset.bulkOrder==='true'?'Bulk order summary':'Your order';
+  if(heading)heading.textContent=currency==='CAD'?label+' · CAD':label;
  }
  function enhanceCheckout(form,aside,auth,cart,data){
   // Card wallets are offered by the hosted provider when eligible; no placeholder native buttons.

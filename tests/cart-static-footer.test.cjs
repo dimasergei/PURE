@@ -19,7 +19,7 @@ test('wallet branding, payment amount and delivery estimate appear in cart',()=>
  assert.match(cart,/nlc-apple-mark/);
  assert.match(cart,/money\(data\.total_cents\)/);
  assert.match(cart,/data-nlc-estimate/);
- assert.match(cart,/dateLabel\(7\).*dateLabel\(13\)/);
+ assert.match(cart,/4–10 business days after payment/);
  assert.match(cart,/RUO Agreement/);
  assert.doesNotMatch(cart,/displayFree|bogo-free/);
  assert.doesNotMatch(cart,/FREE · BOGO/);

@@ -27,15 +27,30 @@
  function inquiryForm(type){return '<form class="ap-inquiry-form" data-inquiry-type="'+esc(type)+'"><div class="ap-form-grid"><label>Name<input name="name" autocomplete="name" required maxlength="120"></label><label>Email<input name="email" type="email" autocomplete="email" required maxlength="254"></label><label>Organization<input name="organization" autocomplete="organization" maxlength="160"></label><label>Country<input name="country" autocomplete="country-name" maxlength="100"></label><label class="ap-form-wide">Topic<input name="topic" value="'+(type==='bulk'?'Bulk order quote':'General inquiry')+'" maxlength="160"></label><label class="ap-form-wide">Message<textarea name="message" required maxlength="5000" rows="5"></textarea></label><label class="ap-honeypot" aria-hidden="true">Website<input name="website" tabindex="-1" autocomplete="off"></label><label class="ap-form-consent"><input type="checkbox" name="consent" required> PURE may use these details to respond to my inquiry.</label></div><button class="ap-button" type="submit">Send inquiry →</button><p class="ap-form-status" role="status" aria-live="polite"></p></form>';}
  function bulkPage(){return heading('Bulk orders','Build a bigger order.<br>Keep the details simple.','Choose quantities across exact product sizes. Review a catalog-price estimate, export your list, or send a bulk quote request to the team.')+`<div class="ap-container ap-workspace-layout"><div><div class="ap-toolbar"><label class="ap-sr" for="ap-bulk-query">Search products or sizes</label><input id="ap-bulk-query" type="search" maxlength="120" value="${esc(bulkQuery)}" placeholder="Search products, sizes, or categories"></div><p class="ap-result-count">${A.catalog.reduce((n,p)=>n+p.variants.length,0)} exact product/size combinations · quantities stay saved on this device</p><div class="ap-bulk-table-wrap"><table class="ap-bulk-table"><thead><tr><th>Compound</th><th>Size</th><th>Unit price</th><th>Qty</th><th>Line total</th></tr></thead><tbody id="ap-bulk-rows"></tbody></table></div><section id="ap-bulk-inquiry" class="ap-panel" hidden style="margin-top:25px"><span class="ap-eyebrow">SEND YOUR SELECTIONS</span><h2>Request a bulk quote.</h2><p class="ap-fine">The selected products and quantities will be sent with your inquiry. Submission does not place an order.</p>${inquiryForm('bulk')}</section></div><aside class="ap-summary"><span class="ap-eyebrow">YOUR BULK REQUEST</span><h2>Every size.<br>Every quantity.</h2><div id="ap-bulk-summary"></div></aside></div>`;}
  function bulkUnits(id){return bulk.filter(x=>x.id===id).reduce((n,x)=>n+x.qty,0);}
- function bulkUpdateCard(id,size){
-  const card=$$('[data-bulk-product]').find(x=>x.dataset.bulkProduct===id);if(!card)return;
-  const p=product(id),v=p?.variants.find(x=>x.size===size),qty=bulk.find(x=>x.id===id&&x.size===size)?.qty||0;
-  const unit=card.querySelector('[data-bulk-unit]');if(unit&&v)unit.innerHTML=priceMarkup(v.price);
-  card.dataset.selected=String(qty>0);
-  card.querySelectorAll('[data-bulk-id][data-bulk-size]').forEach(input=>{if(input.dataset.bulkSize===size)input.value=qty;});
-  card.querySelectorAll('[data-action="bulk-qty"][data-size]').forEach(button=>{if(button.dataset.size===size)button.disabled=Number(button.dataset.delta)<0?qty<=0:qty>=100;});
+ function bulkPriceInfo(price,units){
+  const tier=window.PureQuantityPricing?.bulkRate(Math.max(10,units))||0;
+  const cents=Math.round(price*100);
+  const net=(cents-Math.round(cents*tier/10000))/100;
+  return `<strong>${priceMarkup(net)}</strong><span>/unit</span><del data-bulk-unit>${priceMarkup(price)}</del>`;
  }
- function setBulkQuantity(id,size,value){const p=product(id),v=p?.variants.find(x=>x.size===size),qty=Math.max(0,Math.min(100,Math.trunc(Number(value)||0)));if(!p||!v)return;bulk=bulk.filter(x=>!(x.id===id&&x.size===size));if(qty)bulk=A.normalizeLines([...bulk,{id,size,qty}]);A.write(bulkKey,simpleLines(bulk));bulkUpdateCard(id,size);bulkSummary();}
+ function tierProgress(units){
+  if(units>=50)return '60% off applied';
+  if(units>=10)return '50% off applied. Add '+(50-units)+' more for 60% off.';
+  if(units)return 'Add '+(10-units)+' more to reach the 10-unit minimum.';
+  return '50% off from 10 units';
+ }
+ function bulkUpdateCard(id){
+  const card=$$('[data-bulk-product]').find(x=>x.dataset.bulkProduct===id);if(!card)return;
+  const input=card.querySelector('[data-bulk-id]'),size=input.dataset.bulkSize;
+  const variant=product(id).variants.find(x=>x.size===size);
+  const qty=bulk.find(x=>x.id===id&&x.size===size)?.qty||0,units=bulkUnits(id);
+  card.querySelector('.nl-bulk-prices').innerHTML=bulkPriceInfo(variant.price,units);
+  card.querySelector('.nl-bulk-progress').textContent=tierProgress(units);
+  card.dataset.selected=String(qty>0);
+  input.value=qty;
+  card.querySelectorAll('[data-action="bulk-qty"]').forEach(button=>{button.disabled=Number(button.dataset.delta)<0?qty<=0:qty>=100;});
+ }
+ function setBulkQuantity(id,size,value){const p=product(id),v=p?.variants.find(x=>x.size===size),qty=Math.max(0,Math.min(100,Math.trunc(Number(value)||0)));if(!p||!v)return;bulk=bulk.filter(x=>!(x.id===id&&x.size===size));if(qty)bulk=A.normalizeLines([...bulk,{id,size,qty}]);A.write(bulkKey,simpleLines(bulk));bulkUpdateCard(id);bulkSummary();}
  function bulkResults(){
   const root=$('#ap-bulk-rows');if(!root)return;
   const list=bulkCatalog.filter(p=>(bulkGroup==='All'||A.categoryOf(p)===bulkGroup)&&(p.name+' '+p.group+' '+A.categoryOf(p)).toLowerCase().includes(bulkQuery.toLowerCase()));
@@ -48,8 +63,8 @@
     <a class="nl-bulk-image" href="/product/${encodeURIComponent(p.id)}?size=${encodeURIComponent(v.size)}"><img src="${esc(image(p,v.size))}" alt="${esc(p.name+' '+v.size)}" loading="lazy"></a>
     <div class="nl-bulk-product-body"><span class="ap-eyebrow">${esc(p.group)}</span><h3><a href="/product/${encodeURIComponent(p.id)}?size=${encodeURIComponent(v.size)}">${esc(p.name)}</a></h3>
     <div class="nl-bulk-sizes" role="group" aria-label="Choose a strength for ${esc(p.name)}">${p.variants.map(x=>`<button type="button" data-action="bulk-size" data-id="${esc(p.id)}" data-size="${esc(x.size)}" aria-pressed="${x.size===v.size}">${esc(x.size)}</button>`).join('')}</div>
-    <div class="nl-bulk-prices"><strong data-bulk-unit>${priceMarkup(v.price)}</strong><span>/unit</span></div>
-    <div class="nl-bulk-product-foot"><div class="nl-bulk-quantity-controls">${quantityControls(p.id,v.size,qty,p.name,true)}</div></div></div></article>`;
+    <div class="nl-bulk-prices">${bulkPriceInfo(v.price,bulkUnits(p.id))}</div>
+    <div class="nl-bulk-product-foot"><div class="nl-bulk-quantity-controls">${quantityControls(p.id,v.size,qty,p.name,true)}</div></div><p class="nl-bulk-progress">${tierProgress(bulkUnits(p.id))}</p></div></article>`;
   }).join('')||empty('No matching products','Try a different name or category.');
  }
  function quantityControls(id,size,qty,name,addTen=false){
@@ -64,33 +79,61 @@
    canCheckout=units>0&&bulk.every(x=>bulkUnits(x.id)>=10),
    tierSavingsCents=bulk.reduce((n,x)=>n+Math.round(Math.round(x.price*100)*x.qty*(window.PureQuantityPricing?.bulkRate(bulkUnits(x.id))||0)/10000),0),
    tierNet=subtotal-tierSavingsCents/100,ids=[...new Set(bulk.map(x=>x.id))];
+  const focused=root.contains(document.activeElement)?document.activeElement:null;
+  const listScroll=root.querySelector('.nl-bulk-summary-scroll')?.scrollTop||0;
+  const barTitle=$('[data-bulk-bar-total]'),barDetail=$('[data-bulk-bar-detail]');
+  if(barTitle)barTitle.innerHTML=units?`${units} ${units===1?'unit':'units'} · ${priceMarkup(tierNet)}`:'Bulk order';
+  if(barDetail)barDetail.innerHTML=units?(tierSavingsCents?`You save ${priceMarkup(tierSavingsCents/100)} · View order`:'View order'):'10+ units per product · up to 60% off';
   root.dataset.empty=String(units===0);
   const selection=ids.length?ids.map(id=>{
    const p=product(id),lines=bulk.filter(x=>x.id===id),count=lines.reduce((n,x)=>n+x.qty,0);
-   return `<section class="nl-bulk-menu-product"><header class="nl-bulk-menu-product-head"><img src="${esc(image(p,lines[0].size))}" alt=""><span><strong>${esc(p.name)}</strong><small>${count} units</small></span></header>
-    ${lines.map(x=>{const gross=Math.round(x.price*100)*x.qty,saved=Math.round(gross*(window.PureQuantityPricing?.bulkRate(count)||0)/10000);return `<div class="nl-bulk-menu-line"><div class="nl-bulk-menu-controls"><span class="nl-bulk-menu-variant">${esc(x.size)} · ${priceMarkup(x.price)}/unit</span><div class="nl-bulk-quantity-controls">${quantityControls(x.id,x.size,x.qty,x.name)}</div></div><div class="nl-bulk-menu-line-price">${saved?`<del>${priceMarkup(gross/100)}</del>`:''}<strong>${priceMarkup((gross-saved)/100)}</strong></div></div>`;}).join('')}</section>`;
+   return `<section class="nl-bulk-menu-product"><header class="nl-bulk-menu-product-head"><img src="${esc(image(p,lines[0].size))}" alt=""><span><strong>${esc(p.name)}</strong><small>${count} units</small></span>${count>=10?`<b class="nl-bulk-rate-badge">${(window.PureQuantityPricing?.bulkRate(count)||0)/100}% off</b>`:''}</header>
+    ${lines.map(x=>{const gross=Math.round(x.price*100)*x.qty,saved=Math.round(gross*(window.PureQuantityPricing?.bulkRate(count)||0)/10000);return `<div class="nl-bulk-menu-line"><div class="nl-bulk-menu-controls"><span class="nl-bulk-menu-variant">${esc(x.size)} · ${priceMarkup(x.price)}/unit</span><div class="nl-bulk-quantity-controls">${quantityControls(x.id,x.size,x.qty,x.name)}</div></div><div class="nl-bulk-menu-line-price">${saved?`<del>${priceMarkup(gross/100)}</del>`:''}<strong>${priceMarkup((gross-saved)/100)}</strong></div></div>`;}).join('')}<small class="nl-bulk-progress">${tierProgress(count)}</small></section>`;
   }).join(''):'<div class="nl-bulk-menu-empty">Select product quantities for your order.</div>';
-  root.innerHTML=`<div class="nl-bulk-summary-heading"><span class="ap-eyebrow">YOUR ORDER</span><h2>Your selections</h2><span class="nl-bulk-total-units">${units} units</span></div>
+  root.innerHTML=`<div class="nl-bulk-summary-heading"><h2>Your bulk order</h2><span class="nl-bulk-total-units">${units} units</span></div>
    ${units?'':'<button type="button" class="ap-button nl-bulk-add-products" data-action="bulk-add-products">ADD PRODUCTS</button>'}
    <div class="nl-bulk-summary-scroll" aria-label="Selected products">${selection}</div>
-   <div class="nl-bulk-totals"><div class="nl-bulk-estimate-total"><span>Merchandise subtotal</span><strong>${priceMarkup(subtotal)}</strong></div>${tierSavingsCents>0?`<div class="nl-bulk-tier-savings"><span>Bulk savings</span><strong>−${priceMarkup(tierSavingsCents/100)}</strong></div><div class="nl-bulk-net"><span>After bulk savings</span><strong>${priceMarkup(tierNet)}</strong></div>`:''} </div>
+   <div class="nl-bulk-totals"><div class="nl-bulk-estimate-total"><span>Retail value</span><strong>${priceMarkup(subtotal)}</strong></div>${tierSavingsCents>0?`<div class="nl-bulk-tier-savings"><span>Bulk savings</span><strong>−${priceMarkup(tierSavingsCents/100)}</strong></div><div class="nl-bulk-included-shipping"><span>US two-day express</span><strong>Included</strong></div><div class="nl-bulk-net"><span>After bulk savings</span><strong>${priceMarkup(tierNet)}</strong></div>`:''} </div>
+   ${units?`<div class="nl-bulk-tier-key"><span>10+ units · 50% off</span><span>50+ units · 60% off</span><small>Strengths of each product count together.</small></div>`:''}
    <button class="ap-button" data-action="bulk-checkout" ${canCheckout?'':'disabled'}>Checkout · ${priceMarkup(tierNet)}</button>
-   <p class="ap-fine nl-bulk-checkout-note">Save 50% at 10 units or 60% at 50 units per compound. Strengths of the same compound count together. Free two-day express on eligible bulk orders. The total includes your volume savings. Your regular cart stays saved.</p>`;
+   <p class="ap-fine nl-bulk-checkout-note">Save 50% at 10 units or 60% at 50 units per compound. Strengths of the same compound count together. Your regular cart stays saved for later.</p>`;
+  const scroll=root.querySelector('.nl-bulk-summary-scroll');
+  if(scroll)scroll.scrollTop=listScroll;
+  if(focused){
+   const data=focused.dataset;
+   const replacement=[...root.querySelectorAll('button,input')].find(el=>el.tagName===focused.tagName&&
+    ['action','id','size','delta','bulkId','bulkSize'].every(key=>el.dataset[key]===data[key])&&!el.disabled);
+   (replacement||$('#nl-bulk-sheet[open] .nl-bulk-close'))?.focus({preventScroll:true});
+  }
  }
  function trackOrder(){
-  return `<div class="pure-simple-page">${heading('PURE','Track your order','Enter the order number and checkout email from your PURE confirmation.')}
-   <section class="ap-container ap-section ap-editorial">
-    <form method="post" class="ap-inquiry-form" id="ap-track-order-form" aria-label="Request an order update">
-     <div class="ap-form-grid">
-      <label>Order number<input name="order_number" type="text" required minlength="4" maxlength="40" pattern="[A-Za-z0-9\\-]{4,40}" autocapitalize="characters" spellcheck="false" autocomplete="off" placeholder="P00000000"></label>
-      <label>Checkout email<input name="email" type="email" required maxlength="254" autocomplete="email" placeholder="you@example.com"></label>
-     </div>
-     <button class="ap-button" type="submit">Email my order status</button>
-     <p class="ap-form-status" role="status" aria-live="polite" aria-atomic="true"></p>
-    </form>
-    <p>We send status and carrier tracking details to the checkout address.</p>
-    <p><a href="/account/purchases">Sign in to view account orders</a> or <a href="/contact">contact support</a>.</p>
-   </section></div>`;
+  return `<div class="pure-track-page">
+   <header class="pure-track-intro">
+    <h1>Track Your Order</h1>
+    <p>Enter your order details below to get the latest shipment update by email.</p>
+   </header>
+   <form method="post" class="pure-track-form" id="ap-track-order-form" aria-label="Request an order update">
+    <p class="pure-track-instructions">Enter your order ID and the email you used at checkout. We send status and carrier tracking details to the checkout address.</p>
+    <label>Order ID<input name="order_number" type="text" required minlength="4" maxlength="40" pattern="[A-Za-z0-9\\-]{4,40}" autocapitalize="characters" spellcheck="false" autocomplete="off" placeholder="Found in your order confirmation"></label>
+    <label>Billing email<input name="email" type="email" required maxlength="254" autocomplete="email" placeholder="Email you used during checkout"></label>
+    <button type="submit">Track</button>
+    <p class="pure-track-status" role="status" aria-live="polite" aria-atomic="true"></p>
+   </form>
+   <ul class="pure-track-help" aria-label="Order tracking help">
+    <li>
+     <svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg>
+     <div><h2>Check your email</h2><p>Your order ID is in your confirmation email. You can also <a href="/account/purchases">view orders in your account</a>.</p></div>
+    </li>
+    <li>
+     <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m12 2 8 3v6c0 5-3 8-8 11-5-3-8-6-8-11V5z"/><path d="m8 12 3 3 5-6"/></svg>
+     <div><h2>Shipment protection</h2><p>Added protection at checkout? <a href="/shipping-protection.html">See coverage and claims</a> for loss or damage in transit.</p></div>
+    </li>
+    <li>
+     <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 4h16v12H9l-5 4z"/></svg>
+     <div><h2>Need help?</h2><p>Email <a href="mailto:support@getpurelabs.com">support@getpurelabs.com</a> or <a href="/contact">contact support</a>.</p></div>
+    </li>
+   </ul>
+  </div>`;
  }
  async function requestTracking(form){
   if(!form.reportValidity())return;
@@ -129,7 +172,17 @@
    }
   }
   const renderPage=routes[path];root.innerHTML=renderPage?renderPage():heading('PURE','This page could not be found.','Explore the current catalog.');
-  if(path==='/bulk-orders'){bulkResults();bulkSummary();}
+  if(path==='/bulk-orders'){
+   bulkResults();bulkSummary();
+   const sheet=$('#nl-bulk-sheet'),bar=$('[data-action="bulk-open-summary"]'),layout=$('#ap-bulk-catalog');
+   if(sheet&&bar&&layout){
+    const home=$('.nl-bulk-summary',layout);
+    const restore=()=>{if(home.parentNode===sheet)layout.append(home);bar.setAttribute('aria-expanded','false');};
+    sheet.addEventListener('close',restore);
+    sheet.addEventListener('click',event=>{if(event.target===sheet)sheet.close();});
+    bar.addEventListener('click',()=>{if(sheet.open)return;sheet.append(home);sheet.showModal();bar.setAttribute('aria-expanded','true');});
+   }
+  }
   if(path==='/coas')supplierReferences();
   document.title=({'/bulk-orders':'Bulk Orders','/rewards':'Points & Credit','/coas':'COA Library','/contact':'Contact','/about':'About','/partner-program':'Partner Program','/track-order':'Track Your Order'}[path]||'PURE')+' | PURE';
  }
@@ -139,7 +192,8 @@
   root.innerHTML=empty('Workspace information unavailable','Try reloading your account.');
  }
  document.addEventListener('click',async event=>{const button=event.target.closest('[data-action]');if(!button)return;const action=button.dataset.action;
-  if(action==='bulk-add-products'){const query=$('#ap-bulk-query');if(query){query.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});query.focus({preventScroll:true});}return;}
+  if(action==='bulk-close-summary'){$('#nl-bulk-sheet')?.close();return;}
+  if(action==='bulk-add-products'){const sheet=$('#nl-bulk-sheet');if(sheet?.open)sheet.close();const query=$('#ap-bulk-query');if(query){query.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});query.focus({preventScroll:true});}return;}
   if(action==='bulk-qty'){const current=bulk.find(x=>x.id===button.dataset.id&&x.size===button.dataset.size)?.qty||0;setBulkQuantity(button.dataset.id,button.dataset.size,current+Number(button.dataset.delta));}
   if(action==='bulk-size'){const p=product(button.dataset.id),v=p?.variants.find(x=>x.size===button.dataset.size);if(p&&v){bulkSizes[p.id]=v.size;A.write(bulkSizeKey,bulkSizes);bulkResults();}}
   if(action==='bulk-category'){bulkGroup=button.dataset.group||'All';$$('[data-action="bulk-category"]').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.group===bulkGroup)));bulkResults();}

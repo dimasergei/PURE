@@ -7,7 +7,7 @@
 })();
 
 (() => {
- const active=()=>Date.now()<Date.parse(document.querySelector('meta[name="altapure-promo-end"]')?.content);
+ let monthlyReady=false;
  function updateQuantity(){
   const group=document.querySelector('[data-unit-price]');
   const input=document.getElementById('ap-detail-quantity');
@@ -19,6 +19,14 @@
   for(const button of group.querySelectorAll('[data-bundle-quantity]'))button.setAttribute('aria-pressed',String(Number(button.dataset.bundleQuantity)===qty));
   const estimate=document.querySelector('[data-bundle-estimate]');
   if(estimate)estimate.innerHTML='<strong>'+format(total)+'</strong> for '+qty+' '+unitLabel+(qty===1?'':'s')+(rate?' <span class="pure-tier-saving">SAVE '+rate/100+'% · '+format(unit*qty-total)+' OFF</span>':'');
+  const monthly=document.querySelector('.nl-product-saving-card-member');
+  if(monthly&&monthlyReady){
+   const link=new URL(monthly.href);
+   link.pathname='/monthly-orders';link.searchParams.set('qty',String(qty));
+   monthly.href=link.pathname+link.search;
+   monthly.querySelector('strong').innerHTML='Save 10% · '+format(Math.round(cents*.9)*qty/100);
+   monthly.querySelector('small').textContent='Monthly invoice · Review delivery and total';
+  }
   const mobile=document.querySelector('[data-mobile-total]');
   if(mobile)mobile.innerHTML=format(total)+(rate?' · save '+rate/100+'%':'');
  }
@@ -32,9 +40,28 @@
  });
  document.addEventListener('input',event=>{if(event.target.id==='ap-detail-quantity')updateQuantity();});
  const main=document.getElementById('ap-main');
- if(main)new MutationObserver(records=>{if(records.some(r=>[...r.addedNodes].some(n=>n.nodeType===1&&(n.matches?.('.nl-detail')||n.querySelector?.('.nl-detail')))))updateQuantity();}).observe(main,{childList:true});
+ let purchaseObserver;
+ function mountDetail(){
+  updateQuantity();
+  purchaseObserver?.disconnect();
+  const action=main?.querySelector('.nl-purchase'),bar=main?.querySelector('.ap-mobile-purchase');
+  if(!action||!bar||typeof IntersectionObserver==='undefined')return;
+  purchaseObserver=new IntersectionObserver(([entry])=>{
+   bar.dataset.inView=String(entry.isIntersecting||entry.boundingClientRect.top>0);
+  });
+  purchaseObserver.observe(action);
+ }
+ if(main)new MutationObserver(records=>{
+  if(records.some(r=>[...r.addedNodes].some(n=>n.nodeType===1&&(n.matches?.('.nl-detail')||n.querySelector?.('.nl-detail')))))mountDetail();
+ }).observe(main,{childList:true});
+ if(document.querySelector('.nl-product-saving-card-member')){
+  fetch('/api/customer-config?repeat_orders=status',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(status=>{
+   monthlyReady=status?.available===true;
+   if(monthlyReady)updateQuantity();
+  }).catch(()=>{});
+ }
  window.AltaLocale?.onChange?.(()=>updateQuantity());
- updateQuantity();
+ mountDetail();
 })();
 
 // The bulk order summary follows the current sticky navigation offset.

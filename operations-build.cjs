@@ -29,6 +29,7 @@ function copyImages(dir){if(!fs.existsSync(dir))return;for(const entry of fs.rea
 copyImages('assets');
 fs.cpSync(path.join(root,'assets','fonts'),path.join(out,'assets','fonts'),{recursive:true});
 fs.mkdirSync(path.join(out,'data'),{recursive:true});for(const file of ['verified-coas.json','coa-demo-samples.json','supplier-references.json','supplier-coas.json'])if(fs.existsSync('data/'+file))fs.copyFileSync('data/'+file,path.join(out,'data',file));
+for(const file of ['monthly-orders.html','monthly-orders.js','monthly-orders.css']) fs.copyFileSync(file,path.join(out,file));
 // Only the genuine provider-issued Apple Pay association file may be published here.
 // Do not copy an entire hidden directory or generate a substitute verification file.
 const appleAssociation='.well-known/apple-developer-merchantid-domain-association';
