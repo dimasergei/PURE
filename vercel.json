@@ -13,7 +13,7 @@
       "maxDuration": 60
     },
     "api/customer-config.js": {
-      "includeFiles": "lib/catalog.json",
+      "includeFiles": "lib/{catalog.json,public-catalog-shell.html}",
       "maxDuration": 60
     }
   },
@@ -23,8 +23,36 @@
       "destination": "/api/customer-config?instagram=callback"
     },
     {
+      "source": "/shop/browse",
+      "destination": "/api/customer-config?catalog_view=shop"
+    },
+    {
+      "source": "/coas/search",
+      "destination": "/api/customer-config?catalog_view=coas"
+    },
+    {
+      "source": "/cart",
+      "destination": "/cart.html"
+    },
+    {
+      "source": "/faq",
+      "destination": "/faq.html"
+    },
+    {
+      "source": "/learn",
+      "destination": "/learn.html"
+    },
+    {
+      "source": "/learn/:article",
+      "destination": "/learn/:article.html"
+    },
+    {
+      "source": "/:policy(commercial-terms|corrections-policy|medical-disclaimer|membership-terms|partner-terms|payment-options|privacy-policy|refund-policy|research-documentation|research-use-policy|shipping-policy|shipping-protection|terms-and-conditions)",
+      "destination": "/:policy.html"
+    },
+    {
       "source": "/checkout",
-      "destination": "/account.html"
+      "destination": "/checkout.html"
     },
     {
       "source": "/account",
@@ -52,15 +80,115 @@
     },
     {
       "source": "/bulk-orders/checkout",
-      "destination": "/account.html"
+      "destination": "/bulk-checkout.html"
     },
     {
       "source": "/subscribe-and-save/checkout",
-      "destination": "/monthly-orders.html"
+      "destination": "/monthly-checkout.html"
     },
     {
       "source": "/bulk-orders",
       "destination": "/bulk-orders.html"
+    },
+    {
+      "source": "/coas",
+      "has": [
+        {
+          "type": "query",
+          "key": "q"
+        }
+      ],
+      "destination": "/api/customer-config?catalog_view=coas"
+    },
+    {
+      "source": "/coas",
+      "has": [
+        {
+          "type": "query",
+          "key": "query"
+        }
+      ],
+      "destination": "/api/customer-config?catalog_view=coas"
+    },
+    {
+      "source": "/coas",
+      "has": [
+        {
+          "type": "query",
+          "key": "product"
+        }
+      ],
+      "destination": "/api/customer-config?catalog_view=coas"
+    },
+    {
+      "source": "/coas",
+      "has": [
+        {
+          "type": "query",
+          "key": "size"
+        }
+      ],
+      "destination": "/api/customer-config?catalog_view=coas"
+    },
+    {
+      "source": "/coas",
+      "has": [
+        {
+          "type": "query",
+          "key": "lot"
+        }
+      ],
+      "destination": "/api/customer-config?catalog_view=coas"
+    },
+    {
+      "source": "/coas",
+      "has": [
+        {
+          "type": "query",
+          "key": "date"
+        }
+      ],
+      "destination": "/api/customer-config?catalog_view=coas"
+    },
+    {
+      "source": "/coas",
+      "has": [
+        {
+          "type": "query",
+          "key": "lab"
+        }
+      ],
+      "destination": "/api/customer-config?catalog_view=coas"
+    },
+    {
+      "source": "/coas",
+      "has": [
+        {
+          "type": "query",
+          "key": "laboratory"
+        }
+      ],
+      "destination": "/api/customer-config?catalog_view=coas"
+    },
+    {
+      "source": "/coas",
+      "has": [
+        {
+          "type": "query",
+          "key": "supplier"
+        }
+      ],
+      "destination": "/api/customer-config?catalog_view=coas"
+    },
+    {
+      "source": "/coas",
+      "has": [
+        {
+          "type": "query",
+          "key": "page"
+        }
+      ],
+      "destination": "/api/customer-config?catalog_view=coas"
     },
     {
       "source": "/coas",
@@ -138,42 +266,47 @@
     {
       "source": "/research-subscriptions",
       "destination": "/subscribe-and-save",
-      "permanent": false
+      "statusCode": 301
     },
     {
       "source": "/research-checkout.html",
       "destination": "/memberships",
-      "permanent": false
+      "statusCode": 301
     },
     {
       "source": "/research-checkout",
       "destination": "/memberships",
-      "permanent": false
+      "statusCode": 301
     },
     {
       "source": "/research-builder.html",
       "destination": "/subscribe-and-save",
-      "permanent": false
+      "statusCode": 301
     },
     {
       "source": "/research-builder",
       "destination": "/subscribe-and-save",
-      "permanent": false
+      "statusCode": 301
     },
     {
       "source": "/rewards",
-      "destination": "/account/points",
-      "permanent": false
+      "destination": "/my-account/points",
+      "statusCode": 301
+    },
+    {
+      "source": "/rewards.html",
+      "destination": "/my-account/points",
+      "statusCode": 301
     },
     {
       "source": "/offers",
       "destination": "/shop",
-      "permanent": true
+      "statusCode": 301
     },
     {
       "source": "/offers.html",
       "destination": "/shop",
-      "permanent": true
+      "statusCode": 301
     },
     {
       "source": "/account/memberships",
@@ -188,7 +321,47 @@
     {
       "source": "/storefront-v2.html",
       "destination": "/",
-      "permanent": true
+      "statusCode": 301
+    },
+    {
+      "source": "/index.html",
+      "destination": "/",
+      "statusCode": 301
+    },
+    {
+      "source": "/account.html",
+      "destination": "/my-account",
+      "statusCode": 301
+    },
+    {
+      "source": "/account",
+      "destination": "/my-account",
+      "statusCode": 301
+    },
+    {
+      "source": "/bulk-checkout.html",
+      "destination": "/bulk-orders/checkout",
+      "statusCode": 301
+    },
+    {
+      "source": "/monthly-checkout.html",
+      "destination": "/subscribe-and-save/checkout",
+      "statusCode": 301
+    },
+    {
+      "source": "/product/:slug.html",
+      "destination": "/product/:slug",
+      "statusCode": 301
+    },
+    {
+      "source": "/learn/:article.html",
+      "destination": "/learn/:article",
+      "statusCode": 301
+    },
+    {
+      "source": "/:page(about|bulk-orders|cart|checkout|coas|contact|faq|gift-cards|learn|memberships|monthly-orders|partner-program|shop|spin-and-save|subscribe-and-save|track-order|commercial-terms|corrections-policy|medical-disclaimer|membership-terms|partner-terms|payment-options|privacy-policy|refund-policy|research-documentation|research-use-policy|shipping-policy|shipping-protection|terms-and-conditions).html",
+      "destination": "/:page",
+      "statusCode": 301
     }
   ]
 }

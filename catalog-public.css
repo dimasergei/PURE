@@ -1,0 +1,31 @@
+.pc-page,.pc-product-library{padding-block:clamp(24px,5vw,72px);min-width:0}
+.pc-page header{max-width:52rem;margin-bottom:24px}
+.pc-page h1{font-size:clamp(2.25rem,5vw,4.5rem);line-height:1.05;letter-spacing:-.045em;margin:0 0 16px}
+.pc-page h2,.pc-product-library h2{font-size:clamp(1.45rem,3vw,2.4rem);line-height:1.15;letter-spacing:-.03em}
+.pc-page p,.pc-product-library p{line-height:1.55;max-width:76ch}
+.pc-filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,155px),1fr));align-items:end;gap:16px;padding:20px;background:#f5f5f4;border:1px solid #d6d6d3;border-radius:12px;margin-block:16px}
+.pc-filters label{display:grid;gap:6px;font-weight:650;font-size:.875rem;min-width:0}
+.pc-filters input,.pc-filters select{min-height:44px;width:100%;min-width:0;padding:8px 12px;background:white;border:1px solid #92928f;color:#171717;font:inherit;border-radius:5px}
+.pc-form-actions,.pc-card-actions,.pc-pager,.pc-sizes,.pc-gallery{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.pc-form-actions a,.pc-pager a,.pc-compare,.pc-details summary,.pc-more-filters summary,.pc-reports a{min-height:44px;align-content:center}
+.pc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,205px),1fr));gap:clamp(12px,2.3vw,28px)}
+.pc-card{min-width:0;border:1px solid #dededb;border-radius:12px;overflow:hidden}
+.pc-card>div{padding:16px}.pc-card h3,.pc-card p{margin:0 0 8px}.pc-card-actions{margin-top:12px}
+.pc-card-image img{width:100%;height:auto;aspect-ratio:640/862;display:block;object-fit:cover}
+.pc-pager{margin:24px 0}.pc-pager a{display:grid;place-items:center;min-width:44px;border:1px solid #aaa;border-radius:4px}
+.pc-pager a[aria-current=page]{background:#151515;color:white}.pc-compare{display:inline-flex;align-items:center;gap:8px;cursor:pointer}
+.pc-details,.pc-more-filters{border-block-start:1px solid #ccc;margin-block:12px;padding-block:8px}
+.pc-details summary,.pc-more-filters summary{cursor:pointer;font-weight:700;padding:8px 0}
+.pc-product-facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:16px}
+.pc-product-facts>div{padding:16px;background:#f5f5f4;border-radius:8px}.pc-product-facts h3{margin:0}.pc-product-facts p{margin:8px 0 0}
+.pc-table-scroll{max-width:100%;overflow-x:auto}.pc-reports{width:100%;border-collapse:collapse;text-align:left;font-size:.92rem;min-width:650px}
+.pc-reports td,.pc-reports th{padding:12px 8px;border-bottom:1px solid #d4d4d4;vertical-align:top;line-height:1.5;overflow-wrap:anywhere}
+.pc-reports thead{background:#f5f5f4}.pc-reports small{display:block;color:#404040}.pc-reports a{display:inline-block;text-decoration:underline}
+.pc-guide{max-width:52rem;margin-top:32px}.pc-gallery figure{margin:0}.pc-gallery img{width:100px;height:auto}.pc-gallery figcaption{font-size:.85rem}
+.pc-sizes{list-style:none;padding:0}.pc-sizes li{display:grid;gap:4px;padding:8px 12px;border:1px solid #ccc}.pc-sizes a{min-height:44px;align-content:center}
+@media(max-width:650px){.pc-filters{padding:12px;gap:12px;grid-template-columns:repeat(2,minmax(0,1fr))}.pc-card>div{padding:12px}.pc-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.pc-card h3{overflow-wrap:anywhere;font-size:1rem}.pc-card .ap-button{width:100%;font-size:.8rem;text-align:center}.pc-reports{min-width:0}.pc-reports thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}.pc-reports tbody,.pc-reports tr{display:block}.pc-reports tr{padding:16px 0;border-top:1px solid #bbb}.pc-reports td,.pc-reports tbody th{display:block;border:0;padding:3px 0}.pc-reports td::before{content:attr(data-label);font-weight:650;margin-right:8px}.pc-reports td small{display:inline-block;margin-left:8px}.pc-reports th small{display:inline;margin-left:8px}}
+@media(max-width:350px){.pc-filters{grid-template-columns:1fr}}
+
+.pc-page .pc-result-count{font-size:1rem;letter-spacing:0;line-height:1.5;margin:16px 0}
+
+.pc-preview{padding:6px 12px;min-height:44px;color:#151515;background:#fff;border:1px solid #aaa;border-radius:5px;font:inherit;cursor:pointer}

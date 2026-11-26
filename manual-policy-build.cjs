@@ -1,10 +1,10 @@
 'use strict';
 const fs=require('node:fs');
-const zones=require('./config/shipping-zones.json');
-const {free_shipping_threshold_cents:freeThreshold}=require('./config/checkout.json');
+const {site}=require('./config/site.ts');
+const zones=site.shipping.rates;
 const money=cents=>'US$'+(cents/100).toFixed(cents%100?2:0);
 for(const [file,note] of [
- ['shipping-policy.html',`<strong>Free shipping from ${money(freeThreshold)}:</strong> Economy and standard shipping in the U.S. and Canada, plus U.S. express, are free for eligible merchandise after discounts, before points or store credit.`],
+ ['shipping-policy.html',`<strong>Free shipping from ${site.shipping.freeThresholdLabel}:</strong> ${site.shipping.freeServicesLabel}, are free for eligible merchandise after discounts, before points or store credit.`],
  ['refund-policy.html','<strong>Product orders:</strong> Refund requests and payment reconciliation follow the published checkout and product-return terms. Applicable statutory rights are not limited.']
 ]){
  let html=fs.readFileSync(file,'utf8');

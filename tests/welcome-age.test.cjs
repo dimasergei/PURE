@@ -1,55 +1,47 @@
 'use strict';
-
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
-const { test } = require('node:test');
-const { JSDOM } = require('jsdom');
-const { country } = require('../lib/display-locale');
-
-const dialog = fs.readFileSync('site-build.cjs', 'utf8').match(/<dialog id="ap-age-dialog"[\s\S]*?<\/dialog>/)[0];
-const storefront = fs.readFileSync('storefront-v2.js', 'utf8');
-
-function fixture(t, prior) {
-  const dom = new JSDOM('<main id="ap-main"></main>' + dialog, { url: 'https://getpurelabs.com/shop', runScripts: 'outside-only' });
-  const w = dom.window;
-  t.after(() => w.close());
-  w.HTMLDialogElement.prototype.showModal = function () { this.open = true; };
-  w.HTMLDialogElement.prototype.close = function () { this.open = false; };
-  w.fetch = async () => ({ ok: true, json: async () => [] });
-  if (prior !== undefined) w.localStorage.setItem('ap-age-verified', JSON.stringify(prior));
-  let resolve;
-  w.AltaLocale = { countryReady: new Promise(r => { resolve = r; }), onChange() {}, t(_key, fallback) { return fallback; } };
-  w.eval(storefront);
-  return { w, gate: w.document.querySelector('dialog'), async detect(code) {
-    Object.assign(w.AltaLocale, country({ headers: { 'x-vercel-ip-country': code } }));
-    resolve();
-    await new Promise(r => setImmediate(r));
-  }};
+const {test} = require('node:test');
+const {JSDOM} = require('jsdom');
+const {site} = require('../config/site.ts');
+const {gateDialog, handle} = require('../lib/age-consent');
+const enhance = fs.readFileSync('age-gate.js','utf8');
+function fixture(t, cookie) {
+  const dom = new JSDOM('<main>Research catalog</main>'+gateDialog(site,'/shop'), {url:site.origin+'/shop',runScripts:'outside-only'});
+  t.after(()=>dom.window.close());
+  const w=dom.window;
+  w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};
+  w.HTMLDialogElement.prototype.close=function(){this.open=false;};
+  if(cookie)w.document.cookie=cookie;
+  w.eval(enhance);
+  return {w,gate:w.document.querySelector('dialog')};
 }
-
-test('the Canadian welcome waits for location and saves a regional 19+ confirmation', async t => {
-  const page = fixture(t, true);
-  const accept = page.gate.querySelector('[data-action="age-confirm"]');
-  assert.equal(page.gate.open, true);
-  assert.equal(accept.disabled, true);
-  assert.equal(page.gate.querySelector('h2').textContent, 'Welcome to PURE');
-  await page.detect('CA');
-  assert.equal(page.gate.querySelector('h2').textContent, '19+ only');
-  assert.match(page.gate.querySelector('[data-age-research]').textContent, /Purchasers must be 21/);
-  page.gate.querySelector('[data-action="age-exit"]').click();
-  assert.equal(page.gate.open, true);
-  assert.match(page.gate.querySelector('#ap-age-message').textContent, /19\+/);
-  accept.click();
-  assert.equal(page.gate.open, false);
-  assert.equal(JSON.parse(page.w.localStorage.getItem('ap-age-verified')), 'welcome-1:CA:19');
+test('age confirmation works immediately without location lookup and survives navigation',t=>{
+  const first=fixture(t);
+  const enter=first.gate.querySelector('[data-action="age-confirm"]');
+  assert.equal(first.gate.open,true);
+  assert.equal(enter.disabled,false);
+  assert.match(first.gate.textContent,/21\+ to enter/);
+  assert.equal(first.gate.querySelector('[data-action="age-exit"]').href,site.origin+'/api/customer-config?age_gate=exit');
+  enter.click();
+  assert.equal(first.gate.open,false);
+  const cookie=first.w.document.cookie;
+  assert.match(cookie,/pure_age=21-v1/);
+  assert.equal(fixture(t,cookie).gate.open,false);
+  assert.equal(fixture(t,'pure_age=19-v1').gate.open,true);
 });
-
-test('a saved confirmation applies to the same region and policy version only', async t => {
-  const same = fixture(t, 'welcome-1:CA:19');
-  await same.detect('CA');
-  assert.equal(same.gate.open, false);
-  const different = fixture(t, 'welcome-1:CA:19');
-  await different.detect('US');
-  assert.equal(different.gate.open, true);
-  assert.equal(different.gate.querySelector('h2').textContent, '21+ only');
+function response(){
+  return {headers:{},setHeader(name,value){this.headers[name]=value;},status(code){this.code=code;return this;},send(body){this.body=body;return this;},end(){return this;}};
+}
+test('the native no-JS form stores cookie consent and redirects only to this store',()=>{
+  const req={method:'POST',headers:{origin:site.origin},body:'consent=yes&returnTo=%2Fshop%3Fq%3Dvial'};
+  const params=new URLSearchParams('age_gate=confirm'),res=response();
+  handle(req,res,params);
+  assert.equal(res.code,303);assert.equal(res.headers.Location,'/shop?q=vial');assert.match(res.headers['Set-Cookie'],/pure_age=21-v1;.*Secure; SameSite=Lax/);
+  for(const dest of ['https://elsewhere.example/','//elsewhere.example','/\\elsewhere.example','/api/checkout']){
+    const redirected=response();handle({...req,body:{consent:'yes',returnTo:dest}},redirected,params);assert.equal(redirected.headers.Location,'/');
+  }
+  const denied=response();handle({...req,headers:{origin:'https://elsewhere.example'}},denied,params);assert.equal(denied.code,403);
+  const fresh=response();handle({method:'GET',headers:{}},fresh,new URLSearchParams('age_gate=prompt'));assert.match(fresh.body,/method="post"/);
+  const seen=response();handle({method:'GET',headers:{cookie:'pure_age=21-v1'}},seen,new URLSearchParams('age_gate=prompt'));assert.match(seen.body,/Age confirmed/);assert.doesNotMatch(seen.body,/<form/);
 });

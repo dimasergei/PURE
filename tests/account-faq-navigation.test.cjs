@@ -1,13 +1,21 @@
 'use strict';
-const test = require('node:test');
-const assert = require('node:assert/strict');
-const { readFileSync } = require('node:fs');
-const { resolve } = require('node:path');
-
-test('account header FAQ link targets the existing storefront section', () => {
-  const build = readFileSync(resolve(__dirname, '../site-build.cjs'), 'utf8');
-  const home = require('../reference-ui-functions.cjs').store.home.toString();
-  assert.match(build, /<a href="\/#faq">FAQ<\/a>/);
-  assert.match(build, /account=account\.includes\([^\n]+account\.replace\([^\n]+,header\)/);
-  assert.match(home, /<section [^>]*id="faq"/);
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const os=require('node:os');
+const {JSDOM}=require('jsdom');
+const {site}=require('../config/site.ts');
+const {homeFaq}=require('../scripts/home-shell.cjs');
+const {buildGuides}=require('../scripts/research-guides.cjs');
+test('desktop and mobile account menus lead to the generated FAQ page',t=>{
+ const build=fs.readFileSync(path.resolve(__dirname,'../site-build.cjs'),'utf8');
+ assert.ok((build.match(/href="\/faq">FAQ<\/a>/g)||[]).length>=2);
+ assert.match(build,/account=account\.includes\([^\n]+account\.replace\([^\n]+,header\)/);
+ const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'pure-faq-'));t.after(()=>fs.rmSync(tmp,{recursive:true,force:true}));
+ fs.copyFileSync(path.resolve(__dirname,'../storefront-v2.html'),path.join(tmp,'index.html'));
+ buildGuides(tmp,site,homeFaq(site));
+ const d=new JSDOM(fs.readFileSync(path.join(tmp,'faq.html'),'utf8')).window.document;
+ assert.equal(d.querySelector('main h1').textContent,'Frequently asked questions');
+ assert.equal(d.querySelectorAll('main details').length,10);
 });

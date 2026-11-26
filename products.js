@@ -493,7 +493,7 @@ const CATALOG = [
     category: "supplies",
     group: "Reconstitution Solution & Supplies",
     form: "supply",
-    blurb: "Reconstitution Solution for laboratory reconstitution. Shipping is not included.",
+    blurb: "Reconstitution solution for laboratory research.",
     variants: [["3 mL", 14.95]],
   },
   {
@@ -502,7 +502,7 @@ const CATALOG = [
     category: "supplies",
     group: "Reconstitution Solution & Supplies",
     form: "supply",
-    blurb: "Reconstitution Solution for laboratory reconstitution. Shipping is not included.",
+    blurb: "Reconstitution solution for laboratory research.",
     variants: [["10 mL", 21.95]],
   },
 ].map((product) => ({

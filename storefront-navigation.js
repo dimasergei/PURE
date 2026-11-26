@@ -1,6 +1,16 @@
 /* Shared disclosure menus: hover, touch, keyboard, and outside/Escape dismissal. */
 (() => {
  'use strict';
+ const fallback=document.querySelector('[data-default-offer][data-ends-at]');
+ if(fallback){
+  const expire=()=>{
+   if(!fallback.isConnected)return;
+   const remaining=Date.parse(fallback.dataset.endsAt)-Date.now();
+   if(remaining>0){setTimeout(expire,Math.min(remaining,2147483647));return;}
+   fallback.parentElement.hidden=true;
+  };
+  expire();
+ }
  const copyTimers=new WeakMap();
  document.addEventListener('click',async event=>{
   const coupon=event.target.closest('button[data-copy-offer]');

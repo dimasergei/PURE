@@ -79,6 +79,18 @@
   finally{if(container.isConnected)container.setAttribute('aria-busy','false');}
  }
  api.render=render;root.AltaSupplierCoas=api;
+ document.addEventListener('click',async e=>{
+  const a=e.target.closest('button[data-preview-report]');
+  if(!a||e.button!==0||e.ctrlKey||e.metaKey||e.shiftKey||e.altKey||typeof HTMLDialogElement==='undefined')return;
+  e.preventDefault();
+  try{
+   if(!promise)promise=fetch('/data/supplier-coas.json').then(response=>{if(!response.ok)throw Error();return response.json();}).catch(error=>{promise=null;throw error;});
+   const data=await promise;
+   const record=data.reports.find(r=>r.id===a.dataset.previewReport && validReport(r));
+   if(!record)throw Error();
+   viewReport(record,a);
+  }catch{const url=safeUrl(a.dataset.documentUrl);if(url)location.assign(url);}
+ });
  document.addEventListener('input',e=>{if(e.target.id==='ap-coa-query'){const c=document.getElementById('ap-supplier-references');if(c)render(c,root.AltaStore?.catalog||[]);}});
  document.addEventListener('change',e=>{if(['ap-coa-product','ap-coa-size','ap-coa-supplier','ap-coa-lab'].includes(e.target.id)){const c=document.getElementById('ap-supplier-references');if(c)render(c,root.AltaStore?.catalog||[]);}});
  document.addEventListener('click',e=>{if(e.target.closest('#ap-coa-reset')){for(const id of ['ap-coa-query','ap-coa-product','ap-coa-size','ap-coa-supplier','ap-coa-lab']){const input=document.getElementById(id);if(input)input.value='';}const c=document.getElementById('ap-supplier-references');if(c)render(c,root.AltaStore?.catalog||[]);document.getElementById('ap-coa-query')?.focus();}});

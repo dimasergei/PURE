@@ -50,7 +50,7 @@ test('repeatable public build publishes restored program routes and assets while
   for(const name of retiredPages)fs.writeFileSync(path.join(tmp,name),'retired-fixture');
   for(const name of retiredArtwork)assert.equal(fs.existsSync(path.join(root,name)),false,name+' was retired from source');
   for(let run=0;run<2;run++)for(const script of ['install-store.cjs','site-build.cjs','operations-build.cjs']){
-   const result=spawnSync(process.execPath,[script],{cwd:tmp,encoding:'utf8'});assert.equal(result.status,0,script+': '+result.stderr);
+   const result=spawnSync(process.execPath,[script === 'site-build.cjs' ? path.join(root,script) : script],{cwd:tmp,encoding:'utf8'});assert.equal(result.status,0,script+': '+result.stderr);
   }
   const output=path.join(tmp,'public-build');
   assert.ok(fs.existsSync(path.join(output,'admin-operations.html')));
