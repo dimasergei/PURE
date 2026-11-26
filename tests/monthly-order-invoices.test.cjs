@@ -34,7 +34,7 @@ test('owner consent, replay, pause/skip/edit, unpaid cycles, email and fulfilmen
     await db.exec(read('20261126180000_monthly_order_invoices.sql'));
     await db.exec('alter table commerce_invoices add column cancellation_requested_at timestamptz');
     await db.exec(read('20261122001200_commerce_order_numbers.sql'));
-    await db.exec(read('20261126184519_monthly_invoice_payment_choice.sql'));
+    await db.exec(read('20261126185640_monthly_invoice_payment_choice.sql'));
     await db.exec('alter table auth.users add column email text, add column email_confirmed_at timestamptz');
     await run("insert into auth.users values($1,'owner@example.test',now()),($2,'other@example.test',now())",[owner,other]);
     await run("insert into commerce_payment_methods(id,kind,provider_key,label,currency,payee,instructions,allowed_host,acceptance_reference,active,sale_scope,native_provider) values($1,'hosted_link','custom','Fixture card','USD','Fixture store','Disposable test environment','getpurelabs.com','Test route fixture evidence',true,'goods','rampex')",[mid]);
