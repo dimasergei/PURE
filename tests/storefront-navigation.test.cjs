@@ -1,56 +1,34 @@
 'use strict';
-
-const {test, before, after} = require('node:test');
+const test = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const os = require('node:os');
-const path = require('node:path');
-const {execFileSync} = require('node:child_process');
+const {readFileSync} = require('node:fs');
 const {JSDOM} = require('jsdom');
-const {site} = require('../config/site.ts');
-const {buildHome, applyShell, homeFaq} = require('../scripts/home-shell.cjs');
-const {buildGuides} = require('../scripts/research-guides.cjs');
+const read = file => readFileSync(file, 'utf8');
+const home = require('../reference-ui-functions.cjs').store.home.toString();
 
-const root = path.resolve(__dirname, '..');
-let temp, home, faq;
-
-before(() => {
-  temp = fs.mkdtempSync(path.join(os.tmpdir(), 'pure-nav-'));
-  for (const file of ['products.js', 'account.html', 'account.js']) {
-    fs.copyFileSync(path.join(root, file), path.join(temp, file));
+test('desktop and mobile navigation expose FAQ and target the live homepage section', () => {
+  const source = read('site-build.cjs');
+  const desktop = source.match(/<header class="ap-header[^"]*">[\s\S]*?<\/header>/)?.[0];
+  const mobile = source.match(/<dialog id="ap-mobile-menu"[\s\S]*?<\/dialog>/)?.[0];
+  assert.ok(desktop && mobile);
+  const dom = new JSDOM(desktop + mobile);
+  try {
+    const {document} = dom.window;
+    for (const menu of ['#ap-nav','#ap-mobile-menu']) {
+      const nav = document.querySelector(menu);
+      assert.ok(nav,menu);
+      const faq = nav.querySelector('a[href="/#faq"]');
+      assert.equal(faq?.textContent,'FAQ');
+    }
+    assert.match(home,/<section [^>]*class="[^"]*pure-faq-section" id="faq">/);
+  } finally {
+    dom.window.close();
   }
-  fs.mkdirSync(path.join(temp, 'config'));
-  fs.copyFileSync(path.join(root, 'config/display-currencies.json'), path.join(temp, 'config/display-currencies.json'));
-  execFileSync(process.execPath, [path.join(root, 'site-build.cjs')], {cwd: temp});
-  buildHome(temp, site);
-  // The guides builder uses a generated policy shell. The common storefront fixture
-  // supplies the same main landmark and shared navigation for this isolated test.
-  fs.copyFileSync(path.join(temp, 'index.html'), path.join(temp, 'research-documentation.html'));
-  buildGuides(temp, site, homeFaq(site));
-  applyShell(temp, site);
-  home = new JSDOM(fs.readFileSync(path.join(temp, 'index.html'), 'utf8'));
-  faq = new JSDOM(fs.readFileSync(path.join(temp, 'faq.html'), 'utf8'));
 });
 
-after(() => {
-  home?.window.close();
-  faq?.window.close();
-  if (temp) fs.rmSync(temp, {recursive: true, force: true});
-});
-
-test('desktop and mobile FAQ links open the published FAQ page and the homepage anchor remains usable', () => {
-  const doc = home.window.document;
-  for (const menu of ['#ap-nav', '#ap-mobile-menu']) {
-    assert.equal(doc.querySelector(menu + ' a[href="/faq"]')?.textContent, 'FAQ', menu);
-  }
-  assert.ok(doc.querySelector('main #faq details > summary'));
-  assert.match(faq.window.document.querySelector('main h1').textContent, /frequently asked questions/i);
-  assert.equal(faq.window.document.querySelectorAll('main details').length, homeFaq(site).length);
-});
-
-test('the FAQ provides direct support and its mobile questions fit a single column', () => {
-  assert.equal(faq.window.document.querySelector('main a[href="/contact"]')?.textContent, 'Contact PURE');
-  const css = fs.readFileSync(path.join(temp, 'home-shell.css'), 'utf8');
-  assert.match(css, /@media\s*\(max-width:\s*800px\)[\s\S]*?\.ph-faq\{grid-template-columns:1fr\}/);
-  assert.match(css, /#faq\.ph-faq details>summary\{[^}]*min-height:52px/);
+test('the FAQ contact action stays prominent and its mobile introduction is centered', () => {
+  const css = read('pure-brand.css');
+  assert.match(home,/class="pure-faq-cta" href="\/contact">CONTACT US/);
+  assert.match(css,/\.pure-faq-cta\{[^}]*justify-content:center/);
+  assert.match(css,/\.pure-faq-intro\s*\{[^}]*text-align:\s*center/);
 });

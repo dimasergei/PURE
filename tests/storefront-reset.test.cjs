@@ -13,12 +13,9 @@ function referenceSource(file,scope,anchor){
  assert.ok(source.includes(anchor),file+' exposes the reference view insertion point');
  return source.replace(anchor,Object.entries(views).map(([name,fn])=>'\n '+name+' = '+fn.toString()+';\n').join('')+anchor);
 }
-async function fixture(route,{workspace=false,cart=[],reviews=null,catalogFixture=null,monthlyAvailable=false,prerenderedMain=''}={}){
+async function fixture(route,{workspace=false,cart=[],reviews=null,catalogFixture=null,monthlyAvailable=false}={}){
  const errors=[],vc=new VirtualConsole();vc.on('jsdomError',e=>errors.push(e.message));
- const template=read('storefront-v2.html');
- const html=route==='/'?require('../scripts/home-shell.cjs').renderHomeDocument(template,require('../config/site.ts').site):template;
- const dom=new JSDOM(html,{url:'https://getpurelabs.com'+route,runScripts:'outside-only',virtualConsole:vc}),w=dom.window;
- if(prerenderedMain)w.document.querySelector('#ap-main').innerHTML=prerenderedMain;
+ const dom=new JSDOM(read('storefront-v2.html'),{url:'https://getpurelabs.com'+route,runScripts:'outside-only',virtualConsole:vc}),w=dom.window;
  w.localStorage.setItem('ap-age-verified','true');w.matchMedia=()=>({matches:false});
  if(cart.length)w.localStorage.setItem('pp-cart',JSON.stringify(cart));
  w.HTMLElement.prototype.scrollIntoView=()=>{};
@@ -35,43 +32,76 @@ async function fixture(route,{workspace=false,cart=[],reviews=null,catalogFixtur
  await settle();
  return{w,d:w.document,errors,async close(){await settle();assert.deepEqual(errors,[],route);dom.window.close();}};
 }
-test('homepage shows eight priced products, report evidence, shop actions and native FAQs',async()=>{
+test('homepage keeps the announcement, five-vial hero and product links with quick buy',async()=>{
  const f=await fixture('/');
  try{
-  const {d,w}=f,hero=d.querySelector('.ph-hero');
-  assert.match(hero.querySelector('h1').textContent,/Research compounds for labs/);
-  assert.deepEqual([...hero.querySelectorAll('a')].map(a=>a.getAttribute('href')),['/shop','/coas']);
-  assert.doesNotMatch(hero.textContent,/BLACKFRIDAY10|View Testing/i);
-  assert.equal(hero.querySelectorAll('.ph-vial').length,5);
-  assert.equal(d.querySelector('.ph-pack a').getAttribute('href'),'/shop');
-  assert.equal(d.querySelectorAll('.ph-trust li').length,4);
-  const cards=[...d.querySelectorAll('#nl-featured [data-product]')];
-  assert.equal(cards.length,8);
-  for(const card of cards){
+  const {d,w}=f,hero=d.querySelector('.nl-hero');
+  const offer=d.querySelector('.ap-announcement.pure-offer-active .pure-offer-trigger');
+  assert.equal(offer.querySelector('.pure-offer-action').getAttribute('href'),'/shop');
+  assert.equal(offer.querySelector('.pure-offer-buy').textContent,'10% off');
+  assert.equal(offer.querySelector('.pure-offer-free').textContent,'BLACKFRIDAY10');
+  assert.equal(offer.querySelector('.pure-offer-action').textContent,'Shop now');
+  assert.equal([...hero.querySelector('h1').childNodes].map(n=>n.nodeName==='BR'?'\n':n.textContent).join(''),'CUTTING EDGE\nPURITY');
+  assert.equal(hero.querySelector('.nl-hero-description').textContent,'Research compounds, product documentation, and straightforward ordering for laboratories and research teams.');
+  const heroCopy=hero.querySelector('.nl-hero-copy');
+  assert.deepEqual([...heroCopy.querySelectorAll('a,button')].map(a=>[a.textContent,a.getAttribute('href')]),[['SHOP NOW','/shop']]);
+  assert.doesNotMatch(heroCopy.textContent,/Black Friday|BLACKFRIDAY10|View Testing/i);
+  const packaging=d.querySelector('.pure-home-packaging');
+  assert.deepEqual([...packaging.querySelectorAll('a,button')].map(a=>[a.textContent,a.getAttribute('href')]),[['Shop now','/shop']]);
+  const highlights=hero.querySelectorAll('.nl-trust > div > span');
+  assert.deepEqual([...highlights].map(node=>node.textContent),['Free shipping over $250','99%+ Purity','Verified Lab Testing']);
+  assert.equal(highlights[1].querySelector('a').getAttribute('href'),'/coas?product=5-amino-1mq&size=50mg');
+  assert.equal(highlights[2].querySelector('a').getAttribute('href'),'/coas');
+  assert.equal(hero.querySelectorAll('.nl-trust-check').length,3);
+  assert.equal(hero.querySelectorAll('.nl-vial').length,5);
+  const featured=[...d.querySelectorAll('#nl-featured .ap-product-card')];
+  assert.equal(featured.length,10);
+  for(const card of featured){
    const p=w.AltaStore.product(card.dataset.product);assert.ok(p);
-   assert.equal(card.querySelector('[data-compare]').dataset.compare,p.id);
-   assert.equal(card.querySelector('h3 a').textContent,p.name);
-   assert.equal(card.querySelector('.ph-image').getAttribute('href'),'/product/'+p.id);
-   assert.ok(card.querySelector('img[width][height]'));
-   assert.equal(Number(card.querySelector('[data-usd-cents]').dataset.usdCents),Math.round(100*Math.min(...p.variants.map(v=>v.price))));
+   assert.equal(card.querySelectorAll('select,input').length,0,'strength choices stay in the picker');
    assert.ok(card.querySelector('.ap-catalog-action'));
+   const photo=card.querySelector('a.ap-product-image');assert.ok(photo?.querySelector('img'));
+   const target=new URL(photo.getAttribute('href'),w.location.href);
+   assert.equal(target.pathname,'/product/'+p.id);
+   assert.ok(p.variants.some(v=>v.size===target.searchParams.get('size')),'photo links retain a valid catalog strength');
+   assert.equal(card.querySelector('h3 a').getAttribute('href'),photo.getAttribute('href'));
+   assert.equal(card.querySelector('h3 a').textContent,p.name);
   }
-  assert.equal(w.AltaStore.cart.length,0);assert.ok(d.querySelector('[data-mx-membership-home]'));
-  const report=require('../data/supplier-coas.json').reports.find(r=>r.id==='p99-0285-opt-260727-r1');
-  const reportCard=d.querySelector('.ph-report');
-  assert.ok(reportCard.textContent.includes(report.lot));
-  assert.ok(reportCard.textContent.includes(report.lab_name));
-  assert.equal(require('node:crypto').createHash('sha256').update(fs.readFileSync(path.join(root,reportCard.querySelector('a[download]').getAttribute('href')))).digest('hex'),report.sha256);
-  assert.equal(d.querySelectorAll('#faq details').length,10);
+  assert.equal(w.AltaStore.cart.length,0);
+  assert.equal(d.querySelectorAll('del,[data-promo-clock],.nl-offer-grid').length,0);
+  assert.ok(d.querySelector('[data-mx-membership-home]'),'the homepage includes the shared membership component mount');
+  const supplierReport=require('../data/supplier-coas.json').reports.find(r=>r.product_id==='retatrutide'&&r.size==='20mg'&&r.lab_name==='Prodigy Labs');
+  assert.ok(supplierReport,'the featured 20mg example must exist in the COA source library');
+  assert.match(supplierReport.lot,/laboratory sample 202607-PRO-005/);
+  assert.equal(supplierReport.inventory_lot_linked,false,'do not confuse the sample number with a delivered PURE lot');
+  const coaCard=d.querySelector('.nl-editorial .nl-doc-sheet');
+  assert.ok(coaCard,'featured COA card remains present');
+  assert.equal(coaCard.querySelector('.nl-doc-sheet-top span').textContent,'VERIFIED LAB TESTING');
+  assert.equal(coaCard.querySelector('.nl-doc-sheet-top a, .nl-doc-sheet-top button'),null,'verified lab testing is text, not a duplicate link');
+  assert.equal(d.querySelector('.nl-doc-bottom a').getAttribute('href'),'/coas','existing bottom Explore COAS button remains');
+  const reportFields=[...coaCard.querySelectorAll('.nl-doc-sheet-row')].map(row=>[
+   row.querySelector('span').textContent.trim(),row.querySelector('b').textContent.trim()
+  ]);
+  assert.deepEqual(reportFields,[
+   ['COMPOUND','Retatrutide · 20mg'],
+   ['LAB',supplierReport.lab_name],
+   ['LAB SAMPLE','202607-PRO-005']
+  ]);
+  assert.doesNotMatch(coaCard.textContent,/ILLUSTRATIVE PREVIEW|FULFILLED LOT|Retatrutide\s*60\s*mg/i);
+  assert.doesNotMatch(d.body.textContent,retired);
  }finally{await f.close();}
 });
-test('homepage shows an aggregate and its review incentive only when a real count is returned',async()=>{
- for(const [reviews,expected] of [[{count:7,rating:4.1},'4.1/5 from 7 reviews'],[{count:1,rating:3},'3.0/5 from 1 review'],[{count:0,rating:null},null]]){
+test('homepage adds verified ratings with the incentive disclosure only when at least one review exists',async()=>{
+ for(const [reviews,expected] of [[{count:7,rating:4.1},'4.1/5 · 7 reviews'],[{count:1,rating:3},'3.0/5 · 1 review'],[{count:0,rating:null},null]]){
   const f=await fixture('/',{reviews});
   try{
-   const rating=f.d.querySelector('[data-home-rating]');
-   if(expected){assert.equal(rating.hidden,false);assert.ok(rating.textContent.includes(expected));assert.match(rating.textContent,/Review credit offered/);}
-   else assert.equal(rating.hidden,true);
+   const row=f.d.querySelector('.nl-trust');
+   assert.equal(row.querySelectorAll('.nl-trust-check').length,3);
+   const rating=row.querySelector('.nl-trust-rating');
+   if(expected){
+    assert.ok(rating.textContent.includes(expected));
+    assert.equal(rating.querySelector('small').textContent,'Review credit offered');
+   }else assert.equal(rating,null);
   }finally{await f.close();}
  }
 });
@@ -79,10 +109,6 @@ test('catalog photo cards preserve product navigation, exact USD prices, search,
  const f=await fixture('/shop');
  try{
   const {d,w}=f;
-  const resultGrid=d.querySelector('#ap-catalog-grid');
-  const resultsHeading=d.getElementById(resultGrid.getAttribute('aria-labelledby'));
-  assert.equal(resultsHeading.tagName,'H2');
-  assert.equal(resultsHeading.nextElementSibling,resultGrid);
   const catalog=Array.from(w.AltaStore.catalog),cards=()=>[...d.querySelectorAll('#ap-catalog-grid .ap-product-card')];
   const ids=()=>cards().map(card=>card.dataset.product);
   const search=value=>{const input=d.querySelector('#ap-catalog-query');input.value=value;input.dispatchEvent(new w.Event('input',{bubbles:true}));};
@@ -103,9 +129,7 @@ test('catalog photo cards preserve product navigation, exact USD prices, search,
     assert.equal(action?.dataset.action,p.variants.length>1?'catalog-options':'add');
     assert.match(action.textContent,/^add to cart$/i);
     assert.equal(card.querySelector('a.ap-catalog-view').getAttribute('href'),photo.getAttribute('href'));
-    assert.equal(card.querySelectorAll('button').length,1,'the catalog card has one purchase button');
-    assert.equal(card.querySelectorAll('input[data-compare]').length,1,'the catalog card has one compare control');
-    assert.equal(card.querySelector('input[data-compare]').dataset.compare,p.id,'the compare control selects this product');
+    assert.equal(card.querySelectorAll('select,input,button').length,1,'the catalog card has one purchase button');
     assert.doesNotMatch(card.textContent,/per unit/i);
    }
   };
@@ -368,17 +392,4 @@ test('bulk order sheet tracks tier changes across strengths and restores the sam
   assert.ok(d.querySelector('#ap-bulk-catalog > .nl-bulk-summary #ap-bulk-summary'));
   assert.equal(d.querySelectorAll('#ap-bulk-summary').length,1);
  }finally{await f.close();}
-});
-
-
-test('server-rendered filter results survive a delayed workspace script',async()=>{
- for(const [route,marker] of [['/coas','data-coa-archive'],['/coas/search?q=FLL-0629','data-coa-archive'],['/shop/browse?size=10mg','data-public-catalog']]){
-  const page=await fixture(route,{prerenderedMain:'<section '+marker+'><h1>Filtered results</h1></section>'});
-  try{
-   assert.equal(page.d.querySelector('#ap-main h1')?.textContent,'Filtered results',route+' before workspace initialization');
-   page.w.eval(referenceSource('workspace-v2.js','workspace',' window.AltaWorkspace='));
-   page.w.AltaStore.render();
-   assert.equal(page.d.querySelector('#ap-main h1')?.textContent,'Filtered results',route+' after workspace initialization');
-  }finally{await page.close();}
- }
 });

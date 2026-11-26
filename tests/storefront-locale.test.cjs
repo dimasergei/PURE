@@ -21,14 +21,8 @@ function rates(overrides={}){
 const response=data=>({ok:true,status:200,json:async()=>data});
 function generatedShells(){
  const files=new Map();
- const requireFromBuild=require('node:module').createRequire(path.join(root,'site-build.cjs'));
- const fakeFs={
-  readFileSync:file=>files.get(String(file))??read(String(file)),
-  writeFileSync:(file,value)=>files.set(String(file),String(value)),
-  existsSync:file=>file==='public-build'||files.has(String(file)),
-  copyFileSync:(from,to)=>files.set(String(to),files.get(String(from))??read(String(from)))
- };
- vm.runInNewContext(read('site-build.cjs'),{require:name=>name==='node:fs'?fakeFs:requireFromBuild(name),console:{log(){}}},{filename:'site-build.cjs',timeout:1000});
+ const fakeFs={readFileSync:file=>files.get(String(file))??read(String(file)),writeFileSync:(file,value)=>files.set(String(file),String(value))};
+ vm.runInNewContext(read('site-build.cjs'),{require:name=>name==='node:fs'?fakeFs:require(name),console:{log(){}}},{filename:'site-build.cjs',timeout:1000});
  return files;
 }
 const shells=generatedShells();

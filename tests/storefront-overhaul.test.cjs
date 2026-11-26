@@ -13,11 +13,11 @@ test('public routes restore PURE programs and preserve the shared storefront and
 test('production build creates the actual unified site and account integration without changing catalog prices',()=>{
  const temp=fs.mkdtempSync(path.join(os.tmpdir(),'altapure-overhaul-'));
  try{
-  for(const file of ['products.js','account.html','account.js'])fs.copyFileSync(path.join(root,file),path.join(temp,file));
+  for(const file of ['site-build.cjs','products.js','account.html','account.js'])fs.copyFileSync(path.join(root,file),path.join(temp,file));
   fs.mkdirSync(path.join(temp,'config'),{recursive:true});
   fs.copyFileSync(path.join(root,'config','display-currencies.json'),path.join(temp,'config','display-currencies.json'));
   const source=fs.readFileSync(path.join(temp,'products.js'),'utf8');
-  let run=spawnSync(process.execPath,[path.join(root,'site-build.cjs')],{cwd:temp,encoding:'utf8'});assert.equal(run.status,0,run.stderr);
+  let run=spawnSync(process.execPath,['site-build.cjs'],{cwd:temp,encoding:'utf8'});assert.equal(run.status,0,run.stderr);
   const html=fs.readFileSync(path.join(temp,'index.html'),'utf8');
   for(const marker of ['ap-header','ap-more-menu','ap-search-dialog','ap-cart-dialog','ap-age-dialog','storefront-v2.js','workspace-v2.js','/bulk-orders','/coas','href="/subscribe-and-save"','href="/memberships"','href="/account/membership"','href="/monthly-orders"'])assert.ok(html.includes(marker),marker);assert.doesNotMatch(html,/href="\/offers(?:["?#/])|\bBOGO\b/);
   assert.ok(fs.existsSync(path.join(temp,'storefront-v2.html')));
@@ -27,7 +27,7 @@ test('production build creates the actual unified site and account integration w
   assert.ok(account.indexOf('src="/cart-reference.js"')<account.indexOf('src="/account.js"'),'Shared cart loads before account and checkout routes render');
   const accountJs=fs.readFileSync(path.join(temp,'account.js'),'utf8');assert.match(accountJs,/AltaWorkspace.renderAccountPanel/);assert.doesNotMatch(accountJs,/No membership, subscription, points, store-credit, or partner actions are enabled in this phase/);assert.match(accountJs,/'\/account\/membership':'Membership'/);assert.match(accountJs,/p==='\/account\/subscriptions'\)return go\('\/account\/membership'\)/);assert.doesNotMatch(accountJs,/\['\/account\/membership','\/account\/subscriptions'\]\.includes\(p\)\)return go\('\/account'\)/);
   assert.equal(fs.readFileSync(path.join(temp,'products.js'),'utf8'),source);
-  run=spawnSync(process.execPath,[path.join(root,'site-build.cjs')],{cwd:temp,encoding:'utf8'});assert.equal(run.status,0,run.stderr);
+  run=spawnSync(process.execPath,['site-build.cjs'],{cwd:temp,encoding:'utf8'});assert.equal(run.status,0,run.stderr);
   assert.equal((fs.readFileSync(path.join(temp,'account.html'),'utf8').match(/id="ap-search-dialog"/g)||[]).length,1);
   const repeatedAccount=fs.readFileSync(path.join(temp,'account.html'),'utf8');
   assert.equal((repeatedAccount.match(/src="\/cart-reference\.js"/g)||[]).length,1);

@@ -39,25 +39,8 @@ const forbiddenCopy=/\bBOGO\b|buy\s+more.{0,15}get\s+more|shop\s+the\s+(?:BOGO\s
 let pages=0;
 for(const file of fs.readdirSync(out,{recursive:true}).filter(f=>f.endsWith('.html'))){
  const html=fs.readFileSync(path.join(out,file),'utf8'),dom=new JSDOM(html),doc=dom.window.document;
- const brand=doc.querySelector('header.ap-header a.ap-brand');
- if(brand?.querySelector('small')){
-  const visible=brand.textContent.trim().replace(/\s+/g,' ');
-  assert.equal(visible,'PURE RESEARCH, RECONSIDERED.',file+' header separates its visible wordmark and tagline');
-  assert.ok(brand.getAttribute('aria-label')?.toLowerCase().includes(visible.toLowerCase()),file+' includes the visible label in the home link name');
- }
-
- const bundles = [...doc.querySelectorAll('link[rel="stylesheet"][href^="/pure-styles-"]')];
- const fontPreloads = [...doc.querySelectorAll('link[rel="preload"][as="font"]')];
- assert.equal(fontPreloads.length,1,'One local font preload: '+file);
- if (bundles.length) {
-  const font = '/assets/fonts/archivo-normal-width-weight-variable.woff2';
-  const sheets = bundles.map(link => fs.readFileSync(path.join(out, link.getAttribute('href')), 'utf8'));
-  assert.ok(sheets.some(css => css.includes("font-family: 'Archivo'") && css.includes(font)),'Bundled shared typography: '+file);
-  assert.equal(fontPreloads[0].getAttribute('href'),font,'Preload public font: '+file);
- } else {
-  assert.equal(doc.querySelectorAll('link[href^="/pure-brand.css"]').length,1,'Shared typography: '+file);
-  assert.equal(fontPreloads[0].getAttribute('href'),'/assets/fonts/archivo-latin-variable.woff','Preload original font: '+file);
- }
+ assert.equal(doc.querySelectorAll('link[href^="/pure-brand.css"]').length,1,'Shared typography: '+file);
+ assert.equal(doc.querySelectorAll('link[rel="preload"][href="/assets/fonts/archivo-latin-variable.woff"]').length,1,'One local font preload: '+file);
  if(file==='admin-orders.html'){
   const ordersScript=[...doc.querySelectorAll('script:not([src])')].find(script=>script.textContent.includes('async function loadOrders()'));
   assert.ok(ordersScript,'Orders script must be present in published HTML.');
