@@ -730,8 +730,23 @@ html[data-display-currency]:not([data-display-currency="USD"]) body.ap-site :is(
   .ap-site .nl-home-bulk-copy p { max-width: 540px; }
 }
 @media(max-width:767px) {
-  .ap-site :is(.nl-featured,.nl-shop) .nl-featured-meta { gap: 10px; padding-top: 14px; }
-  .ap-site :is(.nl-featured,.nl-shop) .nl-featured-meta h3,.ap-site :is(.nl-featured,.nl-shop) .nl-featured-price { font-size: 16px; }
+  .ap-site :is(.nl-featured,.nl-shop) .nl-featured-meta {
+    grid-template-columns: minmax(0,1fr);
+    gap: 5px;
+    padding-top: 14px;
+  }
+  .ap-site :is(.nl-featured,.nl-shop) .nl-featured-meta h3 {
+    min-height: 2.7em;
+    font-size: 16px;
+    overflow-wrap: break-word;
+  }
+  .ap-site :is(.nl-featured,.nl-shop) .nl-featured-price {
+    font-size: 16px;
+    text-align: left;
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+  .ap-site .nl-shop .ap-catalog-action { margin-top: 5px; }
   .ap-site .nl-home-bulk { padding: 8px 0 28px; }
   .ap-site .nl-home-bulk .nl-home-bulk-card { padding: 27px 22px; border-radius: 20px; }
   .ap-site .nl-home-bulk-copy h2 { font-size: 34px; }
