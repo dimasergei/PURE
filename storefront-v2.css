@@ -135,7 +135,7 @@ body.ap-site .pure-home-volume h2 {
   line-height: 1.6;
 }
 
-html:root body.ap-site .pure-home-volume .pure-home-volume-link {
+html:root body.ap-site .pure-home-volume .pure-home-volume-copy a.ap-button.pure-home-volume-link {
   display: inline-flex;
   justify-content: space-between;
   align-items: center;
@@ -151,8 +151,8 @@ html:root body.ap-site .pure-home-volume .pure-home-volume-link {
   text-transform: none;
 }
 
-html:root body.ap-site .pure-home-volume .pure-home-volume-link:hover { background: #fff !important; border-color: #fff !important; }
-html:root body.ap-site .pure-home-volume .pure-home-volume-link:focus-visible { outline: 2px solid #fff; outline-offset: 4px; }
+html:root body.ap-site .pure-home-volume-copy a.ap-button.pure-home-volume-link:hover { background: #fff !important; border-color: #fff !important; }
+html:root body.ap-site .pure-home-volume-copy a.ap-button.pure-home-volume-link:focus-visible { outline: 2px solid #fff; outline-offset: 4px; }
 .pure-home-volume-link::after { content: '↗'; font-size: 1.15em; }
 .pure-home-volume-link span { display: none; }
 
