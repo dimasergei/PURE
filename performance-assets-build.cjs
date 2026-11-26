@@ -95,16 +95,23 @@ function optimizeAssets(out) {
     function flush() {
       if (!group.length) return;
       const css = group.map(entry => entry.css).join('\n');
-      const digest = createHash('sha256').update(css).digest('hex').slice(0, 16);
-      // Preserve the base directory for relative font and image URLs.
-      const asset = 'pure-styles-' + digest + '.css';
-      if (!bundles.has(asset)) {
-        fs.writeFileSync(path.join(out, asset), css);
-        bundles.add(asset);
+      let markup;
+      if (Buffer.byteLength(css) <= 2048 && !/\burl\s*\(|<\/style/i.test(css)) {
+        // Small isolated rule sets can stay at the same cascade position without an extra round trip.
+        markup = '<style data-pure-rules>' + css + '</style>';
+      } else {
+        const digest = createHash('sha256').update(css).digest('hex').slice(0, 16);
+        // Preserve the base directory for relative font and image URLs.
+        const asset = 'pure-styles-' + digest + '.css';
+        if (!bundles.has(asset)) {
+          fs.writeFileSync(path.join(out, asset), css);
+          bundles.add(asset);
+        }
+        markup = '<link rel="stylesheet" href="/' + asset + '">';
       }
       group.forEach(({ location }, index) => edits.push({
         start: location.startOffset, end: location.endOffset,
-        markup: index === 0 ? '<link rel="stylesheet" href="/' + asset + '">' : ''
+        markup: index === 0 ? markup : ''
       }));
       group = [];
     }
