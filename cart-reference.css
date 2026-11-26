@@ -4,7 +4,9 @@
 .ap-cart-dialog .ap-dialog-head{margin:0!important;padding:15px 18px!important;min-height:68px;border-bottom:1px solid #e5e5e5!important;display:flex;align-items:center;justify-content:space-between;background:#fff}
 .ap-cart-dialog .ap-dialog-head h2{font-size:18px!important;letter-spacing:-.025em;font-weight:800!important}
 .ap-cart-dialog .ap-dialog-head>button{width:36px;height:36px;border:0;border-radius:50%;background:#f5f5f5;font-size:25px;color:#111}
-#ap-cart-content{height:calc(100dvh - 68px);overflow:hidden;display:flex;flex-direction:column;min-height:0;padding:0!important;font-family:inherit}
+.ap-cart-dialog[open]{display:flex;flex-direction:column}
+.ap-cart-dialog .ap-dialog-head{flex:none}
+#ap-cart-content{flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0;padding:0!important;font-family:inherit}
 .nlc-scrollable-items{min-height:0;flex:1;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
 .nlc-cart-lines{padding:0 18px}
 .nlc-line{display:grid;grid-template-columns:61px minmax(0,1fr) auto;gap:12px;align-items:start;padding:18px 0;border-bottom:1px solid #e5e5e5}
