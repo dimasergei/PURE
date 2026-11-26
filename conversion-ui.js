@@ -161,11 +161,61 @@
      offer.discount_bps<=0||offer.discount_bps>=10000)return null;
   return offer;
  }
+ // Midnight at the start of Christmas Day in Toronto (EST).
+ const christmas=Date.parse('2026-12-25T00:00:00-05:00');
+ async function mountChristmasOffer(announcement,fallback,campaign){
+  const end=Date.parse(campaign?.ends_at),serverTime=Date.parse(campaign?.server_time);
+  const key=campaign?.eligible_variants?.[0],separator=typeof key==='string'?key.indexOf(':'):-1;
+  if(!announcement||!fallback||!Number.isFinite(serverTime)||end!==christmas||serverTime>=end||separator<=0)return false;
+  const id=key.slice(0,separator),size=key.slice(separator+1);
+  // Read the estimate from the same pricing engine used by checkout.
+  const quote=await request('checkout=cart',{items:[{id,size,qty:1}],country:'US'}).catch(()=>null);
+  const bonus=quote?.pricing?.bogo_campaign;
+  if(bonus?.ends_at!==campaign.ends_at||!bonus.free_units?.some(item=>item.id===id&&item.size===size&&item.qty===1))return false;
+  const slide=document.createElement('a'),countdown=document.createElement('time'),next=document.createElement('button');
+  slide.className='pure-offer-trigger pure-christmas-slide';
+  slide.href='/shop';
+  slide.innerHTML='<span class="pure-christmas-kicker">Christmas Sale</span><strong>Buy One Get One Free</strong>';
+  countdown.dateTime=new Date(end).toISOString();
+  countdown.title='Ends December 25 at midnight Toronto time';
+  slide.append(countdown);
+  next.type='button';
+  next.className='pure-promo-next';
+  next.setAttribute('aria-label','Show next promotion');
+  next.textContent='›';
+  slide.hidden=true;
+  announcement.append(slide,next);
+  announcement.classList.add('pure-promo-rotating');
+  const offset=serverTime-Date.now();
+  const showChristmas=show=>{slide.hidden=!show;fallback.hidden=show;};
+  const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  next.addEventListener('click',()=>showChristmas(slide.hidden));
+  const rotate=setInterval(()=>{
+   if(!reduced&&!announcement.matches(':hover,:focus-within')&&!document.hidden)showChristmas(slide.hidden);
+  },6500);
+  function tick(){
+   const remaining=Math.ceil((end-Date.now()-offset)/1000);
+   if(remaining<=0){
+    clearInterval(rotate);clearInterval(clock);
+    showChristmas(false);
+    slide.remove();next.remove();
+    announcement.classList.remove('pure-promo-rotating');
+    return;
+   }
+   const days=Math.floor(remaining/86400);
+   const time=[Math.floor(remaining/3600)%24,Math.floor(remaining/60)%60,remaining%60].map(value=>String(value).padStart(2,'0')).join(':');
+   countdown.textContent=(days?days+'d ':'')+time;
+  }
+  const clock=setInterval(tick,1000);
+  tick();
+  return true;
+ }
  async function mountCampaignStrip(){
   const announcement=document.querySelector('.ap-announcement');
   const fallback=announcement?.querySelector('[data-default-offer]');
   let campaign;
   try{campaign=await readCampaign();}catch{publishCampaign('unavailable');return;}
+  if(await mountChristmasOffer(announcement,fallback,campaign)){publishCampaign('inactive');return;}
   const offer=secondUnitOffer(campaign);
   if(!offer){publishCampaign('inactive');return;}
   const percent=offer.discount_bps/100;

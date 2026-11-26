@@ -28,18 +28,14 @@
  function bulkPage(){return heading('Bulk orders','Build a bigger order.<br>Keep the details simple.','Choose quantities across exact product sizes. Review a catalog-price estimate, export your list, or send a bulk quote request to the team.')+`<div class="ap-container ap-workspace-layout"><div><div class="ap-toolbar"><label class="ap-sr" for="ap-bulk-query">Search products or sizes</label><input id="ap-bulk-query" type="search" maxlength="120" value="${esc(bulkQuery)}" placeholder="Search products, sizes, or categories"></div><p class="ap-result-count">${A.catalog.reduce((n,p)=>n+p.variants.length,0)} exact product/size combinations · quantities stay saved on this device</p><div class="ap-bulk-table-wrap"><table class="ap-bulk-table"><thead><tr><th>Compound</th><th>Size</th><th>Unit price</th><th>Qty</th><th>Line total</th></tr></thead><tbody id="ap-bulk-rows"></tbody></table></div><section id="ap-bulk-inquiry" class="ap-panel" hidden style="margin-top:25px"><span class="ap-eyebrow">SEND YOUR SELECTIONS</span><h2>Request a bulk quote.</h2><p class="ap-fine">The selected products and quantities will be sent with your inquiry. Submission does not place an order.</p>${inquiryForm('bulk')}</section></div><aside class="ap-summary"><span class="ap-eyebrow">YOUR BULK REQUEST</span><h2>Every size.<br>Every quantity.</h2><div id="ap-bulk-summary"></div></aside></div>`;}
  function bulkUnits(id){return bulk.filter(x=>x.id===id).reduce((n,x)=>n+x.qty,0);}
  function bulkPriceInfo(price,units,qty){
-  const tier=window.PureQuantityPricing?.bulkRate(Math.max(10,units))||0;
-  const cents=Math.round(price*100);
-  const count=qty||10,gross=cents*count;
-  const net=(gross-Math.round(gross*tier/10000))/count/100;
-  return `<span class="nl-bulk-current-unit"><strong>${priceMarkup(net)}</strong> <small>/ unit</small></span><del data-bulk-unit aria-label="Retail price">${priceMarkup(price)}</del>`;
+  const pricing=window.PureQuantityPricing;
+  const count=qty||1,gross=Math.round(price*100)*count;
+  const discount=pricing?.bulkDiscountCents(gross,units)??0;
+  return `<strong>${priceMarkup((gross-discount)/count/100)}<small> / unit</small></strong>${discount?`<del aria-label="Retail price">${priceMarkup(price)}</del>`:''}`;
  }
- function tierIndicators(units){
-  const rate=window.PureQuantityPricing?.bulkRate(units)||0;
-  return [10,50].map(min=>{
-   const percent=min===10?50:60,active=rate===percent*100;
-   return '<span data-tier-active="'+active+'">'+min+'+ · '+percent+'% off'+(active?' ✓':'')+'</span>';
-  }).join('');
+ function bulkImageBadge(qty){
+  const rate=window.PureQuantityPricing?.bulkRate(qty)||0;
+  return rate?rate/100+'% off':'';
  }
  function tierProgress(units){
   if(units>=50)return '60% off applied';
@@ -50,13 +46,16 @@
  function bulkUpdateCard(id){
   const card=$$('[data-bulk-product]').find(x=>x.dataset.bulkProduct===id);if(!card)return;
   const input=card.querySelector('[data-bulk-id]'),size=input.dataset.bulkSize;
-  const variant=product(id).variants.find(x=>x.size===size);
   const qty=bulk.find(x=>x.id===id&&x.size===size)?.qty||0,units=bulkUnits(id);
-  card.querySelector('.nl-bulk-prices').innerHTML=bulkPriceInfo(variant.price,units,qty);
-  card.querySelector('.nl-bulk-progress').textContent=tierProgress(units);
-  card.querySelector('.nl-bulk-tier-key').innerHTML=tierIndicators(units);
+  for(const row of card.querySelectorAll('[data-action="bulk-size"]')){
+   const variant=product(id).variants.find(x=>x.size===row.dataset.size);
+   const quantity=bulk.find(x=>x.id===id&&x.size===variant.size)?.qty;
+   row.querySelector('.nl-bulk-prices').innerHTML=bulkPriceInfo(variant.price,units,quantity);
+  }
+  const badge=card.querySelector('[data-bulk-photo-discount]');
+  badge.textContent=bulkImageBadge(qty);
+  badge.hidden=!badge.textContent;
   card.dataset.selected=String(qty>0);
-  card.dataset.tierQualified=String(units>=10);
   input.value=qty;
   card.querySelectorAll('[data-action="bulk-qty"]').forEach(button=>{button.disabled=Number(button.dataset.delta)<0?qty<=0:qty>=100;});
  }
@@ -69,12 +68,13 @@
    const saved=bulkSizes[p.id],hint=linkedVariant?.id===p.id?linkedVariant.size:undefined;
    const size=(p.variants.some(x=>x.size===saved)?saved:existing[0]?.size)||hint;
    const v=p.variants.find(x=>x.size===size)||p.variants[0],qty=existing.find(x=>x.size===v.size)?.qty||0,units=bulkUnits(p.id);
-   return `<article class="nl-bulk-product" data-bulk-product="${esc(p.id)}" data-selected="${qty>0}" data-tier-qualified="${units>=10}">
-    <a class="nl-bulk-image" href="/product/${encodeURIComponent(p.id)}?size=${encodeURIComponent(v.size)}"><img src="${esc(image(p,v.size))}" alt="${esc(p.name+' '+v.size)}" loading="lazy"></a>
+   const variants=p.variants.slice().sort((a,b)=>(parseFloat(a.size)-parseFloat(b.size))||a.size.localeCompare(b.size));
+   const badge=bulkImageBadge(qty);
+   return `<article class="nl-bulk-product" data-bulk-product="${esc(p.id)}" data-selected="${qty>0}">
+    <a class="nl-bulk-image" href="/product/${encodeURIComponent(p.id)}?size=${encodeURIComponent(v.size)}"><img src="${esc(image(p,v.size))}" alt="${esc(p.name+' '+v.size)}" loading="lazy"><span class="nl-bulk-photo-discount" data-bulk-photo-discount ${badge?'':'hidden'}>${badge}</span></a>
     <div class="nl-bulk-product-body"><span class="ap-eyebrow">${esc(p.group)}</span><h3><a href="/product/${encodeURIComponent(p.id)}?size=${encodeURIComponent(v.size)}">${esc(p.name)}</a></h3>
-    <div class="nl-bulk-sizes" role="group" aria-label="Choose a strength for ${esc(p.name)}">${p.variants.map(x=>`<button type="button" data-action="bulk-size" data-id="${esc(p.id)}" data-size="${esc(x.size)}" aria-pressed="${x.size===v.size}">${esc(x.size)}</button>`).join('')}</div>
-    <div class="nl-bulk-prices">${bulkPriceInfo(v.price,units,qty)}</div><div class="nl-bulk-tier-key" aria-label="Per-product discounts">${tierIndicators(units)}</div>
-    <p class="nl-bulk-progress">${tierProgress(units)}</p><div class="nl-bulk-product-foot"><div class="nl-bulk-quantity-controls">${quantityControls(p.id,v.size,qty,p.name,true)}</div></div></div></article>`;
+    <div class="nl-bulk-sizes" role="group" aria-label="Choose a strength for ${esc(p.name)}">${variants.map(x=>`<button type="button" data-action="bulk-size" data-id="${esc(p.id)}" data-size="${esc(x.size)}" aria-pressed="${x.size===v.size}"><span>${esc(x.size)}</span><span class="nl-bulk-prices">${bulkPriceInfo(x.price,units,existing.find(line=>line.size===x.size)?.qty)}</span></button>`).join('')}</div>
+    <div class="nl-bulk-product-foot"><div class="nl-bulk-quantity-controls">${quantityControls(p.id,v.size,qty,p.name,true)}</div></div></article>`;
   }).join('')||empty('No matching products','Try a different name or category.');
  }
  function quantityControls(id,size,qty,name,addTen=false){
@@ -103,7 +103,7 @@
   root.dataset.empty=String(units===0);
   const retail=priceMarkup(subtotal);
   const savings=tierSavingsCents>0?`<div class="nl-bulk-tier-savings"><span>Bulk savings</span><strong>−${priceMarkup(tierSavingsCents/100)}</strong></div>`:'';
-  const shipping=canCheckout?'<div class="nl-bulk-included-shipping"><span>Free 2-Day Express Shipping<small>U.S. orders after dispatch</small></span><strong>Free</strong></div>':'';
+  const shipping=canCheckout?'<div class="nl-bulk-included-shipping"><span>Free 2-Day Express Shipping<small>U.S. orders after dispatch</small></span><strong>FREE</strong></div>':'';
   const selection=ids.length?ids.map(id=>{
    const p=product(id),lines=bulk.filter(x=>x.id===id),count=bulkUnits(id);
    const rate=window.PureQuantityPricing?.bulkRate(count)||0;
@@ -218,7 +218,7 @@
   if(action==='bulk-close-summary'){$('#nl-bulk-sheet')?.close();return;}
   if(action==='bulk-add-products'){const sheet=$('#nl-bulk-sheet');if(sheet?.open)sheet.close();const query=$('#ap-bulk-query');if(query){query.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});query.focus({preventScroll:true});}return;}
   if(action==='bulk-qty'){const current=bulk.find(x=>x.id===button.dataset.id&&x.size===button.dataset.size)?.qty||0;setBulkQuantity(button.dataset.id,button.dataset.size,current+Number(button.dataset.delta));}
-  if(action==='bulk-size'){const p=product(button.dataset.id),v=p?.variants.find(x=>x.size===button.dataset.size);if(p&&v){bulkSizes[p.id]=v.size;A.write(bulkSizeKey,bulkSizes);bulkResults();}}
+  if(action==='bulk-size'){const p=product(button.dataset.id),v=p?.variants.find(x=>x.size===button.dataset.size);if(p&&v){bulkSizes[p.id]=v.size;A.write(bulkSizeKey,bulkSizes);bulkResults();$$('[data-action="bulk-size"]').find(row=>row.dataset.id===p.id&&row.dataset.size===v.size)?.focus({preventScroll:true});}}
   if(action==='bulk-category'){bulkGroup=button.dataset.group||'All';$$('[data-action="bulk-category"]').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.group===bulkGroup)));bulkResults();}
   if(action==='bulk-export')A.exportLines(bulk,'PURE-bulk-request.csv');
   if(action==='bulk-cart'){try{A.addItems(simpleLines(bulk));}catch(e){A.toast(e.message);}}

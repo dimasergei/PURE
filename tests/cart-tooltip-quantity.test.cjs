@@ -7,8 +7,8 @@ test('gift tooltip opens above the icon into the scroll area instead of under th
  assert.match(css,/\.nlc-reward-trigger\s*\{[^}]*width: 44px;[^}]*height: 44px;/s);
  assert.match(css,/\.nlc-scrollable-items\{overflow-x:hidden/);
 });
-test('each earned section and gift share a green color while locked rewards stay black',()=>{
- assert.match(css,/--reward-earned:\s*#19804b/);
+test('each earned section and gift share a lighter monochrome shade while locked rewards stay black',()=>{
+ assert.match(css,/--reward-earned:\s*#555/);
  assert.match(css,/--reward-pending:\s*#171717/);
  assert.match(css,/\.nlc-reward-meter\s*\{[^}]*background: var\(--reward-pending\)/s);
  assert.match(css,/\.nlc-reward-meter::before\s*\{[^}]*width: var\(--earned-width, 0%\);[^}]*background: var\(--reward-earned\)/s);

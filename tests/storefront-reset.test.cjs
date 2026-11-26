@@ -221,7 +221,7 @@ test('product page shows only Subscribe & Save and bulk savings paths, with regu
  try{
   const {d,w}=f,product=w.AltaStore.product('retatrutide');
   assert.equal(d.querySelector('#ap-detail-quantity').value,'1');
-  assert.deepEqual([...d.querySelectorAll('[data-bundle-quantity]')].map(x=>x.dataset.bundleQuantity),['1','2','3','4']);
+  assert.equal(d.querySelector('[data-bundle-quantity]'),null);
   const offers=[...d.querySelectorAll('.nl-product-saving-card')];
   assert.equal(offers.length,2);
   assert.match(offers[0].getAttribute('href'),/^\/subscribe-and-save\?product=/);
@@ -243,7 +243,9 @@ test('mobile size selection retains the quantity and opens the correctly priced 
  const f=await fixture('/product/retatrutide',{monthlyAvailable:true});
  try{
   const {w,d}=f;
-  d.querySelector('[data-bundle-quantity="3"]').click();
+  const quantity=d.querySelector('#ap-detail-quantity');
+  quantity.value='3';
+  quantity.dispatchEvent(new w.Event('input',{bubbles:true}));
   d.querySelectorAll('.ap-mobile-sizes button')[1].click();
   await settle();
   const variant=w.AltaStore.product('retatrutide').variants[1];
@@ -298,7 +300,7 @@ test('bulk ordering grows and clears its summary while preserving exact prices, 
   card.querySelector('[data-action="bulk-size"][data-size="'+second.size+'"]').click();
   card=d.querySelector('[data-bulk-product="'+id+'"]');
   assert.equal(card.querySelector('[data-bulk-id]').value,'0');
-  assert.equal(card.querySelector('[data-bulk-unit]').textContent,format(second.price));
+  assert.equal(card.querySelector('[data-action="bulk-size"][aria-pressed="true"] del').textContent,format(second.price));
   card.querySelector('[data-delta="1"]').click();
   assert.equal(draft().length,2);assert.equal(summary(),format(first.price*100+second.price));
   input=card.querySelector('[data-bulk-id]');input.value='101';input.dispatchEvent(new w.Event('input',{bubbles:true}));
@@ -370,12 +372,17 @@ test('bulk order sheet tracks tier changes across strengths and restores the sam
   const {d,w}=f,bar=d.querySelector('[data-action="bulk-open-summary"]'),sheet=d.getElementById('nl-bulk-sheet');
   const card=[...d.querySelectorAll('[data-bulk-product]')].find(item=>item.querySelectorAll('[data-action="bulk-size"]').length>1);
   const id=card.dataset.bulkProduct,first=card.querySelector('[data-bulk-id]');
-  first.value='49';first.dispatchEvent(new w.Event('input',{bubbles:true}));
-  assert.match(card.querySelector('.nl-bulk-progress').textContent,/Add 1 more/);
+  const badge=card.querySelector('[data-bulk-photo-discount]');
+  for(const [units,text] of [[9,''],[10,'50% off'],[49,'50% off'],[50,'60% off'],[49,'50% off']]){
+   first.value=String(units);first.dispatchEvent(new w.Event('input',{bubbles:true}));
+   assert.equal(badge.textContent,text);
+   assert.equal(badge.hidden,!text);
+  }
+  assert.equal(card.querySelector('.nl-bulk-progress,.nl-bulk-tier-key'),null);
   card.querySelectorAll('[data-action="bulk-size"]')[1].click();
   const chosen=d.querySelector('[data-bulk-product="'+id+'"]');
   chosen.querySelector('[data-delta="1"]').click();
-  assert.match(chosen.querySelector('.nl-bulk-progress').textContent,/60% off applied/);
+  assert.equal(chosen.querySelector('[data-bulk-photo-discount]').hidden,true,'the photo badge follows the selected strength only');
   assert.match(bar.textContent,/50 units/);
   bar.click();
   assert.equal(sheet.open,true);assert.equal(bar.getAttribute('aria-expanded'),'true');
