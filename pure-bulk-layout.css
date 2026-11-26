@@ -1,70 +1,94 @@
 /* Compact public bulk ordering. Loaded after the shared brand layers. */
 html:root body.ap-site .nl-bulk-hero {
-  padding: 36px 0 32px;
+  padding: clamp(32px, 5vw, 70px) 0;
+  background: radial-gradient(ellipse at 86% 110%, #20372a 0, #111916 28%, #101110 61%) !important;
 }
 html:root body.ap-site .nl-bulk-hero h1 {
-  max-width: 1040px;
-  margin: 12px 0 14px;
-  font-size: clamp(36px, 3.5vw, 48px);
-  line-height: 1.08;
-  letter-spacing: -.035em;
+  max-width: 940px;
+  margin: 14px 0 18px;
+  font-size: clamp(40px, 5.6vw, 80px);
+  line-height: .98;
+  letter-spacing: -.055em;
+  text-transform: uppercase;
 }
+html:root body.ap-site .nl-bulk-hero h1 > strong { color: #a8e6b9; }
 html:root body.ap-site .nl-bulk-hero > div > p {
-  max-width: 760px;
-  font-size: 16px;
-  line-height: 1.5;
+  max-width: 610px;
+  margin: 0;
+  font-size: clamp(15px, 1.3vw, 18px);
+  line-height: 1.55;
 }
 html:root body.ap-site .nl-bulk-hero .nl-capsule {
   min-height: 26px;
   padding: 4px 11px;
   font-size: 11px;
 }
-html:root body.ap-site .nl-bulk-benefits {
+.nl-bulk-hero-action {
+  display: inline-flex;
+  align-items: center;
   gap: 12px;
-  margin-top: 20px;
+  min-height: 44px;
+  margin-top: 22px;
+  padding: 8px 15px;
+  border: 1px solid #ffffff55;
+  border-radius: 7px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: none;
+}
+.nl-bulk-hero-action:hover { background: #fff; color: #111; }
+#ap-bulk-catalog { scroll-margin-top: var(--ap-workspace-sticky-top, 128px); }
+html:root body.ap-site .nl-bulk-benefits {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 24px;
   margin-bottom: 0;
 }
 html:root body.ap-site .nl-bulk-benefits > .nl-bulk-benefit {
   min-height: 0;
   justify-content: center;
-  gap: 4px;
-  padding: 16px 18px;
+  padding: 16px clamp(12px, 1.8vw, 24px);
+  gap: 5px;
   border-radius: 12px;
 }
+html:root body.ap-site .nl-bulk-benefits > .nl-bulk-benefit-best {
+  border-color: #cadfd1 !important;
+  background: #edf8f0 !important;
+}
 html:root body.ap-site .nl-bulk-benefit-rate {
-  font-size: 25px !important;
-  line-height: 1.1;
+  font-size: clamp(25px, 3vw, 43px) !important;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -.04em;
+}
+html:root body.ap-site [data-bulk-threshold] .nl-bulk-benefit-rate,
+html:root body.ap-site .nl-bulk-benefit-shipping .nl-bulk-benefit-rate {
+  color: #176536 !important;
+}
+.nl-bulk-benefit-rate > span {
+  font-size: .39em;
+  letter-spacing: .05em;
+  vertical-align: .33em;
 }
 html:root body.ap-site .nl-bulk-benefit-copy {
   margin: 0;
-  font-size: 14px !important;
+  font-size: 15px !important;
   line-height: 1.3;
 }
 html:root body.ap-site .nl-bulk-benefit > small {
   font-size: 13px;
-  line-height: 1.4;
+  line-height: 1.35;
 }
-html:root body.ap-site .nl-bulk-benefits .nl-bulk-coa-proof {
-  grid-template-columns: 27px minmax(0, 1fr);
-  width: 100%;
-  min-height: 0;
-  margin: 0 0 4px;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-}
-html:root body.ap-site .nl-bulk-coa-proof strong { font-size: 14px; }
-html:root body.ap-site .nl-bulk-coa-proof small { font-size: 12px; }
-html:root body.ap-site .nl-bulk-coa-proof > span:last-child { min-width: 0; }
-html:root body.ap-site .nl-bulk-coa-proof :is(strong, small) {
-  white-space: normal;
-  overflow-wrap: anywhere;
+html:root body.ap-site .nl-bulk-report-icon { font-weight: 500; }
+html:root body.ap-site .nl-bulk-benefit-coa:hover {
+  border-color: #777 !important;
+  text-decoration: underline;
 }
 
 html:root body.ap-site .nl-bulk-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 28%);
   gap: 24px;
   align-items: start;
   padding-top: 24px;
@@ -89,86 +113,108 @@ html:root body.ap-site .nl-bulk-categories button {
   line-height: 1.2;
 }
 html:root body.ap-site .nl-bulk-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: stretch;
   gap: 14px;
   margin: 0 0 32px;
 }
 html:root body.ap-site .nl-bulk-product {
-  display: grid;
-  grid-template-columns: 100px minmax(0, 1fr);
-  align-content: start;
-  align-items: start;
-  gap: 14px;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
   min-height: 0;
-  padding: 14px;
+  padding: 0;
   border-radius: 12px;
+  overflow: hidden;
   box-shadow: none;
 }
 html:root body.ap-site .nl-bulk-product:hover {
-  box-shadow: 0 4px 16px #00000008;
+  border-color: #aaa !important;
+  box-shadow: 0 4px 16px #0000000c;
 }
-html:root body.ap-site .nl-bulk-image {
+html:root body.ap-site .nl-bulk-product .nl-bulk-image {
+  display: grid;
+  place-items: center;
   width: 100%;
-  height: 128px;
+  height: clamp(118px, 11vw, 180px);
   min-height: 0;
+  max-height: none;
   aspect-ratio: auto;
-  border-radius: 8px;
+  border: 0;
+  border-radius: 0;
+  background: #f1f0ee;
 }
-html:root body.ap-site .nl-bulk-image img {
-  width: 100%;
+html:root body.ap-site .nl-bulk-product .nl-bulk-image img {
+  width: auto;
+  max-width: 100%;
   height: 100%;
+  min-height: 0;
   object-fit: contain;
 }
-html:root body.ap-site .nl-bulk-product-body {
+html:root body.ap-site .nl-bulk-product .nl-bulk-product-body {
+  display: flex;
+  flex: 1 1 auto;
   min-width: 0;
-  padding: 0;
+  align-items: stretch;
+  padding: 13px;
+  text-align: center;
 }
 html:root body.ap-site .nl-bulk-product-body > .ap-eyebrow {
-  text-align: left;
-  font-size: 11px;
-  line-height: 1.35;
-  letter-spacing: .055em;
+  text-align: center;
+  font-size: 10px;
+  line-height: 1.3;
+  letter-spacing: .065em;
   overflow-wrap: anywhere;
 }
-html:root body.ap-site .nl-bulk-product-body h3 {
-  margin: 4px 0 10px;
-  font-size: 17px;
-  line-height: 1.25;
-  text-align: left;
+html:root body.ap-site .nl-bulk-product .nl-bulk-product-body h3 {
+  display: grid;
+  align-content: center;
+  min-height: 2.4em;
+  margin: 3px 0 8px;
+  font-size: clamp(16px, 1.3vw, 19px);
+  line-height: 1.2;
+  text-align: center;
   overflow-wrap: anywhere;
 }
 html:root body.ap-site .nl-bulk-sizes {
-  gap: 6px;
+  display: flex;
+  justify-content: center;
+  gap: 5px;
   margin-bottom: 10px;
 }
-html:root body.ap-site .nl-bulk-sizes button {
-  min-width: 40px;
-  min-height: 40px;
+html:root body.ap-site .nl-bulk-product .nl-bulk-sizes button {
+  min-width: 35px;
+  min-height: 36px;
   max-width: 100%;
-  padding: 8px 9px;
-  font-size: 12px;
+  padding: 7px;
+  font-size: 11px;
   line-height: 1.2;
   overflow-wrap: anywhere;
 }
 html:root body.ap-site .nl-bulk-prices {
-  display: flex;
-  justify-content: flex-start;
-  gap: 5px;
-  margin: 0;
-  text-align: left;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  gap: 1px;
+  margin: auto 0 0;
+  color: #111;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }
+.nl-bulk-current-unit { display: block; line-height: 1.1; }
 html:root body.ap-site .nl-bulk-prices strong {
-  font-size: 19px;
-  line-height: 1.3;
+  font-size: clamp(20px, 1.75vw, 26px);
+  font-weight: 850;
 }
-html:root body.ap-site .nl-bulk-prices>span { font-size: 13px; }
+html:root body.ap-site .nl-bulk-current-unit small,
+html:root body.ap-site .nl-bulk-prices del { color: #5a5a5a; font-size: 12px; }
 html:root body.ap-site .nl-bulk-product-foot {
   display: block;
-  margin-top: 10px;
+  margin-top: 9px;
   padding-top: 0;
 }
 html:root body.ap-site .nl-bulk-product-foot .nl-bulk-quantity-controls {
+  justify-content: center;
   gap: 4px;
   flex-wrap: wrap;
 }
@@ -365,12 +411,7 @@ html:root body.ap-site .nl-bulk-faq details p {
 
 @media (min-width: 1051px) and (max-width: 1199px) {
   html:root body.ap-site .nl-bulk-layout { gap: 20px; }
-  html:root body.ap-site .nl-bulk-product {
-    grid-template-columns: 80px minmax(0, 1fr);
-    gap: 10px;
-    padding: 12px;
-  }
-  html:root body.ap-site .nl-bulk-image { height: 108px; }
+  html:root body.ap-site .nl-bulk-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 1050px) {
@@ -440,8 +481,9 @@ html:root body.ap-site .nl-bulk-faq details p {
   html:root body.ap-site .nl-bulk-hero { padding: 24px 0; }
   html:root body.ap-site .nl-bulk-hero h1 {
     margin: 10px 0;
-    font-size: clamp(28px, 7.5vw, 36px);
+    font-size: clamp(36px, 8.7vw, 58px);
   }
+  .nl-bulk-hero-action { margin-top: 16px; }
   html:root body.ap-site .nl-bulk-hero > div > p { font-size: 15px; }
   html:root body.ap-site .nl-bulk-benefits {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -453,7 +495,7 @@ html:root body.ap-site .nl-bulk-faq details p {
     gap: 3px;
     padding: 11px 13px;
   }
-  html:root body.ap-site .nl-bulk-benefit-rate { font-size: 21px !important; }
+  html:root body.ap-site .nl-bulk-benefit-rate { font-size: 25px !important; }
   html:root body.ap-site .nl-bulk-benefit-copy { font-size: 13px !important; }
   html:root body.ap-site .nl-bulk-layout { padding-top: 16px; }
   html:root body.ap-site .nl-bulk-categories {
@@ -465,12 +507,8 @@ html:root body.ap-site .nl-bulk-faq details p {
     min-height: 44px;
     padding: 10px 14px;
   }
-  html:root body.ap-site .nl-bulk-product {
-    grid-template-columns: 80px minmax(0, 1fr);
-    gap: 12px;
-    padding: 12px;
-  }
-  html:root body.ap-site .nl-bulk-image { height: 108px; }
+  html:root body.ap-site .nl-bulk-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  html:root body.ap-site .nl-bulk-product .nl-bulk-image { height: 128px; }
   html:root body.ap-site .ap-summary.nl-bulk-summary { padding: 16px !important; }
   html:root body.ap-site .nl-bulk-summary-heading h2 {
     margin-bottom: 10px;
@@ -480,23 +518,15 @@ html:root body.ap-site .nl-bulk-faq details p {
 }
 
 @media (max-width: 650px) {
-  html:root body.ap-site .nl-bulk-grid { grid-template-columns: minmax(0, 1fr); }
-  html:root body.ap-site .nl-bulk-product {
-    grid-template-columns: 84px minmax(0, 1fr);
-  }
-  html:root body.ap-site .nl-bulk-menu-line {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
+  html:root body.ap-site .nl-bulk-menu-line { grid-template-columns: minmax(0, 1fr) auto; }
   html:root body.ap-site .nl-bulk-menu-variant { grid-column: 1 / -1; }
   html:root body.ap-site .nl-bulk-menu-line-price { min-width: 0; }
 }
-
+@media (max-width: 479px) {
+  html:root body.ap-site .nl-bulk-grid { grid-template-columns: minmax(0, 1fr); }
+  html:root body.ap-site .nl-bulk-product .nl-bulk-image { height: 146px; }
+}
 @media (max-width: 359px) {
-  html:root body.ap-site .nl-bulk-product {
-    grid-template-columns: 64px minmax(0, 1fr);
-    gap: 10px;
-  }
-  html:root body.ap-site .nl-bulk-image { height: 88px; }
   html:root body.ap-site .ap-summary.nl-bulk-summary { padding: 12px !important; }
 }
 
@@ -538,7 +568,6 @@ html:root body.ap-site .nl-bulk-sheet .nl-bulk-summary {
 }
 .nl-bulk-sheet .nl-bulk-total-units { right: 36px; }
 .nl-bulk-sheet .nl-bulk-summary-heading { padding-right: 106px !important; }
-html:root body.ap-site .nl-bulk-prices del { color: #666; font-size: 13px; }
 html:root body.ap-site .nl-bulk-progress {
   display: block;
   margin: 9px 0 0;
@@ -607,39 +636,102 @@ html:root body.ap-site .nl-bulk-menu-product-head:has(.nl-bulk-rate-badge) {
   body:has(.nl-bulk-sheet[open]) { overflow: hidden; }
 }
 @media (max-width: 650px) {
-  html:root body.ap-site .nl-bulk-product {
-    display: block;
-    padding: 0;
-    overflow: hidden;
-    border-radius: 14px;
-  }
-  html:root body.ap-site .nl-bulk-image {
-    display: block;
-    width: 100%;
-    height: auto;
-    aspect-ratio: 4 / 3;
-    border-radius: 0;
-    background: #f4f4f4;
-  }
-  html:root body.ap-site .nl-bulk-product-body { padding: 15px; }
-  html:root body.ap-site .nl-bulk-product-body > .ap-eyebrow,
-  html:root body.ap-site .nl-bulk-product-body h3 { text-align: center; }
-  html:root body.ap-site .nl-bulk-product-body h3 { margin-top: 5px; }
-  html:root body.ap-site .nl-bulk-sizes { display: flex; flex-wrap: wrap; }
-  html:root body.ap-site .nl-bulk-sizes button { flex: 1; }
-  html:root body.ap-site .nl-bulk-prices { align-items: baseline; justify-content: center; flex-wrap: wrap; }
-  html:root body.ap-site .nl-bulk-product-foot .nl-bulk-quantity-controls { justify-content: center; }
-  html:root body.ap-site .nl-bulk-product .nl-bulk-progress { text-align: center; }
   html:root body.ap-site :is(.nl-bulk-product-foot, .nl-bulk-menu-line) .nl-bulk-quantity-controls :is(.nl-bulk-qty-step, .nl-bulk-menu-remove, input) {
     flex-basis: 44px;
     width: 44px;
     height: 44px;
   }
+  html:root body.ap-site .nl-bulk-product .nl-bulk-sizes button,
   html:root body.ap-site .nl-bulk-plus-ten { min-height: 44px; }
   .nl-bulk-close { width: 44px; height: 44px; }
 }
+@media (max-width: 360px) {
+  html:root body.ap-site .nl-bulk-menu-line { grid-template-columns: minmax(0, 1fr); }
+  html:root body.ap-site .nl-bulk-menu-line-price { display: flex; flex-direction: row; justify-content: space-between; gap: 8px; }
+}
 
 html:root body.ap-site .nl-bulk-tier-key [data-tier-active="true"],
-html:root body.ap-site .nl-bulk-benefit[data-tier-active="true"] { background:#151515!important; color:#fff!important; border-color:#151515 }
-html:root body.ap-site .nl-bulk-benefit[data-tier-active="true"] :is(strong,span,small) {color:inherit!important}
-.nl-bulk-product .nl-bulk-tier-key {display:flex;flex-wrap:wrap;justify-content:center;gap:5px;margin-block:8px}
+html:root body.ap-site .nl-bulk-rate-badge {
+  background: #e9f6ec !important;
+  color: #176536 !important;
+}
+html:root body.ap-site .nl-bulk-benefit[data-tier-active="true"] {
+  background: #193e2a !important;
+  border-color: #193e2a !important;
+  color: #fff !important;
+}
+html:root body.ap-site .nl-bulk-benefit[data-tier-active="true"] :is(strong, span, small) {
+  color: inherit !important;
+}
+html:root body.ap-site .nl-bulk-product .nl-bulk-tier-key {
+  justify-content: center;
+  gap: 5px;
+  margin-block: 8px 2px;
+}
+html:root body.ap-site .nl-bulk-product .nl-bulk-progress {
+  min-height: 2.6em;
+  margin: 4px 0 0;
+  line-height: 1.3;
+}
+html:root body.ap-site [data-tier-qualified="true"] > .nl-bulk-progress,
+html:root body.ap-site [data-tier-qualified="true"] .nl-bulk-product-body > .nl-bulk-progress {
+  color: #176536;
+  font-weight: 700;
+}
+html:root body.ap-site .nl-bulk-menu-line-price del,
+html:root body.ap-site .nl-bulk-estimate-total del,
+html:root body.ap-site .nl-bulk-prices del,
+html:root body.ap-site :is(.nl-bulk-menu-line-price, .nl-bulk-estimate-total, .nl-bulk-prices) del .pure-price-value {
+  color: #5a5a5a;
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+html:root body.ap-site .nl-bulk-menu-line-price del { font-size: 12px; }
+html:root body.ap-site .nl-bulk-estimate-total strong:has(del) { font-size: 15px; }
+html:root body.ap-site .nl-bulk-totals > :is(.nl-bulk-tier-savings, .nl-bulk-included-shipping) {
+  align-items: flex-start;
+  margin: 0;
+  padding: 7px 9px;
+  background: #edf8f0;
+  color: #176536;
+  font-size: 13px;
+  font-weight: 750;
+}
+html:root body.ap-site .nl-bulk-totals > :is(.nl-bulk-tier-savings, .nl-bulk-included-shipping) strong {
+  color: inherit;
+  white-space: nowrap;
+}
+.nl-bulk-tier-savings { border-radius: 6px; }
+.nl-bulk-tier-savings:has(+ .nl-bulk-included-shipping) { border-radius: 6px 6px 0 0; }
+.nl-bulk-included-shipping { border-radius: 0 0 6px 6px; border-top: 1px solid #d5e9db; }
+.nl-bulk-included-shipping small { display: block; font-size: 11px; font-weight: 550; }
+html:root body.ap-site .nl-bulk-totals > .nl-bulk-net { font-size: 14px; }
+html:root body.ap-site .nl-bulk-totals > .nl-bulk-net strong {
+  font-size: 20px;
+  line-height: 1.15;
+}
+html:root body.ap-site .nl-bulk-faq {
+  display: grid;
+  grid-template-columns: minmax(220px, .8fr) minmax(0, 2fr);
+  align-items: start;
+  gap: clamp(16px, 3vw, 35px);
+  max-width: 1120px;
+  padding-top: 28px;
+}
+.nl-bulk-faq-intro {
+  padding: clamp(18px, 3vw, 30px);
+  border-radius: 12px;
+  background: #121413;
+  color: #fff;
+}
+html:root body.ap-site .nl-bulk-faq .nl-bulk-faq-intro h2 {
+  margin: 0 0 8px;
+  color: inherit;
+  font-size: clamp(23px, 2.4vw, 32px);
+}
+.nl-bulk-faq-intro p { margin: 0 0 14px; color: #d0d0d0; font-size: 14px; }
+.nl-bulk-faq-intro a { color: #fff; font-weight: 750; text-underline-offset: 4px; }
+html:root body.ap-site .nl-bulk-faq-list details:first-child { margin-top: 0; }
+@media (max-width: 720px) {
+  html:root body.ap-site .nl-bulk-faq { grid-template-columns: minmax(0, 1fr); }
+}

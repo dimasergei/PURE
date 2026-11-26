@@ -4,15 +4,14 @@ const {JSDOM}=require('jsdom');
 const config=require('../config/conversion.json');
 const read=path=>fs.readFileSync(path,'utf8');
 
-test('both desktop account tabs and hover menu have Membership only, with no separate Member Stack destination',()=>{
+test('the account hover menu has four destinations and the dashboard retains Membership',()=>{
  const homepage=new JSDOM(read('public-build/index.html'));
  const accountPage=new JSDOM(read('public-build/account.html'));
  for(const page of [homepage,accountPage]){
   const menu=page.window.document.querySelector('#ap-account-menu');
   assert.ok(menu);
   const links=Array.from(menu.querySelectorAll('a')).map(x=>[x.textContent.trim(),x.getAttribute('href')]);
-  assert.ok(links.some(([name,url])=>name==='Membership'&&url==='/account/membership'));
-  assert.ok(!links.some(([name,url])=>/Member Stack/i.test(name)||/\/account\/stack/.test(url)));
+  assert.deepEqual(links,[['Overview','/my-account'],['Orders','/account/purchases'],['Track','/track-order'],['Profile','/account/profile']]);
   page.window.close();
  }
  const source=read('public-build/account.js');

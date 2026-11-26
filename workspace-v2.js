@@ -32,7 +32,7 @@
   const cents=Math.round(price*100);
   const count=qty||10,gross=cents*count;
   const net=(gross-Math.round(gross*tier/10000))/count/100;
-  return `<strong>${priceMarkup(net)}</strong><span>/unit</span><del data-bulk-unit>${priceMarkup(price)}</del>`;
+  return `<span class="nl-bulk-current-unit"><strong>${priceMarkup(net)}</strong> <small>/ unit</small></span><del data-bulk-unit aria-label="Retail price">${priceMarkup(price)}</del>`;
  }
  function tierIndicators(units){
   const rate=window.PureQuantityPricing?.bulkRate(units)||0;
@@ -56,6 +56,7 @@
   card.querySelector('.nl-bulk-progress').textContent=tierProgress(units);
   card.querySelector('.nl-bulk-tier-key').innerHTML=tierIndicators(units);
   card.dataset.selected=String(qty>0);
+  card.dataset.tierQualified=String(units>=10);
   input.value=qty;
   card.querySelectorAll('[data-action="bulk-qty"]').forEach(button=>{button.disabled=Number(button.dataset.delta)<0?qty<=0:qty>=100;});
  }
@@ -67,13 +68,13 @@
    const existing=bulk.filter(x=>x.id===p.id);
    const saved=bulkSizes[p.id],hint=linkedVariant?.id===p.id?linkedVariant.size:undefined;
    const size=(p.variants.some(x=>x.size===saved)?saved:existing[0]?.size)||hint;
-   const v=p.variants.find(x=>x.size===size)||p.variants[0],qty=existing.find(x=>x.size===v.size)?.qty||0;
-   return `<article class="nl-bulk-product" data-bulk-product="${esc(p.id)}" data-selected="${qty>0}">
+   const v=p.variants.find(x=>x.size===size)||p.variants[0],qty=existing.find(x=>x.size===v.size)?.qty||0,units=bulkUnits(p.id);
+   return `<article class="nl-bulk-product" data-bulk-product="${esc(p.id)}" data-selected="${qty>0}" data-tier-qualified="${units>=10}">
     <a class="nl-bulk-image" href="/product/${encodeURIComponent(p.id)}?size=${encodeURIComponent(v.size)}"><img src="${esc(image(p,v.size))}" alt="${esc(p.name+' '+v.size)}" loading="lazy"></a>
     <div class="nl-bulk-product-body"><span class="ap-eyebrow">${esc(p.group)}</span><h3><a href="/product/${encodeURIComponent(p.id)}?size=${encodeURIComponent(v.size)}">${esc(p.name)}</a></h3>
     <div class="nl-bulk-sizes" role="group" aria-label="Choose a strength for ${esc(p.name)}">${p.variants.map(x=>`<button type="button" data-action="bulk-size" data-id="${esc(p.id)}" data-size="${esc(x.size)}" aria-pressed="${x.size===v.size}">${esc(x.size)}</button>`).join('')}</div>
-    <div class="nl-bulk-prices">${bulkPriceInfo(v.price,bulkUnits(p.id),qty)}</div><div class="nl-bulk-tier-key" aria-label="Per-product discounts">${tierIndicators(bulkUnits(p.id))}</div>
-    <div class="nl-bulk-product-foot"><div class="nl-bulk-quantity-controls">${quantityControls(p.id,v.size,qty,p.name,true)}</div></div><p class="nl-bulk-progress">${tierProgress(bulkUnits(p.id))}</p></div></article>`;
+    <div class="nl-bulk-prices">${bulkPriceInfo(v.price,units,qty)}</div><div class="nl-bulk-tier-key" aria-label="Per-product discounts">${tierIndicators(units)}</div>
+    <p class="nl-bulk-progress">${tierProgress(units)}</p><div class="nl-bulk-product-foot"><div class="nl-bulk-quantity-controls">${quantityControls(p.id,v.size,qty,p.name,true)}</div></div></div></article>`;
   }).join('')||empty('No matching products','Try a different name or category.');
  }
  function quantityControls(id,size,qty,name,addTen=false){
@@ -100,18 +101,25 @@
   if(barTitle)barTitle.innerHTML=units?`${units} ${units===1?'unit':'units'} · ${priceMarkup(tierNet)}`:'Bulk order';
   if(barDetail)barDetail.innerHTML=units?(tierSavingsCents?`You save ${priceMarkup(tierSavingsCents/100)} · View order`:'View order'):'10+ units per product · up to 60% off';
   root.dataset.empty=String(units===0);
+  const retail=priceMarkup(subtotal);
+  const savings=tierSavingsCents>0?`<div class="nl-bulk-tier-savings"><span>Bulk savings</span><strong>−${priceMarkup(tierSavingsCents/100)}</strong></div>`:'';
+  const shipping=canCheckout?'<div class="nl-bulk-included-shipping"><span>Free 2-Day Express Shipping<small>U.S. orders after dispatch</small></span><strong>Free</strong></div>':'';
   const selection=ids.length?ids.map(id=>{
-   const p=product(id),lines=bulk.filter(x=>x.id===id),count=lines.reduce((n,x)=>n+x.qty,0);
-   return `<section class="nl-bulk-menu-product"><header class="nl-bulk-menu-product-head"><img src="${esc(image(p,lines[0].size))}" alt=""><span><strong>${esc(p.name)}</strong><small>${count} units</small></span>${count>=10?`<b class="nl-bulk-rate-badge">${(window.PureQuantityPricing?.bulkRate(count)||0)/100}% off</b>`:''}</header>
-    ${lines.map(x=>{const gross=Math.round(x.price*100)*x.qty,saved=Math.round(gross*(window.PureQuantityPricing?.bulkRate(count)||0)/10000);return `<div class="nl-bulk-menu-line"><div class="nl-bulk-menu-controls"><span class="nl-bulk-menu-variant">${esc(x.size)} · ${priceMarkup((gross-saved)/x.qty/100)}/unit</span><div class="nl-bulk-quantity-controls">${quantityControls(x.id,x.size,x.qty,x.name)}</div></div><div class="nl-bulk-menu-line-price">${saved?`<del>${priceMarkup(gross/100)}</del>`:''}<strong>${priceMarkup((gross-saved)/100)}</strong></div></div>`;}).join('')}<small class="nl-bulk-progress">${tierProgress(count)}</small></section>`;
+   const p=product(id),lines=bulk.filter(x=>x.id===id),count=bulkUnits(id);
+   const rate=window.PureQuantityPricing?.bulkRate(count)||0;
+   const lineItems=lines.map(x=>{
+    const gross=Math.round(x.price*100)*x.qty,saved=Math.round(gross*rate/10000),net=(gross-saved)/100;
+    return `<div class="nl-bulk-menu-line"><div class="nl-bulk-menu-controls"><span class="nl-bulk-menu-variant">${esc(x.size)} · ${priceMarkup(net/x.qty)}/unit</span><div class="nl-bulk-quantity-controls">${quantityControls(x.id,x.size,x.qty,x.name)}</div></div><div class="nl-bulk-menu-line-price"><strong>${priceMarkup(net)}</strong>${saved?`<del>${priceMarkup(gross/100)}</del>`:''}</div></div>`;
+   }).join('');
+   return `<section class="nl-bulk-menu-product" data-tier-qualified="${rate>0}"><header class="nl-bulk-menu-product-head"><img src="${esc(image(p,lines[0].size))}" alt=""><span><strong>${esc(p.name)}</strong><small>${count} ${count===1?'unit':'units'}</small></span>${rate?`<b class="nl-bulk-rate-badge">${rate/100}% off</b>`:''}</header>${lineItems}<small class="nl-bulk-progress">${tierProgress(count)}</small></section>`;
   }).join(''):'<div class="nl-bulk-menu-empty">Select product quantities for your order.</div>';
   root.innerHTML=`<div class="nl-bulk-summary-heading"><h2>Your bulk order</h2><span class="nl-bulk-total-units">${units} units</span></div>
    ${units?'':'<button type="button" class="ap-button nl-bulk-add-products" data-action="bulk-add-products">ADD PRODUCTS</button>'}
    <div class="nl-bulk-summary-scroll" aria-label="Selected products">${selection}</div>
-   <div class="nl-bulk-totals"><div class="nl-bulk-estimate-total"><span>Retail value</span><strong>${priceMarkup(subtotal)}</strong></div>${tierSavingsCents>0?`<div class="nl-bulk-tier-savings"><span>Bulk savings</span><strong>−${priceMarkup(tierSavingsCents/100)}</strong></div><div class="nl-bulk-included-shipping"><span>US two-day express</span><strong>Included</strong></div><div class="nl-bulk-net"><span>After bulk savings</span><strong>${priceMarkup(tierNet)}</strong></div>`:''} </div>
+   <div class="nl-bulk-totals"><div class="nl-bulk-estimate-total"><span>Retail value</span><strong>${tierSavingsCents>0?`<del>${retail}</del>`:retail}</strong></div>${savings}${shipping}${tierSavingsCents>0?`<div class="nl-bulk-net"><span>After bulk savings</span><strong>${priceMarkup(tierNet)}</strong></div>`:''}</div>
    ${units?`<div class="nl-bulk-tier-key"><span data-tier-active="${rates.has(5000)}">10+ units · 50% off</span><span data-tier-active="${rates.has(6000)}">50+ units · 60% off</span><small>Strengths of each product count together.</small></div>`:''}
    <button class="ap-button" data-action="bulk-checkout" ${canCheckout?'':'disabled'}>Checkout · ${priceMarkup(tierNet)}</button>
-   <p class="ap-fine nl-bulk-checkout-note">Save 50% at 10 units or 60% at 50 units per compound. Strengths of the same compound count together. Your regular cart stays saved for later.</p>`;
+   <p class="ap-fine nl-bulk-checkout-note">Your regular cart stays saved separately.</p>`;
   const scroll=root.querySelector('.nl-bulk-summary-scroll');
   if(scroll)scroll.scrollTop=listScroll;
   if(focused){

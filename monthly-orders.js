@@ -20,18 +20,23 @@
     if (!response.ok) throw Error(data.error || 'Monthly orders are temporarily unavailable.');
     return data;
   };
-  const line = (name,value,cls='') => '<div class="line '+cls+'"><span>'+esc(name)+'</span><span>'+esc(value)+'</span></div>';
+  const line = (name,value,cls='') => {
+    const amountTag = cls === 'retail-value' ? 'del' : 'span';
+    return `<div class="line ${cls}"><span>${esc(name)}</span><${amountTag}>${esc(value)}</${amountTag}></div>`;
+  };
   const deliveryTimeline = '<ol class="monthly-deliveries" aria-label="Delivery schedule">'+
     [1,2,3].map(month=>'<li><span aria-hidden="true">'+month+'</span> Month '+month+'</li>').join('')+'</ol>';
-  function orderItem(item, included = false) {
+  function orderItem(item, bundled = false) {
     const store = window.AltaStore;
     const product = store?.product(item.id === 'gift-bac-3' ? 'bac-3' : item.id);
     const image = product ? store.image(product,item.size) : '';
-    return '<li class="monthly-summary-item'+(included?' monthly-included':'')+'">'+
+    const retail = bundled ? bundledValue([item]) : item.gross_cents;
+    const crossedPrice = Number.isSafeInteger(retail) && retail > item.line_total_cents ? '<del>'+esc(money(retail))+'</del>' : '';
+    return '<li class="monthly-summary-item'+(bundled?' monthly-included':'')+'">'+
       (image?'<img src="'+esc(image)+'" width="52" height="52" alt="">':'<span class="monthly-item-placeholder" aria-hidden="true"></span>')+
       '<div><strong>'+esc(item.name)+'</strong><small>'+esc(item.size)+' · Qty '+esc(item.qty)+'</small>'+
-      (included?'<small>With every delivery</small>':'')+'</div>'+
-      '<strong class="monthly-item-amount">'+esc(included?'Included':money(item.line_total_cents))+'</strong></li>';
+      (bundled?'<small>With every delivery</small>':'')+'</div>'+
+      '<span class="monthly-price-stack"><strong class="monthly-item-amount">'+esc(bundled?'Bundled':money(item.line_total_cents))+'</strong>'+crossedPrice+'</span></li>';
   }
   function bundledValue(items) {
     const recon = window.AltaStore?.product('bac-3');
@@ -39,6 +44,35 @@
       const variant = item.id === 'gift-bac-3' && recon?.variants.find(entry=>entry.size===item.size);
       return sum+(variant&&Number.isFinite(variant.price)?Math.round(variant.price*100)*item.qty:0);
     },0);
+  }
+  function orderedPlanUnits(lines, draftOrder) {
+    const key = ({id, size}) => JSON.stringify([id, size]);
+    const unit = line => ({...line, qty: 1, gross_cents: line.gross_cents / line.qty, line_total_cents: line.line_total_cents / line.qty});
+    const canonical = lines.flatMap(line => Array.from({length: line.qty}, () => unit(line)));
+    if (!Array.isArray(draftOrder) || draftOrder.length !== canonical.length) return canonical;
+    const available = new Map(lines.map(line => [key(line), {line, remaining: line.qty}]));
+    const ordered = [];
+    for (const item of draftOrder) {
+      const entry = item && available.get(key(item));
+      if (!entry?.remaining) return canonical;
+      entry.remaining--;
+      ordered.push(unit(entry.line));
+    }
+    return ordered;
+  }
+  function planSets(lines, bundledItems, draftOrder) {
+    const size = 4;
+    const units = orderedPlanUnits(lines, draftOrder);
+    const bundles = bundledItems.flatMap(item => Array.from({length: item.qty}, () => ({...item, qty: 1})));
+    return Array.from({length: Math.ceil(units.length / size)}, (_, set) => {
+      const rows = units.slice(set * size, (set + 1) * size).map(item => orderItem(item)).join('');
+      const bundled = bundles[set] ? orderItem(bundles[set], true) : '';
+      return `<section class="monthly-set" aria-labelledby="monthly-set-${set + 1}"><h3 id="monthly-set-${set + 1}">Set ${set + 1}</h3><ul class="monthly-summary-items">${rows}${bundled}</ul></section>`;
+    }).join('');
+  }
+  function readDraftOrder() {
+    try { return JSON.parse(sessionStorage.getItem('pure-monthly-builder-order')); }
+    catch { return null; }
   }
   const threeDeliveryPlan = plan => Boolean(overview.builder_terms && plan?.snapshot.terms === overview.builder_terms);
   const hasUnfinishedTerm = () => overview.plans.some(plan => threeDeliveryPlan(plan) && !plan.can_restart);
@@ -113,6 +147,7 @@
       return;
     }
     let items=initialItems(plan);
+    const draftOrder = builderRoute && !plan ? readDraftOrder() : null;
     if (!Array.isArray(items)||!items.length||items.some(i=>!catalog.some(p=>p.id===i.id && p.variants.some(v=>v.size===i.size)))) {
       root.innerHTML='<p>Choose your items to start a monthly order.</p>'+link(kind==='builder'?'/subscribe-and-save':'/shop','Choose items');return;
     }
@@ -144,7 +179,7 @@
       '<fieldset data-shipping><legend>Delivery address</legend><div class="fields">'+fields('ship_',address,previous.name||address.name)+'</div></fieldset></div>'+
       '<aside class="monthly-checkout-summary" aria-labelledby="monthly-summary-title"><div class="monthly-summary-heading"><h2 id="monthly-summary-title">Order summary</h2><span data-item-count></span></div>'+
       (Number.isSafeInteger(overview.protection_cents)?'<div class="protection"><label class="check"><input name="protection" type="checkbox" '+((plan?plan.snapshot.pricing.delivery.selection.extras.includes('protection'):true)?'checked':'')+'><span>Shipment protection</span><strong>'+esc(money(overview.protection_cents))+'</strong></label><a href="/shipping-protection.html" target="_blank" rel="noopener">Coverage details</a></div>':'')+
-      '<ul class="monthly-summary-items" data-plan aria-label="Products in your monthly delivery"></ul>'+
+      '<div class="monthly-summary-plan" data-plan aria-label="Products in your monthly delivery"></div>'+
       '<div class="monthly-summary-pricing" data-review role="status"></div><fieldset><legend>Payment</legend><div data-methods></div></fieldset>'+
       (threeDelivery?'<p class="monthly-legal">Three monthly deliveries, paid one invoice at a time. Change future selections after your first delivery ships. The plan ends at delivery three. Any applicable fees are shown before payment. <a href="/commercial-terms.html#subscribe-and-save-plan" target="_blank" rel="noopener">Plan terms</a></p>':'')+
       '<label class="check"><input type="checkbox" data-agree required>'+(
@@ -172,12 +207,12 @@
         const giftValue = bundledValue(p.bundled_items);
         const count = p.lines.reduce((sum,item)=>sum+item.qty,0);
         form.querySelector('[data-item-count]').textContent=count===1?'1 item':count+' items';
-        form.querySelector('[data-plan]').innerHTML=p.lines.map(item=>orderItem(item)).join('')+
-          p.bundled_items.map(item=>orderItem(item,true)).join('');
-        review.innerHTML=line('Retail value',money(p.subtotal_cents+giftValue))+
-          line(kind==='builder'?'Subscribe & Save (40%)':'Monthly savings','−'+money(p.discount_cents))+
-          (giftValue?line('Included 3 mL solution','−'+money(giftValue)):'')+
-          line(p.delivery.selection.shipping==='express'?'Express shipping':'Economy shipping',p.delivery.shipping_cents?money(p.delivery.shipping_cents):'Free')+
+        form.querySelector('[data-plan]').innerHTML=kind==='builder' ? planSets(p.lines,p.bundled_items,draftOrder) :
+          '<ul class="monthly-summary-items">'+p.lines.map(item=>orderItem(item)).join('')+'</ul>';
+        review.innerHTML=line('Retail value',money(p.subtotal_cents+giftValue),'retail-value')+
+          line(kind==='builder'?'Monthly savings (40%)':'Monthly savings','−'+money(p.discount_cents),'monthly-savings')+
+          (giftValue?line('Bundled reconstitution solution','−'+money(giftValue),'monthly-savings'):'')+
+          line(p.delivery.selection.shipping==='express'?'Express shipping':'Economy shipping',p.delivery.shipping_cents?money(p.delivery.shipping_cents):'Free',p.delivery.shipping_cents?'':'monthly-savings')+
           (p.delivery.extras_cents?line('Shipment protection',money(p.delivery.extras_cents)):'')+line('Per month (USD)',money(q.total_cents),'total');
         displayed=q.total_cents;if(confirm)confirm.disabled=!methods.length;
       }catch(e){if(revision===current)review.textContent=e.message;}

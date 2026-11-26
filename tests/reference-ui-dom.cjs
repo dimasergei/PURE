@@ -60,12 +60,10 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
   assert.equal(ribbon.querySelector('.pure-offer-action').getAttribute('href'),'/shop');
   assert.equal(ribbon.querySelector('.pure-offer-free').textContent,'BLACKFRIDAY10');
   assert.match(d.querySelector('h1').textContent,/CUTTING EDGEPURITY/);
-   // Desktop navigation and mobile side menu share this single route/link.
-   const testingLink=d.querySelector('#ap-nav a[href="/coas"]');
-   assert.ok(testingLink,'Testing link preserves the COA route');
-   assert.equal(testingLink.textContent,'Testing','nav label after locale initialization');
-   assert.equal(d.querySelector('.ap-footer a[href="/coas"]')?.textContent,'Testing','footer label matches');
-   assert.equal((read('public-build/storefront-v2.js').match(/coas:'Testing'/g)||[]).length,3,'en/fr/es labels stay Testing');
+  // The Testing route remains discoverable in the footer.
+  assert.equal(d.querySelector('#ap-nav a[href="/coas"]'),null);
+  assert.equal(d.querySelector('.ap-footer a[href="/coas"]')?.textContent,'Testing');
+  assert.equal((read('public-build/storefront-v2.js').match(/coas:'Testing'/g)||[]).length,3);
   const vials=[...d.querySelectorAll('.nl-hero .nl-vial')];
   assert.deepEqual(vials.map(a=>a.getAttribute('href')),['/product/nad','/product/retatrutide','/product/bpc-157','/product/ghk-cu','/product/tirzepatide']);
   assert.equal(vials[2].querySelector('img').getAttribute('fetchpriority'),'high');
@@ -82,19 +80,15 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
    assert.equal(photo.contains(card.querySelector('.nl-featured-meta')),false,'name and price are outside the image');
    assert.doesNotMatch(card.textContent,/per unit|\(\d+\s*mg\)/i);
   }
-  const bulk=d.querySelector('.nl-home-bulk');
-  const memberships=d.querySelector('[data-mx-membership-home]');assert.ok(d.querySelector('.nl-editorial').nextElementSibling===memberships,'membership comparison follows documentation');assert.equal(memberships.querySelectorAll('.mx-card').length,3);assert.ok(memberships.nextElementSibling===bulk,'bulk ordering follows membership comparison');
-  assert.equal(bulk.nextElementSibling.id,'faq');
+  const bulk=d.querySelector('.pure-home-volume');
+  assert.equal(d.querySelector('.nl-featured').nextElementSibling,bulk,'bulk savings follow featured products');
+  assert.equal(d.querySelector('[data-mx-membership-home]'),null);
+  assert.equal(d.querySelector('.nl-editorial').nextElementSibling.id,'faq');
   assert.equal(bulk.querySelector('a').getAttribute('href'),'/bulk-orders');
-  assert.match(bulk.textContent,/Save 50% at 10 units or 60% at 50 units per compound/);
+  assert.match(bulk.querySelector('h2').textContent,/Save up to 60%/);
   assert.doesNotMatch(bulk.textContent,/BOGO|monthly auto.?billing/i);
-  const examples=[...bulk.querySelectorAll('tbody tr')];
-  assert.equal(examples.length,2);
-  for(const [index,id,size,qty] of [[0,'bpc-157','10mg',10],[1,'ghk-cu','50mg',50]]){
-   const variant=w.AltaStore.product(id).variants.find(v=>v.size===size),cells=examples[index].cells;
-   assert.equal(cells[1].textContent,String(qty));
-   assert.equal(cells[2].textContent,w.AltaStore.money(variant.price));
-  }
+  const tiers=[...bulk.querySelectorAll('.pure-home-volume-tiers > div')];
+  assert.deepEqual(tiers.map(tier=>tier.textContent),['50% OFF10+ units per compound','60% OFF50+ units per compound']);
   dom.window.close();
  }
  {const{dom,d,w}=await setup('/shop');
@@ -224,20 +218,24 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
    assert.ok(page.querySelector('#'+id),'COA filter/report function remains: '+id);
   assert.equal(page.querySelector('#ap-coa-reset').type,'button');
   assert.equal(page.querySelector('.ap-coa-results-heading a').getAttribute('href'),'/contact');
-  // Actual supplier report rendering: original document buttons are consistent for every card.
+  // Actual supplier report rendering: metadata and document actions stay together in each row.
   const fixture=JSON.parse(read('data/supplier-coas.json'));
   const sampleReports=fixture.reports.slice(0,5);
   assert.ok(sampleReports.length>0,'report data fixture exists');
   w.fetch=async()=>({ok:true,json:async()=>({...fixture,reports:sampleReports})});
   w.eval(read('public-build/supplier-coas.js'));
   await w.AltaSupplierCoas.render(d.getElementById('ap-supplier-references'),w.AltaStore.catalog);
-  const cards=[...d.querySelectorAll('.ap-supplier-coa-grid .ap-coa-card')];
-  assert.equal(cards.length,sampleReports.length,'sample report cards render');
-  for(const card of cards){
-   const actions=card.querySelector('.pure-coa-card-body .ap-actions');
+  const rows=[...d.querySelectorAll('.ap-supplier-coa-grid .ap-coa-card')];
+  assert.equal(rows.length,sampleReports.length,'sample report rows render');
+  for(const [index,row] of rows.entries()){
+   const report=sampleReports[index];
+   assert.equal(row.querySelector('.pure-coa-row-title').textContent,report.product+' · '+report.size);
+   assert.deepEqual([...row.querySelectorAll('.pure-coa-row-meta dt')].map(term=>term.textContent),['Laboratory','Certificate publisher','Reported lot','Report date','Report ID']);
+   assert.ok(row.querySelector('.pure-coa-row-meta').textContent.includes(report.report_id));
+   const actions=row.querySelector('.pure-coa-card-body .ap-actions');
    const primary=actions.querySelector('button.ap-button');
    const original=actions.querySelector('a.ap-coa-original-link');
-   assert.ok(primary&&original,'both actions are present on each card');
+   assert.ok(primary&&original,'both actions are present on each row');
    assert.equal(actions.children[0],primary);
    assert.equal(actions.children[1],original);
    assert.match(original.textContent,/^Open original (?:PDF|report)$/);
@@ -248,7 +246,7 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
   }
   const coaStyles=read('public-build/pure-coa.css');
   assert.ok(coaStyles.includes('.ap-coa-original-link {'),'new original button CSS is published');
-  assert.ok(coaStyles.includes('flex-direction: column;'),'COA actions are vertically stacked');
+  assert.match(coaStyles,/\.pure-coa-page \.ap-supplier-coa-grid\s*\{[^}]*grid-template-columns: minmax\(0, 1fr\)/,'one report per row across the full archive width');
 
   dom.window.close();
  }

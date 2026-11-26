@@ -30,33 +30,57 @@ html:root body .pure-price>.pure-price-base{
 html:root body .pure-price-compact>.pure-price-base{display:inline;margin-inline-start:6px}
 html:root body .pure-currency-code{font:inherit;letter-spacing:inherit;color:inherit}
 .pure-currency-note{font-size:12px;line-height:1.5;overflow-wrap:anywhere}
-.pure-currency-control{min-width:0;margin:8px 4px 2px;padding:13px 0 3px;border-top:1px solid #e5e5e5;color:#111}
-.ap-header-popover .pure-currency-control label{display:block;margin:0 0 7px;font-family:inherit;font-size:13px;font-weight:700;line-height:1.4;letter-spacing:0;text-transform:none;color:#111}
-.ap-header-popover .pure-currency-control select{
-  display:block;
-  box-sizing:border-box;
-  width:100%;
-  max-width:100%;
-  min-width:0;
-  min-height:44px;
-  padding:9px 26px 9px 10px;
-  border:1px solid #111;
-  border-radius:6px;
-  background:#fff;
-  color:#111;
-  font-family:inherit;
-  font-size:14px;
-  font-weight:600;
-  line-height:1.4;
-  letter-spacing:0;
-  text-transform:none;
-  cursor:pointer;
+/* Keep the native selector over a short, currency-code-only label. */
+.pure-currency-control { min-width: 0; color: #111; }
+.pure-currency-picker {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 58px;
+  min-height: 44px;
+  padding-inline: 4px;
+  border-radius: 4px;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
 }
-.ap-header-popover .pure-currency-control select:focus-visible{outline:2px solid #111;outline-offset:3px}
-.ap-header-popover .pure-currency-control option{background:#fff;color:#111}
-.ap-header-popover .pure-currency-status{margin:8px 0 0;font-family:inherit;font-size:12px;font-weight:400;line-height:1.5;letter-spacing:0;text-transform:none;color:#555;white-space:normal;overflow-wrap:anywhere}
-@media(max-width:1190px){
-  .pure-currency-control{margin:8px 5px 2px;padding-top:14px}
-  .ap-header-popover .pure-currency-control label{font-size:14px}
-  .ap-header-popover .pure-currency-control select{font-size:16px}
+.pure-currency-picker::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border: solid currentColor;
+  border-width: 0 1.5px 1.5px 0;
+  transform: translateY(-2px) rotate(45deg);
+}
+.pure-currency-picker:focus-within {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+.pure-currency-picker select {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  cursor: pointer;
+  font: inherit;
+  font-size: 16px;
+}
+@media (max-width: 1190px) {
+  .ap-header-actions > .pure-currency-control { display: none; }
+}
+@media (forced-colors: active) {
+  .pure-currency-picker select {
+    position: static;
+    opacity: 1;
+    max-width: min(170px, 42vw);
+  }
+  .pure-currency-picker > span, .pure-currency-picker::after { display: none; }
 }

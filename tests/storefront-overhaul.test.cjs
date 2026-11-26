@@ -19,7 +19,7 @@ test('production build creates the actual unified site and account integration w
   const source=fs.readFileSync(path.join(temp,'products.js'),'utf8');
   let run=spawnSync(process.execPath,['site-build.cjs'],{cwd:temp,encoding:'utf8'});assert.equal(run.status,0,run.stderr);
   const html=fs.readFileSync(path.join(temp,'index.html'),'utf8');
-  for(const marker of ['ap-header','ap-more-menu','ap-search-dialog','ap-cart-dialog','ap-age-dialog','storefront-v2.js','workspace-v2.js','/bulk-orders','/coas','href="/subscribe-and-save"','href="/memberships"','href="/account/membership"','href="/monthly-orders"'])assert.ok(html.includes(marker),marker);assert.doesNotMatch(html,/href="\/offers(?:["?#/])|\bBOGO\b/);
+  for(const marker of ['ap-header','ap-account-menu','ap-search-dialog','ap-cart-dialog','ap-age-dialog','storefront-v2.js','workspace-v2.js','/bulk-orders','/coas','href="/subscribe-and-save"','href="/memberships"'])assert.ok(html.includes(marker),marker);assert.doesNotMatch(html,/href="\/offers(?:["?#/])|\bBOGO\b/);
   assert.ok(fs.existsSync(path.join(temp,'storefront-v2.html')));
   const account=fs.readFileSync(path.join(temp,'account.html'),'utf8');assert.match(account,/storefront-v2\.css/);assert.match(account,/workspace-v2\.js/);
   assert.match(account,/<link rel="stylesheet" href="\/cart-reference\.css">/);

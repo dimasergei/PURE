@@ -23,6 +23,8 @@
  function originalDocumentLink(url,isImage){
   const a=link(url,isImage?'Open original report':'Open original PDF');
   a.className='ap-coa-original-link';
+  a.title=a.textContent;
+  a.replaceChildren(el('span',a.title,'pure-coa-action-label'));
   const ns='http://www.w3.org/2000/svg';
   const svg=document.createElementNS(ns,'svg');
   svg.setAttribute('viewBox','0 0 24 24');
@@ -32,6 +34,14 @@
   path.setAttribute('d','M6.5 3.5h7l4 4v13h-11z M13.5 3.5v4h4 M9 12h6 M9 16h6');
   svg.append(path);
   a.prepend(svg);
+  return a;
+ }
+ function verificationLink(url){
+  const a=link(url,'Certificate verification');
+  a.title=a.textContent;
+  const arrow=el('span','↗','pure-coa-verify-arrow');
+  arrow.setAttribute('aria-hidden','true');
+  a.replaceChildren(arrow,el('span',a.title,'pure-coa-action-label'));
   return a;
  }
  function closeViewer(){if(dialog?.open)dialog.close();dialog?.querySelector('iframe')?.remove();returnFocus?.focus();}
@@ -58,17 +68,24 @@
    const coverage=data.coverage.filter(c=>(!product||c.product_id===product)&&(!size||c.size===size));
    const count=document.getElementById('ap-coa-count');if(count)count.textContent=records.length+' COA report'+(records.length===1?'':'s')+' found'+(query.trim()?' for “'+query.trim()+'”':'');
    container.replaceChildren();
-   const grid=el('div',undefined,'ap-panel-grid ap-supplier-coa-grid');
+   const grid=el('div',undefined,'ap-supplier-coa-grid');
    for(const r of records){
-    const card=el('article',undefined,'ap-coa-card'),head=el('header',undefined,'pure-coa-card-head'),body=el('div',undefined,'pure-coa-card-body');head.append(el('span','COA REPORT','ap-pill'),el('h2',r.product+' · '+r.size));card.append(head,body);
-    const dl=el('dl');for(const [label,value]of [['Laboratory',r.lab_name],['Certificate publisher',r.publisher],['Reported lot',r.lot],['Report / analysis date',r.report_date],['Report ID',r.report_id]])if(value)dl.append(el('dt',label),el('dd',value));body.append(dl);
+    const row=el('article',undefined,'ap-coa-card'),title=el('h2',r.product+' · '+r.size,'pure-coa-row-title');
+    const body=el('div',undefined,'pure-coa-card-body'),metadata=el('dl',undefined,'pure-coa-row-meta');
+    for(const [label,value] of [['Laboratory',r.lab_name],['Certificate publisher',r.publisher],['Reported lot',r.lot],['Report date',r.report_date],['Report ID',r.report_id]]){
+      const field=el('div');
+      field.append(el('dt',label),el('dd',value||'—'));
+      metadata.append(field);
+    }
+    body.append(metadata);
+    row.append(title,body);
     const actions=el('div',undefined,'ap-actions'),button=el('button','View COA','ap-button ap-button-small');
     button.type='button';button.onclick=()=>viewReport(r,button);
     const isImage=r.document_type==='images';
     const originalUrl=isImage&&safeUrl(r.source_library_url)?r.source_library_url:r.document_url;
     actions.append(button,originalDocumentLink(originalUrl,isImage));
-    if(safeUrl(r.verification_url))actions.append(link(r.verification_url,'Certificate verification ↗'));
-    body.append(actions);grid.append(card);
+    if(safeUrl(r.verification_url))actions.append(verificationLink(r.verification_url));
+    body.append(actions);grid.append(row);
    }
    if(!records.length)grid.append(el('p','No COA report matches these filters. Try another selection or request the exact product, strength and lot.','ap-panel'));
    container.append(grid);

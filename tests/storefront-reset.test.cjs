@@ -69,7 +69,7 @@ test('homepage keeps the announcement, five-vial hero and product links with qui
   }
   assert.equal(w.AltaStore.cart.length,0);
   assert.equal(d.querySelectorAll('del,[data-promo-clock],.nl-offer-grid').length,0);
-  assert.ok(d.querySelector('[data-mx-membership-home]'),'the homepage includes the shared membership component mount');
+  assert.equal(d.querySelector('[data-mx-membership-home]'),null,'the homepage omits the membership comparison');
   const supplierReport=require('../data/supplier-coas.json').reports.find(r=>r.product_id==='retatrutide'&&r.size==='20mg'&&r.lab_name==='Prodigy Labs');
   assert.ok(supplierReport,'the featured 20mg example must exist in the COA source library');
   assert.match(supplierReport.lot,/laboratory sample 202607-PRO-005/);

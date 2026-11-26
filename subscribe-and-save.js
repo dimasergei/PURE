@@ -2,6 +2,7 @@
 (() => {
   'use strict';
   const planKey = 'pure-subscribe-plan-v1';
+  const checkoutOrderKey = 'pure-monthly-builder-order';
   const setSize = 4;
 
   function mount() {
@@ -121,10 +122,11 @@
       get('mobile-count').textContent = count + '/' + capacity;
       get('progress').max = capacity;
       get('progress').value = count;
-      get('subtotal').innerHTML = price((itemsCents + giftCents) / 100);
+      const retailValue = price((itemsCents + giftCents) / 100);
+      get('subtotal').innerHTML = monthlyPricing && count ? `<del>${retailValue}</del>` : retailValue;
       get('monthly-total').innerHTML = price(monthlyTotalCents / 100) + ' <small>/mo</small>';
       get('savings').innerHTML = (itemsCents ? '−' : '') + price((itemsCents - monthlyTotalCents) / 100);
-      get('gift-savings').innerHTML = giftCents ? '−' + price(giftCents / 100) : 'Included';
+      get('gift-savings').innerHTML = giftCents ? '−' + price(giftCents / 100) : 'Bundled';
       get('gift-line').hidden = !includedCount;
       for (const line of monthlyLines) line.hidden = !monthlyPricing;
       get('timeline').hidden = !monthlyPricing;
@@ -135,24 +137,31 @@
       cart.disabled = remaining > 0;
       monthly.disabled = !monthlyPricing || cart.disabled;
       mobileContinue.disabled = monthly.hidden ? cart.disabled : monthly.disabled;
-      const rows = chosen.map(({ id, size }, index) => {
+      const row = ({ id, size }, index) => {
         const product = store.product(id);
+        const retail = monthlyPricing ? `<del>${price(findVariant(id, size).price)}</del>` : '';
         return `<li class="pss-selected">
           <img width="42" height="48" src="${esc(store.image(product, size))}" alt="">
           <span class="pss-item-text"><strong>${esc(product.name)}</strong><small>${esc(size)}</small></span>
-          <b class="pss-row-price">${itemPrice(id, size)}</b>
+          <span class="pss-price-stack"><strong class="pss-row-price">${itemPrice(id, size)}</strong>${retail}</span>
           <button type="button" class="pss-remove" data-pss-remove="${index}" aria-label="Remove ${esc(product.name)} ${esc(size)}">×</button>
         </li>`;
-      }).join('');
-      const openSlots = Array.from({ length: remaining }, (_, index) =>
-        `<li class="pss-open-slot"><button type="button" data-pss-choose aria-label="Choose a product for selection ${count + index + 1}"><span aria-hidden="true">+</span>Choose a product</button></li>`
-      ).join('');
-      const included = includedCount ? `<li class="pss-included">
+      };
+      const bundled = includedCount ? `<li class="pss-included">
         <img width="42" height="48" src="${esc(store.image(gift, '3 mL'))}" alt="">
-        <span class="pss-item-text"><strong>Reconstitution solution</strong><small>3 mL${includedCount > 1 ? ' × ' + includedCount : ''} · Every delivery</small></span>
-        <span class="pss-gift-label">Included</span>
+        <span class="pss-item-text"><strong>Reconstitution solution</strong><small>3 mL · Every delivery</small></span>
+        <span class="pss-price-stack"><strong class="pss-gift-label">Bundled</strong>${giftUnitCents ? `<del>${price(giftUnitCents / 100)}</del>` : ''}</span>
       </li>` : '';
-      selection.innerHTML = `<ul class="pss-selection" aria-label="Plan selections">${rows}${openSlots}${included}</ul>`;
+      selection.innerHTML = Array.from({ length: capacity / setSize }, (_, set) => {
+        const start = set * setSize;
+        const setRows = Array.from({ length: setSize }, (_, slot) => {
+          const index = start + slot;
+          return chosen[index] ? row(chosen[index], index) :
+            `<li class="pss-open-slot"><button type="button" data-pss-choose aria-label="Choose a product for selection ${index + 1}"><span aria-hidden="true">+</span>Choose a product</button></li>`;
+        }).join('');
+        const heading = `pss-set-${set + 1}`;
+        return `<section class="pss-set" aria-labelledby="${heading}"><h3 id="${heading}">Set ${set + 1}</h3><ul class="pss-selection">${setRows}${set < includedCount ? bundled : ''}</ul></section>`;
+      }).join('');
     }
 
     function render() {
@@ -250,6 +259,7 @@
         status('Allow this site to save your selection to review monthly invoices.');
         return;
       }
+      try { sessionStorage.setItem(checkoutOrderKey, JSON.stringify(chosen)); } catch {}
       location.assign('/subscribe-and-save/checkout');
     });
     cart.addEventListener('click', () => {

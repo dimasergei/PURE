@@ -31,7 +31,7 @@ test('Subscribe & Save checkout discloses the three-delivery term and displays t
   const preview = {
     total_cents: 2900,
     pricing: {
-      lines: [{id:'item',qty:4,name:'Fixture',size:'S',line_total_cents:2400}],
+      lines: [{id:'item',qty:4,name:'Fixture',size:'S',gross_cents:4000,line_total_cents:2400}],
       bundled_items: [{id:'gift-bac-3',qty:1,name:'Reconstitution Solution',size:'3 mL',line_total_cents:0}],
       subtotal_cents: 4000,
       discount_cents: 1600,
@@ -63,12 +63,16 @@ test('Subscribe & Save checkout discloses the three-delivery term and displays t
     const checkout = w.document.querySelector('.monthly-checkout-summary');
     assert.equal(checkout.querySelector('[data-plan]'),plan);
     assert.equal(checkout.querySelector('[data-item-count]').textContent,'4 items');
+    assert.equal(plan.querySelectorAll('.monthly-set').length, 1);
+    assert.equal(plan.querySelectorAll('.monthly-set .monthly-summary-item').length, 5);
     const selected = plan.querySelector('.monthly-summary-item');
     assert.equal(selected.querySelector('img').getAttribute('src'),'/fixtures/item.webp');
-    assert.equal(selected.querySelector('small').textContent,'S · Qty 4');
-    assert.equal(selected.querySelector('.monthly-item-amount').textContent,'$24.00');
+    assert.equal(selected.querySelector('small').textContent,'S · Qty 1');
+    assert.equal(selected.querySelector('.monthly-item-amount').textContent,'$6.00');
+    assert.equal(selected.querySelector('del').textContent,'$10.00');
     assert.equal(plan.querySelector('.monthly-included img').getAttribute('src'),'/fixtures/bac-3.webp');
-    assert.match(plan.querySelector('.monthly-included').textContent,/With every deliveryIncluded/);
+    assert.match(plan.querySelector('.monthly-included').textContent,/With every deliveryBundled/);
+    assert.equal(plan.querySelector('.monthly-included del').textContent,'$14.95');
     assert.equal(plan.querySelector('select'), null);
     assert.equal(w.document.querySelectorAll('.monthly-deliveries li').length,3);
     assert.equal(checkout.querySelector('[name=protection]').checked,true);
@@ -76,8 +80,9 @@ test('Subscribe & Save checkout discloses the three-delivery term and displays t
     assert.match(checkout.textContent, /Change future selections after your first delivery ships/);
     const review = checkout.querySelector('[data-review]').textContent;
     assert.match(review, /Retail value\$54\.95/);
-    assert.match(review, /Subscribe & Save \(40%\)−\$16\.00/);
-    assert.match(review, /Included 3 mL solution−\$14\.95/);
+    assert.equal(checkout.querySelector('.retail-value del').textContent, '$54.95');
+    assert.match(review, /Monthly savings \(40%\)−\$16\.00/);
+    assert.match(review, /Bundled reconstitution solution−\$14\.95/);
     assert.match(review, /Express shippingFree/);
     assert.match(review, /Shipment protection\$5\.00/);
     assert.match(review, /Per month \(USD\)\$29\.00/);

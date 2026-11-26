@@ -1,5 +1,11 @@
+[data-pss-planner] {
+  --pss-savings-ink: #145c3d;
+  --pss-savings-soft: #eff8f1;
+  --pss-savings-border: #cfe5d6;
+}
+
 .pss-hero {
-  background: #111;
+  background: radial-gradient(ellipse at 92% 0, #242824, #111 63%);
   color: #fff;
   padding: clamp(34px, 5vw, 70px) 0;
 }
@@ -20,47 +26,54 @@
 
 .pss-benefits {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(8px, 1.5vw, 16px);
   margin: clamp(22px, 4vw, 38px) 0 0;
   padding: 0;
   list-style: none;
 }
 
 .pss-benefits li {
+  display: grid;
+  align-content: start;
+  gap: 6px;
   min-width: 0;
-  padding: 15px 16px;
-  border: 1px solid #444;
-  border-radius: 12px;
-  background: #1c1c1c;
-}
-
-.pss-benefits strong,
-.pss-benefits span {
-  display: block;
+  padding: clamp(13px, 2.1vw, 23px);
+  border: 1px solid #393939;
+  border-radius: 14px;
+  background: #202020;
 }
 
 .pss-benefits strong {
-  font-size: clamp(.95rem, 2vw, 1.35rem);
-  line-height: 1.1;
+  font-size: clamp(1rem, 2.35vw, 1.75rem);
+  font-weight: 800;
+  letter-spacing: -.035em;
+  line-height: 1.05;
 }
 
 .pss-benefits span {
-  margin-top: 5px;
-  color: #d4d4d4;
-  font-size: .85rem;
+  color: #c6c6c6;
+  font-size: .69rem;
+  font-weight: 750;
+  letter-spacing: .08em;
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+
+.pss-benefits small {
+  color: #dedede;
+  font-size: .81rem;
   line-height: 1.35;
 }
 
-.pss-benefits a {
-  display: block;
-  color: inherit;
-  text-decoration: none;
+.pss-benefits .pss-benefit-savings {
+  border-color: #d3e7d8;
+  background: #e6f2e8;
+  color: #164830;
 }
 
-.pss-benefits a strong {
-  text-decoration: underline;
-  text-underline-offset: 4px;
+.pss-benefit-savings :is(span, small) {
+  color: #355e46;
 }
 
 .pss-layout {
@@ -237,10 +250,27 @@
   display: none;
 }
 
+.pss-set {
+  min-width: 0;
+  margin-top: 14px;
+  padding: 10px;
+  border: 1px solid #e4e4e4;
+  border-radius: 10px;
+}
+
+.pss-set h3 {
+  margin: 1px 0 8px;
+  color: #454545;
+  font-size: .75rem;
+  font-weight: 750;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
 .pss-selection {
   display: grid;
   gap: 6px;
-  margin: 13px 0 0;
+  margin: 0;
   padding: 0;
   list-style: none;
 }
@@ -286,11 +316,34 @@
   font-size: .74rem;
 }
 
-.pss-row-price {
-  font-size: .83rem;
+.pss-price-stack {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
   font-variant-numeric: tabular-nums;
   text-align: right;
   white-space: nowrap;
+  line-height: 1.15;
+}
+
+.pss-row-price {
+  font-size: .86rem;
+}
+
+.pss-price-stack del,
+.pss-totals del {
+  color: #5d5d5d;
+  font-weight: 550;
+  text-decoration-thickness: 1px;
+}
+
+[data-pss-planner] del .pure-price-value {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.pss-price-stack del {
+  font-size: .74rem;
 }
 
 .pss-remove,
@@ -353,16 +406,15 @@
 
 .pss-included {
   grid-template-columns: 40px minmax(0, 1fr) auto;
-  border: 1px solid #d9d9d9;
-  background: #f8f8f8;
+  margin-top: 3px;
+  border: 1px solid var(--pss-savings-border);
+  background: var(--pss-savings-soft);
+  color: var(--pss-savings-ink);
 }
 
 .pss-gift-label {
-  padding: 3px 7px;
-  border-radius: 30px;
-  background: #181818;
-  color: #fff;
-  font-size: .67rem;
+  color: var(--pss-savings-ink);
+  font-size: .79rem;
   font-weight: 700;
 }
 
@@ -386,6 +438,11 @@
   font-weight: 650;
   text-align: right;
   white-space: nowrap;
+}
+
+.pss-totals .pss-savings-line {
+  color: var(--pss-savings-ink);
+  font-weight: 650;
 }
 
 .pss-totals small {
@@ -503,19 +560,6 @@
 }
 
 @media (max-width: 800px) {
-  .pss-benefits {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-  }
-
-  .pss-benefits li {
-    padding: 11px;
-  }
-
-  .pss-benefits span {
-    font-size: .76rem;
-  }
-
   .pss-layout {
     display: flex;
     flex-direction: column;
@@ -608,5 +652,24 @@
     line-height: 1.25;
     letter-spacing: normal;
     text-align: center;
+  }
+}
+
+@media (max-width: 620px) {
+  .pss-benefits {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pss-benefits li {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 9px;
+    border-radius: 10px;
+  }
+
+  .pss-benefits strong {
+    grid-row: 1 / 3;
+    grid-column: 2;
+    align-self: center;
+    text-align: right;
   }
 }

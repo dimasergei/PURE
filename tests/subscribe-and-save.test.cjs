@@ -56,8 +56,8 @@ test('preselects the exact linked strength and preserves the locally saved plan'
   try {
     assert.equal(view.get('h1').textContent, 'SUBSCRIBE & SAVE.');
     assert.ok(view.get('aside [data-pss-selection]'));
-    assert.equal(view.get('.pss-benefits').querySelectorAll('li').length, 4);
-    assert.equal(view.get('.pss-benefits a').getAttribute('href'), '/coas');
+    assert.equal(view.get('.pss-benefits').querySelectorAll('li').length, 3);
+    assert.equal(view.get('.pss-benefits a[href="/coas"]'), null);
     assert.equal(view.get('[data-pss-count]').textContent, '2 / 4');
     assert.equal(view.get('[data-pss-selection]').querySelectorAll('[data-pss-choose]').length, 2);
     assert.equal(view.card('alpha').querySelector('[data-pss-size][aria-pressed="true"]').dataset.pssSize, '10mg');
@@ -120,6 +120,7 @@ test('restores an older larger draft and consolidates repeated variants for the 
     assert.equal(view.get('[data-pss-subtotal]').textContent, '$93.00');
     assert.equal(view.get('[data-pss-monthly]').disabled, true);
     assert.equal(view.get('[data-pss-selection]').querySelectorAll('[data-pss-remove]').length, 8);
+    assert.deepEqual([...view.get('[data-pss-selection]').querySelectorAll('.pss-set')].map(set => set.querySelectorAll('.pss-selected').length), [4, 4]);
     const restored = openPlanner('', view.saved());
     try {
       assert.equal(restored.get('[data-pss-subtotal]').textContent, '$93.00');
@@ -150,6 +151,7 @@ test('only offers monthly checkout for eligible complete sets after a positive r
     assert.equal(view.get('aside [data-pss-monthly]').textContent,'Continue · $26.40/mo');
     assert.equal(view.get('[data-pss-monthly-total]').textContent, '$26.40 /mo');
     assert.equal(view.get('[data-pss-subtotal]').textContent, '$58.95');
+    assert.equal(view.get('[data-pss-subtotal] del').textContent, '$58.95');
     assert.equal(view.get('[data-pss-savings]').textContent, '−$17.60');
     assert.equal(view.get('[data-pss-gift-savings]').textContent, '−$14.95');
     assert.match(view.get('.pss-totals').textContent, /Express shipping U\.S\. & CanadaFree/);
@@ -158,9 +160,11 @@ test('only offers monthly checkout for eligible complete sets after a positive r
     assert.doesNotMatch(view.card('beta').textContent, /\$11\.00/);
     const row = view.get('[data-pss-remove="0"]').closest('li');
     assert.equal(row.querySelector('.pss-row-price').textContent, '$6.60');
-    assert.doesNotMatch(row.textContent, /\$11\.00/);
+    assert.equal(row.querySelector('del').textContent, '$11.00');
     assert.equal(view.get('[data-pss-selection]').querySelectorAll('.pss-included').length, 1);
     assert.equal(view.get('.pss-included img').getAttribute('src'), '/assets/fixture-gift.webp');
+    assert.equal(view.get('.pss-included strong.pss-gift-label').textContent, 'Bundled');
+    assert.equal(view.get('.pss-included del').textContent, '$14.95');
     view.get('[data-pss-remove="3"]').click();
     assert.equal(view.get('[data-pss-monthly]').disabled, true);
     assert.equal(view.get('[data-pss-monthly]').textContent, 'Choose 1 more');
