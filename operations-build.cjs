@@ -46,11 +46,11 @@ const routes={
  '/about':['About PURE','Learn about the connected PURE laboratory research workspace.'],
  '/contact':['Contact PURE','Submit a documented inquiry for support, product documentation or an existing order.'],
  '/partner-program':['Partner Program','Explore PURE’s referral program for laboratory research organizations, review commission and payout terms, and join through your account.'],
- '/track-order':['Track Your Order','Check your shipment email or sign in to view tracking for an account order.']
+ '/track-order':['Track Your Order','Use your PURE order number and checkout email to request a private order status update.']
 };
 fs.writeFileSync(path.join(out,'index.html'),page(shell,'/','PURE | Cutting Edge Purity','Research compounds, product documentation, and straightforward ordering for laboratories and research teams.'));
 for(const [url,[title,description]] of Object.entries(routes)){
- const links=url==='/track-order'?'<a href="/account/purchases">Sign in to view account orders</a><p>For help with a guest order, <a href="/contact">contact support</a> with your order number and checkout email.</p>':'<a href="/shop">Explore the catalog</a>';
+ const links=url==='/track-order'?'<a href="/account/purchases">Sign in to view account orders</a><p>Enable JavaScript to request order status by email. For help with a guest order, <a href="/contact">contact support</a> with your order number and checkout email.</p>':'<a href="/shop">Explore the catalog</a>';
  const body='<section class="ap-container ap-page-intro"><h1>'+esc(title)+'</h1><p>'+esc(description)+'</p>'+links+'</section>';
  fs.writeFileSync(path.join(out,url.slice(1)+'.html'),page(shell,url,title+' | PURE',description,body));
 }

@@ -27,10 +27,12 @@ for (const product of catalog) {
 }
 const retired=['offers.html','data/storefront-programs.json'];
 for(const file of retired)assert.equal(fs.existsSync(path.join(out,file)),false,'Retired artifact: '+file);
-for(const file of ['memberships.html','research-builder.html','membership-terms.html','membership-experience.js','membership-checkout.js','research-builder-client.js'])assert.ok(fs.existsSync(path.join(out,file)),'Restored program artifact: '+file);
+for(const file of ['memberships.html','subscribe-and-save.html','research-builder.html','membership-terms.html','membership-experience.js','membership-checkout.js','research-builder-client.js'])assert.ok(fs.existsSync(path.join(out,file)),'Restored program artifact: '+file);
 const config=JSON.parse(fs.readFileSync('vercel.json','utf8'));
 assert.ok(config.rewrites.some(r=>r.source==='/memberships'));assert.ok(!config.redirects.some(r=>r.source==='/memberships'));
-for(const route of ['/research-builder','/research-checkout'])assert.equal(config.redirects.find(r=>r.source===route)?.destination,'/memberships','Retired standalone enrollment: '+route);
+assert.equal(config.redirects.find(r=>r.source==='/research-builder')?.destination,'/subscribe-and-save');
+assert.equal(config.redirects.find(r=>r.source==='/research-checkout')?.destination,'/memberships');
+assert.ok(config.rewrites.some(r=>r.source==='/subscribe-and-save'));
 assert.ok(config.redirects.some(r=>r.source==='/offers'&&r.destination==='/shop'));
 const forbiddenCopy=/\bBOGO\b|buy\s+more.{0,15}get\s+more|shop\s+the\s+(?:BOGO\s+)?sale|Alta Gold|Alta Platinum|PURE GOLD|PURE PLATINUM/i;
 let pages=0;

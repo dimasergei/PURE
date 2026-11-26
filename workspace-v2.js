@@ -77,6 +77,37 @@
    <button class="ap-button" data-action="bulk-checkout" ${canCheckout?'':'disabled'}>Checkout · ${priceMarkup(tierNet)}</button>
    <p class="ap-fine nl-bulk-checkout-note">Save 50% at 10 units or 60% at 50 units per compound. Strengths of the same compound count together. Free two-day express on eligible bulk orders. The total includes your volume savings. Your regular cart stays saved.</p>`;
  }
+ function trackOrder(){
+  return `<div class="pure-simple-page">${heading('PURE','Track your order','Enter the order number and checkout email from your PURE confirmation.')}
+   <section class="ap-container ap-section ap-editorial">
+    <form method="post" class="ap-inquiry-form" id="ap-track-order-form" aria-label="Request an order update">
+     <div class="ap-form-grid">
+      <label>Order number<input name="order_number" type="text" required minlength="4" maxlength="40" pattern="[A-Za-z0-9\\-]{4,40}" autocapitalize="characters" spellcheck="false" autocomplete="off" placeholder="P00000000"></label>
+      <label>Checkout email<input name="email" type="email" required maxlength="254" autocomplete="email" placeholder="you@example.com"></label>
+     </div>
+     <button class="ap-button" type="submit">Email my order status</button>
+     <p class="ap-form-status" role="status" aria-live="polite" aria-atomic="true"></p>
+    </form>
+    <p>We send status and carrier tracking details to the checkout address.</p>
+    <p><a href="/account/purchases">Sign in to view account orders</a> or <a href="/contact">contact support</a>.</p>
+   </section></div>`;
+ }
+ async function requestTracking(form){
+  if(!form.reportValidity())return;
+  const values=new FormData(form),submit=$('button[type="submit"]',form),status=$('[role="status"]',form);
+  if(submit.disabled)return;
+  submit.disabled=true;
+  status.textContent='Requesting an order update…';
+  try{
+   const response=await fetch('/api/customer-config?track_order=request',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({order_number:values.get('order_number'),email:values.get('email')})});
+   const result=await response.json();
+   if(!response.ok)throw Error(result.error||'Tracking is temporarily unavailable. Please contact support.');
+   status.textContent=result.message;
+   form.reset();
+  }catch(error){status.textContent=error.message||'Tracking is temporarily unavailable. Please contact support.';}
+  finally{submit.disabled=false;}
+ }
  function render(path,root){
   if(!root)return;
   const pageFallback=(title,copy,href,label)=>()=>'<div class="pure-simple-page">'+heading('PURE',title,copy)+'<section class="ap-container ap-section"><a class="ap-button ap-button-secondary" href="'+href+'">'+label+' →</a></section></div>';
@@ -86,10 +117,7 @@
    '/coas':coaPage,
    '/contact':contactPage,'/partner-program':partnerPage,
    '/about':pageFallback('About PURE','Research compounds and product documentation for laboratory teams.','/shop','Explore the catalog'),
-   '/track-order':()=>`<div class="pure-simple-page">${heading('PURE','Track your order','Check your PURE shipment email for carrier and tracking details after dispatch.')}
-    <section class="ap-container ap-section"><a class="ap-button ap-button-secondary" href="/account/purchases">Sign in to view account orders →</a>
-    <h2>Guest orders</h2><p>Keep your PURE order email for the order number. If a payment is still due, open the link in the pending order email in the browser you used at checkout.</p>
-    <p>If you can’t find the email or need help with an order, <a href="/contact">contact support</a> with your order number and checkout email.</p></section></div>`
+   '/track-order':trackOrder
   };
   if(path==='/bulk-orders'&&!initialized){
    initialized=true;
@@ -139,7 +167,7 @@
   if(el.matches('[data-bulk-id]')){const qty=Number(el.value);if(!Number.isInteger(qty)||qty<0||qty>100){el.setCustomValidity('Enter a whole number from 0 to 100.');return;}el.setCustomValidity('');setBulkQuantity(el.dataset.bulkId,el.dataset.bulkSize,qty);}
  });
  document.addEventListener('change',event=>{const el=event.target;if(el.id==='ap-bulk-group'){bulkGroup=el.value;bulkResults();}});
- document.addEventListener('submit',async event=>{const form=event.target;if(!form.matches('.ap-inquiry-form'))return;event.preventDefault();if(!form.reportValidity())return;const data=new FormData(form),type=form.dataset.inquiryType,button=$('button[type="submit"]',form),out=$('.ap-form-status',form);if(type==='bulk'&&!bulk.length){out.textContent='Choose products and quantities first.';return;}button.disabled=true;out.textContent='Sending your request…';if(!form.dataset.requestId)form.dataset.requestId=crypto.randomUUID();try{const result=await A.inquiry({type,request_id:form.dataset.requestId,name:data.get('name'),email:data.get('email'),organization:data.get('organization'),country:data.get('country'),topic:data.get('topic'),message:data.get('message'),website:data.get('website'),consent:data.get('consent')==='on',items:type==='bulk'?simpleLines(bulk):[]});out.textContent='Request saved. Reference: '+result.reference+'. Team notification: '+(result.notification||'queued')+'. View account responses under My account → Requests. No order was placed.';form.reset();delete form.dataset.requestId;}catch(e){out.textContent=e.message;}finally{button.disabled=false;}});
+ document.addEventListener('submit',async event=>{const form=event.target;if(form.id==='ap-track-order-form'){event.preventDefault();await requestTracking(form);return;}if(!form.matches('.ap-inquiry-form'))return;event.preventDefault();if(!form.reportValidity())return;const data=new FormData(form),type=form.dataset.inquiryType,button=$('button[type="submit"]',form),out=$('.ap-form-status',form);if(type==='bulk'&&!bulk.length){out.textContent='Choose products and quantities first.';return;}button.disabled=true;out.textContent='Sending your request…';if(!form.dataset.requestId)form.dataset.requestId=crypto.randomUUID();try{const result=await A.inquiry({type,request_id:form.dataset.requestId,name:data.get('name'),email:data.get('email'),organization:data.get('organization'),country:data.get('country'),topic:data.get('topic'),message:data.get('message'),website:data.get('website'),consent:data.get('consent')==='on',items:type==='bulk'?simpleLines(bulk):[]});out.textContent='Request saved. Reference: '+result.reference+'. Team notification: '+(result.notification||'queued')+'. View account responses under My account → Requests. No order was placed.';form.reset();delete form.dataset.requestId;}catch(e){out.textContent=e.message;}finally{button.disabled=false;}});
  window.AltaWorkspace={render,renderAccountPanel,authClient,bulkCatalog};
  if($('#ap-main')&&!['/','/index','/shop'].includes(A.route())&&!A.route().startsWith('/product/'))render(A.route(),$('#ap-main'));
 })();

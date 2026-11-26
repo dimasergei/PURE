@@ -43,3 +43,91 @@
  .ap-header-compact .ap-nav{justify-content:flex-start}
  .ap-header-compact .ap-nav>*{flex:0 0 auto}
 }
+
+/* Full-screen menu uses the native modal focus and dismissal behavior. */
+.ap-mobile-menu {
+  box-sizing: border-box;
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: #fff;
+  color: #111;
+}
+.ap-mobile-menu[open] { display: flex; flex-direction: column; }
+body:has(.ap-mobile-menu[open]) { overflow: hidden; }
+.ap-mobile-menu-head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: max(15px,env(safe-area-inset-top)) 22px 15px;
+  background: #111;
+  color: #fff;
+}
+.ap-site .ap-mobile-menu-head a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: #fff;
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: -.035em;
+  text-decoration: none;
+}
+.ap-mobile-menu-head button {
+  width: 44px;
+  height: 44px;
+  border: 1px solid #fff;
+  border-radius: 50%;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  font-size: 25px;
+  line-height: 1;
+}
+.ap-mobile-menu-links {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 14px 22px max(22px,env(safe-area-inset-bottom));
+}
+.ap-site .ap-mobile-menu-links :is(a,summary) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 60px;
+  gap: 12px;
+  border-bottom: 1px solid #e5e5e5;
+  color: #111;
+  font-size: clamp(16px,5vw,21px);
+  font-weight: 780;
+  line-height: 1.25;
+  text-decoration: none;
+}
+.ap-mobile-menu-links summary { cursor: pointer; list-style: none; }
+.ap-mobile-menu-links summary::-webkit-details-marker { display: none; }
+.ap-mobile-menu-links :is(a,summary)::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  flex: none;
+  margin-right: 5px;
+  border-right: 1.5px solid currentColor;
+  border-top: 1.5px solid currentColor;
+  transform: rotate(45deg);
+}
+.ap-mobile-menu-links summary::after { transform: rotate(135deg); }
+.ap-mobile-menu-links details[open] summary::after { transform: rotate(-45deg); }
+.ap-mobile-menu-more { padding-left: 16px; }
+.ap-site .ap-mobile-menu-more a { min-height: 49px; font-size: 16px; font-weight: 650; }
+.ap-mobile-menu-more .pure-currency-control { margin-block: 12px; }
+.ap-site .ap-mobile-menu-links .ap-mobile-menu-account { margin-top: 12px; }
+.ap-mobile-menu :is(a,button,summary):focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }

@@ -79,6 +79,14 @@
       "destination": "/memberships.html"
     },
     {
+      "source": "/spin-and-save",
+      "destination": "/spin-and-save.html"
+    },
+    {
+      "source": "/subscribe-and-save",
+      "destination": "/subscribe-and-save.html"
+    },
+    {
       "source": "/research-builder",
       "destination": "/research-builder.html"
     },
@@ -113,7 +121,7 @@
     },
     {
       "source": "/research-subscriptions",
-      "destination": "/memberships",
+      "destination": "/subscribe-and-save",
       "permanent": false
     },
     {
@@ -128,12 +136,12 @@
     },
     {
       "source": "/research-builder.html",
-      "destination": "/memberships",
+      "destination": "/subscribe-and-save",
       "permanent": false
     },
     {
       "source": "/research-builder",
-      "destination": "/memberships",
+      "destination": "/subscribe-and-save",
       "permanent": false
     },
     {

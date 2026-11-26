@@ -48,48 +48,17 @@ function account({plan=null,hash=''}={}){
  w.eval(read('conversion-ui.js'));
  return{dom,w,root,calls,mounts,session};
 }
-for(const [plan,percent,shipping] of [['vip','20%','standard'],['elite','40%','express']]){
- test('paid '+plan+' tier displays Member Stack as an expandable Membership benefit and not an account section',async()=>{
-  const env=account({plan});
+for(const plan of [null,'vip','elite']){
+ test('membership retains account benefits without a Member Stack entry for '+(plan||'free'),async()=>{
+  const env=account({plan,hash:'#member-stack'});
   try{
    await env.w.ConversionUI.mountMembership(env.root,env.session);
-   const feature=env.root.querySelector('details#member-stack[data-cv-member-stack-details]');
-   assert.ok(feature,'member feature appears inside Membership');
-   assert.match(feature.querySelector('summary').textContent,new RegExp(percent));
-   assert.match(feature.querySelector('summary').textContent,new RegExp(shipping));
-   assert.ok(env.root.querySelector('.cv-member-status'),'original Membership panel remains');
-   assert.equal(env.root.querySelector('a[href="/account/stack"]'),null);
-   assert.equal(env.mounts.length,0,'builder is lazy-loaded instead of a separate page');
-   const button=env.root.querySelector('button[data-cv-open-member-stack]');
-   assert.ok(button);
-   button.click();
-   assert.equal(feature.open,true);
-   assert.equal(env.mounts.length,1);
-   assert.equal(env.mounts[0].element,feature.querySelector('[data-cv-member-stack-root]'));
-   assert.equal(env.mounts[0].options.auth,env.session);
-   assert.match(feature.textContent,/Member Stack builder is within Membership/);
-   button.click();
-   feature.dispatchEvent(new env.w.Event('toggle'));
-   assert.equal(env.mounts.length,1,'opening again does not mount a duplicate builder');
+   assert.ok(env.root.querySelector('.cv-member-status'));
+   assert.ok(env.root.querySelector('[data-cv-memberships]'));
+   assert.doesNotMatch(env.root.textContent,/Member Stack/);
+   assert.equal(env.root.querySelector('#member-stack'),null);
+   assert.equal(env.mounts.length,0);
    assert.deepEqual(env.calls,['/api/customer-config?checkout=account']);
   }finally{env.dom.window.close();}
  });
 }
-test('unpaid members have only the membership comparison and no member stack builder',async()=>{
- const env=account();
- try{
-  await env.w.ConversionUI.mountMembership(env.root,env.session);
-  assert.equal(env.root.querySelector('[data-cv-member-stack-details]'),null);
-  assert.equal(env.root.querySelector('[data-cv-open-member-stack]'),null);
-  assert.equal(env.mounts.length,0);
-  assert.ok(env.root.querySelector('[data-cv-memberships]'));
- }finally{env.dom.window.close();}
-});
-test('deep link to the Membership section expands the integrated feature rather than navigating to a separate tab',async()=>{
- const env=account({plan:'vip',hash:'#member-stack'});
- try{
-  await env.w.ConversionUI.mountMembership(env.root,env.session);
-  assert.equal(env.root.querySelector('#member-stack').open,true);
-  assert.equal(env.mounts.length,1);
- }finally{env.dom.window.close();}
-});

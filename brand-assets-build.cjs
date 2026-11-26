@@ -73,6 +73,7 @@ for(const file of fs.readdirSync(out,{recursive:true}).filter(f=>f.endsWith('.ht
   html=html.replace(/src="\/workspace-v2\.js(?:\?[^"]*)?"/g,'src="/workspace-v2.js?v=20261126-guest-order-help"');
   html=html.replace(/src="\/(cart-reference|storefront-v2)\.js(?:\?[^"]*)?"/g,'src="/$1.js?v=20261126-quick-cart"');
   html=html.replace(/href="\/(cart-reference|reference-ui)\.css(?:\?[^"]*)?"/g,'href="/$1.css?v=20261126-quick-cart"');
+  html=html.replace(/\b(src|href)="\/(storefront-navigation\.(?:js|css)|membership-experience\.(?:js|css)|conversion-ui\.js|workspace-v2\.js)(?:\?[^"]*)?"/g,'$1="/$2?v=20261126-retention"');
   fs.writeFileSync(target,html);
   count++;
 }

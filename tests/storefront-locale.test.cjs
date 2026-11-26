@@ -55,7 +55,7 @@ function assertDocumentIntact(env){
  assert.ok(env.w.document.querySelector('h1'),'page content must survive the html display-currency attribute');
 }
 
-test('generated storefront and account shells expose one accessible Automatic/manual selector in More',()=>{
+test('generated storefront and account shells expose accessible Automatic/manual selectors in desktop and mobile More',()=>{
  for(const name of ['index.html','account.html']){
   const dom=new JSDOM(shells.get(name));
   try{
@@ -65,7 +65,11 @@ test('generated storefront and account shells expose one accessible Automatic/ma
    assert.deepEqual([...select.options].map(option=>option.value),['auto',...supported]);
    const status=d.getElementById(select.getAttribute('aria-describedby'));
    assert.equal(status.getAttribute('role'),'status');assert.equal(status.getAttribute('aria-live'),'polite');
-   assert.equal(d.querySelectorAll('[data-currency-status]').length,1,'one live status avoids duplicate announcements');
+   const mobile=d.getElementById('mobile-currency-select');
+   assert.ok(mobile.closest('dialog:not([open]) details'));
+   assert.deepEqual([...mobile.options].map(option=>option.value),['auto',...supported]);
+   assert.equal(d.querySelectorAll('#ap-more-menu [data-currency-status]').length,1);
+   assert.equal(d.querySelectorAll('#ap-mobile-menu [data-currency-status]').length,1);
    assert.ok(d.querySelector('link[href="/pure-currency.css"]'));assert.equal(d.getElementById('currency-status').dataset.displayCurrency,'note');
    assert.doesNotMatch(select.textContent,/[\u{1F1E6}-\u{1F1FF}]/u,'currencies use readable names, not flag-only labels');
   }finally{dom.window.close();}

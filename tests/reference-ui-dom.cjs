@@ -136,7 +136,7 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
   assert.equal(d.querySelector('[data-pure-campaign-countdown]').dataset.campaignProduct,'retatrutide:10mg');
   const paths=[...d.querySelectorAll('.nl-product-saving-card')];
   assert.equal(paths.length,2);
-  assert.equal(paths[0].getAttribute('href'),'/memberships');
+  assert.match(paths[0].getAttribute('href'),/^\/subscribe-and-save\?product=/);
   assert.match(paths[0].textContent,/SUBSCRIBE & SAVE/);
   assert.match(paths[1].textContent,/Save up to 60%/);
   assert.match(paths[1].getAttribute('href'),/^\/bulk-orders\?product=/);
@@ -178,11 +178,11 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
   const vercel=require('../vercel.json');
   assert.equal(vercel.rewrites.find(rule=>rule.source==='/track-order')?.destination,'/track-order.html');
   assert.equal(vercel.redirects.some(rule=>rule.source==='/track-order'),false);
-  assert.match(main.textContent,/shipment email/);
-  assert.match(main.textContent,/browser you used at checkout/);
-  assert.match(main.textContent,/order number and checkout email/);
+  const form=main.querySelector('#ap-track-order-form');
+  assert.ok(form.querySelector('input[name="order_number"][required]'));
+  assert.ok(form.querySelector('input[name="email"][type="email"][required]'));
+  assert.match(main.textContent,/send status and carrier tracking details to the checkout address/i);
   assert.equal(main.querySelector('a[href="/contact"]').textContent,'contact support');
-  assert.equal(main.querySelector('form'),null);
   dom.window.close();
   const fallback=new JSDOM(read('public-build/track-order.html'));
   assert.ok(fallback.window.document.querySelector('#ap-main a[href="/contact"]'));

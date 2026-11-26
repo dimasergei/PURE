@@ -5,7 +5,7 @@
  function close(m){clearTimeout(m.timer);m.panel.hidden=true;m.trigger.setAttribute('aria-expanded','false');m.root.classList.remove('ap-menu-open');}
  function open(m){for(const other of menus)if(other!==m)close(other);clearTimeout(m.timer);m.panel.hidden=false;m.trigger.setAttribute('aria-expanded','true');m.root.classList.add('ap-menu-open');}
  for(const m of menus){
-  m.root.addEventListener('pointerenter',e=>{if(e.pointerType!=='touch'&&window.matchMedia('(min-width: 1051px) and (hover: hover)').matches)open(m);});
+  m.root.addEventListener('pointerenter',e=>{if(e.pointerType!=='touch'&&window.matchMedia('(min-width: 1191px) and (hover: hover)').matches)open(m);});
   m.root.addEventListener('pointerleave',()=>{m.timer=setTimeout(()=>{if(!m.root.contains(document.activeElement))close(m);},150);});
   m.root.addEventListener('focusin',()=>{if(!m.suppressFocus)open(m);});
   m.root.addEventListener('focusout',e=>{if(!m.root.contains(e.relatedTarget))close(m);});
@@ -24,12 +24,19 @@
    if(focused){focused.suppressFocus=true;focused.trigger.focus();focused.suppressFocus=false;}
    return;
   }
-  const nav=document.querySelector('#ap-nav.ap-open');
-  if(nav){
-   nav.classList.remove('ap-open');
-   const toggle=document.querySelector('[data-action="menu"][aria-controls="ap-nav"]');
-   if(toggle){toggle.setAttribute('aria-expanded','false');toggle.focus();}
-   e.preventDefault();
-  }
  });
+ const mobileMenu=document.getElementById('ap-mobile-menu');
+ const mobileToggle=document.querySelector('[aria-controls="ap-mobile-menu"]');
+ if(mobileMenu&&mobileToggle){
+  mobileToggle.addEventListener('click',()=>{
+   if(mobileMenu.open)return;
+   mobileMenu.showModal();
+   mobileToggle.setAttribute('aria-expanded','true');
+  });
+  mobileMenu.querySelector('[data-mobile-menu-close]').addEventListener('click',()=>mobileMenu.close());
+  mobileMenu.addEventListener('close',()=>mobileToggle.setAttribute('aria-expanded','false'));
+  window.matchMedia('(min-width: 1191px)').addEventListener?.('change',event=>{
+   if(event.matches&&mobileMenu.open)mobileMenu.close();
+  });
+ }
 })();

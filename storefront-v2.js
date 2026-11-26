@@ -202,7 +202,6 @@
   if(action==='close-dialog'){closeDialog(button);return;}
   if(action==='search'){showDialog('#ap-search-dialog');searchResults();$('#ap-global-search').focus();return;}
   if(action==='cart'){openCart();return;}
-  if(action==='menu'){const nav=$('#ap-nav');const open=nav.classList.toggle('ap-open');button.setAttribute('aria-expanded',String(open));return;}
   if(action==='age-confirm'){if(welcomeKey){write('ap-age-verified',welcomeKey);age.close();}return;}
   if(action==='age-exit'){if(welcomeKey)updateAgeText('#ap-age-message','welcomeBlocked','You must be {age}+ and meet any higher local age requirement to enter.');return;}
   if(action==='catalog-options'){openCatalogOptions(product(id));return;}
@@ -233,7 +232,7 @@
   if(el.id==='ap-saved-filter'){state.savedOnly=el.checked;state.limit=12;renderCatalogResults();}
  });
  document.addEventListener('input',event=>{const el=event.target;if(el.id==='ap-global-search')searchResults(el.value);if(el.id==='ap-catalog-query'){state.query=el.value;state.limit=12;renderCatalogResults();}if(el.id==='ap-price-filter'){state.maxPrice=Number(el.value);$('#ap-price-label').innerHTML=priceMarkup(state.maxPrice);renderCatalogResults();}});
- document.addEventListener('keydown',event=>{if(event.key==='/'&&!event.ctrlKey&&!event.metaKey&&!event.altKey&&!event.target.matches('input,textarea,select,[contenteditable=true]')){event.preventDefault();showDialog('#ap-search-dialog');searchResults();$('#ap-global-search').focus();}if(event.key==='Escape'&&!event.defaultPrevented){$('#ap-nav')?.classList.remove('ap-open');$('[data-action="menu"]')?.setAttribute('aria-expanded','false');}});
+ document.addEventListener('keydown',event=>{if(event.key==='/'&&!event.ctrlKey&&!event.metaKey&&!event.altKey&&!event.target.matches('input,textarea,select,[contenteditable=true]')){event.preventDefault();showDialog('#ap-search-dialog');searchResults();$('#ap-global-search').focus();}});
  document.addEventListener('submit',async event=>{const form=event.target;if(!form.matches('.ap-newsletter-form'))return;event.preventDefault();if(!form.reportValidity())return;const data=new FormData(form),button=$('button',form),status=$('.ap-form-status',form);button.disabled=true;status.textContent='Sending your request…';try{await inquiry({type:'updates',email:data.get('email'),name:'Catalog updates request',message:'Please send me PURE catalog and program updates.',consent:data.get('consent')==='on'});status.textContent='Your update request has been saved.';form.reset();}catch(e){status.textContent=e.message;}finally{button.disabled=false;}});
  $$('#ap-search-dialog,#ap-cart-dialog,#ap-compare-dialog').forEach(d=>d.addEventListener('click',e=>{if(e.target===d){const r=d.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)d.close();}}));
  if($('#year'))$('#year').textContent=String(new Date().getFullYear());

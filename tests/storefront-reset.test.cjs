@@ -220,7 +220,7 @@ test('product page shows only Subscribe & Save and bulk savings paths, with regu
   assert.equal(d.querySelectorAll('[data-bundle-quantity]').length,0);
   const offers=[...d.querySelectorAll('.nl-product-saving-card')];
   assert.equal(offers.length,2);
-  assert.equal(offers[0].getAttribute('href'),'/memberships');
+  assert.match(offers[0].getAttribute('href'),/^\/subscribe-and-save\?product=/);
   assert.match(offers[0].textContent,/SUBSCRIBE & SAVE/);
   assert.match(offers[1].getAttribute('href'),/^\/bulk-orders\?product=retatrutide/);
   assert.match(offers[1].textContent,/Save up to 60%/);

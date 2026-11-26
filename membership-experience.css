@@ -76,3 +76,8 @@
 @media(max-width:1000px){.mx-choose,.mx-tier-label,.mx-price>.mx-price-period{font-size:12px}}
 @media(max-width:700px){.mx-description,.mx-features li,.mx-faq details p,.mx-intro-copy p{font-size:14px}.mx-features li small,.mx-terms{font-size:13px}.mx-choose{font-size:12px;min-height:48px}.mx-current-note{font-size:14px}.mx-intro-detail{font-size:12px}.mx-billing button{font-size:14px}}
 @media(max-width:360px){.mx-intro h1,.mx-intro h2{font-size:38px}}
+.mx-feature-groups { margin-top: 22px; border-top: 1px solid #ddd; }
+.mx-feature-groups section { padding-top: 15px; }
+.mx-feature-groups h4 { margin: 0 0 9px; color: inherit; font-size: 12px; font-weight: 800; }
+.mx-feature-groups .mx-features { margin: 0; padding: 0; border: 0; gap: 8px; }
+.mx-card-black .mx-feature-groups { border-color: #3f3f3f; }

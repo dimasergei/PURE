@@ -58,7 +58,7 @@ test('Member Stack payment applies the selected tier at checkout without changin
 test('public standalone checkout and separate subscription links are removed',()=>{
  const vercel=JSON.parse(fs.readFileSync('vercel.json','utf8'));
  for(const pathname of ['/research-builder','/research-builder.html','/research-checkout','/research-checkout.html']){
-  assert.equal(vercel.redirects.find(row=>row.source===pathname)?.destination,'/memberships');
+  assert.equal(vercel.redirects.find(row=>row.source===pathname)?.destination,pathname.startsWith('/research-builder')?'/subscribe-and-save':'/memberships');
  }
  assert.equal(vercel.redirects.find(x=>x.source==='/account/subscriptions')?.destination,'/account/membership');
  for(const url of ['/account/stack','/my-account/stack'])assert.equal(vercel.redirects.find(x=>x.source===url)?.destination,'/account/membership');

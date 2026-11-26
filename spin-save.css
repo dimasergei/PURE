@@ -1,0 +1,105 @@
+.spin-save {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+  gap: clamp(24px, 6vw, 80px);
+  padding-block: 24px 64px;
+}
+.spin-save[hidden],
+.spin-save [hidden] {
+  display: none;
+}
+.spin-save-wheel {
+  position: relative;
+  width: min(100%, 340px);
+  margin: 14px auto 0;
+}
+.spin-save-pointer {
+  position: absolute;
+  z-index: 1;
+  top: -14px;
+  left: calc(50% - 10px);
+  width: 0;
+  height: 0;
+  border-inline: 10px solid transparent;
+  border-top: 23px solid #111;
+}
+.spin-save-disc {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  border: 4px solid #111;
+  border-radius: 50%;
+  background: #333;
+  transition: transform 950ms cubic-bezier(.18, .62, .22, 1);
+}
+.spin-save-disc strong {
+  display: grid;
+  place-items: center;
+  min-width: 75px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #fff;
+  font-size: 18px;
+  font-weight: 900;
+}
+.spin-save-details h2 {
+  margin: 0 0 10px;
+  font-weight: 900;
+}
+.spin-save-details p {
+  margin: 0 0 12px;
+}
+.spin-save-details a {
+  text-underline-offset: 3px;
+}
+.spin-save-odds {
+  margin-block: 14px;
+  padding-block: 12px;
+  border-block: 1px solid #d7d7d7;
+}
+.spin-save-odds summary {
+  cursor: pointer;
+  font-weight: 750;
+}
+.spin-save-odds p,
+.spin-save-odds ul {
+  margin-top: 10px;
+}
+.spin-save-form {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.spin-save-form label:not(.spin-save-confirm) {
+  display: grid;
+  gap: 8px;
+}
+.spin-save-form input[type="number"] {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid #888;
+  border-radius: 8px;
+  font: inherit;
+}
+.spin-save-confirm {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.spin-save-form button {
+  min-height: 44px;
+}
+@media (max-width: 700px) {
+  .spin-save {
+    grid-template-columns: 1fr;
+  }
+  .spin-save-wheel {
+    width: min(70vw, 260px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spin-save-disc {
+    transition: none;
+  }
+}
