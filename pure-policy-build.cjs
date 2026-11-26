@@ -25,7 +25,7 @@ const policyFiles = [
 
 const sharedScriptNames = new Set([
   'storefront-navigation.js', 'products.js', 'product-images.js', 'locale.js',
-  'storefront-v2.js', 'cart-nmi-express.js', 'cart-reference.js'
+  'storefront-v2.js', 'cart-nmi-express.js', 'mobile-funnel.js', 'cart-reference.js'
 ]);
 
 function textFragments(root) {

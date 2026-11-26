@@ -21,4 +21,13 @@ for (const url of publicPaths) {
   if (!html.includes('src="/marketing-analytics.js"')) html = html.replace('</head>', '<script defer src="/marketing-analytics.js"></script></head>');
   fs.writeFileSync(fullPath, html);
 }
+fs.copyFileSync('mobile-funnel.js', path.join(out, 'mobile-funnel.js'));
+for (const file of fs.readdirSync(out, { recursive: true }).filter(name => name.endsWith('.html'))) {
+  const filename = path.join(out, file);
+  const html = fs.readFileSync(filename, 'utf8');
+  const cartScript = /<script src="\/cart-reference\.js(?:\?[^"\s]*)?">/;
+  if (cartScript.test(html)) {
+    fs.writeFileSync(filename, html.replace(cartScript, '<script src="/mobile-funnel.js?v=1"></script>$&'));
+  }
+}
 console.log('Public-page analytics and research documentation guide built; private/payment pages excluded.');

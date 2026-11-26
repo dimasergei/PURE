@@ -87,10 +87,10 @@
   }
   function notice(message,error=false){const el=$('mk-alert');el.textContent=message||'';el.style.color='#111111';el.style.fontWeight=error?'800':'600';}
   function elem(tag,text,cls){const e=document.createElement(tag);if(text!==undefined)e.textContent=String(text);if(cls)e.className=cls;return e;}
-  async function endpoint(body){
+  async function endpoint(body,path='/api/customer-config?marketing=admin'){
     const opt={method:body?'POST':'GET',cache:'no-store',headers:body?{'Content-Type':'application/json'}:{}};
     if(body)opt.body=JSON.stringify(body);
-    const r=await window.PureAdminAuth.fetch('/api/customer-config?marketing=admin',opt);
+    const r=await window.PureAdminAuth.fetch(path,opt);
     const payload=await r.json().catch(()=>({error:'Unable to read server response.'}));
     if(!window.PureAdminAuth.authenticated){showLogin('Sign in to continue.');throw Error('Sign in to continue.');}
     if(!r.ok)throw Error(payload.error||'Marketing endpoint unavailable.');
@@ -414,9 +414,31 @@
     }catch(err){notice(err.message,true);renderInstagram();}
   }
 
+  async function loadMobileFunnel(){
+    const status=$('mk-mobile-status'), table=$('mk-mobile-results'), rows=$('mk-mobile-rows');
+    if(!status||!table||!rows)return;
+    const epoch=workspaceEpoch;
+    status.textContent='Loading mobile checkout figures…';table.hidden=true;rows.replaceChildren();
+    const ratio=(count,total)=>total>0?new Intl.NumberFormat('en',{style:'percent',maximumFractionDigits:1}).format(count/total):'—';
+    try{
+      const result=await endpoint(undefined,'/api/customer-config?mobile_funnel=report');
+      if(epoch!==workspaceEpoch)return;
+      for(const [browser,label] of [['iphone_safari','iPhone Safari'],['android_chrome','Android Chrome']]){
+        const count=result.rows.find(row=>row.browser===browser);
+        if(!count)continue;
+        const row=elem('tr'), name=elem('th',label);
+        name.scope='row';row.append(name);
+        for(const cell of [fmt(count.carts),fmt(count.checkouts),fmt(count.paid),ratio(count.checkouts,count.carts),ratio(count.paid,count.checkouts)])row.append(elem('td',cell));
+        rows.append(row);
+      }
+      table.hidden=false;status.textContent=result.rows.some(row=>Number(row.carts)||Number(row.checkouts))?'':'No mobile checkout data yet.';
+    }catch(err){if(epoch===workspaceEpoch)status.textContent=err.message;}
+  }
+
   function switchPanel(name){
     for(const b of document.querySelectorAll('.mk-subtab')){const active=b.dataset.panel===name;b.classList.toggle('is-active',active);b.setAttribute('aria-selected',String(active));}
     for(const panel of ['pipeline','conversations','instagram','insights','settings'])$('mk-panel-'+panel).hidden=panel!==name;
+    if(name==='insights')void loadMobileFunnel();
   }
 
   window.PureAdminAuth.bindForm({

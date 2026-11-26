@@ -82,3 +82,8 @@
 .mk-ig-settings-controls{margin-top:16px;padding-top:16px;border-top:1px solid var(--mk-border)}
 .mk-ig-settings-controls .mk-header-actions{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
 .mk-ig-settings-controls details{margin-top:12px}
+
+.mk-mobile-table-wrap{overflow-x:auto}
+.mk-mobile-table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.mk-mobile-table th,.mk-mobile-table td{border-bottom:1px solid var(--mk-border);padding:10px;text-align:right;white-space:nowrap}
+.mk-mobile-table th:first-child{text-align:left;padding-left:0}

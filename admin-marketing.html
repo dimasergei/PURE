@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/admin-dashboard.css?v=20261117c">
-  <link rel="stylesheet" href="/admin-marketing.css?v=20261117b">
+  <link rel="stylesheet" href="/admin-marketing.css?v=20261125-mobile">
 
 
   <link rel="stylesheet" href="/admin-ui-polish.css?v=20261117b">
@@ -121,6 +121,17 @@
 
       <section id="mk-panel-insights" class="mk-panel" hidden>
         <div class="mk-card"><h2>Outreach pipeline</h2><p class="mk-muted">Counts reflect manually recorded stages, not platform analytics or verified purchases.</p><div id="mk-stage-bars" class="mk-stage-bars"></div></div>
+        <div class="mk-card">
+          <h2>Mobile checkout</h2>
+          <p class="mk-muted">Last 30 UTC days. Cart and checkout counts are per tab per day. Paid orders use verified payment records. These ratios compare totals across the period.</p>
+          <p id="mk-mobile-status" class="mk-muted" role="status"></p>
+          <div class="mk-mobile-table-wrap" id="mk-mobile-results" hidden>
+            <table class="mk-mobile-table" aria-label="Mobile checkout counts and conversion ratios">
+              <thead><tr><th scope="col">Browser</th><th scope="col">Carts</th><th scope="col">Checkouts</th><th scope="col">Paid</th><th scope="col">Cart to checkout</th><th scope="col">Checkout to paid</th></tr></thead>
+              <tbody id="mk-mobile-rows"></tbody>
+            </table>
+          </div>
+        </div>
       </section>
 
       <section id="mk-panel-settings" class="mk-panel" hidden>
@@ -168,7 +179,7 @@
   </form>
 </dialog>
 <script src="/admin-auth.js?v=20261117-inventory1" defer></script>
-<script src="/admin-marketing.js?v=20261117c" defer></script>
+<script src="/admin-marketing.js?v=20261125-mobile" defer></script>
   <script src="/admin-experience.js?v=20261117b" defer></script>
 </body>
 </html>
