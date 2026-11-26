@@ -171,17 +171,19 @@
   </section>`;
  }
  function homeBulkProduct(p){
-  const size=homeBulkSizes.get(p.id)||p.variants[0].size;
+  const variants=p.variants.slice().sort((a,b)=>(parseFloat(a.size)-parseFloat(b.size))||a.size.localeCompare(b.size));
+  const variant=variants.find(v=>v.size===homeBulkSizes.get(p.id))||variants[0];
+  const {size,price}=variant;
   const quantity=homeBulkDraft.find(line=>line.id===p.id&&line.size===size)?.qty||0;
   return `<article data-home-bulk-product="${esc(p.id)}">
-    <div class="pure-home-express-image"><img src="${esc(image(p,size))}" alt="" loading="lazy" width="160" height="200"></div>
+    <div class="pure-home-express-image"><img src="${esc(image(p,size))}" alt="" loading="lazy" width="48" height="56"></div>
     <h4>${esc(p.name)}</h4>
-    <label><span class="ap-sr">Strength for ${esc(p.name)}</span><select data-home-bulk-size>${p.variants.map(v=>`<option value="${esc(v.size)}"${v.size===size?' selected':''}>${esc(v.size)}</option>`).join('')}</select></label>
+    <label class="pure-home-express-strength"><span class="ap-sr">Strength for ${esc(p.name)}</span><select data-home-bulk-size>${variants.map(v=>`<option value="${esc(v.size)}"${v.size===size?' selected':''}>${esc(v.size)}</option>`).join('')}</select></label>
     <div class="pure-home-express-quantity">
-      <button type="button" data-home-bulk-step="-1" aria-label="Decrease ${esc(p.name)} quantity" ${quantity===0?'disabled':''}>−</button>
-      <input type="number" inputmode="numeric" min="0" max="100" step="1" value="${quantity}" data-home-bulk-quantity aria-label="Quantity for ${esc(p.name)}">
-      <button type="button" data-home-bulk-step="${quantity===0?10:1}" aria-label="${quantity===0?'Add 10 units of':'Increase quantity of'} ${esc(p.name)}" ${quantity===100?'disabled':''}>${quantity===0?'+10':'+'}</button>
+      <input type="number" inputmode="numeric" min="0" max="100" step="1" value="${quantity}" data-home-bulk-quantity aria-label="Quantity for ${esc(p.name+' '+size)}">
+      <button type="button" data-home-bulk-step="10" aria-label="Add 10 units of ${esc(p.name+' '+size)}" ${quantity===100?'disabled':''}>+10</button>
     </div>
+    <div class="pure-home-express-price"><strong>${priceMarkup(price,{trimWhole:true})}</strong><small>Retail / unit</small></div>
   </article>`;
  }
  function homeBulkSummary(){
@@ -222,13 +224,8 @@
  }
  function updateHomeBulkQuantity(card,qty){
   const id=card.dataset.homeBulkProduct;
-  if(!setHomeBulkQuantity(id,card.querySelector('select').value,qty))return;
-  const [minus,plus]=card.querySelectorAll('[data-home-bulk-step]');
-  minus.disabled=qty===0;
-  plus.disabled=qty===100;
-  plus.dataset.homeBulkStep=qty===0?'10':'1';
-  plus.textContent=qty===0?'+10':'+';
-  plus.setAttribute('aria-label',(qty===0?'Add 10 units of ':'Increase quantity of ')+product(id).name);
+  if(!setHomeBulkQuantity(id,card.querySelector('[data-home-bulk-size]').value,qty))return;
+  card.querySelector('[data-home-bulk-step]').disabled=qty===100;
  }
  function mountHomeBulk(root){
   const builder=root.querySelector('[data-home-bulk]');
@@ -255,9 +252,10 @@
    if(!button)return;
    if(button.hasAttribute('data-home-bulk-step')){
     const card=button.closest('[data-home-bulk-product]');
-    const qty=Number(card.querySelector('input').value)||0;
-    const next=Math.max(0,Math.min(100,qty+Number(button.dataset.homeBulkStep)));
-    card.querySelector('input').value=String(next);
+    const id=card.dataset.homeBulkProduct,size=card.querySelector('[data-home-bulk-size]').value;
+    const qty=homeBulkDraft.find(line=>line.id===id&&line.size===size)?.qty||0;
+    const next=Math.min(100,qty+Number(button.dataset.homeBulkStep));
+    card.querySelector('[data-home-bulk-quantity]').value=String(next);
     updateHomeBulkQuantity(card,next);
     updateSummary();
    }
@@ -293,9 +291,15 @@
    ['What does shipping protection cover?', 'Optional protection covers qualifying loss or damage in transit. See the <a href="/shipping-protection">shipping protection terms</a> for eligibility and claim instructions.'],
    ['Where can I track my order?', 'Look for the tracking link in your shipment email after dispatch, or use <a href="/track-order">Track Order</a> with your order number and email.']
   ];
-  return `<section class="ap-container ap-section ap-faq-layout pure-faq-section pure-home-faq" id="faq">
-    <div class="pure-faq-intro"><div class="pure-faq-intro-copy"><h2>Frequently asked questions</h2><p>Find answers about pricing, ordering and delivery.</p>
-      </div><div class="pure-home-faq-links"><p>Order support</p><a href="/track-order">Track Order</a><a href="/shipping-policy">Shipping</a><a href="/contact">Contact Us</a></div>
+  return `<section aria-labelledby="pure-home-faq-title" class="ap-container ap-section ap-faq-layout pure-faq-section pure-home-faq" id="faq">
+    <div class="pure-faq-intro">
+      <div class="pure-faq-intro-copy"><h2 id="pure-home-faq-title">Frequently asked questions</h2><p>Find answers about pricing, ordering and delivery.</p></div>
+      <nav class="pure-home-faq-links" aria-labelledby="pure-home-faq-support-title">
+        <h3 id="pure-home-faq-support-title">Order support</h3>
+        <a href="/track-order">Track Order <span>Check your shipment status</span></a>
+        <a href="/shipping-policy">Shipping <span>See processing and delivery estimates</span></a>
+        <a href="/contact">Contact Us <span>Get help from the PURE team</span></a>
+      </nav>
     </div>
     <div class="ap-faq pure-faq-list">${questions.map(([question,answer])=>`<details><summary>${question}</summary><p>${answer}</p></details>`).join('')}</div>
   </section>`;
@@ -310,7 +314,8 @@
   return `<section class="ap-container pure-home-email" aria-labelledby="pure-home-email-title">
     <div class="pure-home-email-copy"><h2 id="pure-home-email-title">PURE updates</h2><p>Get product announcements and current offers by email.</p></div>
     <form class="ap-newsletter-form">
-      <div class="pure-home-email-fields"><label><span class="ap-sr">Email address</span><input type="email" name="email" autocomplete="email" maxlength="254" placeholder="Email address" required></label><button class="ap-button" type="submit">Sign up</button></div>
+      <label class="pure-home-email-label" for="pure-home-email-address">Email address</label>
+      <div class="pure-home-email-fields"><input id="pure-home-email-address" type="email" name="email" autocomplete="email" maxlength="254" placeholder="you@example.com" required><button class="ap-button ap-button-light" type="submit">Sign up</button></div>
       <label class="pure-home-email-consent"><input type="checkbox" name="consent" required> I agree to receive email updates from PURE.</label>
       <p class="ap-form-status" role="status" aria-live="polite"></p>
     </form>
