@@ -44,8 +44,9 @@
   const cart=window.AltaStore?.cart||[];
   if(!cart.length){root.replaceChildren(el('p','nlx-empty','Your cart is empty.'));return;}
   let data;
+  const locale=window.AltaLocale;
   const checkoutApi=body=>window.DirectCheckout.api(auth,body,guest?'guest':'customer');
-  try{data=await checkoutApi();}catch(err){root.replaceChildren(el('p','nlx-error',err.message));return;}
+  try{[data]=await Promise.all([checkoutApi(),locale?.countryReady]);}catch(err){root.replaceChildren(el('p','nlx-error',err.message));return;}
   const paymentKind=window.DirectCheckout.paymentKind;
   const guestMethodIds=new Set(data.guest_methods||[]);
   const paymentMethods=(data.methods||[]).filter(m=>paymentKind(m)&&m.active!==false&&(!guest||guestMethodIds.has(m.id)));
@@ -71,9 +72,7 @@
       savedAddon={plan:value.plan,period:value.period};
     else sessionStorage.removeItem('pure-checkout-membership-item-v1');
   }catch{sessionStorage.removeItem('pure-checkout-membership-item-v1');}
-  const cartCountry=sessionStorage.getItem('pure-cart-destination');
-  const priorCountry=supported.includes(cartCountry)?cartCountry:guest?localStorage.getItem('ap-shipping-country'):saved.country;
-  const country=supported.includes(priorCountry)?priorCountry:'US';
+  const country=[saved.country,locale?.country,localStorage.getItem('ap-shipping-country')].find(code=>supported.includes(code))||'US';
   const savedAddress=saved.country&&saved.country!==country?{}:saved;
   const state={country,email:user?.email||'',
     membershipAddon:savedAddon,membershipChoice:savedAddon||{plan:'vip',period:'monthly'},
@@ -520,7 +519,6 @@
       state.paymentKind=(guest?paymentKind(paymentMethods.find(method=>method.countries?.includes(state.country))):null)||'card';
       state.wallet=null;
      }
-     sessionStorage.removeItem('pure-cart-destination');
      localStorage.setItem('ap-shipping-country',state.country);
      const rates=data.shipping_zones?.[state.country]||data.shipping_zones?.OTHER||{};
      if(!Number.isSafeInteger(rates[state.shipping]))state.shipping='economy';

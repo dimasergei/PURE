@@ -407,7 +407,6 @@
       currencies=supported;
       if(preference==="auto")currency=suggestedCurrency;
       notify("currency");
-      if(currency!=="USD")await loadRates();
     }catch{updateControls();refreshPrices();}
   }
   const formatMoney=usdDollars=>{
@@ -440,5 +439,7 @@
     const saved=read("ap-currency","");preference=read("ap-currency-mode","")==="auto"?"auto":currencyPattern.test(saved)?"manual":"auto";currency=preference==="auto"?suggestedCurrency:saved;
     notify("currency");if(currency!=="USD")loadRates();
   });
-  window.AltaLocale.ready=Promise.all([loadCountry(),currency!=="USD"?loadRates():Promise.resolve(false)]);
+  const countryReady=loadCountry();
+  window.AltaLocale.countryReady=countryReady;
+  window.AltaLocale.ready=Promise.all([countryReady.then(()=>currency!=="USD"?loadRates():false),currency!=="USD"?loadRates():false]);
 })();

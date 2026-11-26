@@ -167,28 +167,37 @@ test('a temporarily unavailable quote keeps the saved coupon and allows retrying
  }finally{f.dom.window.close();}
 });
 
-test('cart destination changes update the economy estimate beside the payable total',async()=>{
+for(const example of [
+ {country:'US',currency:'USD',rate:1,zone:'Domestic',shipping:'$7.95',total:'$172.95',cents:17295},
+ {country:'CA',currency:'CAD',rate:1.4,zone:'Domestic',shipping:'CA$20.93',total:'CA$251.93',cents:17995},
+ {country:'GB',currency:'GBP',rate:.8,zone:'International',shipping:'£31.96',total:'£163.96',cents:20495}
+])test('cart uses the detected '+example.country+' location without a destination picker',async()=>{
  const f=fixture('cart');
  try{
-  f.w.localStorage.setItem('ap-currency-mode','manual');
-  f.w.localStorage.setItem('ap-currency','USD');
+  const fetch=f.w.fetch;
+  const supported=[...new Set(['USD',example.currency])];
+  const now=new Date(),expires=new Date(now.getTime()+3600000);
+  f.w.localStorage.setItem('ap-shipping-country','US');
+  f.w.fetch=(url,options)=>{
+   if(String(url).includes('display_locale=country'))return Promise.resolve({ok:true,json:async()=>({
+    version:'display-locale-v1',base:'USD',country:example.country,suggested_currency:example.currency,supported_currencies:supported
+   })});
+   if(String(url).includes('display_locale=rates'))return Promise.resolve({ok:true,json:async()=>({
+    version:'display-fx-v1',base:'USD',source:'European Central Bank',provider:'frankfurter-ecb-v2',status:'fresh',
+    rate_date:now.toISOString().slice(0,10),fetched_at:now.toISOString(),expires_at:expires.toISOString(),
+    supported_currencies:supported,rates:{USD:1,[example.currency]:example.rate}
+   })});
+   return fetch(url,options);
+  };
   f.w.eval(fs.readFileSync('locale.js','utf8'));
-  await f.w.AltaLocale.ready;
-  await f.w.AltaCartNmi.offer(f.root);
+  await Promise.all([f.w.AltaLocale.ready,f.w.AltaCartNmi.offer(f.root)]);
   const button=f.root.querySelector('.nlc-proceed');
-  assert.equal(button.querySelector('.pure-price-value').textContent,'$172.95');
-  assert.doesNotMatch(button.textContent,/<span/i);
-  const destination=f.root.querySelector('[data-nlc-country]');
-  assert.equal(destination.value,'US');
+  assert.equal(f.root.querySelector('select'),null);
+  assert.equal(f.requests[0].country,example.country);
   assert.equal(f.requests[0].delivery.shipping,'economy');
-  assert.match(f.root.querySelector('[data-nlc-cart-totals]').textContent,/Economy shipping estimate\$7\.95/);
-  destination.value='CA';destination.dispatchEvent(new f.w.Event('change'));
-  await tick();
-  assert.equal(f.requests.at(-1).country,'CA');
-  assert.equal(f.w.sessionStorage.getItem('pure-cart-destination'),'CA');
-  assert.equal(button.querySelector('[data-usd-cents]').dataset.usdCents,'17995');
-  assert.match(f.root.querySelector('[data-nlc-cart-totals]').textContent,/Economy shipping estimate\$14\.95/);
-  assert.match(f.root.querySelector('.nlc-proceed').textContent,/\$179\.95/);
+  assert.ok(f.root.querySelector('[data-nlc-cart-totals]').textContent.includes(example.zone+' shipping estimate'+example.shipping));
+  assert.equal(button.textContent,'Proceed to Checkout ('+example.total+')');
+  assert.equal(button.querySelector('[data-usd-cents]').dataset.usdCents,String(example.cents));
  }finally{f.dom.window.close();}
 });
 

@@ -13,7 +13,7 @@ const interac = { id: 'interac-test', kind: 'interac', provider_key: 'interac', 
 const item = { id: 'fixture', size: 'Single', key: 'fixture:Single', name: 'Catalog item', price: 40, qty: 1 };
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-async function checkout(t, matches, { signedIn = false, cartCountry } = {}) {
+async function checkout(t, matches, { signedIn = false, geoCountry } = {}) {
   const dom = new JSDOM('<main></main>', { url: 'https://getpurelabs.com/checkout', runScripts: 'outside-only' });
   const w = dom.window;
   const root = w.document.querySelector('main');
@@ -32,7 +32,7 @@ async function checkout(t, matches, { signedIn = false, cartCountry } = {}) {
   const user = signedIn ? { email: 'account@example.test', user_metadata: { alta_profile: { shipping: { country: 'CA', line1: '100 Canadian Street' } } } } : null;
   t.after(() => w.close());
   w.matchMedia = () => mediaQuery;
-  if (cartCountry) w.sessionStorage.setItem('pure-cart-destination', cartCountry);
+  if (geoCountry) w.AltaLocale = { country: geoCountry, countryReady: Promise.resolve() };
   w.AltaStore = { cart: [item], catalog: [], product: () => item };
   w.fetch = async (url, options) => {
     if (url.endsWith(signedIn ? 'checkout=customer' : 'checkout=public')) return {
@@ -150,12 +150,12 @@ test('phone payment updates the displayed amount from the signed-in CAD quote', 
   assert.equal(root.querySelector('[data-nlx-place]').textContent, 'PLACE ORDER');
 });
 
-test('an explicit cart destination carries into checkout without the previous country’s saved address', async t => {
-  const { w, form, requestBodies } = await checkout(t, true, { signedIn: true, cartCountry: 'US' });
-  assert.equal(form.elements.country.value, 'US');
-  assert.equal(form.elements.line1.value, '');
-  assert.equal(requestBodies[0].country, 'US');
-  form.elements.country.value = 'CA';
-  form.elements.country.dispatchEvent(new w.Event('change'));
-  assert.equal(w.sessionStorage.getItem('pure-cart-destination'), null);
+test('checkout defaults to the detected country and preserves an available saved address', async t => {
+  const guest = await checkout(t, true, { geoCountry: 'CA' });
+  assert.equal(guest.form.elements.country.value, 'CA');
+  assert.equal(guest.requestBodies[0].country, 'CA');
+  const signedIn = await checkout(t, true, { signedIn: true, geoCountry: 'US' });
+  assert.equal(signedIn.form.elements.country.value, 'CA');
+  assert.equal(signedIn.form.elements.line1.value, '100 Canadian Street');
+  assert.equal(signedIn.requestBodies[0].country, 'CA');
 });
