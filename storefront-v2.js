@@ -131,13 +131,7 @@
   return code&&saving?{code,saving}:null;
  }
  function homeHeroActions(){
-  const offer=homeOffer();
-  const voucher=offer?`<div class="pure-home-offer">
-    <span>Black Friday <strong>${esc(offer.saving)}</strong></span>
-    <button type="button" data-copy-offer="${esc(offer.code)}" aria-label="Copy code ${esc(offer.code)}"><span>${esc(offer.code)}</span></button>
-    <span class="ap-sr" role="status" data-offer-status></span>
-  </div>`:'';
-  return voucher+`<div class="pure-home-hero-actions"><div class="ap-actions"><a class="ap-button nl-primary" href="/shop">SHOP NOW</a></div><a class="pure-home-testing" href="/coas">View Testing <span aria-hidden="true">↗</span></a></div>`;
+  return '<div class="ap-actions"><a class="ap-button nl-primary" href="/shop">SHOP NOW</a></div>';
  }
  function homeOrderBenefits(){
   return `<section class="ap-container pure-order-benefits" aria-label="Ordering benefits">
@@ -153,7 +147,7 @@
  function homePackaging(){
   return `<section class="ap-container pure-home-packaging" aria-labelledby="pure-packaging-title">
     <img src="/assets/hero-lab-pure.webp" alt="PURE vial beside its black carton" width="1672" height="912" loading="lazy">
-    <div><h2 id="pure-packaging-title">Packaging &amp; delivery</h2><p>See shipping options for your destination and how to track your parcel after dispatch.</p><div class="pure-packaging-actions"><a class="ap-button" href="/shipping-policy.html">Shipping details</a><a class="ap-text-link" href="/track-order">Track an order <span aria-hidden="true">↗</span></a></div></div>
+    <div><h2 id="pure-packaging-title">Packaging &amp; delivery</h2><p>Choose your shipping option at checkout. Look for tracking details in your shipment email after dispatch.</p><a class="ap-button" href="/shop">Shop now</a></div>
   </section>`;
  }
  function homeEmailUpdates(){

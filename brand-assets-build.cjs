@@ -35,7 +35,7 @@ for(const file of fs.readdirSync(out,{recursive:true}).filter(f=>f.endsWith('.ht
     fs.writeFileSync(target,html);continue;
   }
   const themeLink=html.includes('href="/brand-theme.css"')?'':'<link rel="stylesheet" href="/brand-theme.css?v=20261123-hero-labels">';
-  const mobileLink=html.includes('href="/mobile-parity.css')?'':'<link rel="stylesheet" media="(max-width: 767px)" href="/mobile-parity.css?v=20261117-monochrome">';
+  const mobileLink=html.includes('href="/mobile-parity.css')?'':'<link rel="stylesheet" media="(max-width: 767px)" href="/mobile-parity.css?v=20261126-shop-mobile">';
   html=html.replace('</head>',`${themeLink}${mobileLink}${iconLinks}</head>`);
   const body=html.match(/<body\b([^>]*)>/i);
   if(body){
@@ -71,10 +71,8 @@ for(const file of fs.readdirSync(out,{recursive:true}).filter(f=>f.endsWith('.ht
   html=html.replace(/src="\/(checkout-reference|direct-checkout-client|native-pay|polygon-usdc-pay|guest-interac-pay)\.js(?:\?[^"]*)?"/g,'src="/$1.js?v=20261126-usdc-networks"');
   html=html.replace(/src="\/(locale|storefront-v2)\.js(?:\?[^"]*)?"/g,'src="/$1.js?v=20261125-welcome-age"');
   html=html.replace(/src="\/workspace-v2\.js(?:\?[^"]*)?"/g,'src="/workspace-v2.js?v=20261126-guest-order-help"');
-  html=html.replace(/src="\/(storefront-v2|reference-ui)\.js(?:\?[^"]*)?"/g,'src="/$1.js?v=20261126-mobile-storefront"');
-  html=html.replace(/href="\/reference-ui\.css(?:\?[^"]*)?"/g,'href="/reference-ui.css?v=20261126-mobile-storefront"');
-  html=html.replace(/\b(src|href)="\/(cart-reference\.(?:js|css))(?:\?[^"]*)?"/g,'$1="/$2?v=20261126-cart-rewards"');
   html=html.replace(/\b(src|href)="\/(storefront-navigation\.(?:js|css)|membership-experience\.(?:js|css)|conversion-ui\.js|workspace-v2\.js)(?:\?[^"]*)?"/g,'$1="/$2?v=20261126-mobile-storefront"');
+  html=html.replace(/\b(src|href)="\/((?:storefront-v2|reference-ui|cart-reference)\.(?:js|css)|(?:storefront-navigation|pure-bulk-layout)\.css)(?:\?[^"]*)?"/g,'$1="/$2?v=20261126-shop-mobile"');
   fs.writeFileSync(target,html);
   count++;
 }

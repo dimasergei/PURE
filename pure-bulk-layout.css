@@ -572,7 +572,8 @@ html:root body.ap-site .nl-bulk-menu-product-head:has(.nl-bulk-rate-badge) {
 @media (max-width: 1050px) {
   html:root body.ap-site .nl-bulk-layout > .nl-bulk-summary { display: none; }
   html:root body.ap-site .nl-bulk-sheet .nl-bulk-summary-scroll {
-    max-height: 40dvh;
+    max-height: none;
+    overflow: visible;
   }
   html:root body.ap-site .nl-bulk-sheet .nl-bulk-summary #ap-bulk-summary[data-empty="true"] {
     display: flex;
@@ -629,6 +630,13 @@ html:root body.ap-site .nl-bulk-menu-product-head:has(.nl-bulk-rate-badge) {
   html:root body.ap-site .nl-bulk-prices { align-items: baseline; justify-content: center; flex-wrap: wrap; }
   html:root body.ap-site .nl-bulk-product-foot .nl-bulk-quantity-controls { justify-content: center; }
   html:root body.ap-site .nl-bulk-product .nl-bulk-progress { text-align: center; }
+  html:root body.ap-site :is(.nl-bulk-product-foot, .nl-bulk-menu-line) .nl-bulk-quantity-controls :is(.nl-bulk-qty-step, .nl-bulk-menu-remove, input) {
+    flex-basis: 44px;
+    width: 44px;
+    height: 44px;
+  }
+  html:root body.ap-site .nl-bulk-plus-ten { min-height: 44px; }
+  .nl-bulk-close { width: 44px; height: 44px; }
 }
 
 html:root body.ap-site .nl-bulk-tier-key [data-tier-active="true"],

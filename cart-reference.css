@@ -83,6 +83,8 @@ html[data-display-currency]:not([data-display-currency="USD"]) .nlc-price strong
 .nlc-quantity-row .ap-quantity{margin:0!important}
 /* The two markers share the same merchandise scale as the fill. */
 .nlc-rewards {
+  --reward-earned: #19804b;
+  --reward-pending: #171717;
   position: relative;
   z-index: 2;
   padding: 12px 18px 4px;
@@ -111,7 +113,14 @@ html[data-display-currency]:not([data-display-currency="USD"]) .nlc-price strong
   transform: translateY(-50%);
   overflow: hidden;
   border-radius: 5px;
-  background: #e0e0e0;
+  background: var(--reward-pending);
+}
+.nlc-reward-meter::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--earned-width, 0%);
+  background: var(--reward-earned);
 }
 .nlc-reward-meter > span {
   position: relative;
@@ -119,9 +128,7 @@ html[data-display-currency]:not([data-display-currency="USD"]) .nlc-price strong
   height: 100%;
   overflow: hidden;
   border-radius: inherit;
-  background: #171717;
 }
-.nlc-reward-meter[data-complete="true"] > span { background: #19804b; }
 .nlc-reward-stop {
   position: absolute;
   top: 50%;
@@ -147,13 +154,16 @@ html[data-display-currency]:not([data-display-currency="USD"]) .nlc-price strong
   box-sizing: border-box;
   width: 24px;
   height: 24px;
-  border: 1px solid #777;
+  border: 1px solid var(--reward-pending);
   border-radius: 50%;
   box-shadow: 0 0 0 2px #fff;
-  background: #fff;
-  color: #222;
+  background: var(--reward-pending);
+  color: #fff;
 }
-.nlc-reward-trigger[data-reached="true"] > span { background: #161616; color: #fff; border-color: #161616; }
+.nlc-reward-trigger[data-reached="true"] > span {
+  background: var(--reward-earned);
+  border-color: var(--reward-earned);
+}
 .nlc-reward-trigger svg { width: 14px; height: 14px; }
 .nlc-reward-trigger:focus-visible { outline: none; }
 .nlc-reward-trigger:focus-visible > span { outline: 2px solid #111; outline-offset: 3px; }
@@ -394,6 +404,39 @@ html[data-display-currency]:not([data-display-currency="USD"]) .nlc-price strong
   .ap-cart-dialog .nlc-product-title strong,
   .ap-cart-dialog .nlc-product-title .nlc-size {
     font-size: 10px !important;
+  }
+  .ap-cart-dialog .nlc-product-title { overflow-wrap: anywhere; }
+  .ap-cart-dialog .nlc-product-title .nlc-size { white-space: normal; }
+  .ap-cart-dialog .nlc-scrollable-items { scrollbar-gutter: auto; }
+  .ap-cart-dialog .nlc-line .nlc-quantity-row .ap-quantity {
+    grid-template-columns: 44px 32px 44px !important;
+    width: 122px !important;
+    height: 46px !important;
+    border-radius: 24px !important;
+  }
+  .ap-cart-dialog .nlc-line .nlc-quantity-row .ap-quantity button {
+    width: 44px !important;
+    height: 44px !important;
+  }
+  .ap-cart-dialog .nlc-line .nlc-quantity-row .ap-quantity input {
+    width: 32px !important;
+    height: 44px !important;
+    line-height: 44px !important;
+    font-size: 16px !important;
+  }
+  .ap-cart-dialog .ap-dialog-head > button,
+  .ap-cart-dialog .nlc-price button,
+  .ap-cart-dialog .nlc-rec-controls button { min-width: 44px; min-height: 44px; }
+  html:root body.ap-site .ap-cart-dialog .nlc-rec button,
+  html:root body.ap-site .ap-cart-dialog .nlc-wallet-row .nlc-wallet-link { min-height: 44px; }
+  html:root body.ap-site .ap-cart-dialog .nlc-cart-checkout {
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+  html[data-display-currency]:not([data-display-currency="USD"]) .ap-cart-dialog .nlc-line {
+    grid-template-columns: 50px minmax(0, 1fr) !important;
+  }
+  html[data-display-currency]:not([data-display-currency="USD"]) .ap-cart-dialog .nlc-price strong {
+    white-space: normal;
   }
 }
 

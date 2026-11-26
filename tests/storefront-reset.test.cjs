@@ -43,7 +43,11 @@ test('homepage keeps the announcement, five-vial hero and product links with qui
   assert.equal(offer.querySelector('.pure-offer-action').textContent,'Shop now');
   assert.equal([...hero.querySelector('h1').childNodes].map(n=>n.nodeName==='BR'?'\n':n.textContent).join(''),'CUTTING EDGE\nPURITY');
   assert.equal(hero.querySelector('.nl-hero-description').textContent,'Research compounds, product documentation, and straightforward ordering for laboratories and research teams.');
-  assert.deepEqual([...hero.querySelectorAll('.ap-actions a')].map(a=>[a.textContent,a.getAttribute('href')]),[['SHOP NOW','/shop']]);
+  const heroCopy=hero.querySelector('.nl-hero-copy');
+  assert.deepEqual([...heroCopy.querySelectorAll('a,button')].map(a=>[a.textContent,a.getAttribute('href')]),[['SHOP NOW','/shop']]);
+  assert.doesNotMatch(heroCopy.textContent,/Black Friday|BLACKFRIDAY10|View Testing/i);
+  const packaging=d.querySelector('.pure-home-packaging');
+  assert.deepEqual([...packaging.querySelectorAll('a,button')].map(a=>[a.textContent,a.getAttribute('href')]),[['Shop now','/shop']]);
   const highlights=hero.querySelectorAll('.nl-trust > div > span');
   assert.deepEqual([...highlights].map(node=>node.textContent),['Free shipping over $250','99%+ Purity','Verified Lab Testing']);
   assert.equal(highlights[1].querySelector('a').getAttribute('href'),'/coas?product=5-amino-1mq&size=50mg');

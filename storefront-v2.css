@@ -12,74 +12,6 @@
 .ap-nmi-express-dialog{width:min(1100px,96vw);max-height:90dvh;overflow:auto}.ap-nmi-modal-body{padding:10px}.ap-cart-express{margin:14px 0;padding:16px 0;border-block:1px solid #e5e5e5}.ap-cart-express .ap-button{width:100%}
 
 /* Homepage offers share the storefront's regular checkout rules. */
-.pure-home-offer,
-.pure-home-hero-actions,
-.pure-packaging-actions {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.pure-home-offer {
-  width: fit-content;
-  max-width: 100%;
-  margin-bottom: 18px;
-  padding: 4px 4px 4px 14px;
-  border: 1px solid #ffffff61;
-  border-radius: 8px;
-  color: #fff;
-  font-size: 13px;
-}
-
-.pure-home-offer strong {
-  margin-left: 4px;
-  color: #fff;
-}
-
-.pure-home-offer button {
-  min-height: 40px;
-  min-width: 114px;
-  padding: 6px 10px;
-  border: 1px solid #ffffff26;
-  border-radius: 5px;
-  background: #2c2c2c;
-  color: #fff;
-  font: inherit;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.pure-home-offer button:hover,
-.pure-home-offer button.is-copied {
-  background: #454545;
-}
-
-.ap-site .pure-home-testing {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 50px;
-  padding: 10px 20px;
-  border: 1px solid #ffffff80;
-  border-radius: 999px;
-  color: #fff;
-  background: #111;
-  font-size: 14px;
-  font-weight: 700;
-  text-decoration: none;
-}
-
-.ap-site .pure-home-testing:hover {
-  background: #272727;
-}
-
-.pure-home-offer button:focus-visible,
-.ap-site .pure-home-testing:focus-visible {
-  outline: 2px solid #fff;
-  outline-offset: 3px;
-}
-
 .pure-order-benefits {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -106,7 +38,7 @@
   font-weight: 700;
 }
 
-.pure-order-benefits h2 {
+.ap-site .pure-order-benefits h2 {
   margin: 0;
   color: #111;
   font-size: clamp(16px, 1.5vw, 20px);
@@ -120,13 +52,6 @@
   color: #525252;
   font-size: 14px;
   line-height: 1.5;
-}
-
-.pure-packaging-actions .ap-text-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 44px;
 }
 
 .pure-home-email {
@@ -199,16 +124,6 @@
   margin-top: 10px;
 }
 
-@media (max-width: 900px) {
-  .pure-home-offer {
-    margin-inline: auto;
-  }
-
-  .pure-home-hero-actions {
-    justify-content: center;
-  }
-}
-
 @media (max-width: 700px) {
   .pure-order-benefits,
   .pure-home-email {
@@ -217,18 +132,19 @@
 
   .pure-order-benefits article {
     display: grid;
-    grid-template-columns: minmax(76px, .65fr) minmax(0, 1fr);
+    grid-template-columns: clamp(4.25rem, 18vw, 6rem) minmax(0, 1fr);
     gap: 12px;
     padding: 14px;
+  }
+
+  .pure-order-benefits article > div {
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   .pure-order-benefits article + article {
     border-inline-start: 0;
     border-top: 1px solid #dedede;
-  }
-
-  .pure-packaging-actions {
-    justify-content: center;
   }
 }
 
