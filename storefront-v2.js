@@ -146,7 +146,7 @@
  }
  function homePackaging(){
   return `<section class="ap-container pure-home-packaging" aria-labelledby="pure-packaging-title">
-    <img src="/assets/hero-lab-pure.webp" alt="PURE vial beside its black carton" width="1672" height="912" loading="lazy">
+    <img src="/assets/pure-packaging-studio.webp" alt="Black PURE carton and matching vial with white lettering on a white background" width="1344" height="816" loading="lazy">
     <div><h2 id="pure-packaging-title">Packaging &amp; delivery</h2><p>Choose your shipping option at checkout. Look for tracking details in your shipment email after dispatch.</p><a class="ap-button" href="/shop">Shop now</a></div>
   </section>`;
  }
