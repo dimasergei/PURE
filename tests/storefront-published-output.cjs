@@ -1,5 +1,6 @@
 "use strict";
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const {Script}=require('node:vm');
 const {JSDOM}=require('jsdom');
 const out='public-build';
 const catalog = JSON.parse(fs.readFileSync('lib/catalog.json', 'utf8'));
@@ -40,6 +41,12 @@ for(const file of fs.readdirSync(out,{recursive:true}).filter(f=>f.endsWith('.ht
  const html=fs.readFileSync(path.join(out,file),'utf8'),dom=new JSDOM(html),doc=dom.window.document;
  assert.equal(doc.querySelectorAll('link[href^="/pure-brand.css"]').length,1,'Shared typography: '+file);
  assert.equal(doc.querySelectorAll('link[rel="preload"][href="/assets/fonts/archivo-latin-variable.woff"]').length,1,'One local font preload: '+file);
+ if(file==='admin-orders.html'){
+  const ordersScript=[...doc.querySelectorAll('script:not([src])')].find(script=>script.textContent.includes('async function loadOrders()'));
+  assert.ok(ordersScript,'Orders script must be present in published HTML.');
+  assert.doesNotThrow(()=>new Script(ordersScript.textContent,{filename:file}),'Orders script must survive build-time HTML injection.');
+  assert.equal(doc.querySelectorAll('body > script[src^="/admin-gift-cards.js"]').length,1,'Gift card management must load outside the inline Orders script.');
+ }
  if(!path.basename(file).startsWith('admin-')){
   doc.querySelectorAll('script,style').forEach(n=>n.remove());
   assert.doesNotMatch(doc.body.textContent,forbiddenCopy,'Retired visible copy: '+file);
