@@ -67,6 +67,7 @@ for(const file of fs.readdirSync(out,{recursive:true}).filter(f=>f.endsWith('.ht
   html=html.replace(/\b(src|href)="\/(cart-reference\.(?:js|css)|checkout-reference\.(?:js|css)|account\.js|account-experience\.css)(?:\?[^"]*)?"/g,'$1="/$2?v=20261125-mobile-checkout"');
   html=html.replace(/\b(src|href)="\/(storefront-v2\.js|reference-ui\.css)(?:\?[^"]*)?"/g,'$1="/$2?v=20261126-catalog-tools"');
   html=html.replace(/\b(src|href)="\/(locale\.js|cart-reference\.(?:js|css)|checkout-reference\.js)(?:\?[^"]*)?"/g,'$1="/$2?v=20261125-auto-location"');
+  html=html.replace(/href="\/checkout-reference\.css(?:\?[^"]*)?"/g,'href="/checkout-reference.css?v=20261125-shipping-rows"');
   fs.writeFileSync(target,html);
   count++;
 }

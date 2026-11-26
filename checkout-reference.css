@@ -25,7 +25,7 @@ body.ap-checkout-page #account-root{box-shadow:none!important;border:0!important
 .nlx-checkout-root button:disabled{cursor:not-allowed}
 .nlx-checkout-root label:not(.nlx-small-check):not(.nlx-delivery-card):not(.nlx-extra-box):not(.nlx-mini-check):not(.nlx-payment-option):not(.nlx-member-types label):not(.nlx-terms label){display:block;font-size:11px;font-weight:700;color:#111}
 .nlx-step-shipping>label,.nlx-step-shipping>.nlx-two,.nlx-billing-other>label,.nlx-billing-other>.nlx-two{margin:10px 0}
-.nlx-step-shipping input:not([type=checkbox]),.nlx-step-shipping select,.nlx-step-shipping textarea,
+.nlx-step-shipping input:not([type=checkbox]):not([type=radio]),.nlx-step-shipping select,.nlx-step-shipping textarea,
 .nlx-checkout-root .nlx-billing-other input,.nlx-checkout-root .nlx-billing-other select{height:53px;background:#fff;border:1px solid #d4d4d4;border-radius:13px;padding:11px 16px;margin-top:6px;width:100%;outline:none;font-size:14px;color:#111;font-weight:500;box-shadow:none}
 .nlx-step-shipping select{appearance:auto}
 .nlx-step-shipping input:focus,.nlx-step-shipping select:focus,.nlx-checkout-root textarea:focus{border-color:#111;box-shadow:0 0 0 2px #0000001b}
@@ -396,6 +396,11 @@ body.ap-checkout-page #account-root{box-shadow:none!important;border:0!important
  .nlx-mobile-total span{font-size:11px;color:var(--nx-muted)}
  .nlx-mobile-total strong{font-size:18px;font-variant-numeric:tabular-nums}
  [data-nlx-inline-delivery]{margin-top:22px;border-top:1px solid var(--nx-border)}
+ [data-nlx-inline-delivery] .nlx-delivery-card{
+  display:grid;grid-template-columns:19px minmax(0,1fr) max-content;min-width:0;gap:10px;padding:12px;
+ }
+ [data-nlx-inline-delivery] .nlx-delivery-card input[type=radio]{margin:0}
+ [data-nlx-inline-delivery] .nlx-delivery-desc{overflow-wrap:anywhere}
  .nlx-step-shipping input:not([type=checkbox]):not([type=radio]),.nlx-step-shipping select,
  .nlx-checkout-root textarea,.nlx-checkout-root .nlx-coupon input{font-size:16px}
 }
