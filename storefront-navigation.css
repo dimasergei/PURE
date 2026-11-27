@@ -239,6 +239,9 @@ body:has(.ap-mobile-menu[open]) { overflow: hidden; }
 .ap-site .ap-footer .ap-footer-bottom { justify-content: center; justify-items: center; }
 
 .ap-footer .pure-footer-links { padding: 0; border: 0; }
+.pure-business-contact { font-style: normal; }
+.ap-footer .pure-business-contact { margin-bottom: 12px; color: #a3a3a3; font-size: 12px; }
+.ap-site main .pure-business-contact { color: #000; grid-column: 1 / -1; }
 .ap-footer .pure-footer-links summary { list-style: none; font-size: 1rem; font-weight: 750; cursor: pointer; }
 .ap-footer .pure-footer-links summary::-webkit-details-marker { display: none; }
 .ap-footer .pure-footer-links > div { display: grid; align-content: start; gap: 5px; margin-top: 12px; }

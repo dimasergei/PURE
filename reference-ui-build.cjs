@@ -1,9 +1,14 @@
 'use strict';
 const fs=require('node:fs'),path=require('node:path');
 const views=require('./reference-ui-functions.cjs'),out='public-build';
+const businessContact = require('./lib/business-contact.cjs');
 for(const [file,anchor,functions] of [['storefront-v2.js',' window.AltaStore=',views.store],['workspace-v2.js',' window.AltaWorkspace=',views.workspace]]){
  const p=path.join(out,file);let s=fs.readFileSync(p,'utf8');if(!s.includes(anchor))throw Error('Missing view integration point: '+file);
- s=s.replace(anchor,Object.entries(functions).map(([name,fn])=>'\n '+name+' = '+fn.toString()+';\n').join('')+anchor);
+ const viewAssignments = Object.entries(functions).map(([name, fn]) => {
+  const view = name === 'contactPage' ? `(${fn}).bind(null, ${JSON.stringify(businessContact)})` : fn.toString();
+  return `\n ${name} = ${view};\n`;
+ });
+ s=s.replace(anchor,() => viewAssignments.join('')+anchor);
  s=s.replace('Documentation,<br>without the search party.','Certificates of Analysis').replace('COA library','COAS').replace('One place for the value<br>you’ve earned.','Rewards & Store Credit').replace('From your account<br>to your shipment.','Track Your Order').replace('Request a bulk quote ↗','View bulk orders ↗');
  s=s.replace('limit:12,','limit:20,').replace(":1;if(!Number.isInteger(qty)",":Number(button.dataset.quantity||1);if(!Number.isInteger(qty)");
  fs.writeFileSync(p,s);

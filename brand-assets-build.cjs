@@ -1,6 +1,7 @@
 'use strict';
 const fs=require('node:fs');
 const path=require('node:path');
+const businessContact = require('./lib/business-contact.cjs');
 const out=path.join(process.cwd(),'public-build');
 const theme='brand-theme.css';
 if(!fs.existsSync(out))throw new Error('public-build output is missing.');
@@ -43,7 +44,7 @@ const organization='<script type="application/ld+json">{"@context":"https://sche
 let count=0;
 for(const file of fs.readdirSync(out,{recursive:true}).filter(f=>f.endsWith('.html'))){
   const target=path.join(out,file);
-  let html=fs.readFileSync(target,'utf8');
+  let html=fs.readFileSync(target,'utf8').replaceAll('<!-- business-contact -->',businessContact);
   // Admin and public shells share the exact same reference-derived wordmark.
   html=html.replace(/<link\b[^>]*href=["']\/pure-brand\.css[^"']*["'][^>]*>/gi,'');
   html=html.replace(/<link\b[^>]*href=["']https:\/\/fonts\.(?:googleapis|gstatic)\.com[^"']*["'][^>]*>/gi,'');
@@ -118,13 +119,13 @@ for(const file of fs.readdirSync(out,{recursive:true}).filter(f=>f.endsWith('.ht
   html=html.replace(/\b(src|href)="\/((?:storefront-v2|conversion-ui|checkout-reference|readiness-ui)\.(?:js|css)|direct-checkout-client\.js)(?:\?[^"\n]*)?"/g,'$1="/$2?v=20261126-checkout-carousel"');
   html=html.replace(/\b(src|href)="\/((?:storefront-v2|workspace-v2)\.js|(?:storefront-v2|reference-ui|pure-bulk-layout)\.css)(?:\?[^"\n]*)?"/g,'$1="/$2?v=20261127-storefront-polish"');
   html=html.replace(/\b(src|href)="\/(storefront-v2\.(?:js|css))(?:\?[^"\n]*)?"/g,'$1="/$2?v=20261127-sticky-shop-motion"');
-  html=html.replace(/src="\/workspace-v2\.js(?:\?[^"\n]*)?"/g,'src="/workspace-v2.js?v=20261127-bulk-price-preview"');
+  html=html.replace(/src="\/workspace-v2\.js(?:\?[^"\n]*)?"/g,'src="/workspace-v2.js?v=20261127-business-contact"');
   html=html.replace(/\b(src|href)="\/(membership-checkout\.js|checkout-reference\.(?:js|css))(?:\?[^"\n]*)?"/g,'$1="/$2?v=20261127-checkout-pure-white"');
   html=html.replace(/\b(src|href)="\/(checkout-reference\.(?:js|css))(?:\?[^"\n]*)?"/g,'$1="/$2?v=20261127-checkout-review-wrap"');
   html=html.replace(/\b(src|href)="\/(conversion-ui\.(?:js|css))(?:\?[^"\n]*)?"/g,'$1="/$2?v=20261126-sale-loop"');
   html=html.replace(/\b(src|href)="\/(conversion-ui\.(?:js|css))(?:\?[^"\n]*)?"/g,'$1="/$2?v=20261127-account-workspace"');
   html=html.replace(/\b(src|href)="\/((?:storefront-navigation\.(?:js|css)|mobile-parity\.css|cart-reference\.css))(?:\?[^"\n]*)?"/g,'$1="/$2?v=20261126-header-cart"');
-  html=html.replace(/href="\/storefront-navigation\.css(?:\?[^"\n]*)?"/g,'href="/storefront-navigation.css?v=20261127-centered-footer"');
+  html=html.replace(/href="\/storefront-navigation\.css(?:\?[^"\n]*)?"/g,'href="/storefront-navigation.css?v=20261127-business-contact"');
   html=html.replace(/href="\/cart-reference\.css(?:\?[^"\n]*)?"/g,'href="/cart-reference.css?v=20261126-quick-add-contrast"');
   fs.writeFileSync(target,html);
   count++;

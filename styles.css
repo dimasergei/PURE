@@ -1110,6 +1110,12 @@ button { border: 0; }
 
 .footer-bottom p { margin: 0; }
 
+.footer-bottom .pure-business-contact {
+  margin-bottom: 12px;
+  font-size: 12px;
+  font-style: normal;
+}
+
 .footer-bottom a {
   margin-right: 10px;
 }
