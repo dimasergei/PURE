@@ -41,6 +41,7 @@ async function setup(route,campaign=null,quote=null){const errors=[];const conso
   assert.equal(photos[0].getAttribute('src'),photos[1].getAttribute('src'));
   assert.equal(hero.querySelector('.pure-bogo-vial-free span').textContent,'Free');
   assert.equal(hero.querySelector('[data-pure-sale-cta]').getAttribute('href'),'/shop?category=Peptides');
+  assert.doesNotMatch(hero.textContent,/BLACKFRIDAY10/);
   assert.ok(d.querySelector('.pure-promo-repeat[aria-hidden="true"]'));
   d.querySelector('.pure-promo-pause').click();
   assert.ok(d.querySelector('.pure-promo-paused'));
@@ -153,8 +154,8 @@ async function setup(route,campaign=null,quote=null){const errors=[];const conso
   assert.doesNotMatch(bulk.textContent,/BOGO|monthly auto.?billing/i);
   const form=bulk.querySelector('form[data-home-bulk]');
   const tiers=[...form.querySelectorAll('[data-home-bulk-tier]')];
-  assert.deepEqual(tiers.map(tier=>[tier.value,tier.labels[0].querySelector('strong').textContent,tier.checked]),[['10','50% off',true],['50','60% off',false]]);
-  assert.equal(bulk.querySelector('a.pure-home-express-more[href="/bulk-orders"]').textContent.trim(),'View all bulk products');
+  assert.deepEqual(tiers.map(tier=>[tier.value,tier.labels[0].querySelector('strong').textContent,tier.labels[0].querySelector('small').textContent,tier.checked]),[['10','10 units','50% off',true],['50','50 units','60% off',false]]);
+  assert.equal(bulk.querySelector('header a.pure-home-express-more[href="/bulk-orders"]').getAttribute('aria-label'),'View all bulk products');
   assert.equal(form.querySelector('img,article,details,[data-home-bulk-step],[data-home-bulk-remove]'),null);
   assert.equal(form.querySelectorAll('button').length,1);
   const checkout=form.querySelector('[data-home-bulk-checkout]');
@@ -172,7 +173,7 @@ async function setup(route,campaign=null,quote=null){const errors=[];const conso
    const variant=w.AltaStore.product(compound.value).variants.find(v=>v.size===strength.value);
    const retail=Math.round(variant.price*100)*quantity;
    const net=retail-w.PureQuantityPricing.bulkDiscountCents(retail,quantity);
-   assert.equal(estimate.querySelector('span').textContent,quantity+' units · Est. subtotal');
+   assert.equal(estimate.querySelector('span').textContent,'Est. subtotal');
    assert.equal(estimate.querySelector('strong').textContent,w.AltaStore.money(net/100));
   };
   assertTotal(10);

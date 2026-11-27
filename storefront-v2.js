@@ -152,30 +152,33 @@
   const variant=p.variants.find(v=>v.size===size)||homeBulkVariants(p)[0];
   const retail=Math.round(variant.price*100)*qty;
   const net=retail-window.PureQuantityPricing.bulkDiscountCents(retail,qty);
-  return `<span>${qty} units · Est. subtotal</span><strong>${priceMarkup(net/100)}</strong>`;
+  return `<span>Est. subtotal</span><strong>${priceMarkup(net/100)}</strong>`;
  }
  function homeBulkPromo(featured){
   const tiers=(window.PureQuantityPricing?.TIERS||[]).filter(tier=>tier.bps>0).slice().reverse();
   const products=featured.filter(p=>p.category!=='supplies'&&p.variants.length).slice(0,3);
   const active=products.find(p=>p.id===activeHomeBulkProduct)||products[0];
   const quantity=tiers.find(tier=>tier.min===homeBulkQuantity)?.min??tiers[0]?.min;
-  const browse='<a class="pure-home-express-more" href="/bulk-orders">View all bulk products <span aria-hidden="true">→</span></a>';
+  const browse='<a class="pure-home-express-more" href="/bulk-orders" aria-label="View all bulk products">View all <span aria-hidden="true">→</span></a>';
   return `<section class="ap-container pure-home-volume" aria-labelledby="pure-home-volume-title">
-    <h2 id="pure-home-volume-title">Bulk Orders</h2>
+    <header class="pure-home-volume-header"><h2 id="pure-home-volume-title">Bulk Orders</h2>${browse}</header>
     ${active&&quantity?`<form class="pure-home-express" data-home-bulk>
-      <fieldset class="pure-home-volume-tiers">
-        <legend class="ap-sr">Bulk quantity</legend>
-        ${tiers.map(tier=>`<label><input class="ap-sr" type="radio" name="quantity" value="${tier.min}" data-home-bulk-tier${tier.min===quantity?' checked':''}><span><strong>${tier.bps/100}% off</strong><small>${tier.min} units</small></span></label>`).join('')}
-      </fieldset>
       <div class="pure-home-express-fields">
         <label>Compound<select name="compound" data-home-bulk-compound>${products.map(p=>`<option value="${esc(p.id)}"${p===active?' selected':''}>${esc(p.name)}</option>`).join('')}</select></label>
         <label>Strength<select name="strength" data-home-bulk-size>${homeBulkStrengthOptions(active)}</select></label>
       </div>
-      <p class="pure-home-express-estimate" data-home-bulk-estimate role="status">${homeBulkEstimate(active,homeBulkSizes.get(active.id),quantity)}</p>
-      <button class="ap-button ap-button-light" type="submit" data-home-bulk-checkout ${homeBulkSubmitting?'disabled':''}>Bulk Checkout</button>
+      <fieldset class="pure-home-volume-tiers">
+        <legend>Quantity</legend>
+        <div class="pure-home-volume-options">
+          ${tiers.map(tier=>`<label><input class="ap-sr" type="radio" name="quantity" value="${tier.min}" data-home-bulk-tier${tier.min===quantity?' checked':''}><span><strong>${tier.min} units</strong><small>${tier.bps/100}% off</small></span></label>`).join('')}
+        </div>
+      </fieldset>
+      <div class="pure-home-express-footer">
+        <p class="pure-home-express-estimate" data-home-bulk-estimate role="status">${homeBulkEstimate(active,homeBulkSizes.get(active.id),quantity)}</p>
+        <button class="ap-button ap-button-light" type="submit" data-home-bulk-checkout ${homeBulkSubmitting?'disabled':''}>Bulk Checkout</button>
+      </div>
       <p data-home-bulk-notice role="status"></p>
     </form>`:''}
-    ${browse}
   </section>`;
  }
  function mountHomeBulk(root){
@@ -297,7 +300,6 @@
      </div>
      <div class="pure-bogo-action">
       <a class="pure-bogo-cta" href="/shop?category=Peptides" data-pure-sale-cta>Shop the Sale <span aria-hidden="true">→</span></a>
-      <p>Extra 10% with <strong>BLACKFRIDAY10</strong></p>
      </div>
     </div>
    </div>
