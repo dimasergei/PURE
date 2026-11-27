@@ -68,6 +68,7 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
   assert.deepEqual(vials.map(a=>a.getAttribute('href')),['/product/nad','/product/retatrutide','/product/bpc-157','/product/ghk-cu','/product/tirzepatide']);
   assert.equal(vials[2].querySelector('img').getAttribute('fetchpriority'),'high');
   const featured=[...d.querySelectorAll('#nl-featured .ap-product-card')];
+  assert.doesNotMatch(d.querySelector('.nl-featured .ap-section-head').textContent,/BLACKFRIDAY10/);
   assert.equal(featured.length,10);
   for(const card of featured){
    const p=w.AltaStore.product(card.dataset.product),photo=card.querySelector('.ap-product-image');
@@ -89,7 +90,7 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
   assert.doesNotMatch(bulk.textContent,/BOGO|monthly auto.?billing/i);
   const tiers=[...bulk.querySelectorAll('.pure-home-volume-tiers > span')];
   assert.deepEqual(tiers.map(tier=>tier.textContent),['50% off at 10+ units','60% off at 50+ units']);
-  assert.match(bulk.querySelector('.pure-home-volume-note').textContent,/starting at 10\+/);
+  assert.doesNotMatch(bulk.textContent,/Bulk prices per unit|Free U\.S\. 2-day express after dispatch/);
   const bulkSummary=bulk.querySelector('.pure-home-express-summary');
   assert.equal(bulkSummary.hidden,true);
   const bulkRows=[...bulk.querySelectorAll('[data-home-bulk-product]')];
