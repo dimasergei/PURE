@@ -382,5 +382,20 @@ html:root body.ap-site .pure-floating-shop {
 }
 html:root body.ap-site .pure-floating-shop:hover { background: #333; }
 html:root body.ap-site .pure-floating-shop:focus-visible { outline: 2px solid #111; outline-offset: 3px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  html:root body.ap-site .pure-floating-shop { overflow: hidden; }
+  html:root body.ap-site .pure-floating-shop::before {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    inset: -80% auto -80% 0;
+    width: 28%;
+    pointer-events: none;
+    background: linear-gradient(90deg, transparent, #ffffff0c 20%, #ffffff48 50%, #ffffff0c 80%, transparent);
+    animation: pure-announcement-shimmer 5s ease-in-out infinite;
+  }
+}
+
 body.ap-site:has(.pure-floating-shop) .ap-footer { padding-block-end: calc(86px + env(safe-area-inset-bottom)); }
 body.ap-site:has(#ap-compare-bar:not([hidden])) .pure-floating-shop { inset-block-end: calc(80px + env(safe-area-inset-bottom)); }

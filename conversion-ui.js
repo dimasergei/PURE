@@ -167,6 +167,7 @@
   const end=Date.parse(campaign?.ends_at),serverTime=Date.parse(campaign?.server_time);
   const key=campaign?.eligible_variants?.[0],separator=typeof key==='string'?key.indexOf(':'):-1;
   if(!announcement||!fallback||!Number.isFinite(serverTime)||end!==christmas||serverTime>=end||separator<=0)return false;
+  const offset=serverTime-Date.now();
   const id=key.slice(0,separator),size=key.slice(separator+1);
   // Read the estimate from the same pricing engine used by checkout.
   const quote=await request('checkout=cart',{items:[{id,size,qty:1}],country:'US'}).catch(()=>null);
@@ -175,9 +176,9 @@
   const slide=document.createElement('a'),countdown=document.createElement('time'),next=document.createElement('button');
   slide.className='pure-offer-trigger pure-christmas-slide';
   slide.href='/shop';
-  slide.innerHTML='<span class="pure-christmas-kicker">Christmas Sale</span><strong>Buy One Get One Free</strong>';
+  slide.innerHTML='<strong>Christmas BOGO Sale</strong><span class="pure-christmas-kicker">Buy One, Get One Free</span>';
   countdown.dateTime=new Date(end).toISOString();
-  countdown.title='Ends December 25 at midnight Toronto time';
+  countdown.title='Ends at the end of December 24, Toronto time';
   slide.append(countdown);
   next.type='button';
   next.className='pure-promo-next';
@@ -186,7 +187,6 @@
   slide.hidden=true;
   announcement.append(slide,next);
   announcement.classList.add('pure-promo-rotating');
-  const offset=serverTime-Date.now();
   const showChristmas=show=>{slide.hidden=!show;fallback.hidden=show;};
   const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   next.addEventListener('click',()=>showChristmas(slide.hidden));
@@ -207,6 +207,7 @@
    countdown.textContent=(days?days+'d ':'')+time;
   }
   const clock=setInterval(tick,1000);
+  showChristmas(true);
   tick();
   return true;
  }
