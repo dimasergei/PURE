@@ -312,6 +312,24 @@ body.ap-site .nl-featured .ap-section-head .pure-home-featured-title {
   text-wrap: balance;
 }
 
+body.ap-site .nl-editorial .nl-capsule {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-color: #000;
+  background: #000;
+  color: #fff;
+}
+body.ap-site .nl-editorial .nl-capsule::before {
+  box-sizing: border-box;
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border: 3px solid currentColor;
+  border-radius: 50%;
+  content: '';
+}
+
 body.ap-site .pure-home-volume {
   display: grid;
   gap: 12px;
