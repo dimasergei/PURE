@@ -25,7 +25,7 @@ for(const file of fs.readdirSync(out,{recursive:true}).filter(f=>f.endsWith('.ht
   html=html.replace(/<link\b[^>]*href=["']\/pure-brand\.css[^"']*["'][^>]*>/gi,'');
   html=html.replace(/<link\b[^>]*href=["']https:\/\/fonts\.(?:googleapis|gstatic)\.com[^"']*["'][^>]*>/gi,'');
   const fontPreload=html.includes('href="/assets/fonts/archivo-latin-variable.woff"')?'':'<link rel="preload" href="/assets/fonts/archivo-latin-variable.woff" as="font" type="font/woff" crossorigin>';
-  html=html.replace('</head>',fontPreload+'<link rel="stylesheet" href="/pure-brand.css?v=20261126-mobile-testing"></head>');
+  html=html.replace('</head>',fontPreload+'<link rel="stylesheet" href="/pure-brand.css?v=20261126-account-contrast"></head>');
   html=html.replace(/<link\b[^>]*\brel=["'](?:(?:shortcut )?icon|apple-touch-icon)["'][^>]*>/gi,'');
   html=html.replace(/<meta\b[^>]*\bname=["'](?:theme-color|altapure-promo-end)["'][^>]*>/gi,'');
   if(path.basename(file).startsWith('admin-')){
@@ -48,7 +48,7 @@ for(const file of fs.readdirSync(out,{recursive:true}).filter(f=>f.endsWith('.ht
     html=html.replace(body[0],`<body${attrs}>`);
   }
   if(file==='index.html'&&!html.includes('"@type":"Organization"'))html=html.replace('</head>',`${organization}</head>`);
-  html=html.replace('</head>','<link rel="stylesheet" href="/unified-palette.css?v=20261117-monochrome"></head>');
+  html=html.replace('</head>','<link rel="stylesheet" href="/unified-palette.css?v=20261126-account-contrast"></head>');
   html=html.replace('</head>','<link rel="stylesheet" href="/pure-layout.css?v=20261118"><link rel="stylesheet" href="/pure-bulk-layout.css?v=20261118"><link rel="stylesheet" href="/pure-coa.css?v=20261118"></head>');
   html=html.replace(/src="\/(workspace-v2|supplier-coas)\.js(?:\?[^"]*)?"/g,'src="/$1.js?v=20261118-coa"');
   html=html.replace(/src="\/(checkout-reference|direct-checkout-client|payment-options-public|readiness-ui|locale)\.js(?:\?[^"]*)?"/g,'src="/$1.js?v=20261118-cad-checkout"');
@@ -86,6 +86,7 @@ for(const file of fs.readdirSync(out,{recursive:true}).filter(f=>f.endsWith('.ht
   html=html.replace(/\b(src|href)="\/((?:storefront-v2|reference-ui)\.js|(?:reference-ui|brand-theme)\.css)(?:\?[^"]*)?"/g,'$1="/$2?v=20261126-product-price-line"');
   html=html.replace(/src="\/((?:locale|checkout-reference|direct-checkout-client|readiness-ui|membership-checkout)\.js)(?:\?[^"]*)?"/g,'src="/$1?v=20261126-cad-price-symbol"');
   html=html.replace(/\b(src|href)="\/((?:account|readiness-ui|monthly-orders)\.js|readiness-ui\.css)(?:\?[^"]*)?"/g,'$1="/$2?v=20261126-account-subscription"');
+  html=html.replace(/\b(src|href)="\/((?:account-experience|readiness-ui)\.(?:js|css))(?:\?[^"]*)?"/g,'$1="/$2?v=20261126-account-contrast"');
   html=html.replace(/href="\/cart-reference\.css(?:\?[^"]*)?"/g,'href="/cart-reference.css?v=20261126-reward-glow"');
   if(file==='bulk-orders.html')html=html.replace(/\b(src|href)="\/(workspace-v2\.js|pure-bulk-layout\.css)(?:\?[^"\n]*)?"/g,'$1="/$2?v=20261126-bulk-coa-card"');
   if(file==='contact.html')html=html.replace(/href="\/reference-ui\.css(?:\?[^"]*)?"/g,'href="/reference-ui.css?v=20261126-contact-wordmark"');

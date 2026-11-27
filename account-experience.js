@@ -25,7 +25,7 @@
  }
  async function orders(root,auth,user,legacyApi,legacyCard){
   const query=new URLSearchParams(location.search),view=['history','tracking','pending'].includes(query.get('view'))?query.get('view'):'all';
-  root.innerHTML=`<nav class="ae-subnav" aria-label="Order views">${[['all','All orders'],['pending','Awaiting payment'],['tracking','Tracking'],['history','Earlier orders']].map(([id,label])=>`<a href="/account/purchases${id==='all'?'':'?view='+id}" ${id===view?'aria-current="page"':''}>${label}</a>`).join('')}</nav><div class="ae-order-tools"><label>Search orders<input id="ae-order-search" type="search" placeholder="Order number, product or carrier"></label><a class="ap-button ap-button-secondary" href="/shop">Continue shopping</a></div><p id="ae-search-count" role="status"></p><section id="ae-current-orders"></section><section id="ae-earlier-orders"></section>`;
+  root.innerHTML=`<nav class="ae-subnav ae-order-views" aria-label="Order views">${[['all','All orders'],['tracking','Tracking'],['pending','Awaiting payment'],['history','Earlier orders']].map(([id,label])=>`<a href="/account/purchases${id==='all'?'':'?view='+id}" ${id===view?'aria-current="page"':''}>${label}</a>`).join('')}</nav><div class="ae-order-tools"><label>Search orders<input id="ae-order-search" type="search" placeholder="Order number, product or carrier"></label><a class="ap-button ap-button-secondary" href="/shop">Continue shopping</a></div><p id="ae-search-count" role="status"></p><section id="ae-current-orders"></section><section id="ae-earlier-orders"></section>`;
   const review=query.get('review');
   if(/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(review||'')){
    const panel=document.createElement('section');panel.className='ae-panel';

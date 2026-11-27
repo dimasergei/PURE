@@ -201,4 +201,4 @@ body.ap-site {
 .ap-site .rd-welcome>span{background:#f5f5f5;color:#111}
 .ap-site .rd-points{background:#fff!important}
 .ap-site .rd-delivery:has(input:checked){border-color:#111;background:#fff}
-.ap-site .rd-quick-links>a:hover,.ap-site .rd-code-list button:hover{border-color:#111;color:#111}
+.ap-site .rd-code-list button:hover{border-color:#111;color:#111}

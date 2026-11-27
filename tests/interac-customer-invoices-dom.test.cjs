@@ -119,13 +119,17 @@ test('expired, unavailable, canceled, or wrong-currency Interac invoices never r
  }
 });
 
-test('account overview omits summary tiles and retains recent orders and balances',async()=>{
+test('account overview omits summary and shortcut tiles while retaining orders, balances and support',async()=>{
  const f=fixture({allInvoices:[invoice({status:'paid',currency:'USD',total_cents:10000}),invoice({id:'55555555-5555-4555-8555-555555555555',status:'paid',total_cents:29719}),invoice({id:'66666666-6666-4666-8666-666666666666',status:'requested',total_cents:null,currency:null})]});
  try{
   await f.w.ReadinessUI.overview(f.root,f.auth,{user_metadata:{full_name:'Fixture Researcher'}});
   assert.equal(f.root.querySelector('.rd-stat-grid'),null);
+  assert.equal(f.root.querySelector('.rd-quick-links'),null);
   assert.doesNotMatch(f.root.textContent,/Orders in current checkout|Paid order total|Available store credit|Auto-Stack/i);
+  assert.equal(f.root.querySelector('.rd-overview-grid h2').textContent,'Your orders');
+  assert.ok(f.root.querySelector('.rd-overview-grid a[href="/account/purchases"]'));
   assert.ok(f.root.querySelector('#rewards-and-credit'));
+  assert.ok(f.root.querySelector('a[href="/account/requests"]'));
   assert.match(f.root.querySelector('tbody').textContent,/\$100\.00/);
   assert.match(f.root.querySelector('tbody').textContent,/CA\$297\.19/);assert.match(f.root.querySelector('tbody').textContent,/CAD order total pending/);
  }finally{f.dom.window.close();}

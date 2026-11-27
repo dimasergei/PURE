@@ -290,6 +290,86 @@ html:root body.ap-site.ap-auth-page .google-button img.pure-google-mark{
   html:root body.ap-site.ap-account-site .account-card nav.account-nav :is(a,.account-nav-logout){flex:none;white-space:nowrap;min-height:44px}
 }
 
+/* Match the storefront display type, panels and controls across account tabs. */
+html:root body.ap-site.ap-account-site:not(.ap-auth-page,.ap-checkout-page) .account-card h1,
+html:root body.ap-site #monthly-main:not(:has(.monthly-checkout-layout)) h1 {
+  font-size: clamp(2rem,5vw,3.5rem);
+  font-weight: 900;
+  letter-spacing: -.045em;
+  line-height: 1.05;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+html:root body.ap-site.ap-account-site:not(.ap-auth-page,.ap-checkout-page) .account-card h2,
+html:root body.ap-site #monthly-main:not(:has(.monthly-checkout-layout)) h2 {
+  font-weight: 850;
+  letter-spacing: -.025em;
+  line-height: 1.15;
+  text-transform: uppercase;
+}
+
+html:root body.ap-site.ap-account-site:not(.ap-auth-page,.ap-checkout-page) .account-card :is(.ae-panel,.account-order),
+html:root body.ap-site #monthly-main > #monthly-content > article {
+  border: 1px solid #c9c9c9;
+  border-block-start: 3px solid #111;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: none;
+}
+
+html:root body.ap-site.ap-account-site .account-card .rd-welcome {
+  padding: clamp(18px,4vw,32px);
+  border-radius: 14px;
+  background: #111;
+  color: #fff;
+}
+
+html:root body.ap-site.ap-account-site .account-card .rd-welcome :is(h1,small,span) { color: inherit; }
+html:root body.ap-site.ap-account-site .account-card .rd-welcome > span {
+  display: inline-block;
+  padding: 0;
+  background: transparent;
+  font-size: 14px;
+}
+
+html:root body.ap-site.ap-account-site:not(.ap-auth-page,.ap-checkout-page) .account-card
+  :is(.ae-form,.ap-form,.account-form,.ae-order-tools) :is(input:not([type=checkbox],[type=radio],[type=hidden]),select,textarea) {
+  min-height: 44px;
+  border-color: #777;
+  background-color: #fff;
+  color: #111;
+}
+
+html:root body.ap-site.ap-account-site:not(.ap-auth-page,.ap-checkout-page) .account-card .ap-button,
+html:root body.ap-site #monthly-main:not(:has(.monthly-checkout-layout)) :is(button,.button) {
+  min-height: 44px;
+  border-radius: 999px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 700px) {
+  html:root body.ap-site.ap-account-site .account-card nav.account-nav {
+    display: grid;
+    grid-template-columns: repeat(3,minmax(0,1fr));
+    gap: 4px;
+    overflow: visible;
+    padding-bottom: 4px;
+  }
+
+  html:root body.ap-site.ap-account-site .account-card nav.account-nav :is(a,.account-nav-logout) {
+    min-width: 0;
+    margin: 0;
+    padding: 6px 3px;
+    font-size: clamp(.675rem,2.9vw,.8125rem);
+    text-align: center;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
+
 
 /* PURE homepage documentation / FAQ: scoped to these two editorial surfaces. */
 html:root body.ap-site .nl-editorial .nl-doc-art{position:relative;isolation:isolate;overflow:hidden;display:flex;flex-direction:column;gap:22px;min-height:478px;padding:32px 34px;background:#111214;color:#fff;border:1px solid #36383b;border-radius:22px;transform:rotate(-2deg);box-shadow:0 0 0 12px #f1f1f1,0 32px 72px #0000002b;transition:transform .25s ease,box-shadow .25s ease}
