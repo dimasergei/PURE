@@ -46,9 +46,12 @@ function bulkPage() {
    <a class="nl-bulk-benefit nl-bulk-benefit-coa" href="/coas">
     <div class="nl-bulk-coa-proof">
      <span class="nl-bulk-coa-check" aria-hidden="true">✓</span>
-     <div><strong>HPLC + MS</strong><small>Reported test methods</small></div>
+     <div><strong>99%+ purity</strong><small>In select HPLC + MS reports</small></div>
     </div>
-    <span class="nl-bulk-benefit-copy">Certificates of Analysis</span><small>View available COAs <span aria-hidden="true">→</span></small>
+    <div class="nl-bulk-coa-details">
+     <span class="nl-bulk-benefit-copy">Certificates of Analysis</span>
+     <small>Lab reports · View COAs <span aria-hidden="true">&#8594;</span></small>
+    </div>
    </a>
    <article class="nl-bulk-benefit nl-bulk-benefit-shipping">
     <span class="nl-bulk-shipping-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M9 16h5V5H2v11h3m9-7h4l4 4v3h-2m-6 0h2"/><circle cx="7" cy="17" r="2"/><circle cx="18" cy="17" r="2"/></svg></span>

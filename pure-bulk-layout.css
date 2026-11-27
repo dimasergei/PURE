@@ -95,16 +95,20 @@ html:root body.ap-site .nl-bulk-benefit > small {
   font-size: 13px;
   line-height: 1.35;
 }
+html:root body.ap-site .nl-bulk-benefits > .nl-bulk-benefit-coa {
+  padding-inline: clamp(13px, 1.45vw, 20px);
+  text-decoration: none;
+}
 html:root body.ap-site .nl-bulk-benefit .nl-bulk-coa-proof {
   display: inline-flex;
   align-items: center;
   width: max-content;
   max-width: 100%;
-  min-height: 44px;
-  margin: 0 0 8px;
-  padding: 6px 9px;
+  min-height: 43px;
+  margin: 0 0 12px;
+  padding: 6px 10px 6px 8px;
   border: 1px solid var(--ap-line);
-  border-radius: 12px;
+  border-radius: 13px;
   background: var(--ap-white);
   white-space: normal;
 }
@@ -129,7 +133,14 @@ html:root body.ap-site .nl-bulk-coa-proof > div > small {
   color: var(--ap-muted);
   white-space: normal;
 }
-html:root body.ap-site .nl-bulk-benefit-coa > small > span {
+.nl-bulk-coa-details {
+  display: grid;
+  gap: 3px;
+  margin-top: auto;
+}
+html:root body.ap-site .nl-bulk-coa-details > .nl-bulk-benefit-copy { margin: 0; }
+.nl-bulk-coa-details > small { font-size: 13px; line-height: 1.35; }
+html:root body.ap-site .nl-bulk-coa-details > small > span {
   display: inline;
   margin: 0;
 }
@@ -145,7 +156,6 @@ html:root body.ap-site .nl-bulk-benefit-shipping > .nl-bulk-shipping-icon {
 html:root body.ap-site .nl-bulk-benefit-shipping > .nl-bulk-benefit-copy { margin-top: auto !important; }
 html:root body.ap-site .nl-bulk-benefit-coa:hover {
   border-color: #777 !important;
-  text-decoration: underline;
 }
 
 html:root body.ap-site .nl-bulk-layout {
@@ -599,6 +609,7 @@ html:root body.ap-site .nl-bulk-faq details p {
   html:root body.ap-site .nl-bulk-benefit > small { font-size: 12px; }
   html:root body.ap-site .nl-bulk-benefit .nl-bulk-coa-proof { gap: 6px; padding-inline: 6px; }
   html:root body.ap-site .nl-bulk-coa-proof > div > strong { font-size: 12px; }
+  .nl-bulk-coa-details > small { font-size: 12px; }
   html:root body.ap-site .nl-bulk-layout { padding-top: 16px; }
   html:root body.ap-site .nl-bulk-categories {
     gap: 8px;
