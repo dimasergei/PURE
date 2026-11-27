@@ -220,7 +220,7 @@ async function setup(route,campaign=null,quote=null){const errors=[];const conso
   assert.equal(refreshed.querySelector('[data-home-bulk-size]').value,selectedStrength);
   assert.equal(refreshed.querySelector('[data-home-bulk-tier]:checked').value,'50');
   const faq=d.querySelector('#faq');
-  assert.equal(faq.firstElementChild.textContent,'Frequently asked questions');
+  assert.equal(faq.firstElementChild.textContent,'FAQs');
   assert.equal(faq.firstElementChild.tagName,'H2');
   assert.ok(faq.firstElementChild.nextElementSibling.matches('.pure-faq-list'));
   assert.equal(faq.querySelector('nav'),null);

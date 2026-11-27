@@ -242,7 +242,7 @@
    ['Where can I track my order?', 'Look for the tracking link in your shipment email after dispatch, or use <a href="/track-order">Track Order</a> with your order number and email.']
   ];
   return `<section aria-labelledby="pure-home-faq-title" class="ap-container ap-section ap-faq-layout pure-faq-section pure-home-faq" id="faq">
-    <h2 id="pure-home-faq-title">Frequently asked questions</h2>
+    <h2 id="pure-home-faq-title">FAQs</h2>
     <div class="ap-faq pure-faq-list">${questions.map(([question,answer])=>`<details><summary>${question}</summary><p>${answer}</p></details>`).join('')}</div>
   </section>`;
  }
