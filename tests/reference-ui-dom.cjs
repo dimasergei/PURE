@@ -86,18 +86,84 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
   assert.equal(d.querySelector('.nl-featured').nextElementSibling,bulk,'bulk savings follow featured products');
   assert.equal(d.querySelector('[data-mx-membership-home]'),null);
   assert.equal(d.querySelector('.nl-editorial').nextElementSibling.id,'faq');
-  assert.equal(bulk.querySelector('a').getAttribute('href'),'/bulk-orders');
+  assert.equal(bulk.querySelector('a[href="/bulk-orders"]'),null);
   assert.equal(bulk.querySelector('h2').textContent,'Bulk Orders');
   assert.doesNotMatch(bulk.textContent,/BOGO|monthly auto.?billing/i);
   const tiers=[...bulk.querySelectorAll('.pure-home-volume-tiers > span')];
   assert.deepEqual(tiers.map(tier=>tier.textContent),['50% off at 10+ units','60% off at 50+ units']);
   assert.doesNotMatch(bulk.textContent,/Bulk prices per unit|Free U\.S\. 2-day express after dispatch/);
-  assert.equal(bulk.querySelector('article,select,input'),null);
   assert.doesNotMatch(bulk.textContent,/mix strengths/i);
-  const bulkLink=bulk.querySelector('.nl-center > .ap-button');
-  const catalogLink=d.querySelector('.nl-featured .nl-center > .ap-button');
-  assert.equal(bulkLink.textContent,'Build a Bulk Order');
-  assert.equal(bulkLink.className,catalogLink.className);
+  const bulkSummary=bulk.querySelector('.pure-home-express-summary');
+  assert.equal(bulkSummary.hidden,true);
+  const bulkRows=[...bulk.querySelectorAll('[data-home-bulk-product]')];
+  assert.equal(bulkRows.length,3);
+  for(const row of bulkRows){
+   const p=w.AltaStore.product(row.dataset.homeBulkProduct);
+   const strengths=[...row.querySelector('[data-home-bulk-size]').options].map(option=>option.value);
+   assert.deepEqual(strengths,[...p.variants].sort((a,b)=>(parseFloat(a.size)-parseFloat(b.size))||a.size.localeCompare(b.size)).map(v=>v.size));
+   assert.ok(row.firstElementChild.querySelector('img[src]'));
+   assert.ok(row.lastElementChild.matches('.pure-home-express-price'));
+   assert.deepEqual([...row.lastElementChild.children].map(child=>child.tagName),['DEL','STRONG']);
+  }
+  const id=bulkRows[0].dataset.homeBulkProduct;
+  const bulkRow=()=>bulk.querySelector(`[data-home-bulk-product="${id}"]`);
+  const chooseStrength=index=>{
+   const select=bulkRow().querySelector('[data-home-bulk-size]');
+   select.selectedIndex=index;
+   select.dispatchEvent(new w.Event('change',{bubbles:true}));
+  };
+  const enterQty=qty=>{
+   const input=bulkRow().querySelector('[data-home-bulk-quantity]');
+   input.value=qty;
+   input.dispatchEvent(new w.Event('input',{bubbles:true}));
+  };
+  const shownBulkPrice=()=>bulkRow().querySelector('.pure-home-express-price strong').textContent;
+  const entryTier=shownBulkPrice();
+  const addTen=()=>bulkRow().querySelector('[data-home-bulk-step="10"]').click();
+  const minus=()=>bulkRow().querySelector('[data-home-bulk-adjust="-1"]');
+  const plus=()=>bulkRow().querySelector('[data-home-bulk-adjust="1"]');
+  const step=()=>bulkRow().querySelector('[data-home-bulk-step="10"]');
+  assert.equal(minus().disabled,true);
+  assert.equal(step().textContent,'Add 10');
+  assert.equal(step().closest('.pure-home-express-quantity'),null);
+  plus().click();
+  assert.equal(bulkRow().querySelector('[data-home-bulk-quantity]').value,'1');
+  minus().click();
+  assert.equal(minus().disabled,true);
+  assert.equal(bulkSummary.hidden,true);
+  enterQty('99');
+  addTen();
+  assert.equal(bulkRow().querySelector('[data-home-bulk-quantity]').value,'100');
+  assert.equal(plus().disabled,true);
+  assert.equal(step().disabled,true);
+  minus().click();
+  assert.equal(bulkRow().querySelector('[data-home-bulk-quantity]').value,'99');
+  assert.equal(plus().disabled,false);
+  enterQty('0');
+  addTen();
+  addTen();
+  assert.equal(bulkSummary.hidden,false);
+  assert.equal(bulkRow().querySelector('[data-home-bulk-quantity]').value,'20');
+  enterQty('6');
+  assert.equal(bulk.querySelector('[data-home-bulk-checkout]').disabled,true);
+  assert.equal(bulk.querySelector('.pure-home-express-line-price del'),null);
+  chooseStrength(1);
+  assert.equal(bulkRow().querySelector('[data-home-bulk-quantity]').value,'0');
+  enterQty('4');
+  assert.equal(bulk.querySelector('[data-home-bulk-checkout]').disabled,false);
+  for(const line of bulk.querySelectorAll('.pure-home-express-line-price')){
+   assert.deepEqual([...line.children].map(child=>child.tagName),['DEL','STRONG']);
+  }
+  chooseStrength(0);
+  assert.equal(bulkRow().querySelector('[data-home-bulk-quantity]').value,'6');
+  enterQty('46');
+  const retail=w.AltaStore.product(id).variants.find(variant=>variant.size===bulkRow().querySelector('select').value).price;
+  assert.equal(shownBulkPrice(),'Bulk '+w.AltaStore.money(Math.round(retail*40)/100));
+  assert.notEqual(shownBulkPrice(),entryTier);
+  enterQty('0');
+  chooseStrength(1);
+  enterQty('0');
+  assert.equal(bulkSummary.hidden,true);
   const faqLinks=d.querySelector('.pure-home-faq-links');
   assert.deepEqual([...faqLinks.children].map(link=>[link.tagName,link.textContent,link.getAttribute('href')]),[
    ['A','Track Order','/track-order'], ['A','Shipping','/shipping-policy'], ['A','Contact Us','/contact']
