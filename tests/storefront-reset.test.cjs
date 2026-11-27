@@ -297,6 +297,7 @@ test('bulk ordering grows and clears its summary while preserving exact prices, 
   assert.equal(draft()[0].qty,11);assert.equal(summary(),format(first.price*11));assert.match(summaryNode().querySelector('.nl-bulk-tier-savings').textContent,/Bulk savings/);
   assert.equal(summaryNode().querySelector('.nl-bulk-net span').textContent,'Total');
   assert.deepEqual([...summaryNode().querySelectorAll('.nl-bulk-tier-key > span')].map(x=>x.textContent),['10+ units · 50%','50+ units · 60%']);
+  assert.match(summaryNode().querySelector('.nl-bulk-tier-help').textContent,/Combine strengths of the same compound/);
   assert.equal(summaryNode().querySelector('.nl-bulk-included-shipping span').textContent,'Free 2-Day Express Shipping');
   assert.equal(summaryNode().querySelector('.nl-bulk-included-shipping strong').textContent,'FREE');
   assert.doesNotMatch(summaryNode().textContent,/Your regular cart stays saved separately|U\.S\. orders after dispatch|Strengths of each product count together/);

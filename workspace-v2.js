@@ -126,7 +126,7 @@
    ${units?'':'<button type="button" class="ap-button nl-bulk-add-products" data-action="bulk-add-products">ADD PRODUCTS</button>'}
    <div class="nl-bulk-summary-scroll" aria-label="Selected products">${selection}</div>
    <div class="nl-bulk-totals"><div class="nl-bulk-estimate-total"><span>Retail value</span><strong>${tierSavingsCents>0?`<del>${retail}</del>`:retail}</strong></div>${savings}${shipping}${tierSavingsCents>0?`<div class="nl-bulk-net"><span>Total</span><strong>${priceMarkup(tierNet)}</strong></div>`:''}</div>
-   ${units?`<div class="nl-bulk-tier-key"><span data-tier-active="${rates.has(5000)}">10+ units · 50%</span><span data-tier-active="${rates.has(6000)}">50+ units · 60%</span><p class="nl-bulk-tier-help">Each compound qualifies for its own discount tier.</p></div>`:''}
+   ${units?`<div class="nl-bulk-tier-key"><span data-tier-active="${rates.has(5000)}">10+ units · 50%</span><span data-tier-active="${rates.has(6000)}">50+ units · 60%</span><p class="nl-bulk-tier-help">Discounts apply per compound. Combine strengths of the same compound to meet the minimum for either tier.</p></div>`:''}
    <button class="ap-button" data-action="bulk-checkout" ${canCheckout?'':'disabled'}>Checkout · ${priceMarkup(tierNet)}</button>`;
   const scroll=root.querySelector('.nl-bulk-summary-scroll');
   if(scroll)scroll.scrollTop=listScroll;

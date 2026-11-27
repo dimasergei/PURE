@@ -689,16 +689,19 @@ html:root body.ap-site .nl-bulk-menu-product-head:has(.nl-bulk-rate-badge) {
 .nl-bulk-tier-key {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 7px;
+  gap: 9px;
   margin: 4px 0 12px;
-  padding: 9px;
-  border: 1px solid var(--ap-line);
-  border-radius: 11px;
-  background: var(--ap-cream);
+  padding: 11px;
+  border: 1px solid #d6d6d6;
+  border-radius: 13px;
+  background: var(--ap-lime);
 }
 html:root body.ap-site .nl-bulk-tier-key > span {
+  display: grid;
+  place-items: center;
+  min-height: 33px;
   padding: 5px 3px;
-  border: 1px solid var(--ap-line);
+  border: 1px solid #d6d6d6;
   border-radius: 999px;
   background: var(--ap-white);
   color: var(--ap-ink);
@@ -712,7 +715,7 @@ html:root body.ap-site .nl-bulk-tier-key > .nl-bulk-tier-help {
   margin: 0;
   color: var(--ap-muted);
   font-size: 12px;
-  line-height: 1.35;
+  line-height: 1.45;
 }
 .nl-bulk-included-shipping { display: flex; justify-content: space-between; margin: 5px 0; font-size: 13px; }
 @media (max-width: 1050px) {
@@ -766,7 +769,11 @@ html:root body.ap-site .nl-bulk-tier-key > .nl-bulk-tier-help {
   html:root body.ap-site .nl-bulk-menu-controls { flex-wrap: wrap; }
 }
 
-html:root body.ap-site .nl-bulk-tier-key > span[data-tier-active="true"],
+html:root body.ap-site .nl-bulk-tier-key > span[data-tier-active="true"] {
+  border-color: var(--ap-ink);
+  background: linear-gradient(135deg, var(--ap-ink), #2b2b2b) !important;
+  color: var(--ap-white) !important;
+}
 html:root body.ap-site .nl-bulk-rate-badge {
   border-color: var(--ap-ink);
   background: var(--ap-ink) !important;
