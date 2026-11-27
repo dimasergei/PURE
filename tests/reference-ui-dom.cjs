@@ -12,7 +12,7 @@ function assertCurrentView(d,route){
  }
  assert.equal(d.querySelectorAll('#ap-main [data-promo-clock],#ap-main .nl-offer-grid').length,0,route+' has no old sale presentation');
 }
-async function setup(route,campaign=null,quote=null){const errors=[];const console=new VirtualConsole();console.on('jsdomError',e=>errors.push(e.message));const dom=new JSDOM(read('public-build/index.html'),{url:'https://getpurelabs.com'+route,runScripts:'outside-only',virtualConsole:console}),w=dom.window;w.localStorage.setItem('ap-age-verified','true');w.matchMedia=()=>({matches:false});w.HTMLElement.prototype.scrollIntoView=()=>{};w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;};w.fetch=async url=>({ok:true,json:async()=>String(url).includes('campaign=window')?(campaign||{}):String(url).includes('checkout=cart')?quote:[]});w.AltaConversionConfig=require('../config/conversion.json');w.eval(read('public-build/quantity-pricing.js')+'\n'+read('public-build/membership-experience.js')+'\n'+read('public-build/conversion-ui.js')+'\n'+read('public-build/products.js')+'\n'+read('public-build/product-images.js')+'\n'+read('public-build/storefront-v2.js')+'\n'+read('public-build/workspace-v2.js'));await new Promise(r=>setTimeout(r,0));assert.deepEqual(errors,[],route);assertCurrentView(w.document,route);return{dom,w,d:w.document};}
+async function setup(route,campaign=null,quote=null,Observer=null){const errors=[];const console=new VirtualConsole();console.on('jsdomError',e=>errors.push(e.message));const dom=new JSDOM(read('public-build/index.html'),{url:'https://getpurelabs.com'+route,runScripts:'outside-only',virtualConsole:console}),w=dom.window;w.localStorage.setItem('ap-age-verified','true');w.matchMedia=()=>({matches:false});if(Observer)w.IntersectionObserver=Observer;w.HTMLElement.prototype.scrollIntoView=()=>{};w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;};w.fetch=async url=>({ok:true,json:async()=>String(url).includes('campaign=window')?(campaign||{}):String(url).includes('checkout=cart')?quote:[]});w.AltaConversionConfig=require('../config/conversion.json');w.eval(read('public-build/quantity-pricing.js')+'\n'+read('public-build/membership-experience.js')+'\n'+read('public-build/conversion-ui.js')+'\n'+read('public-build/products.js')+'\n'+read('public-build/product-images.js')+'\n'+read('public-build/storefront-v2.js')+'\n'+read('public-build/workspace-v2.js'));await new Promise(r=>setTimeout(r,0));assert.deepEqual(errors,[],route);assertCurrentView(w.document,route);return{dom,w,d:w.document};}
 (async()=>{
  const now=Date.now();
  {
@@ -31,7 +31,13 @@ async function setup(route,campaign=null,quote=null){const errors=[];const conso
   const quote={pricing:{coupon_discount_cents:299,bogo_campaign:{ends_at,free_units:[{id:'bpc-157',size:'10mg',qty:1}]}}};
   let confirm;
   const verification=new Promise(resolve=>{confirm=resolve;});
-  const {dom,d}=await setup('/',campaign,verification);
+  let onIntersection, observedCTA;
+  const Observer=class {
+   constructor(callback){onIntersection=callback;}
+   observe(target){observedCTA=target;}
+   disconnect(){}
+  };
+  const {dom,d}=await setup('/',campaign,verification,Observer);
   const pending=d.querySelector('[data-pure-home-pending]');
   const age=d.querySelector('#ap-age-dialog');
   const accept=age.querySelector('[data-action="age-confirm"]');
@@ -44,12 +50,21 @@ async function setup(route,campaign=null,quote=null){const errors=[];const conso
   assert.equal(accept.getAttribute('aria-disabled'),'true');
   assert.equal(d.activeElement,accept);
   assert.match(d.cookie,/pure_age=21-v1/);
-  assert.equal(d.querySelector('.pure-floating-shop').hidden,true);
+  assert.equal(d.querySelector('.pure-floating-shop').hasAttribute('inert'),true);
   confirm(quote);
   await new Promise(resolve=>setTimeout(resolve,0));
   assert.equal(age.open,false);
   assert.equal(d.querySelector('[data-pure-home-pending],.nl-hero'),null);
-  assert.equal(d.activeElement,d.querySelector('[data-pure-sale-cta]'));
+  const saleCTA=d.querySelector('[data-pure-sale-cta]');
+  assert.equal(d.activeElement,saleCTA);
+  assert.equal(observedCTA,saleCTA);
+  const sticky=d.querySelector('.pure-floating-shop');
+  assert.equal(sticky.getAttribute('href'),'/shop');
+  assert.equal(sticky.hasAttribute('inert'),true,'the button is hidden until the first visibility reading');
+  for(const isIntersecting of [true,false,true,false]){
+   onIntersection([{isIntersecting}]);
+   assert.equal(sticky.hasAttribute('inert'),isIntersecting);
+  }
   const set=d.querySelector('.pure-promo-set:not(.pure-promo-repeat)');
   const [christmas,divider,blackFriday,shipping]=set.children;
   assert.equal(christmas.querySelector('time').dateTime,ends_at);

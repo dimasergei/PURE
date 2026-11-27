@@ -329,7 +329,7 @@
  function home() {
  const featured=['retatrutide','bpc-157','ghk-cu','nad'].map(product).filter(Boolean);
  featured.push(...catalog.filter(x=>!featured.includes(x)).slice(0,10-featured.length));
- return `${homeHero()}<section class="ap-container nl-featured"><div class="ap-section-head"><div><span class="ap-eyebrow">THE COLLECTION</span><h2 class="pure-home-featured-title">Featured Compounds</h2></div><div class="nl-carousel-controls"><button data-carousel="-1" aria-label="Previous products">‹</button><button data-carousel="1" aria-label="Next products">›</button></div></div><div class="nl-carousel" id="nl-featured">${featured.map(p=>card(p,{featured:true,quickAdd:true})).join('')}</div><div class="nl-center"><a class="ap-button" href="/shop">View All Products</a></div></section>${homeBulkPromo(featured)}${homePackaging()}<section class="ap-container nl-editorial"><div><span class="nl-capsule pure-glow-pill">PURE DOCUMENTATION</span><h2>KNOW WHAT’S<br>IN YOUR ORDER.</h2><p>Request the certificate for your fulfilled lot when you order.</p></div><div class="nl-doc-art"><span>PURE</span><strong>Certificate<br>of Analysis</strong><div class="nl-doc-purity"><span class="nl-doc-purity-check" aria-hidden="true">✓</span><span><b>Testing reports</b><small>See available product documentation</small></span></div><div><b>Retatrutide</b> / 60mg</div><hr><div><b>Janoshik</b> / Report ID</div><hr><div><b>PURE</b> / Lot</div><a class="ap-button" href="/coas">View COAS</a></div></section>${homeResearchCallout()}${homeFAQ()}${homeEmailUpdates()}<a class="pure-floating-shop" href="/shop">Shop Now</a>`;
+ return `${homeHero()}<section class="ap-container nl-featured"><div class="ap-section-head"><div><span class="ap-eyebrow">THE COLLECTION</span><h2 class="pure-home-featured-title">Featured Compounds</h2></div><div class="nl-carousel-controls"><button data-carousel="-1" aria-label="Previous products">‹</button><button data-carousel="1" aria-label="Next products">›</button></div></div><div class="nl-carousel" id="nl-featured">${featured.map(p=>card(p,{featured:true,quickAdd:true})).join('')}</div><div class="nl-center"><a class="ap-button" href="/shop">View All Products</a></div></section>${homeBulkPromo(featured)}${homePackaging()}<section class="ap-container nl-editorial"><div><span class="nl-capsule pure-glow-pill">PURE DOCUMENTATION</span><h2>KNOW WHAT’S<br>IN YOUR ORDER.</h2><p>Request the certificate for your fulfilled lot when you order.</p></div><div class="nl-doc-art"><span>PURE</span><strong>Certificate<br>of Analysis</strong><div class="nl-doc-purity"><span class="nl-doc-purity-check" aria-hidden="true">✓</span><span><b>Testing reports</b><small>See available product documentation</small></span></div><div><b>Retatrutide</b> / 60mg</div><hr><div><b>Janoshik</b> / Report ID</div><hr><div><b>PURE</b> / Lot</div><a class="ap-button" href="/coas">View COAS</a></div></section>${homeResearchCallout()}${homeFAQ()}${homeEmailUpdates()}<a class="pure-floating-shop" href="/shop" inert>Shop Now</a>`;
 }
  function catalogResults(){
   const lowest=p=>Math.min(...(state.group==='Offers'?eligibleSizes(p):p.variants).map(v=>v.price));
@@ -442,11 +442,12 @@
   homeSaleVisibility?.disconnect();
   const sticky=$('.pure-floating-shop'),sale=$('[data-pure-sale-cta]');
   if(!sticky)return;
-  if($('[data-pure-home-pending]')){sticky.hidden=true;return;}
-  if(!sale||!window.IntersectionObserver){sticky.hidden=false;return;}
+  if($('[data-pure-home-pending]')){sticky.setAttribute('inert','');return;}
+  if(!sale||!window.IntersectionObserver){sticky.removeAttribute('inert');return;}
   const hero=sale.closest('[data-pure-home-hero]');
   homeSaleVisibility=new IntersectionObserver(([entry])=>{
-   sticky.hidden=entry.isIntersecting;
+   if(!sale.isConnected)return;
+   sticky.toggleAttribute('inert',entry.isIntersecting);
    hero.classList.toggle('pure-sale-cta-visible',entry.isIntersecting);
   });
   homeSaleVisibility.observe(sale);
