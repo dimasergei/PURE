@@ -63,11 +63,7 @@ const site = {
     'Reconstitution Solution & Supplies': 'Laboratory supplies'
   },
   origin: 'https://getpurelabs.com',
-  company: {
-    name: '1001517614 ONTARIO INC.',
-    address: ['145 Columbia St. W #210', 'Waterloo, ON N2L 0K7', 'Canada'],
-    phone: '647-792-9074'
-  },
+  company: { phone: '647-792-9074' },
   minimumAge: 21,
   ruo: 'For in-vitro laboratory research only. Not for human or veterinary use.',
   support: { email: 'support@getpurelabs.com', hours: null, responseTime: null, bulkResponseTime: null },

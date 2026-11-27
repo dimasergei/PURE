@@ -78,6 +78,7 @@ function button(h, text) { return [...h.window.document.querySelectorAll('.pica-
 function posts(h, action) { return h.calls.filter(call => call.body?.action === action); }
 async function fill(h, overrides = {}) {
   await tick();
+  set(h, 'seller_name', 'Fixture Seller Inc.');
   for (const [name, value] of Object.entries({ fx: '1.35', shipping: '20.00', origin_country: 'CA', origin_region: 'ON', carrier: 'Fixture carrier', service: 'Ground', handling_max_days: '2', transit_min_days: '2', transit_max_days: '5', quote_reference: 'FIXTURE-QUOTE', quote_expires_at: '2099-01-01T12:00', duties: 'domestic', route_review: 'Fixture product and route eligibility reviewed.', tax_mode: 'reviewed', tax_basis: 'Fixture documented no-collection treatment.', review_note: 'Fixture FX source, delivery, tax and exact items reviewed.', ...overrides })) set(h, name, value);
   set(h, 'jurisdictions_reviewed', true); set(h, 'fulfillment_confirmed', true);
 }
@@ -89,6 +90,7 @@ test('only requested Interac orders mount the review; estimates and approved met
   assert.match(h.host.textContent, /Requested USD estimate.*USD\s+104\.95/s);
   assert.match(h.host.textContent, /BLACKFRIDAY15/); assert.match(h.host.textContent, /Express delivery · Priority processing · Shipping protection/);
   assert.equal(input(h, 'fx').value, ''); assert.equal(input(h, 'shipping').value, ''); assert.equal(input(h, 'carrier').value, '');
+  assert.equal(input(h, 'seller_name').value, '');
   assert.equal(input(h, 'fulfillment_confirmed').checked, false); assert.equal(input(h, 'jurisdictions_reviewed').checked, false);
   assert.deepEqual([...input(h, 'method_id').options].map(option => option.value), ['', methodId]);
   assert.doesNotMatch(h.host.textContent, /PRIVATE-PAYEE|PRIVATE-RECEIVING|Private fixture return address/);

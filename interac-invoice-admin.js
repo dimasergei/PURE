@@ -105,7 +105,7 @@
 
     const taxDetails = el('details', undefined, 'pica-review'); taxDetails.append(el('summary', 'Tax review · required'));
     taxDetails.append(el('p', 'Tax destination: ' + destination.region + ', ' + destination.country + '. The order uses the requested delivery address.', 'pica-note'));
-    const taxGrid = grid(taxDetails), seller = field(taxGrid, 'Legal seller', 'seller_name', { value: '1001517614 ONTARIO INC.', minLength: 2 });
+    const taxGrid = grid(taxDetails), seller = field(taxGrid, 'Legal seller', 'seller_name', { minLength: 2 });
     const taxMode = select(taxGrid, 'Reviewed tax treatment', 'tax_mode', [['', 'Choose tax treatment'], ['reviewed', 'Reviewed tax lines / no collection'], ['canada_taxable_goods', 'Canadian taxable goods: calculate GST/HST']]);
     taxMode.querySelector('[value="canada_taxable_goods"]').disabled = String(destination.country).toUpperCase() !== 'CA';
     const canada = el('fieldset', undefined, 'pica-canada');

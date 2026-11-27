@@ -4,7 +4,7 @@
  const field=(label,name,type='text',extra='')=>`<label>${label}<input name="${name}" type="${type}" ${extra}></label>`;
  const section=document.createElement('section');section.className='ops-card';section.id='invoice-delivery-tax';
  section.innerHTML=`<h3>Delivery and tax review</h3><p>Use the supplier’s actual shipping quote. Confirm the tax treatment for the delivery terms and destination before issuing a payable invoice.</p>
- ${field('Legal seller','dt_seller','text','maxlength="180" value="1001517614 ONTARIO INC."')}
+ ${field('Legal seller','dt_seller','text','maxlength="180"')}
  <div class="ops-two">${field('Tax destination country code','dt_country','text','maxlength="2"')}${field('Tax destination state / province','dt_region','text','maxlength="80"')}</div>
  <fieldset id="dt-delivery"><legend>Quoted delivery</legend>
  <label>Supplier planning estimate<select name="dt_supplier"><option value="">Loading supplier profiles…</option></select></label><button type="button" id="dt-apply-supplier" disabled>Use supplier estimate</button><p id="dt-supplier-note" role="status">Estimates do not confirm a carrier, rate, available lot or destination eligibility. Confirm those details before issuing the invoice.</p>
