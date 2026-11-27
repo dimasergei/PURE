@@ -154,7 +154,7 @@
     <div class="pure-home-volume-copy">
       <span class="ap-eyebrow">BULK ORDERS</span>
       <h2 id="pure-home-volume-title">${headline}</h2>
-      <p>Strengths of the same compound count together. Your discount applies to every unit of that compound.</p>
+      <p>Mix strengths of the same compound to reach either tier.</p>
       <a class="pure-home-volume-link" href="/bulk-orders">Build a Bulk Order</a>
     </div>
     <div class="pure-home-volume-details">
@@ -163,12 +163,28 @@
     </div>
     ${pricing&&products.length?`<div class="pure-home-express" data-home-bulk>
       <div class="pure-home-express-picker">
-        <h3>Build from featured compounds</h3>
+        <h3>Featured compounds</h3>
         <div class="pure-home-express-products">${products.map(homeBulkProduct).join('')}</div>
       </div>
       <aside class="pure-home-express-summary" aria-label="Bulk order summary">${homeBulkSummary()}</aside>
     </div>`:''}
   </section>`;
+ }
+ function homeBulkPrices(retail,net){
+  return net<retail
+   ? `<del><span class="ap-sr">Retail </span>${priceMarkup(retail/100)}</del><strong><span class="ap-sr">Bulk </span>${priceMarkup(net/100)}</strong>`
+   : `<strong>${priceMarkup(retail/100)}</strong>`;
+ }
+ function homeBulkUnitPrice(id,price,quantity){
+  const pricing=window.PureQuantityPricing;
+  const minimum=pricing.TIERS.filter(tier=>tier.bps>0).at(-1).min;
+  const count=homeBulkDraft.reduce((units,line)=>units+(line.id===id?line.qty:0),0);
+  const qualified=pricing.bulkRate(count)>0;
+  const units=qualified?(quantity||1):minimum;
+  const retail=Math.round(price*100);
+  const gross=retail*units;
+  const net=Math.round((gross-pricing.bulkDiscountCents(gross,Math.max(minimum,count)))/units);
+  return `${homeBulkPrices(retail,net)}<small>${qualified?'Per unit':`Per unit at ${minimum}+`}</small>`;
  }
  function homeBulkProduct(p){
   const variants=p.variants.slice().sort((a,b)=>(parseFloat(a.size)-parseFloat(b.size))||a.size.localeCompare(b.size));
@@ -183,7 +199,7 @@
       <input type="number" inputmode="numeric" min="0" max="100" step="1" value="${quantity}" data-home-bulk-quantity aria-label="Quantity for ${esc(p.name+' '+size)}">
       <button type="button" data-home-bulk-step="10" aria-label="Add 10 units of ${esc(p.name+' '+size)}" ${quantity===100?'disabled':''}>+10</button>
     </div>
-    <div class="pure-home-express-price"><strong>${priceMarkup(price,{trimWhole:true})}</strong><small>Retail / unit</small></div>
+    <div class="pure-home-express-price">${homeBulkUnitPrice(p.id,price,quantity)}</div>
   </article>`;
  }
  function homeBulkSummary(){
@@ -197,7 +213,7 @@
    const gross=Math.round(variant.price*100)*line.qty;
    const discount=pricing.bulkDiscountCents(gross,counts.get(line.id));
    retail+=gross;savings+=discount;
-   return `<li><span><strong>${esc(p.name)}</strong><small>${esc(line.size)} · ${line.qty} units</small></span><span>${priceMarkup((gross-discount)/100)}${discount?`<del>${priceMarkup(gross/100)}</del>`:''}</span><button type="button" data-home-bulk-remove="${esc(line.id)}" data-size="${esc(line.size)}" aria-label="Remove ${esc(p.name+' '+line.size)}">×</button></li>`;
+   return `<li><span><strong>${esc(p.name)}</strong><small>${esc(line.size)} · ${line.qty} units</small></span><span class="pure-home-express-line-price">${homeBulkPrices(gross,gross-discount)}</span><button type="button" data-home-bulk-remove="${esc(line.id)}" data-size="${esc(line.size)}" aria-label="Remove ${esc(p.name+' '+line.size)}">×</button></li>`;
   }).join('');
   return `<h3>Your bulk order</h3>
    ${lines?`<ul>${lines}</ul>`:'<p>Add products to see your estimate.</p>'}
@@ -206,7 +222,7 @@
     <div class="pure-home-express-estimate"><strong>Estimated total</strong><strong>${priceMarkup((retail-savings)/100)}</strong></div>
    </div>
    <button class="ap-button" type="button" data-home-bulk-checkout ${ready?'':'disabled'}>Checkout</button>
-   <p data-home-bulk-notice>${ready?'Delivery options are confirmed at checkout.':'Add at least 10 units per compound to check out.'}</p>`;
+   <p data-home-bulk-notice>${ready?'':'Add at least 10 units per compound.'}</p>`;
  }
  function refreshHomeBulkProduct(card){
   const p=product(card.dataset.homeBulkProduct);
@@ -224,7 +240,10 @@
  }
  function updateHomeBulkQuantity(card,qty){
   const id=card.dataset.homeBulkProduct;
-  if(!setHomeBulkQuantity(id,card.querySelector('[data-home-bulk-size]').value,qty))return;
+  const size=card.querySelector('[data-home-bulk-size]').value;
+  if(!setHomeBulkQuantity(id,size,qty))return;
+  const variant=product(id).variants.find(item=>item.size===size);
+  card.querySelector('.pure-home-express-price').innerHTML=homeBulkUnitPrice(id,variant.price,qty);
   card.querySelector('[data-home-bulk-step]').disabled=qty===100;
  }
  function mountHomeBulk(root){
@@ -293,12 +312,11 @@
   ];
   return `<section aria-labelledby="pure-home-faq-title" class="ap-container ap-section ap-faq-layout pure-faq-section pure-home-faq" id="faq">
     <div class="pure-faq-intro">
-      <div class="pure-faq-intro-copy"><h2 id="pure-home-faq-title">Frequently asked questions</h2><p>Find answers about pricing, ordering and delivery.</p></div>
-      <nav class="pure-home-faq-links" aria-labelledby="pure-home-faq-support-title">
-        <h3 id="pure-home-faq-support-title">Order support</h3>
-        <a href="/track-order">Track Order <span>Check your shipment status</span></a>
-        <a href="/shipping-policy">Shipping <span>See processing and delivery estimates</span></a>
-        <a href="/contact">Contact Us <span>Get help from the PURE team</span></a>
+      <div class="pure-faq-intro-copy"><h2 id="pure-home-faq-title">Frequently asked questions</h2></div>
+      <nav class="pure-home-faq-links" aria-label="Order support">
+        <a href="/track-order">Track Order</a>
+        <a href="/shipping-policy">Shipping</a>
+        <a href="/contact">Contact Us</a>
       </nav>
     </div>
     <div class="ap-faq pure-faq-list">${questions.map(([question,answer])=>`<details><summary>${question}</summary><p>${answer}</p></details>`).join('')}</div>

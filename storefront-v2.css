@@ -22,22 +22,21 @@ body.ap-site .pure-home-volume {
   display: grid;
   grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr);
   align-items: center;
-  gap: clamp(24px, 4vw, 64px);
+  gap: clamp(13px, 2vw, 24px);
   margin-block: 0 clamp(32px, 5vw, 64px);
-  padding: clamp(24px, 4vw, 60px);
-  border-radius: 24px;
+  padding: clamp(14px, 2.4vw, 32px);
+  border-radius: 20px;
   background: #121212;
   background-image: linear-gradient(112deg, #121212 35%, #2c2c2c);
   color: #fff;
 }
 
-html:root body.ap-site .pure-home-volume-copy .ap-eyebrow { color: #cdcdcd; }
+html:root body.ap-site .pure-home-volume-copy .ap-eyebrow { margin: 0 0 6px; color: #cdcdcd; }
 
 body.ap-site .pure-home-volume h2 {
-  max-width: 10ch;
-  margin: 10px 0 16px;
+  margin: 0 0 8px;
   color: #fff;
-  font-size: clamp(38px, 5vw, 80px);
+  font-size: clamp(29px, 3.6vw, 54px);
   font-weight: 900;
   line-height: .98;
   letter-spacing: -.06em;
@@ -49,18 +48,17 @@ body.ap-site .pure-home-volume h2 {
   max-width: 39ch;
   margin: 0;
   color: #d7d7d7;
-  font-size: clamp(14px, 1.3vw, 17px);
-  line-height: 1.6;
+  font-size: clamp(13px, 1.2vw, 15px);
+  line-height: 1.4;
 }
 
 html:root body.ap-site .pure-home-volume-link {
   display: inline-flex;
   justify-content: space-between;
   align-items: center;
-  gap: 20px;
-  min-height: 48px;
-  margin-top: 23px;
-  padding: 10px 20px;
+  min-height: 44px;
+  margin-top: 12px;
+  padding: 8px 16px;
   background: #f2f2f2;
   color: #141414;
   border: 1px solid #f2f2f2;
@@ -82,9 +80,9 @@ html:root body.ap-site .pure-home-volume-link:focus-visible { outline: 2px solid
 
 .pure-home-volume-tiers > div {
   display: grid;
-  gap: 8px;
+  gap: 4px;
   min-width: 0;
-  padding: clamp(13px, 2.2vw, 27px);
+  padding: clamp(9px, 1.4vw, 18px);
   border: 1px solid #707070;
   border-radius: 14px;
   background: #ffffff0d;
@@ -93,7 +91,7 @@ html:root body.ap-site .pure-home-volume-link:focus-visible { outline: 2px solid
 .pure-home-volume-tiers > div:last-child { background: #f2f2f2; color: #141414; border-color: #f2f2f2; }
 
 .pure-home-volume-tiers strong {
-  font-size: clamp(30px, 4vw, 61px);
+  font-size: clamp(25px, 3vw, 43px);
   font-weight: 900;
   line-height: 1;
   letter-spacing: -.07em;
@@ -108,7 +106,7 @@ html:root body.ap-site .pure-home-volume-link:focus-visible { outline: 2px solid
   align-items: baseline;
   flex-wrap: wrap;
   gap: 4px 12px;
-  margin: 15px 0 0;
+  margin: 8px 0 0;
   color: #d7d7d7;
   font-size: 13px;
 }
@@ -210,30 +208,20 @@ body.ap-site .pure-home-email .ap-button-light:disabled { opacity: .65; cursor: 
 html:root body.ap-site .pure-home-faq .pure-faq-intro {
   align-self: start;
   min-height: 0;
-  gap: 22px;
+  gap: 14px;
   padding: clamp(22px, 3vw, 36px);
   background: #111;
   text-align: left;
 }
 
 html:root body.ap-site .pure-home-faq .pure-faq-intro::before { content: none; }
-html:root body.ap-site .pure-home-faq .pure-faq-intro h2 { margin: 0 0 10px; color: #fff; }
-html:root body.ap-site .pure-home-faq .pure-faq-intro p { margin: 0; color: #d4d4d4; }
+html:root body.ap-site .pure-home-faq .pure-faq-intro h2 { margin: 0; color: #fff; }
 
 .pure-home-faq-links { display: grid; gap: 7px; min-width: 0; }
-.pure-home-faq-links h3 {
-  margin: 0 0 2px;
-  color: #d4d4d4;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-}
-
 .pure-home-faq-links > a {
-  display: grid;
-  gap: 2px;
-  min-height: 52px;
+  display: flex;
+  align-items: center;
+  min-height: 44px;
   padding: 9px 13px;
   border: 1px solid #484848;
   border-radius: 10px;
@@ -246,7 +234,6 @@ html:root body.ap-site .pure-home-faq .pure-faq-intro p { margin: 0; color: #d4d
 
 .pure-home-faq-links > a:hover { background: #333; }
 .pure-home-faq-links > a:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
-.pure-home-faq-links > a span { color: #d4d4d4; font-size: 12px; font-weight: 400; line-height: 1.35; }
 
 html:root body.ap-site .pure-home-faq .pure-faq-list { align-self: start; }
 html:root body.ap-site .pure-home-faq .pure-faq-list details { padding-block: 0; }
@@ -267,28 +254,28 @@ html:root body.ap-site .pure-home-faq .pure-faq-list summary { min-height: 52px;
   grid-column: 1 / -1;
   display: grid;
   grid-template-columns: minmax(0,1.85fr) minmax(0,1fr);
-  gap: 16px;
+  gap: 10px;
   align-items: start;
   min-width: 0;
   color: #111;
 }
 .pure-home-express-picker, .pure-home-express-summary {
-  padding: clamp(14px,2vw,24px);
+  padding: clamp(10px,1.3vw,16px);
   min-width: 0;
-  border-radius: 16px;
+  border-radius: 12px;
   background: #fff;
 }
-.pure-home-express h3 { margin: 0 0 14px; font-size: clamp(17px,2vw,23px); line-height: 1.2; }
+.pure-home-express h3 { margin: 0 0 8px; font-size: clamp(16px,1.55vw,21px); line-height: 1.2; }
 .pure-home-express-picker { container: home-bulk-picker / inline-size; }
 .pure-home-express-products { display: grid; gap: 6px; }
 .pure-home-express-products article {
   display: grid;
-  grid-template-columns: 48px minmax(65px,1fr) minmax(70px,auto) auto minmax(65px,auto);
+  grid-template-columns: 40px minmax(65px,1fr) minmax(70px,auto) auto minmax(70px,auto);
   grid-template-areas: "image name strength quantity price";
   align-items: center;
-  gap: 10px;
+  gap: 7px;
   min-width: 0;
-  padding: 7px 10px;
+  padding: 4px 7px;
   border: 1px solid #e0e0e0;
   border-radius: 10px;
   background: #fff;
@@ -349,16 +336,23 @@ html:root body.ap-site .pure-home-faq .pure-faq-list summary { min-height: 52px;
 .pure-home-express-quantity button:disabled { opacity: .38; cursor: default; }
 .pure-home-express-quantity input { appearance: textfield; }
 .pure-home-express-quantity input::-webkit-inner-spin-button { appearance: none; }
-.pure-home-express-price { grid-area: price; text-align: right; white-space: nowrap; line-height: 1.2; }
-.pure-home-express-price strong { display: block; font-size: 15px; font-variant-numeric: tabular-nums; }
-.pure-home-express-price small { display: block; margin-top: 2px; color: #595959; font-size: 11px; }
+.pure-home-express-price { grid-area: price; }
+.pure-home-express-price, .pure-home-express-line-price {
+  display: grid;
+  text-align: right;
+  white-space: nowrap;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+.pure-home-express-price strong, .pure-home-express-line-price strong { font-size: 15px; }
+.pure-home-express-price small { margin-top: 2px; color: #595959; font-size: 10px; }
 @container home-bulk-picker (max-width: 420px) {
   .pure-home-express-products article {
-    grid-template-columns: 39px minmax(0,1fr) minmax(65px,auto);
+    grid-template-columns: 33px minmax(0,1fr) minmax(65px,auto);
     grid-template-areas: "image name price" "image strength quantity";
     column-gap: 6px;
-    row-gap: 5px;
-    padding: 7px 8px;
+    row-gap: 3px;
+    padding: 4px 6px;
   }
   .pure-home-express-strength { max-width: 105px; }
   .pure-home-express-strength select { padding-inline: 4px; }
@@ -369,9 +363,10 @@ html:root body.ap-site .pure-home-faq .pure-faq-list summary { min-height: 52px;
 .pure-home-express-summary li { display: grid; grid-template-columns: minmax(0,1fr) auto 28px; align-items: center; gap: 7px; min-height: 45px; padding: 5px 0; border-bottom: 1px solid #eee; }
 .pure-home-express-summary li span:first-child { min-width: 0; overflow-wrap: anywhere; }
 .pure-home-express-summary li small, .pure-home-express-summary small { display: block; color: #555; }
-.pure-home-express-summary li del { display: block; text-align: right; }
 .pure-home-express-summary li button { min-height: 34px; border: 0; background: #efefef; color: #111; border-radius: 5px; }
-.pure-home-express-summary del, .pure-home-express-summary del .pure-price-value { color: #575757; text-decoration: line-through; }
+.pure-home-express :is(del, del .pure-price-value) { color: #595959; text-decoration: line-through; }
+.pure-home-express-price del, .pure-home-express-line-price del { font-size: 12px; }
+[data-home-bulk-notice]:empty { display: none; }
 .pure-home-express-total > div { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding-block: 6px; }
 .pure-home-express-total .pure-order-savings { color: #155e36; font-weight: 740; }
 .pure-home-express-total .pure-order-savings small { color: inherit; }

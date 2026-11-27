@@ -97,6 +97,8 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
    assert.deepEqual(strengths,[...p.variants].sort((a,b)=>(parseFloat(a.size)-parseFloat(b.size))||a.size.localeCompare(b.size)).map(v=>v.size));
    assert.ok(row.firstElementChild.querySelector('img[src]'));
    assert.ok(row.lastElementChild.matches('.pure-home-express-price'));
+   assert.deepEqual([...row.lastElementChild.children].map(child=>child.tagName),['DEL','STRONG','SMALL']);
+   assert.match(row.lastElementChild.querySelector('small').textContent,/10\+/);
   }
   const id=bulkRows[0].dataset.homeBulkProduct;
   const bulkRow=()=>bulk.querySelector(`[data-home-bulk-product="${id}"]`);
@@ -110,18 +112,33 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
    input.value=qty;
    input.dispatchEvent(new w.Event('input',{bubbles:true}));
   };
+  const shownBulkPrice=()=>bulkRow().querySelector('.pure-home-express-price strong').textContent;
+  const entryTier=shownBulkPrice();
   const addTen=()=>bulkRow().querySelector('[data-home-bulk-step="10"]').click();
   addTen();
   addTen();
   assert.equal(bulkRow().querySelector('[data-home-bulk-quantity]').value,'20');
   enterQty('6');
   assert.equal(bulk.querySelector('[data-home-bulk-checkout]').disabled,true);
+  assert.equal(bulk.querySelector('.pure-home-express-line-price del'),null);
   chooseStrength(1);
   assert.equal(bulkRow().querySelector('[data-home-bulk-quantity]').value,'0');
   enterQty('4');
   assert.equal(bulk.querySelector('[data-home-bulk-checkout]').disabled,false);
+  for(const line of bulk.querySelectorAll('.pure-home-express-line-price')){
+   assert.deepEqual([...line.children].map(child=>child.tagName),['DEL','STRONG']);
+  }
   chooseStrength(0);
   assert.equal(bulkRow().querySelector('[data-home-bulk-quantity]').value,'6');
+  enterQty('46');
+  const retail=w.AltaStore.product(id).variants.find(variant=>variant.size===bulkRow().querySelector('select').value).price;
+  assert.equal(shownBulkPrice(),'Bulk '+w.AltaStore.money(Math.round(retail*40)/100));
+  assert.notEqual(shownBulkPrice(),entryTier);
+  const faqLinks=d.querySelector('.pure-home-faq-links');
+  assert.deepEqual([...faqLinks.children].map(link=>[link.tagName,link.textContent,link.getAttribute('href')]),[
+   ['A','Track Order','/track-order'], ['A','Shipping','/shipping-policy'], ['A','Contact Us','/contact']
+  ]);
+  assert.equal(faqLinks.querySelector('span,p'),null);
   dom.window.close();
  }
  {const{dom,d,w}=await setup('/shop');
