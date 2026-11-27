@@ -84,7 +84,7 @@
   const country=[saved.country,locale?.country,localStorage.getItem('ap-shipping-country')].find(code=>supported.includes(code))||'US';
   const savedAddress=saved.country&&saved.country!==country?{}:saved;
   const state={country,email:user?.email||'',
-    membershipAddon:savedAddon,membershipChoice:savedAddon||{plan:'vip',period:'monthly'},
+    membershipAddon:savedAddon,
     shipping:'economy',extras:new Set([...(Array.isArray(priorExtras)?priorExtras.filter(x=>x!=='protection'&&isActive(x)):[]),...(isActive('protection')&&wantsProtection(cart)?['protection']:[])]),
     coupon:initialCoupon(),paymentKind:walletPreference?'card':paymentKind(preferred)||'card',cryptoMethodId:paymentKind(preferred)==='crypto'?preferred.id:null,wallet:walletPreference,fxQuote:null,shippingData:null,billingData:null,billingSame:true,note:'',smsOptIn:false};
   if(guest)state.paymentKind=paymentKind(preferred?.countries?.includes(state.country)?preferred:paymentMethods.find(method=>method.countries?.includes(state.country)))||'card';
@@ -312,10 +312,11 @@
    }
    view('[data-nlx-totals]',detail).innerHTML=currentPreview?moneyLines().map(([n,v])=>'<div class="'+(['Total','Total (CAD)'].includes(n)?'nlx-grand':'')+'"><span>'+esc(n)+'</span><strong>'+currentMoney(v)+'</strong></div>').join(''):'<p role="status">Calculating your order total…</p>';
    if(!guest)window.PureMembershipCheckout?.offer(view('[data-pure-membership-offer]',detail),currentPreview,data.terms?.conversion,{
-     selection:state.membershipChoice,
-     onSelect:choice=>{state.membershipChoice=choice;renderSummary();},
-     onAdd:addon=>{state.membershipAddon={plan:addon.plan,period:addon.period};sessionStorage.setItem('pure-checkout-membership-item-v1',JSON.stringify(state.membershipAddon));invalidate();renderSummary();void refresh();},
-     onRemove:()=>{state.membershipAddon=null;sessionStorage.removeItem('pure-checkout-membership-item-v1');invalidate();renderSummary();void refresh();}
+     onAdd:addon=>{
+      state.membershipAddon=addon;
+      sessionStorage.setItem('pure-checkout-membership-item-v1',JSON.stringify(addon));
+      invalidate();renderSummary();void refresh();
+     }
    });
    const removeMember=view('[data-nlx-remove-membership]',detail);
    if(removeMember)removeMember.onclick=()=>{state.membershipAddon=null;sessionStorage.removeItem('pure-checkout-membership-item-v1');invalidate();renderSummary();void refresh();};

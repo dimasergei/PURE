@@ -5,23 +5,18 @@
  const field=(label,name,value='',attributes='')=>'<label>'+label+'<input name="'+name+'" value="'+esc(value)+'" '+attributes+'></label>';
  function offer(root,quote,config,actions={}){
   if(!root)return;
-  const membership=quote?.membership,addon=quote?.pricing?.membership_addon;
-  if(membership){root.hidden=true;return;}
-  if(addon){root.hidden=true;return;}
-  if(!config?.memberships_enabled||!quote?.membership_offer){root.hidden=true;return;}
-  const tiers=['vip','elite'],months=['monthly','annual'],selected=actions.selection||{plan:'vip',period:'monthly'},
-   plan=config.plans[selected.plan]||config.plans.vip;
+  const plan=config?.plans?.vip;
+  const potential=quote?.membership_offer?.plans?.vip;
+  if(quote?.membership||quote?.pricing?.membership_addon||!config?.memberships_enabled||!plan||!potential){
+   root.hidden=true;
+   return;
+  }
   const fx=quote.currency==='CAD'&&Number.isSafeInteger(quote.pricing?.fx_ppm)?quote.pricing.fx_ppm:1000000;
-  const amount=Math.round(plan[selected.period+'_cents']*fx/1000000);
-  const potential=quote.membership_offer.plans[selected.plan]||quote.membership_offer.plans.vip;
+  const amount=Math.round(plan.monthly_cents*fx/1000000);
   root.hidden=false;
   root.innerHTML='<div class="pm-offer"><span class="pm-eyebrow">SUBSCRIBE & SAVE</span><h3>'+esc(potential.total_savings_cents>0?'Save '+money(potential.total_savings_cents,quote.currency)+' on this order':'Add a PURE membership')+'</h3>'+
-   '<div class="pm-add-membership-options"><div class="pm-add-tiers">'+tiers.map(key=>'<button type="button" data-pm-tier="'+key+'" aria-pressed="'+(selected.plan===key)+'">'+esc(config.plans[key].name)+'</button>').join('')+'</div>'+
-   '<div class="pm-add-periods">'+months.map(key=>'<button type="button" data-pm-period="'+key+'" aria-pressed="'+(selected.period===key)+'">'+(key==='annual'?'Annual':'Monthly')+'</button>').join('')+'</div></div>'+
    '<button type="button" class="ap-button pm-add-to-order" data-pm-add>Add '+esc(plan.name)+' · '+esc(money(amount,quote.currency))+'</button></div>';
-  root.querySelectorAll('[data-pm-tier]').forEach(button=>button.onclick=()=>actions.onSelect?.({plan:button.dataset.pmTier,period:selected.period}));
-  root.querySelectorAll('[data-pm-period]').forEach(button=>button.onclick=()=>actions.onSelect?.({plan:selected.plan,period:button.dataset.pmPeriod}));
-  root.querySelector('[data-pm-add]').onclick=()=>actions.onAdd?.(selected);
+  root.querySelector('[data-pm-add]').onclick=()=>actions.onAdd?.({plan:'vip',period:'monthly'});
  }
  async function checkout(root,auth,user,options={}){
   let busy=false,savedId=null,quote=null,request=null,requestId=null,previousFingerprint=null,revision=0,quotedRevision=null,quotedFingerprint=null;

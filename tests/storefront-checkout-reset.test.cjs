@@ -3,19 +3,20 @@ const test=require('node:test'),assert=require('node:assert/strict'),fs=require(
 const {JSDOM,VirtualConsole}=require('jsdom');
 const {price}=require('../lib/direct-checkout');
 const config=require('../config/checkout.json'),delivery=require('../config/delivery-options.json'),zones=require('../config/shipping-zones.json');
+const conversion=require('../config/conversion.json');
 const bank={id:'22222222-2222-4222-8222-222222222222',kind:'bank_transfer',sale_scope:'goods',currency:'USD',label:'Same-Day Bank Payment',active:true};
 const card={id:'11111111-1111-4111-8111-111111111111',kind:'hosted_link',sale_scope:'goods',currency:'USD',label:'Card',native_provider:'rampex',rampex_provider:'hosted',countries:['US','CA']};
 const user={email:'researcher@example.test',user_metadata:{full_name:'Fixture Researcher',alta_profile:{shipping:{name:'Fixture Researcher',line1:'123 Research Lane',city:'Miami',region:'FL',postal_code:'33101',country:'US',phone:'3055550157'}}}};
 const tick=()=>new Promise(resolve=>setTimeout(resolve,20));
-function fixture(surface,{legacyCoupon=false,balances={points:0,credit_cents:0},campaign}={}){
+function fixture(surface,{legacyCoupon=false,balances={points:0,credit_cents:0},campaign,membershipOffer}={}){
  const dom=new JSDOM('<main id="root"></main>',{url:'https://pure-labs.live/'+(surface==='cart'?'shop':'checkout'),runScripts:'outside-only',virtualConsole:new VirtualConsole()}),w=dom.window,requests=[],orderRequests=[];
  let cart=[{id:'fixture',key:'fixture:5mg',name:'Fixture compound',size:'5mg',qty:2,price:80}];
  const products=[{id:'fixture',name:'Fixture compound',variants:[{size:'5mg',price:80}]},{id:'addon',name:'Research add-on',variants:[{size:'10mg',price:30}]}];
- const data={config,delivery_options:delivery,shipping_zones:zones,methods:[card,bank],nmi:null,balances,events:[]};
+ const data={config,delivery_options:delivery,shipping_zones:zones,methods:[card,bank],nmi:null,balances,events:[],terms:{conversion}};
  w.AltaStore={get cart(){return cart;},catalog:products,product:id=>products.find(p=>p.id===id),image:()=>'/fixture.svg',adjustQuantity(key,delta){cart=cart.map(item=>item.key===key?{...item,qty:item.qty+delta}:item).filter(item=>item.qty>0);}};
  function quote(body){
   const q=price({kind:'goods',request:{items:body.items.map(item=>({...item,name:'Fixture compound',unit_price_usd_cents:8000})),...(body.membership_addon?{membership_addon:body.membership_addon}:{}),address:{country:body.country||body.address?.country||'US'},checkout:{coupon:body.coupon||'',points:body.points||0,credit_cents:body.credit_cents||0,delivery:body.delivery}}},bank,null,balances,null,delivery,null,campaign);
-  return {...q,free_shipping_threshold_cents:25000,free_shipping_remaining_cents:Math.max(0,25000-q.subtotal_cents+q.discount_cents)};
+  return {...q,membership_offer:body.membership_addon?null:membershipOffer,free_shipping_threshold_cents:25000,free_shipping_remaining_cents:Math.max(0,25000-q.subtotal_cents+q.discount_cents)};
  }
  w.fetch=async(url,options={})=>{
   if(String(url).includes('checkout=public'))return {ok:true,json:async()=>data};
@@ -25,6 +26,7 @@ function fixture(surface,{legacyCoupon=false,balances={points:0,credit_cents:0},
  };
  const auth={auth:{getSession:async()=>({data:{session:{access_token:'isolated-fixture-token'}}})}};
  w.eval(fs.readFileSync('direct-checkout-client.js','utf8'));
+ w.eval(fs.readFileSync('membership-checkout.js','utf8'));
  w.DirectCheckout={...w.DirectCheckout,checkout:async()=>{},openHostedPayment:async()=>({paid:true}),api:async(_auth,body)=>{if(!body)return data;orderRequests.push(body);if(body.action==='quote')return {...quote(body),quote:'fixture-signed-quote'};if(body.action==='place')return {id:body.id};throw Error('Unexpected checkout action');}};
  if(legacyCoupon){w.localStorage.setItem('ap-checkout-coupon','BOGO');w.localStorage.setItem('ap-cart-coupon','BOGO');}
  w.eval(fs.readFileSync(surface==='cart'?'cart-reference.js':'checkout-reference.js','utf8'));
@@ -101,6 +103,27 @@ test('checkout exposes existing balances without promising new rewards',async()=
  try{await f.w.DirectCheckout.checkout(f.root,f.auth,f.user);await tick();assert.ok(f.root.querySelector('a[href="/checkout?balance=1"]'));assert.match(f.root.textContent,/200 points/);assert.doesNotMatch(f.root.textContent,/Earn .*points|membership/i);}finally{f.dom.window.close();}
 });
 
+
+test('the PURE WHITE offer updates the checkout quote and returns when removed',async()=>{
+ const f=fixture('checkout',{membershipOffer:{plans:{vip:{total_savings_cents:1850}}}});
+ try{
+  await f.w.DirectCheckout.checkout(f.root,f.auth,f.user);await tick();
+  const offer=f.root.querySelector('[data-pure-membership-offer]');
+  const button=offer.querySelector('[data-pm-add]');
+  assert.equal(button.textContent,'Add PURE WHITE · $19.99');
+  button.click();await tick();
+  assert.deepEqual(f.requests.at(-1).membership_addon,{plan:'vip',period:'monthly'});
+  assert.equal(offer.hidden,true);
+  const line=f.root.querySelector('.nlx-membership-line');
+  assert.equal(line.querySelector('strong').textContent,'PURE WHITE');
+  assert.equal(line.querySelector('.nlx-product-price').textContent,'$19.99');
+  line.querySelector('[data-nlx-remove-membership]').click();await tick();
+  assert.equal(f.requests.at(-1).membership_addon,undefined);
+  assert.equal(f.root.querySelector('.nlx-membership-line'),null);
+  assert.equal(offer.hidden,false);
+  assert.equal(f.orderRequests.length,0,'adding or removing the offer does not place an order');
+ }finally{f.dom.window.close();}
+});
 
 test('checkout membership item lines up with product prices and no redundant payment or delivery copy appears',async()=>{
  const f=fixture('checkout');
