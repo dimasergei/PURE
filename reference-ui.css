@@ -724,7 +724,18 @@ html[data-display-currency]:not([data-display-currency="USD"]) body.ap-site :is(
 .ap-site .pure-contact-hero p{position:relative;z-index:1;max-width:540px;font-size:16px;line-height:1.7;color:#ddd}
 .ap-site .pure-contact-chips{position:relative;z-index:1;display:flex;gap:8px;flex-wrap:wrap;margin-top:24px}
 .ap-site .pure-contact-chips span{border:1px solid #555;color:#eee;font-size:10px;font-weight:800;letter-spacing:.08em;border-radius:30px;padding:8px 12px}
-.ap-site .pure-contact-watermark{position:absolute;right:-25px;bottom:-60px;pointer-events:none;font-weight:900;letter-spacing:-.10em;font-size:clamp(165px,25vw,390px);color:#ffffff0b;line-height:1}
+.ap-site .pure-contact-watermark{
+  position:absolute;
+  right:-25px;
+  bottom:-24px;
+  width:clamp(370px,60vw,930px);
+  aspect-ratio:320 / 74;
+  overflow:hidden;
+  text-indent:-9999px;
+  background:url('/assets/pure-wordmark.svg') bottom right / contain no-repeat;
+  opacity:.043;
+  pointer-events:none;
+}
 .ap-site .pure-contact-main{display:grid;grid-template-columns:minmax(270px,.82fr) minmax(0,1.18fr);gap:20px;padding-top:42px;padding-bottom:28px;align-items:stretch}
 .ap-site .pure-contact-side{min-width:0;display:flex;flex-direction:column;background:#111;color:#fff;border-radius:20px;padding:clamp(25px,3vw,44px)}
 .ap-site .pure-contact-side .pure-contact-caption{color:#aaa}
@@ -745,7 +756,7 @@ html[data-display-currency]:not([data-display-currency="USD"]) body.ap-site :is(
 .ap-site .pure-contact-outro{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;padding-bottom:56px;font-size:11px;font-weight:800;letter-spacing:.1em;color:#666}
 .ap-site .pure-contact-outro a{color:#111;text-underline-offset:4px}
 @media(max-width:850px){.ap-site .pure-contact-main{grid-template-columns:1fr;padding-top:23px}.ap-site .pure-contact-hero-inner{min-height:290px;padding-top:48px;padding-bottom:45px}}
-@media(max-width:550px){.ap-site .pure-contact-hero h1{font-size:clamp(36px,10vw,58px)}.ap-site .pure-contact-hero p{font-size:14px}.ap-site .pure-contact-chips span{font-size:9px;padding:6px 9px}.ap-site .pure-contact-watermark{font-size:165px;right:-20px;bottom:-16px}.ap-site .pure-contact-side{padding:26px}.ap-site .pure-contact-form-card{padding:24px 18px}.ap-site .pure-contact-outro{padding-bottom:35px}}
+@media(max-width:550px){.ap-site .pure-contact-hero h1{font-size:clamp(36px,10vw,58px)}.ap-site .pure-contact-hero p{font-size:14px}.ap-site .pure-contact-chips span{font-size:9px;padding:6px 9px}.ap-site .pure-contact-watermark{right:-20px;bottom:-13px}.ap-site .pure-contact-side{padding:26px}.ap-site .pure-contact-form-card{padding:24px 18px}.ap-site .pure-contact-outro{padding-bottom:35px}}
 
 /* Consistent PURE catalog and bulk typography, contrast, spacing and responsive cards */
 .ap-site .pure-shop-page{background:#f8f8f8;color:#111}
