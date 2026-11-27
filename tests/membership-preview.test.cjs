@@ -25,6 +25,10 @@ test('account navigation separates prepaid Membership from Subscription and mark
    assert.equal(monthly.length,1);
    assert.equal(monthly[0].textContent,'Subscription');
    assert.equal(document.querySelector('a[aria-current="page"]').getAttribute('href'),route);
+   const toggle=document.querySelector('.account-nav-toggle');
+   assert.equal(toggle.textContent,document.querySelector('a[aria-current="page"]').textContent);
+   assert.equal(toggle.getAttribute('aria-expanded'),'false');
+   assert.equal(document.getElementById(toggle.getAttribute('aria-controls')).querySelectorAll('a').length,7);
    assert.equal(document.querySelectorAll('#logout').length,1);
    assert.equal(document.querySelector('a[href="/account/subscriptions"],a[href="/account/stack"]'),null);
   }finally{window.close();}

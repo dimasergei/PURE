@@ -206,6 +206,8 @@ html:root body.ap-site .nl-bulk-faq { padding-top: 0; padding-bottom: var(--pure
 }
 
 /* PURE account: understated tab underline instead of filled selection boxes. */
+.account-nav-toggle { display: none; }
+.account-nav-options { display: contents; }
 html:root body.ap-site.ap-account-site .account-card nav.account-nav :is(a,.account-nav-logout){
   position:relative;
   display:inline-flex;
@@ -373,6 +375,43 @@ html:root body.ap-site #monthly-main:not(:has(.monthly-checkout-layout)) :is(but
     overflow: visible;
     padding-bottom: 4px;
   }
+
+  html:root body.ap-site.ap-account-site .account-card nav.account-nav:has(> .account-nav-toggle) {
+    margin-block: 0 16px;
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+
+  html:root body.ap-site.ap-account-site .account-nav > .account-nav-toggle {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 48px;
+    padding: 8px 16px;
+    border: 1px solid #111;
+    border-radius: 12px;
+    background: #fff;
+    color: #111;
+    font-size: .875rem;
+    font-weight: 850;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    text-align: start;
+    cursor: pointer;
+  }
+  .account-nav-toggle::after {
+    content: '';
+    flex: 0 0 8px;
+    height: 8px;
+    border: solid currentColor;
+    border-width: 0 2px 2px 0;
+    transform: translateY(-2px) rotate(45deg);
+  }
+  .account-nav-toggle[aria-expanded="true"]::after { transform: translateY(2px) rotate(225deg); }
+  .account-nav-toggle:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+  .account-nav-toggle[aria-expanded="false"] + .account-nav-options { display: none; }
 
   html:root body.ap-site.ap-account-site .account-card nav.account-nav :is(a,.account-nav-logout) {
     min-width: 0;

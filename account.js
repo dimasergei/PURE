@@ -1,6 +1,27 @@
 (()=>{const root=document.getElementById('account-root');document.getElementById('year').textContent=new Date().getFullYear();let auth,user,recovery=false;
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),money=(v,c='USD')=>new Intl.NumberFormat('en-US',{style:'currency',currency:(c||'USD').toUpperCase()}).format((Number(v)||0)/100),date=v=>v?new Intl.DateTimeFormat('en-US',{dateStyle:'medium',timeStyle:'short'}).format(new Date(v)):'Date unavailable',status=v=>String(v||'pending').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase()),msg=(v,b=false)=>'<div class="'+(b?'account-error':'account-message')+'" role="'+(b?'alert':'status')+'">'+esc(v)+'</div>',dis='<div class="account-disclaimer"><strong>Research use only.</strong> Products are supplied for controlled laboratory research only. They are not for human or veterinary use, ingestion, injection, diagnosis, treatment, or consumption.</div>',head=(h,s='')=>'<p class="account-eyebrow">PURE · Customer account</p><h1>'+h+'</h1>'+(s?'<p class="account-muted">'+s+'</p>':''),go=p=>location.assign(p),valid=e=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e),strong=p=>p.length>=12&&p.length<=128&&/[a-z]/.test(p)&&/[A-Z]/.test(p)&&/[0-9]/.test(p)&&/[^A-Za-z0-9]/.test(p);
 const liveAccountOrigin='https://getpurelabs.com';
+function collapseAccountNav(toggle){
+ if(toggle?.getAttribute('aria-expanded')!=='true')return;
+ toggle.setAttribute('aria-expanded','false');
+ toggle.focus({preventScroll:true});
+}
+root.addEventListener('click',event=>{
+ const toggle=event.target.closest('.account-nav')?.querySelector('.account-nav-toggle');
+ if(!toggle)return;
+ if(toggle.contains(event.target)){
+  toggle.setAttribute('aria-expanded',String(toggle.getAttribute('aria-expanded')==='false'));
+ }else if(event.target.closest('.account-nav-options :is(a,button)')){
+  collapseAccountNav(toggle);
+ }
+});
+root.addEventListener('keydown',event=>{
+ if(event.key!=='Escape')return;
+ const toggle=event.target.closest('.account-nav')?.querySelector('.account-nav-toggle[aria-expanded="true"]');
+ if(!toggle)return;
+ event.preventDefault();
+ collapseAccountNav(toggle);
+});
 const googleClientId='259510881588-qk99i7meksolpbd3dpihclkt43ah5lov.apps.googleusercontent.com';
 let googleLibrary;
 function accountAuthOrigin(){
