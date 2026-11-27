@@ -200,9 +200,12 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
   assert.equal(d.querySelector('.nl-bulk-count'),null);assert.equal(d.querySelector('#ap-bulk-count'),null);
   const benefits=[...d.querySelectorAll('.nl-bulk-benefit')];
   assert.equal(benefits.length,4);
-  assert.deepEqual(benefits.map(benefit=>benefit.querySelector('.nl-bulk-benefit-copy').textContent),['Off every unit at 10+','Off every unit at 50+','Product documentation','Free 2-day express shipping']);
+  assert.deepEqual(benefits.slice(0,2).map(benefit=>benefit.querySelector('.nl-bulk-benefit-rate').textContent),['50%','60%']);
+  assert.deepEqual(benefits.map(benefit=>benefit.querySelector('.nl-bulk-benefit-copy').textContent),['Off every unit at 10+','Off every unit at 50+','Certificates of Analysis','Free 2-day express shipping']);
   assert.match(d.querySelector('.nl-bulk-benefit-shipping small').textContent,/U\.S\. bulk orders · after dispatch/);
   assert.equal(benefits[2].getAttribute('href'),'/coas');
+  assert.equal(benefits[2].querySelector('.nl-bulk-coa-proof strong').textContent,'HPLC + MS');
+  assert.equal(benefits[2].querySelector('.nl-bulk-coa-proof small').textContent,'Reported test methods');
   const hero=d.querySelector('.nl-bulk-hero');
   assert.equal(hero.querySelector('.nl-capsule').textContent,'BULK ORDERS · SALE PRICING');
   assert.equal(hero.querySelector('h1').textContent,'Buy in bulk. Save up to 60%.');
