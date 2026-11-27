@@ -169,16 +169,21 @@ body:has(.ap-mobile-menu[open]) { overflow: hidden; }
   overscroll-behavior: contain;
   padding: 14px 22px max(22px,env(safe-area-inset-bottom));
 }
+.ap-site .ap-mobile-menu-links :is(a, summary, .ap-mobile-cart-link, .ap-mobile-menu-currency) {
+  font-family: Archivo, Arial, sans-serif;
+  letter-spacing: .035em;
+  text-transform: uppercase;
+}
 .ap-site .ap-mobile-menu-links :is(a,summary) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 60px;
+  min-height: 49px;
   gap: 12px;
   border-bottom: 1px solid #e5e5e5;
   color: #111;
-  font-size: clamp(16px,5vw,21px);
-  font-weight: 780;
+  font-size: 17px;
+  font-weight: 850;
   line-height: 1.25;
   text-decoration: none;
 }
@@ -198,9 +203,8 @@ body:has(.ap-mobile-menu[open]) { overflow: hidden; }
 .ap-mobile-menu-links details[open] summary::after { transform: rotate(-45deg); }
 
 .ap-mobile-menu-tools { margin-top: 21px; }
-.ap-site .ap-mobile-menu-tools .ap-mobile-menu-account > summary { font-weight: 650; }
 .ap-mobile-menu-account > div { padding-inline-start: 14px; }
-.ap-site .ap-mobile-menu-account > div > a { min-height: 44px; font-size: 15px; font-weight: 600; }
+.ap-site .ap-mobile-menu-account > div > a { min-height: 44px; font-size: 15px; font-weight: 750; }
 .ap-mobile-menu-currency {
   display: flex;
   align-items: center;
@@ -209,20 +213,20 @@ body:has(.ap-mobile-menu[open]) { overflow: hidden; }
   min-height: 49px;
   color: #414141;
   font-size: 14px;
+  font-weight: 750;
 }
 .ap-mobile-menu :is(a,button,summary):focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
 
 .ap-site .ap-mobile-menu-links .ap-mobile-cart-link {
   width: 100%; display: flex; align-items: center; justify-content: space-between;
   min-height: 49px; padding: 0; border: 0; border-bottom: 1px solid #e5e5e5;
-  background: transparent; color: #111; font: inherit; font-size: 17px;
-  font-weight: 650; text-align: left; cursor: pointer;
+  background: transparent; color: #111; font-size: 17px;
+  font-weight: 850; line-height: 1.25; text-align: left; cursor: pointer;
 }
 .ap-mobile-cart-link::after {
   content: ''; width: 7px; height: 7px; margin-right: 5px;
   border: solid currentColor; border-width: 1.5px 1.5px 0 0; transform: rotate(45deg);
 }
-.ap-site .ap-mobile-menu-links :is(a, summary) { min-height: 49px; font-size: 17px; }
 
 .ap-footer .pure-footer-links { padding: 0; border: 0; }
 .ap-footer .pure-footer-links summary { list-style: none; font-size: 1rem; font-weight: 750; cursor: pointer; }
