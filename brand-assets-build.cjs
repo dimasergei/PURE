@@ -115,7 +115,7 @@ for(const file of fs.readdirSync(out,{recursive:true}).filter(f=>f.endsWith('.ht
   html=html.replace(/href="\/cart-reference\.css(?:\?[^"]*)?"/g,'href="/cart-reference.css?v=20261126-reward-glow"');
   html=html.replace(/\b(src|href)="\/((?:storefront-v2|conversion-ui|checkout-reference|readiness-ui)\.(?:js|css)|direct-checkout-client\.js)(?:\?[^"\n]*)?"/g,'$1="/$2?v=20261126-checkout-carousel"');
   html=html.replace(/\b(src|href)="\/(storefront-v2\.(?:js|css))(?:\?[^"\n]*)?"/g,'$1="/$2?v=20261126-faq-shop"');
-  html=html.replace(/\b(src|href)="\/(conversion-ui\.(?:js|css))(?:\?[^"\n]*)?"/g,'$1="/$2?v=20261126-shipping-promo"');
+  html=html.replace(/\b(src|href)="\/(conversion-ui\.(?:js|css))(?:\?[^"\n]*)?"/g,'$1="/$2?v=20261126-promo-pace"');
   if(file==='bulk-orders.html')html=html.replace(/\b(src|href)="\/(workspace-v2\.js|pure-bulk-layout\.css)(?:\?[^"\n]*)?"/g,'$1="/$2?v=20261126-bulk-coa-card"');
   if(file==='contact.html')html=html.replace(/href="\/reference-ui\.css(?:\?[^"]*)?"/g,'href="/reference-ui.css?v=20261126-contact-wordmark"');
   fs.writeFileSync(target,html);

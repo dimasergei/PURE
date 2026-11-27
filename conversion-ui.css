@@ -379,6 +379,7 @@ body.ap-site .nl-detail [data-campaign-product]:not([hidden]) {
   flex: none;
   width: max-content;
   max-width: calc(100vw - var(--promo-control-width));
+  padding-inline: .25rem;
 }
 .pure-promo-loop [data-copy-offer] { display: grid; text-align: center; }
 .pure-promo-loop [data-copy-offer]::before {

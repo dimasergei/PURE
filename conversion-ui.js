@@ -216,7 +216,7 @@
     track.append(repeat);
    }
    track.style.setProperty('--promo-distance',-width+'px');
-   track.style.setProperty('--promo-duration',Math.max(8,width/40)+'s');
+   track.style.setProperty('--promo-duration',Math.max(6,width/64)+'s');
   }
   function refresh(){
    copies.forEach(copy=>copy.remove());
