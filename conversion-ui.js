@@ -351,7 +351,9 @@
   }catch{}
  }
  window.PureCampaign={mountCountdown,mountDispatch,eligible:(id,size)=>eligibleVariants.has(id+':'+size),get status(){return campaignStatus;},get discountPercent(){return discountPercent;},get holiday(){return holidayOffer;}};
- if(document.querySelector('.ap-announcement [data-default-offer]')||/^\/(?:$|index(?:\.html)?$|shop(?:\.html)?\/?$|product\/)/.test(location.pathname)){
+ if(document.querySelector('.ap-announcement [data-default-offer]')){
+  mountCampaignStrip();
+ }else if(/^\/(?:$|index(?:\.html)?$|shop(?:\.html)?\/?$|product\/)/.test(location.pathname)){
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mountCampaignStrip,{once:true});
   else mountCampaignStrip();
  }

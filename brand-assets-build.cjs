@@ -48,7 +48,7 @@ for(const file of fs.readdirSync(out,{recursive:true}).filter(f=>f.endsWith('.ht
   html=html.replace(/<link\b[^>]*href=["']\/pure-brand\.css[^"']*["'][^>]*>/gi,'');
   html=html.replace(/<link\b[^>]*href=["']https:\/\/fonts\.(?:googleapis|gstatic)\.com[^"']*["'][^>]*>/gi,'');
   const fontPreload=html.includes('href="/assets/fonts/archivo-latin-variable.woff"')?'':'<link rel="preload" href="/assets/fonts/archivo-latin-variable.woff" as="font" type="font/woff" crossorigin>';
-  html=html.replace('</head>',fontPreload+'<link rel="stylesheet" href="/pure-brand.css?v=20261126-account-contrast"></head>');
+  html=html.replace('</head>',fontPreload+'<link rel="stylesheet" href="/pure-brand.css?v=20261127-card-surface"></head>');
   html=html.replace(/<link\b[^>]*\brel=["'](?:(?:shortcut )?icon|apple-touch-icon)["'][^>]*>/gi,'');
   html=html.replace(/<meta\b[^>]*\bname=["'](?:theme-color|altapure-promo-end)["'][^>]*>/gi,'');
   if(path.basename(file).startsWith('admin-')){
@@ -114,9 +114,10 @@ for(const file of fs.readdirSync(out,{recursive:true}).filter(f=>f.endsWith('.ht
   html=html.replace(/\b(src|href)="\/((?:account-experience|readiness-ui)\.(?:js|css))(?:\?[^"]*)?"/g,'$1="/$2?v=20261126-account-contrast"');
   html=html.replace(/href="\/cart-reference\.css(?:\?[^"]*)?"/g,'href="/cart-reference.css?v=20261126-reward-glow"');
   html=html.replace(/\b(src|href)="\/((?:storefront-v2|conversion-ui|checkout-reference|readiness-ui)\.(?:js|css)|direct-checkout-client\.js)(?:\?[^"\n]*)?"/g,'$1="/$2?v=20261126-checkout-carousel"');
-  html=html.replace(/src="\/storefront-v2\.js(?:\?[^"\n]*)?"/g,'src="/storefront-v2.js?v=20261127-documentation-copy"');
-  html=html.replace(/href="\/storefront-v2\.css(?:\?[^"\n]*)?"/g,'href="/storefront-v2.css?v=20261127-home-headings"');
+  html=html.replace(/src="\/storefront-v2\.js(?:\?[^"\n]*)?"/g,'src="/storefront-v2.js?v=20261127-home-entry"');
+  html=html.replace(/href="\/storefront-v2\.css(?:\?[^"\n]*)?"/g,'href="/storefront-v2.css?v=20261127-home-entry"');
   html=html.replace(/\b(src|href)="\/(conversion-ui\.(?:js|css))(?:\?[^"\n]*)?"/g,'$1="/$2?v=20261126-sale-loop"');
+  html=html.replace(/src="\/conversion-ui\.js(?:\?[^"\n]*)?"/g,'src="/conversion-ui.js?v=20261127-home-entry"');
   html=html.replace(/\b(src|href)="\/((?:storefront-navigation\.(?:js|css)|mobile-parity\.css|cart-reference\.css))(?:\?[^"\n]*)?"/g,'$1="/$2?v=20261126-header-cart"');
   html=html.replace(/href="\/cart-reference\.css(?:\?[^"\n]*)?"/g,'href="/cart-reference.css?v=20261126-quick-add-contrast"');
   if(file==='bulk-orders.html')html=html.replace(/\b(src|href)="\/(workspace-v2\.js|pure-bulk-layout\.css)(?:\?[^"\n]*)?"/g,'$1="/$2?v=20261126-bulk-coa-card"');

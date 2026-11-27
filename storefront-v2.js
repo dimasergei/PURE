@@ -33,6 +33,7 @@
  let compared=[];
  const selections={};
  const route=()=>location.pathname.replace(/\.html$/,'').replace(/\/$/,'')||'/';
+ const homeEntry=$('#ap-main > [data-pure-home-pending]')?.outerHTML;
  const initialParams=new URLSearchParams(location.search);
  const initialCategory=initialParams.get('offer')==='second-unit'?'Offers':initialParams.get('category')||'All';
  const shopCategories=['All','Peptides','Mist Applicators','Supplies'];
@@ -313,6 +314,7 @@
   const holiday=window.PureCampaign?.holiday;
   const sale=holiday&&homeSaleHero(holiday);
   if(sale)return sale;
+  if(homeEntry&&window.PureCampaign?.status==='loading')return homeEntry;
  const hero=['nad','retatrutide','bpc-157','ghk-cu','tirzepatide'].map(product).filter(Boolean);
  return `<section class="nl-hero" data-pure-home-hero><div class="ap-container nl-hero-inner"><div class="nl-hero-copy"><h1>CUTTING EDGE<br><em>PURITY</em></h1><p class="nl-hero-description">Research compounds, product documentation, and straightforward ordering for laboratories and research teams.</p>${homeHeroActions()}</div><div class="nl-vial-stage" aria-label="Featured PURE products">${homeVialOutline()}${hero.map((p,i)=>`<a class="nl-vial nl-vial-${i}" href="/product/${p.id}"><img src="${esc(image(p,p.variants[0].size))}" alt="${esc(p.name+' '+p.variants[0].size)}" ${i===2?'fetchpriority="high"':''}></a>`).join('')}<span class="nl-stage-word" aria-hidden="true">PURE</span></div>${homeHighlights()}</div></section>`;
  }
@@ -359,7 +361,7 @@
  window.addEventListener('pure:campaign',()=>{
   if(route()==='/shop'){renderCatalogResults();return;}
   const hero=$('[data-pure-home-hero]');
-  if(hero&&hero.classList.contains('pure-bogo-home')!==Boolean(window.PureCampaign?.holiday)){
+  if(hero&&(hero.hasAttribute('data-pure-home-pending')||hero.classList.contains('pure-bogo-home')!==Boolean(window.PureCampaign?.holiday))){
    const restoreFocus=hero.contains(document.activeElement);
    hero.outerHTML=homeHero();
    if(restoreFocus)$('[data-pure-home-hero] :is(.pure-bogo-cta,.nl-primary)')?.focus({preventScroll:true});
@@ -429,9 +431,9 @@
  let homeSaleVisibility;
  function syncHomeFloatingShop(){
   homeSaleVisibility?.disconnect();
-  const sticky=$('.pure-floating-shop'),sale=$('[data-pure-sale-cta]');
+  const sticky=$('.pure-floating-shop'),sale=$('[data-pure-sale-cta], [data-pure-home-pending] .pure-bogo-cta');
   if(!sticky||!sale||!window.IntersectionObserver){if(sticky)sticky.hidden=false;return;}
-  const hero=sale.closest('.pure-bogo-home');
+  const hero=sale.closest('[data-pure-home-hero]');
   homeSaleVisibility=new IntersectionObserver(([entry])=>{
    sticky.hidden=entry.isIntersecting;
    hero.classList.toggle('pure-sale-cta-visible',entry.isIntersecting);

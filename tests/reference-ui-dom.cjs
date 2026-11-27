@@ -16,10 +16,26 @@ async function setup(route,campaign=null,quote=null){const errors=[];const conso
 (async()=>{
  const now=Date.now();
  {
+  const staticHome=new JSDOM(read('public-build/index.html'));
+  const entry=staticHome.window.document.querySelector('#ap-main');
+  assert.equal(entry.querySelector('[data-pure-home-pending] h1').textContent,'PURE');
+  assert.equal(entry.querySelector('a').getAttribute('href'),'/shop');
+  assert.doesNotMatch(entry.textContent,/CUTTING EDGE|Buy one/i);
+  staticHome.window.close();
   const ends_at='2026-12-25T05:00:00.000Z';
   const campaign={ends_at,server_time:'2026-12-10T16:00:00.000Z',eligible_variants:['bpc-157:10mg']};
   const quote={pricing:{coupon_discount_cents:299,bogo_campaign:{ends_at,free_units:[{id:'bpc-157',size:'10mg',qty:1}]}}};
-  const {dom,d}=await setup('/',campaign,quote);
+  let confirm;
+  const verification=new Promise(resolve=>{confirm=resolve;});
+  const {dom,d}=await setup('/',campaign,verification);
+  const pending=d.querySelector('[data-pure-home-pending]');
+  assert.ok(pending);
+  assert.equal(d.querySelector('.nl-hero,.pure-bogo-home'),null);
+  pending.querySelector('a').focus();
+  confirm(quote);
+  await new Promise(resolve=>setTimeout(resolve,0));
+  assert.equal(d.querySelector('[data-pure-home-pending],.nl-hero'),null);
+  assert.equal(d.activeElement,d.querySelector('[data-pure-sale-cta]'));
   const set=d.querySelector('.pure-promo-set:not(.pure-promo-repeat)');
   const [christmas,divider,blackFriday,shipping]=set.children;
   assert.equal(christmas.querySelector('time').dateTime,ends_at);
