@@ -204,8 +204,16 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
   assert.deepEqual(benefits.map(benefit=>benefit.querySelector('.nl-bulk-benefit-copy').textContent),['Off every unit at 10+','Off every unit at 50+','Certificates of Analysis','Free 2-day express shipping']);
   assert.match(d.querySelector('.nl-bulk-benefit-shipping small').textContent,/U\.S\. bulk orders · after dispatch/);
   assert.equal(benefits[2].getAttribute('href'),'/coas');
-  assert.equal(benefits[2].querySelector('.nl-bulk-coa-proof strong').textContent,'HPLC + MS');
-  assert.equal(benefits[2].querySelector('.nl-bulk-coa-proof small').textContent,'Reported test methods');
+  assert.equal(benefits[2].querySelector('.nl-bulk-coa-proof strong').textContent,'99%+ purity');
+  assert.equal(benefits[2].querySelector('.nl-bulk-coa-proof small').textContent,'In select HPLC + MS reports');
+  assert.equal(benefits[2].querySelector('.nl-bulk-coa-details small').textContent,'Lab reports · View COAs →');
+  const reportedResults=require('../data/coa-results.json');
+  const supplierReports=require('../data/supplier-coas.json').reports;
+  assert.ok(supplierReports.some(report=>{
+   const result=reportedResults[report.id];
+   return result?.document_sha256===report.sha256&&parseFloat(result.purity)>=99&&
+    result.methods?.some(method=>/HPLC/.test(method))&&result.methods.some(method=>/MS/.test(method));
+  }),'a linked supplier report supports the qualified purity badge');
   const hero=d.querySelector('.nl-bulk-hero');
   assert.equal(hero.querySelector('.nl-capsule').textContent,'BULK ORDERS · SALE PRICING');
   assert.equal(hero.querySelector('h1').textContent,'Buy in bulk. Save up to 60%.');
