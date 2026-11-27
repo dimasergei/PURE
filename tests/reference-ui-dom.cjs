@@ -89,7 +89,7 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
   assert.doesNotMatch(bulk.textContent,/BOGO|monthly auto.?billing/i);
   const tiers=[...bulk.querySelectorAll('.pure-home-volume-tiers > span')];
   assert.deepEqual(tiers.map(tier=>tier.textContent),['50% off at 10+ units','60% off at 50+ units']);
-  assert.match(bulk.querySelector('.pure-home-volume-note').textContent,/starting at 10\+/);
+  assert.doesNotMatch(bulk.textContent,/Bulk prices per unit|Free U\.S\. 2-day express after dispatch/);
   const bulkSummary=bulk.querySelector('.pure-home-express-summary');
   assert.equal(bulkSummary.hidden,true);
   const bulkRows=[...bulk.querySelectorAll('[data-home-bulk-product]')];

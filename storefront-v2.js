@@ -157,7 +157,6 @@
     <p class="pure-home-volume-tiers">${tiers.map(tier=>`<span><strong>${tier.bps/100}% off</strong> at ${tier.min}+ units</span>`).join('')}<small>Per compound · mix strengths</small></p>
     ${tiers.length&&products.length?`<div class="pure-home-express" data-home-bulk>
       <div class="pure-home-express-products">${products.map(homeBulkProduct).join('')}</div>
-      <p class="pure-home-volume-note"><span>Bulk prices per unit starting at ${tiers[0].min}+</span><span>Free U.S. 2-day express after dispatch</span></p>
       <aside class="pure-home-express-summary" aria-label="Bulk order summary" ${homeBulkDraft.length?'':'hidden'}>${homeBulkSummary()}</aside>
     </div>`:''}
   </section>`;
