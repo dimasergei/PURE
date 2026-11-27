@@ -57,14 +57,14 @@ html:root body.ap-site .pure-home-volume-link {
 html:root body.ap-site .pure-home-volume-link:hover { border-color: #333; background: #333; }
 html:root body.ap-site .pure-home-volume-link:focus-visible { outline: 2px solid #111; outline-offset: 2px; }
 
-.pure-home-volume-tiers {
+.pure-home-volume .pure-home-volume-tiers {
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
   column-gap: 8px;
   row-gap: 3px;
-  margin: 7px 0 8px;
-  padding: 4px 9px;
+  margin: 6px 0 7px;
+  padding: 2px 9px;
   border-radius: 6px;
   background: #f3f3f3;
   color: #333;
@@ -360,7 +360,8 @@ body.ap-site .pure-home-express-summary .ap-button:disabled { opacity: .52; }
 @media (max-width: 365px) {
   .pure-home-volume-head { column-gap: 8px; }
   html:root body.ap-site .pure-home-volume-link { padding-inline: 7px; font-size: 12px; }
-  .pure-home-volume-tiers { padding-inline: 5px; }
+  .pure-home-volume .pure-home-volume-tiers { column-gap: 6px; padding-inline: 4px; }
+  .pure-home-volume-tiers > span + span { padding-inline-start: 6px; }
   .pure-home-express-price { flex-wrap: wrap; gap: 1px 5px; }
   .pure-home-express-products h4 { font-size: 13px; }
 }
