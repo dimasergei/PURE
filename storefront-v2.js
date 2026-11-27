@@ -7,10 +7,14 @@
  const age=$('#ap-age-dialog');
  const minimumAge=window.PureSite?.minimumAge??21;
  const welcomeCookie='pure_age='+minimumAge+'-v1';
- let welcomeReady=false;
+ let welcomeReady=false,welcomeConfirmed=false;
  function saveWelcome(){
   document.cookie=welcomeCookie+'; Max-Age=2592000; Path=/; SameSite=Lax'+(location.protocol==='https:'?'; Secure':'');
   try{localStorage.removeItem('ap-age-verified');}catch{}
+ }
+ function closeWelcome(){
+  age.close();
+  $('[data-pure-home-hero] :is(.pure-bogo-cta,.nl-primary)')?.focus({preventScroll:true});
  }
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const dictionary={
@@ -364,7 +368,8 @@
   if(hero&&(hero.hasAttribute('data-pure-home-pending')||hero.classList.contains('pure-bogo-home')!==Boolean(window.PureCampaign?.holiday))){
    const restoreFocus=hero.contains(document.activeElement);
    hero.outerHTML=homeHero();
-   if(restoreFocus)$('[data-pure-home-hero] :is(.pure-bogo-cta,.nl-primary)')?.focus({preventScroll:true});
+   if(welcomeConfirmed&&age?.open)closeWelcome();
+   else if(restoreFocus)$('[data-pure-home-hero] :is(.pure-bogo-cta,.nl-primary)')?.focus({preventScroll:true});
    syncHomeFloatingShop();
   }
   for(const item of $$('#nl-featured .ap-product-card,.ap-related .ap-product-card')){
@@ -431,8 +436,10 @@
  let homeSaleVisibility;
  function syncHomeFloatingShop(){
   homeSaleVisibility?.disconnect();
-  const sticky=$('.pure-floating-shop'),sale=$('[data-pure-sale-cta], [data-pure-home-pending] .pure-bogo-cta');
-  if(!sticky||!sale||!window.IntersectionObserver){if(sticky)sticky.hidden=false;return;}
+  const sticky=$('.pure-floating-shop'),sale=$('[data-pure-sale-cta]');
+  if(!sticky)return;
+  if($('[data-pure-home-pending]')){sticky.hidden=true;return;}
+  if(!sale||!window.IntersectionObserver){sticky.hidden=false;return;}
   const hero=sale.closest('[data-pure-home-hero]');
   homeSaleVisibility=new IntersectionObserver(([entry])=>{
    sticky.hidden=entry.isIntersecting;
@@ -448,8 +455,17 @@
   if(action==='close-dialog'){closeDialog(button);return;}
   if(action==='search'){showDialog('#ap-search-dialog');searchResults();$('#ap-global-search').focus();return;}
   if(action==='cart'){openCart();return;}
-  if(action==='age-confirm'){if(welcomeReady){saveWelcome();age.close();}return;}
-  if(action==='age-exit'){if(welcomeReady)updateAgeText('#ap-age-message','welcomeBlocked','You must be {age}+ and meet any higher local age requirement to enter.');return;}
+  if(action==='age-confirm'){
+   if(!welcomeReady||welcomeConfirmed)return;
+   welcomeConfirmed=true;
+   saveWelcome();
+   if($('#ap-main > [data-pure-home-pending]')){
+    for(const option of $$('[data-action]',age))option.setAttribute('aria-disabled','true');
+    updateAgeText('#ap-age-message','welcomeOpening','Opening the homepage…');
+   }else closeWelcome();
+   return;
+  }
+  if(action==='age-exit'){if(welcomeReady&&!welcomeConfirmed)updateAgeText('#ap-age-message','welcomeBlocked','You must be {age}+ and meet any higher local age requirement to enter.');return;}
   if(action==='catalog-options'){openCatalogOptions(product(id));return;}
   if(action==='add'||action==='detail-add'){
    const detail=action==='detail-add';

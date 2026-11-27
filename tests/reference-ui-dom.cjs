@@ -16,11 +16,15 @@ async function setup(route,campaign=null,quote=null){const errors=[];const conso
 (async()=>{
  const now=Date.now();
  {
-  const staticHome=new JSDOM(read('public-build/index.html'));
-  const entry=staticHome.window.document.querySelector('#ap-main');
-  assert.equal(entry.querySelector('[data-pure-home-pending] h1').textContent,'PURE');
-  assert.equal(entry.querySelector('a').getAttribute('href'),'/shop');
-  assert.doesNotMatch(entry.textContent,/CUTTING EDGE|Buy one/i);
+  const html=read('public-build/index.html');
+  const staticHome=new JSDOM(html);
+  const entry=staticHome.window.document.querySelector('#ap-main > [data-pure-home-pending]');
+  const noScript=entry.querySelector('noscript');
+  assert.equal(noScript.querySelector('a').getAttribute('href'),'/shop');
+  noScript.remove();
+  assert.equal(entry.textContent.trim(),'');
+  assert.ok(html.indexOf('/conversion-ui.js?')<html.indexOf('/products.js?'));
+  assert.ok(html.indexOf('/storefront-v2.js?')<html.indexOf('@supabase/supabase-js'));
   staticHome.window.close();
   const ends_at='2026-12-25T05:00:00.000Z';
   const campaign={ends_at,server_time:'2026-12-10T16:00:00.000Z',eligible_variants:['bpc-157:10mg']};
@@ -29,11 +33,20 @@ async function setup(route,campaign=null,quote=null){const errors=[];const conso
   const verification=new Promise(resolve=>{confirm=resolve;});
   const {dom,d}=await setup('/',campaign,verification);
   const pending=d.querySelector('[data-pure-home-pending]');
+  const age=d.querySelector('#ap-age-dialog');
+  const accept=age.querySelector('[data-action="age-confirm"]');
   assert.ok(pending);
   assert.equal(d.querySelector('.nl-hero,.pure-bogo-home'),null);
-  pending.querySelector('a').focus();
+  assert.equal(age.open,true);
+  accept.click();
+  assert.equal(age.open,true,'an early confirmation waits for the hero');
+  assert.equal(accept.getAttribute('aria-disabled'),'true');
+  assert.equal(d.activeElement,accept);
+  assert.match(d.cookie,/pure_age=21-v1/);
+  assert.equal(d.querySelector('.pure-floating-shop').hidden,true);
   confirm(quote);
   await new Promise(resolve=>setTimeout(resolve,0));
+  assert.equal(age.open,false);
   assert.equal(d.querySelector('[data-pure-home-pending],.nl-hero'),null);
   assert.equal(d.activeElement,d.querySelector('[data-pure-sale-cta]'));
   const set=d.querySelector('.pure-promo-set:not(.pure-promo-repeat)');
@@ -62,8 +75,15 @@ async function setup(route,campaign=null,quote=null){const errors=[];const conso
   d.querySelector('.pure-promo-pause').click();
   assert.ok(d.querySelector('.pure-promo-paused'));
   dom.window.close();
-  const unverified=await setup('/',campaign,{pricing:{}});
-  assert.equal(unverified.d.querySelector('.pure-bogo-home'),null);
+  let rejectOffer;
+  const unverified=await setup('/',campaign,new Promise(resolve=>{rejectOffer=resolve;}));
+  const otherAge=unverified.d.querySelector('#ap-age-dialog');
+  otherAge.querySelector('[data-action="age-confirm"]').click();
+  assert.equal(otherAge.open,true);
+  rejectOffer({pricing:{coupon_discount_cents:299,bogo_campaign:{ends_at,free_units:{}}}});
+  await new Promise(resolve=>setTimeout(resolve,0));
+  assert.equal(otherAge.open,false,'a malformed checkout estimate cannot keep the dialog open');
+  assert.equal(unverified.d.querySelector('.pure-bogo-home,[data-pure-home-pending]'),null);
   assert.ok(unverified.d.querySelector('.nl-hero'));
   unverified.dom.window.close();
  }

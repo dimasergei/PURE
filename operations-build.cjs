@@ -49,14 +49,14 @@ const routes={
  '/partner-program':['Partner Program','Explore PURE’s referral program for laboratory research organizations, review commission and payout terms, and join through your account.'],
  '/track-order':['Track Your Order','Use your PURE order number and checkout email to request a private order status update.']
 };
-const homeEntry=`<section class="pure-home-entry" data-pure-home-hero data-pure-home-pending aria-labelledby="pure-home-entry-title">
- <div class="ap-container">
-  <h1 id="pure-home-entry-title">PURE</h1>
-  <p>Research compounds and product documentation.</p>
-  <a class="pure-bogo-cta" href="/shop">Shop All Products</a>
-  <noscript><p>Enable JavaScript to filter products and place an order. For assistance, email support@getpurelabs.com.</p></noscript>
- </div>
-</section>`;
+const homeEntry=`<div class="pure-home-entry" data-pure-home-hero data-pure-home-pending>
+ <noscript>
+  <div class="ap-container">
+   <p>Enable JavaScript to filter products and place an order. For assistance, email support@getpurelabs.com.</p>
+   <a class="pure-bogo-cta" href="/shop">Shop All Products</a>
+  </div>
+ </noscript>
+</div>`;
 fs.writeFileSync(path.join(out,'index.html'),page(shell,'/','PURE | Cutting Edge Purity','Research compounds, product documentation, and straightforward ordering for laboratories and research teams.',homeEntry));
 for(const [url,[title,description]] of Object.entries(routes)){
  const links=url==='/track-order'?'<a href="/account/purchases">Sign in to view account orders</a><p>Enable JavaScript to request order status by email. For help with a guest order, <a href="/contact">contact support</a> with your order number and checkout email.</p>':'<a href="/shop">Explore the catalog</a>';

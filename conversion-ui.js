@@ -268,7 +268,8 @@
   const quote=await requestCampaign('checkout=cart',{items:[{id,size,qty:1}],country:'US',coupon:'BLACKFRIDAY10'}).catch(()=>null);
   const bonus=quote?.pricing?.bogo_campaign;
   if(!(quote?.pricing?.coupon_discount_cents>0)||bonus?.ends_at!==campaign.ends_at||
-     !bonus.free_units?.some(item=>item.id===id&&item.size===size&&item.qty===1)||Date.now()+offset>=end)return null;
+     !Array.isArray(bonus.free_units)||!bonus.free_units.some(item=>item?.id===id&&item.size===size&&item.qty===1)||
+     Date.now()+offset>=end)return null;
   return {end,offset,campaign:Object.freeze({endsAt:campaign.ends_at,eligibleVariants:Object.freeze([...variants])})};
  }
  function mountChristmasOffer(loop,{end,offset}){
@@ -351,11 +352,17 @@
   }catch{}
  }
  window.PureCampaign={mountCountdown,mountDispatch,eligible:(id,size)=>eligibleVariants.has(id+':'+size),get status(){return campaignStatus;},get discountPercent(){return discountPercent;},get holiday(){return holidayOffer;}};
+ function startCampaignStrip(){
+  mountCampaignStrip().catch(()=>{
+   holidayOffer=null;
+   publishCampaign('unavailable');
+  });
+ }
  if(document.querySelector('.ap-announcement [data-default-offer]')){
-  mountCampaignStrip();
+  startCampaignStrip();
  }else if(/^\/(?:$|index(?:\.html)?$|shop(?:\.html)?\/?$|product\/)/.test(location.pathname)){
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mountCampaignStrip,{once:true});
-  else mountCampaignStrip();
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startCampaignStrip,{once:true});
+  else startCampaignStrip();
  }
  if(/^\/(?:$|shop(?:\/|$)|product\/)/.test(location.pathname)){
   document.addEventListener('mouseout',function exitOffer(event){
