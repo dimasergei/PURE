@@ -178,11 +178,11 @@ async function setup(route,campaign=null,quote=null){const errors=[];const conso
   assert.equal(count.textContent,'');
   bulkSummary.querySelector('[data-home-bulk-remove]').click();
   assert.equal(bulkSummary.hidden,true);
-  const faqLinks=d.querySelector('.pure-home-faq-links');
-  assert.deepEqual([...faqLinks.children].map(link=>[link.tagName,link.textContent,link.getAttribute('href')]),[
-   ['A','Track Order','/track-order'], ['A','Shipping','/shipping-policy'], ['A','Contact Us','/contact']
-  ]);
-  assert.equal(faqLinks.querySelector('span,p'),null);
+  const faq=d.querySelector('#faq');
+  assert.equal(faq.firstElementChild.textContent,'Frequently asked questions');
+  assert.equal(faq.firstElementChild.tagName,'H2');
+  assert.ok(faq.firstElementChild.nextElementSibling.matches('.pure-faq-list'));
+  assert.equal(faq.querySelector('nav'),null);
   const club=d.querySelector('.pure-home-email');
   assert.equal(club.querySelector('.pure-home-email-club').textContent,'PURE CLUB');
   assert.equal(club.querySelector('h2').textContent,'Get 10% off your first order.');

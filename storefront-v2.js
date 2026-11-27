@@ -314,14 +314,7 @@
    ['Where can I track my order?', 'Look for the tracking link in your shipment email after dispatch, or use <a href="/track-order">Track Order</a> with your order number and email.']
   ];
   return `<section aria-labelledby="pure-home-faq-title" class="ap-container ap-section ap-faq-layout pure-faq-section pure-home-faq" id="faq">
-    <div class="pure-faq-intro">
-      <div class="pure-faq-intro-copy"><h2 id="pure-home-faq-title">Frequently asked questions</h2></div>
-      <nav class="pure-home-faq-links" aria-label="Order support">
-        <a href="/track-order">Track Order</a>
-        <a href="/shipping-policy">Shipping</a>
-        <a href="/contact">Contact Us</a>
-      </nav>
-    </div>
+    <h2 id="pure-home-faq-title">Frequently asked questions</h2>
     <div class="ap-faq pure-faq-list">${questions.map(([question,answer])=>`<details><summary>${question}</summary><p>${answer}</p></details>`).join('')}</div>
   </section>`;
  }

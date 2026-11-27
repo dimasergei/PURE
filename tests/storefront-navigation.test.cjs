@@ -35,8 +35,7 @@ test('desktop and mobile share the four primary links while FAQ stays available 
   }
 });
 
-test('the restored FAQ side panel leads to contact and order tracking', () => {
-  assert.match(storefront, /href="\/contact">Contact Us/);
+test('the homepage FAQ heading leads directly into the accordion', () => {
+  assert.match(storefront, /id="faq">\s*<h2 id="pure-home-faq-title">Frequently asked questions<\/h2>\s*<div class="ap-faq pure-faq-list">/);
   assert.match(storefront, /<a href="\/track-order">Track Order/);
-  assert.match(read('storefront-v2.css'), /\.pure-home-faq \.pure-faq-intro \{[^}]*background:/);
 });
