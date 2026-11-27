@@ -140,11 +140,13 @@
   const tiers=(pricing?.TIERS||[]).filter(tier=>tier.bps>0).slice().reverse();
   const products=featured.filter(p=>p.category!=='supplies').slice(0,3);
   return `<section class="ap-container pure-home-volume" aria-labelledby="pure-home-volume-title">
-    <header class="pure-home-volume-head">
-      <h2 id="pure-home-volume-title">Bulk Orders</h2>
-      <a class="pure-home-volume-link" href="/bulk-orders">Build a Bulk Order</a>
+    <header class="pure-home-volume-intro">
+      <div class="pure-home-volume-head">
+        <h2 id="pure-home-volume-title">Bulk Orders</h2>
+        <a class="pure-home-volume-link" href="/bulk-orders">Build a Bulk Order</a>
+      </div>
+      <p class="pure-home-volume-tiers">${tiers.map(tier=>`<span><strong>${tier.bps/100}% off</strong> at ${tier.min}+ units</span>`).join('')}<small>Per compound · mix strengths</small></p>
     </header>
-    <p class="pure-home-volume-tiers">${tiers.map(tier=>`<span><strong>${tier.bps/100}% off</strong> at ${tier.min}+ units</span>`).join('')}<small>Per compound · mix strengths</small></p>
     ${tiers.length&&products.length?`<div class="pure-home-express" data-home-bulk>
       <div class="pure-home-express-products">${products.map(homeBulkProduct).join('')}</div>
       <aside class="pure-home-express-summary" aria-label="Bulk order summary" ${homeBulkDraft.length?'':'hidden'}>${homeBulkSummary()}</aside>
