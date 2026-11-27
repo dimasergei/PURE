@@ -65,7 +65,7 @@ const site = {
   origin: 'https://getpurelabs.com',
   company: {
     name: '1001517614 ONTARIO INC.',
-    address: ['145 Columbia St. W', 'Waterloo, ON N2L 0K7', 'Canada'],
+    address: ['145 Columbia St. W #210', 'Waterloo, ON N2L 0K7', 'Canada'],
     phone: '647-792-9074'
   },
   minimumAge: 21,
