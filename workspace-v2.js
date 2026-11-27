@@ -29,8 +29,11 @@
  function bulkUnits(id){return bulk.filter(x=>x.id===id).reduce((n,x)=>n+x.qty,0);}
  function bulkPriceInfo(price,units,qty){
   const pricing=window.PureQuantityPricing;
-  const count=qty||1,gross=Math.round(price*100)*count;
-  const discount=pricing?.bulkDiscountCents(gross,units)??0;
+  const minimum=10;
+  // Preview a minimum order until this strength has a qualifying line.
+  const count=units>=minimum&&qty ? qty : minimum;
+  const gross=Math.round(price*100)*count;
+  const discount=pricing?.bulkDiscountCents(gross,Math.max(units,minimum))??0;
   return `<strong>${priceMarkup((gross-discount)/count/100)}<small> / unit</small></strong>${discount?`<del aria-label="Retail price">${priceMarkup(price)}</del>`:''}`;
  }
  function bulkImageBadge(qty){
