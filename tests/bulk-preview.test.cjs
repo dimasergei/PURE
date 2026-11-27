@@ -56,6 +56,7 @@ test('bulk quantities stay in a separate draft and checkout requires ten units p
     assert.ok(input.closest('article').querySelector('.nl-bulk-sizes button[aria-pressed=true] del'));
     const line = document.querySelector('.nl-bulk-menu-line-price');
     assert.deepEqual([...line.children].map(child => child.tagName),['STRONG','DEL']);
+    assert.match(line.parentElement.querySelector('.nl-bulk-progress').textContent,/^50% off applied/);
     assert.equal(document.querySelector('.nl-bulk-estimate-total del').textContent,line.querySelector('del').textContent);
     assert.match(document.querySelector('.nl-bulk-tier-savings strong').textContent,/^−/);
     assert.equal(document.querySelector('.nl-bulk-included-shipping strong').textContent,'FREE');

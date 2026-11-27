@@ -81,7 +81,7 @@ for(const file of fs.readdirSync(out,{recursive:true}).filter(f=>f.endsWith('.ht
   html=html.replace(/src="\/((?:workspace-v2|supplier-coas|monthly-orders)\.js)(?:\?[^"]*)?"/g,'src="/$1?v=20261126-builder-polish"');
   html=html.replace(/\b(src|href)="\/((?:storefront-v2|workspace-v2|reference-ui|conversion-ui|subscribe-and-save)\.(?:js|css)|(?:pure-bulk-layout|cart-reference)\.css)(?:\?[^"]*)?"/g,'$1="/$2?v=20261126-holiday-layout"');
   html=html.replace(/\b(src|href)="\/(storefront-v2\.(?:js|css))(?:\?[^"]*)?"/g,'$1="/$2?v=20261126-home-bulk-approved"');
-  if(file==='bulk-orders.html')html=html.replace(/\b(src|href)="\/(workspace-v2\.js|pure-bulk-layout\.css)(?:\?[^"\n]*)?"/g,'$1="/$2?v=20261126-bulk-card-alignment"');
+  if(file==='bulk-orders.html')html=html.replace(/\b(src|href)="\/(workspace-v2\.js|pure-bulk-layout\.css)(?:\?[^"\n]*)?"/g,'$1="/$2?v=20261126-bulk-hero"');
   fs.writeFileSync(target,html);
   count++;
 }

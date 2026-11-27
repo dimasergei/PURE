@@ -30,25 +30,27 @@ function bulkPage() {
  return `
   <section class="nl-wide-hero nl-bulk-hero">
    <div class="ap-container">
-    <span class="nl-capsule">BULK ORDERS</span>
+    <span class="nl-capsule">BULK ORDERS · SALE PRICING</span>
     <h1>Buy in bulk. Save up to <strong>60%</strong>.</h1>
-    <p>Save 50% at 10 units and 60% at 50 units per compound. Combine strengths of the same compound to reach either tier.</p>
-    <a class="nl-bulk-hero-action" href="#ap-bulk-catalog">Build your order</a>
+    <p>Start with 10 units per compound and combine strengths to qualify. Save 50% on every unit at 10+ or 60% at 50+, based on retail prices. U.S. bulk orders ship with <strong>free 2-day express delivery after dispatch.</strong></p>
    </div>
   </section>
   <section class="ap-container nl-wide-benefits nl-bulk-benefits" aria-label="Bulk order highlights">
    <article class="nl-bulk-benefit" data-bulk-threshold="10">
-    <strong class="nl-bulk-benefit-rate">50% <span>OFF</span></strong><span class="nl-bulk-benefit-copy">10+ units</span><small>Per compound</small>
+    <strong class="nl-bulk-benefit-rate">50%</strong><span class="nl-bulk-benefit-copy">Off every unit at 10+</span><small>Per compound, strengths combined</small>
    </article>
    <article class="nl-bulk-benefit nl-bulk-benefit-best" data-bulk-threshold="50">
-    <strong class="nl-bulk-benefit-rate">60% <span>OFF</span></strong><span class="nl-bulk-benefit-copy">50+ units</span><small>Per compound</small>
-   </article>
-   <article class="nl-bulk-benefit nl-bulk-benefit-shipping">
-    <strong class="nl-bulk-benefit-rate">2-day</strong><span class="nl-bulk-benefit-copy">Free express shipping</span><small>US bulk orders · after dispatch</small>
+    <div class="nl-bulk-tier-head"><strong class="nl-bulk-benefit-rate">60%</strong><span class="nl-bulk-best-value">Best value</span></div>
+    <span class="nl-bulk-benefit-copy">Off every unit at 50+</span><small>Applies to the full compound quantity</small>
    </article>
    <a class="nl-bulk-benefit nl-bulk-benefit-coa" href="/coas">
-    <strong class="nl-bulk-benefit-rate nl-bulk-report-icon" aria-hidden="true">↗</strong><span class="nl-bulk-benefit-copy">Product documentation</span><small>Browse available COAs</small>
+    <div class="nl-bulk-coa-proof"><span class="nl-bulk-coa-check" aria-hidden="true">✓</span><strong>Lab reports</strong></div>
+    <span class="nl-bulk-benefit-copy">Product documentation</span><small>Browse available COAs <span aria-hidden="true">↗</span></small>
    </a>
+   <article class="nl-bulk-benefit nl-bulk-benefit-shipping">
+    <span class="nl-bulk-shipping-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M2 6h12v11H2zM14 10h4l4 4v3h-8"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></svg></span>
+    <span class="nl-bulk-benefit-copy">Free 2-day express shipping</span><small>U.S. bulk orders · after dispatch</small>
+   </article>
   </section>
   <div class="ap-container ap-workspace-layout nl-bulk-layout" id="ap-bulk-catalog">
    <div>
