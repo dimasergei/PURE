@@ -11,13 +11,12 @@
 
 .ap-nmi-express-dialog{width:min(1100px,96vw);max-height:90dvh;overflow:auto}.ap-nmi-modal-body{padding:10px}.ap-cart-express{margin:14px 0;padding:16px 0;border-block:1px solid #e5e5e5}.ap-cart-express .ap-button{width:100%}
 
-.pure-bogo-home { background: #0b0b0c; color: #fff; }
+.pure-bogo-home { background: #000; color: #fff; }
 .pure-bogo-hero {
   display: grid;
   min-height: calc(100vh - 105px);
   min-height: calc(100svh - 105px);
   overflow: hidden;
-  background: radial-gradient(ellipse at 76% 62%, #513615 0%, #241b10 31%, transparent 64%), #0b0b0c;
 }
 .pure-bogo-inner {
   display: grid;
@@ -144,19 +143,11 @@ body.ap-site .pure-bogo-copy h1 {
   min-width: 0;
   isolation: isolate;
 }
-.pure-bogo-art::after {
-  content: '';
-  position: absolute;
-  z-index: -1;
-  inset: auto 10% 5%;
-  height: 15%;
-  background: radial-gradient(ellipse, #ffad414f, transparent 68%);
-}
 .pure-bogo-backdrop {
   position: absolute;
   z-index: -1;
   inset: 22% 0 auto;
-  color: #efdcc526;
+  color: #ffffff22;
   font-size: clamp(75px, 13vw, 232px);
   font-weight: 950;
   line-height: .85;
@@ -256,7 +247,6 @@ body.ap-site:has(.pure-bogo-home.pure-sale-cta-visible) .spin-save-shortcut { vi
   .pure-bogo-hero {
     min-height: calc(100vh - 101px);
     min-height: calc(100svh - 101px);
-    background: radial-gradient(ellipse at 50% 60%, #513615, #241b10 33%, transparent 66%), #0b0b0c;
   }
   .pure-bogo-inner {
     grid-template-columns: minmax(0, 1fr);
