@@ -200,10 +200,14 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
   assert.equal(d.querySelector('.nl-bulk-count'),null);assert.equal(d.querySelector('#ap-bulk-count'),null);
   const benefits=[...d.querySelectorAll('.nl-bulk-benefit')];
   assert.equal(benefits.length,4);
-  assert.deepEqual(benefits.map(benefit=>benefit.querySelector('.nl-bulk-benefit-copy').textContent),['10+ units','50+ units','Free express shipping','Product documentation']);
-  assert.match(d.querySelector('.nl-bulk-benefit-shipping').textContent,/2-day.*US bulk orders/);
-  assert.equal(benefits[3].getAttribute('href'),'/coas');
-  assert.match(d.querySelector('.nl-bulk-hero p').textContent,/Save 50% at 10 units/);
+  assert.deepEqual(benefits.map(benefit=>benefit.querySelector('.nl-bulk-benefit-copy').textContent),['Off every unit at 10+','Off every unit at 50+','Product documentation','Free 2-day express shipping']);
+  assert.match(d.querySelector('.nl-bulk-benefit-shipping small').textContent,/U\.S\. bulk orders · after dispatch/);
+  assert.equal(benefits[2].getAttribute('href'),'/coas');
+  const hero=d.querySelector('.nl-bulk-hero');
+  assert.equal(hero.querySelector('.nl-capsule').textContent,'BULK ORDERS · SALE PRICING');
+  assert.equal(hero.querySelector('h1').textContent,'Buy in bulk. Save up to 60%.');
+  assert.match(hero.querySelector('p').textContent,/50% on every unit at 10\+ or 60% at 50\+, based on retail prices/);
+  assert.equal(hero.querySelector('a,button'),null);
   assert.deepEqual([...d.querySelectorAll('[data-action="bulk-category"]')].map(button=>button.textContent),['All Products','Peptides','Mist Applicators','Supplies']);
   const category=d.querySelector('[data-action="bulk-category"][data-group="Supplies"]');category.click();
   assert.equal(category.getAttribute('aria-pressed'),'true');

@@ -94,7 +94,6 @@
   for(const badge of $$('[data-bulk-threshold]')){
    const active=rates.has(Number(badge.dataset.bulkThreshold)===10?5000:6000);
    badge.dataset.tierActive=String(active);
-   badge.querySelector('small').textContent=active?'Applied ✓':'Per compound';
   }
   const focused=root.contains(document.activeElement)?document.activeElement:null;
   const listScroll=root.querySelector('.nl-bulk-summary-scroll')?.scrollTop||0;
@@ -108,17 +107,26 @@
   const selection=ids.length?ids.map(id=>{
    const p=product(id),lines=bulk.filter(x=>x.id===id),count=bulkUnits(id);
    const rate=window.PureQuantityPricing?.bulkRate(count)||0;
-   const lineItems=lines.map(x=>{
+   const lineItems=lines.map((x,index)=>{
     const gross=Math.round(x.price*100)*x.qty,saved=Math.round(gross*rate/10000),net=(gross-saved)/100;
-    return `<div class="nl-bulk-menu-line"><div class="nl-bulk-menu-controls"><span class="nl-bulk-menu-variant">${esc(x.size)} · ${priceMarkup(net/x.qty)}/unit</span><div class="nl-bulk-quantity-controls">${quantityControls(x.id,x.size,x.qty,x.name)}</div></div><div class="nl-bulk-menu-line-price"><strong>${priceMarkup(net)}</strong>${saved?`<del>${priceMarkup(gross/100)}</del>`:''}</div></div>`;
+    return `<div class="nl-bulk-menu-line">
+      <div class="nl-bulk-menu-controls">
+       <span class="nl-bulk-menu-variant">${esc(x.size)} · ${priceMarkup(net/x.qty)}/unit</span>
+       <div class="nl-bulk-quantity-controls">${quantityControls(x.id,x.size,x.qty,x.name)}</div>
+      </div>
+      <div class="nl-bulk-menu-line-footer">
+       ${index===lines.length-1?`<small class="nl-bulk-progress">${tierProgress(count)}</small>`:''}
+       <div class="nl-bulk-menu-line-price"><strong>${priceMarkup(net)}</strong>${saved?`<del>${priceMarkup(gross/100)}</del>`:''}</div>
+      </div>
+     </div>`;
    }).join('');
-   return `<section class="nl-bulk-menu-product" data-tier-qualified="${rate>0}"><header class="nl-bulk-menu-product-head"><img src="${esc(image(p,lines[0].size))}" alt=""><span><strong>${esc(p.name)}</strong><small>${count} ${count===1?'unit':'units'}</small></span>${rate?`<b class="nl-bulk-rate-badge">${rate/100}% off</b>`:''}</header>${lineItems}<small class="nl-bulk-progress">${tierProgress(count)}</small></section>`;
+   return `<section class="nl-bulk-menu-product" data-tier-qualified="${rate>0}"><header class="nl-bulk-menu-product-head"><img src="${esc(image(p,lines[0].size))}" alt=""><span><strong>${esc(p.name)}</strong><small>${count} ${count===1?'unit':'units'}</small></span>${rate?`<b class="nl-bulk-rate-badge">${rate/100}% off</b>`:''}</header>${lineItems}</section>`;
   }).join(''):'<div class="nl-bulk-menu-empty">Select product quantities for your order.</div>';
   root.innerHTML=`<div class="nl-bulk-summary-heading"><h2>Your bulk order</h2><span class="nl-bulk-total-units">${units} units</span></div>
    ${units?'':'<button type="button" class="ap-button nl-bulk-add-products" data-action="bulk-add-products">ADD PRODUCTS</button>'}
    <div class="nl-bulk-summary-scroll" aria-label="Selected products">${selection}</div>
-   <div class="nl-bulk-totals"><div class="nl-bulk-estimate-total"><span>Retail value</span><strong>${tierSavingsCents>0?`<del>${retail}</del>`:retail}</strong></div>${savings}${shipping}${tierSavingsCents>0?`<div class="nl-bulk-net"><span>After bulk savings</span><strong>${priceMarkup(tierNet)}</strong></div>`:''}</div>
-   ${units?`<div class="nl-bulk-tier-key"><span data-tier-active="${rates.has(5000)}">10+ units · 50% off</span><span data-tier-active="${rates.has(6000)}">50+ units · 60% off</span></div>`:''}
+   <div class="nl-bulk-totals"><div class="nl-bulk-estimate-total"><span>Retail value</span><strong>${tierSavingsCents>0?`<del>${retail}</del>`:retail}</strong></div>${savings}${shipping}${tierSavingsCents>0?`<div class="nl-bulk-net"><span>Total</span><strong>${priceMarkup(tierNet)}</strong></div>`:''}</div>
+   ${units?`<div class="nl-bulk-tier-key"><span data-tier-active="${rates.has(5000)}">10+ units · 50%</span><span data-tier-active="${rates.has(6000)}">50+ units · 60%</span><p class="nl-bulk-tier-help">Each compound qualifies for its own discount tier.</p></div>`:''}
    <button class="ap-button" data-action="bulk-checkout" ${canCheckout?'':'disabled'}>Checkout · ${priceMarkup(tierNet)}</button>`;
   const scroll=root.querySelector('.nl-bulk-summary-scroll');
   if(scroll)scroll.scrollTop=listScroll;
