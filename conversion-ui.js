@@ -161,39 +161,25 @@
      offer.discount_bps<=0||offer.discount_bps>=10000)return null;
   return offer;
  }
- // Midnight at the start of Christmas Day in Toronto (EST).
- const christmas=Date.parse('2026-12-25T00:00:00-05:00');
- async function mountChristmasOffer(announcement,fallback,campaign){
-  const end=Date.parse(campaign?.ends_at),serverTime=Date.parse(campaign?.server_time);
-  const key=campaign?.eligible_variants?.[0],separator=typeof key==='string'?key.indexOf(':'):-1;
-  if(!announcement||!fallback||!Number.isFinite(serverTime)||end!==christmas||serverTime>=end||separator<=0)return false;
-  const offset=serverTime-Date.now();
-  const id=key.slice(0,separator),size=key.slice(separator+1);
-  // Read the estimate from the same pricing engine used by checkout.
-  const quote=await request('checkout=cart',{items:[{id,size,qty:1}],country:'US',coupon:'BLACKFRIDAY10'}).catch(()=>null);
-  const bonus=quote?.pricing?.bogo_campaign;
-  if(!(quote?.pricing?.coupon_discount_cents>0)||bonus?.ends_at!==campaign.ends_at||
-     !bonus.free_units?.some(item=>item.id===id&&item.size===size&&item.qty===1))return false;
-  const slide=document.createElement('a'),countdown=document.createElement('time');
+ function mountPromoLoop(announcement,fallback){
   const viewport=document.createElement('div'),track=document.createElement('div'),set=document.createElement('div');
   const pause=document.createElement('button');
-  slide.className='pure-offer-trigger pure-christmas-slide';
-  slide.href='/shop';
-  slide.innerHTML='<span class="pure-christmas-snowflake" aria-hidden="true">❄</span><span class="pure-offer-buy pure-christmas-title"><i class="pure-christmas-hat" aria-hidden="true"></i>Christmas</span><strong class="pure-offer-free"><span>BOGO Sale</span></strong>';
-  countdown.dateTime=new Date(end).toISOString();
-  countdown.title='Ends at the end of December 24, Toronto time';
-  slide.append(countdown);
   viewport.className='pure-promo-window';
   track.className='pure-promo-track';
   set.className='pure-promo-set';
   fallback.before(viewport);
-  set.append(slide,fallback);
-  const repeat=set.cloneNode(true);
-  repeat.classList.add('pure-promo-repeat');
-  repeat.setAttribute('aria-hidden','true');
-  repeat.querySelectorAll('a,button').forEach(control=>control.tabIndex=-1);
-  repeat.querySelectorAll('[role=status]').forEach(status=>status.removeAttribute('role'));
-  track.append(set,repeat);
+  set.append(fallback);
+  const threshold=Number(announcement.dataset.freeShippingCents);
+  if(Number.isSafeInteger(threshold)&&threshold>0){
+   const shipping=document.createElement('a');
+   const amount=money(threshold).replace(/\.00$/,'')+'+';
+   shipping.className='pure-offer-trigger pure-shipping-slide';
+   shipping.href='/shipping-policy';
+   shipping.setAttribute('aria-label','Free shipping '+amount+'. See shipping details.');
+   shipping.innerHTML='<span class="pure-offer-buy">Free shipping</span><strong class="pure-offer-free"><span>'+esc(amount)+'</span></strong><span class="pure-offer-action">Details</span>';
+   set.append(shipping);
+  }
+  track.append(set);
   viewport.append(track);
   pause.type='button';
   pause.className='pure-promo-pause';
@@ -209,19 +195,80 @@
   });
   announcement.append(pause);
   announcement.classList.add('pure-promo-loop');
-  const displays=[countdown,repeat.querySelector('time')];
+  let copies=[];
+  function sizeLoop(){
+   const width=set.getBoundingClientRect().width;
+   const needed=width?Math.max(1,Math.ceil(viewport.clientWidth/width)):1;
+   while(copies.length>needed)copies.pop().remove();
+   while(copies.length<needed){
+    const repeat=set.cloneNode(true);
+    repeat.classList.add('pure-promo-repeat');
+    repeat.setAttribute('aria-hidden','true');
+    repeat.querySelectorAll('a,button').forEach(control=>control.tabIndex=-1);
+    repeat.querySelectorAll('[role=status]').forEach(status=>status.removeAttribute('role'));
+    const copied=repeat.querySelector('[data-copy-offer].is-copied');
+    if(copied){
+     copied.classList.remove('is-copied');
+     copied.querySelector('span').textContent=copied.dataset.copyOffer;
+     repeat.querySelector('[data-offer-status]').textContent='';
+    }
+    copies.push(repeat);
+    track.append(repeat);
+   }
+   track.style.setProperty('--promo-distance',-width+'px');
+   track.style.setProperty('--promo-duration',Math.max(8,width/40)+'s');
+  }
+  function refresh(){
+   copies.forEach(copy=>copy.remove());
+   copies=[];
+   sizeLoop();
+  }
+  if(window.ResizeObserver){
+   const observer=new ResizeObserver(sizeLoop);
+   observer.observe(viewport);
+   observer.observe(set);
+  }else window.addEventListener('resize',sizeLoop);
+  sizeLoop();
+  return {set,track,refresh};
+ }
+ // Midnight at the start of Christmas Day in Toronto (EST).
+ const christmas=Date.parse('2026-12-25T00:00:00-05:00');
+ async function mountChristmasOffer(loop,campaign){
+  const end=Date.parse(campaign?.ends_at),serverTime=Date.parse(campaign?.server_time);
+  const key=campaign?.eligible_variants?.[0],separator=typeof key==='string'?key.indexOf(':'):-1;
+  if(!loop||!Number.isFinite(serverTime)||end!==christmas||serverTime>=end||separator<=0)return false;
+  const offset=serverTime-Date.now();
+  const id=key.slice(0,separator),size=key.slice(separator+1);
+  // Read the estimate from the same pricing engine used by checkout.
+  const quote=await request('checkout=cart',{items:[{id,size,qty:1}],country:'US',coupon:'BLACKFRIDAY10'}).catch(()=>null);
+  const bonus=quote?.pricing?.bogo_campaign;
+  if(!(quote?.pricing?.coupon_discount_cents>0)||bonus?.ends_at!==campaign.ends_at||
+     !bonus.free_units?.some(item=>item.id===id&&item.size===size&&item.qty===1))return false;
+  const slide=document.createElement('a'),countdown=document.createElement('time'),snowflake=document.createElement('span');
+  slide.className='pure-offer-trigger pure-christmas-slide';
+  slide.href='/shop';
+  slide.innerHTML='<span class="pure-christmas-snowflake" aria-hidden="true">❄</span><span class="pure-offer-buy pure-christmas-title"><i class="pure-christmas-hat" aria-hidden="true"></i>Christmas</span><strong class="pure-offer-free"><span>BOGO Sale</span></strong>';
+  countdown.dateTime=new Date(end).toISOString();
+  countdown.title='Ends at the end of December 24, Toronto time';
+  slide.append(countdown);
+  snowflake.className='pure-christmas-snowflake pure-promo-divider';
+  snowflake.setAttribute('aria-hidden','true');
+  snowflake.textContent='❄';
+  loop.set.prepend(slide,snowflake);
+  loop.refresh();
   function tick(){
    const remaining=Math.ceil((end-Date.now()-offset)/1000);
    if(remaining<=0){
     clearInterval(clock);
-    viewport.replaceWith(fallback);
-    pause.remove();
-    announcement.classList.remove('pure-promo-loop','pure-promo-paused');
+    if(document.activeElement===slide)loop.set.querySelector('[data-copy-offer]')?.focus();
+    slide.remove();
+    snowflake.remove();
+    loop.refresh();
     return;
    }
    const days=Math.floor(remaining/86400);
    const time=[Math.floor(remaining/3600)%24,Math.floor(remaining/60)%60,remaining%60].map(value=>String(value).padStart(2,'0')).join(':');
-   for(const display of displays)display.textContent=(days?days+'d ':'')+time;
+   for(const display of loop.track.querySelectorAll('.pure-christmas-slide time'))display.textContent=(days?days+'d ':'')+time;
   }
   const clock=setInterval(tick,1000);
   tick();
@@ -230,9 +277,10 @@
  async function mountCampaignStrip(){
   const announcement=document.querySelector('.ap-announcement');
   const fallback=announcement?.querySelector('[data-default-offer]');
+  const loop=fallback&&mountPromoLoop(announcement,fallback);
   let campaign;
   try{campaign=await readCampaign();}catch{publishCampaign('unavailable');return;}
-  if(await mountChristmasOffer(announcement,fallback,campaign)){publishCampaign('inactive');return;}
+  if(await mountChristmasOffer(loop,campaign)){publishCampaign('inactive');return;}
   const offer=secondUnitOffer(campaign);
   if(!offer){publishCampaign('inactive');return;}
   const percent=offer.discount_bps/100;
@@ -245,6 +293,7 @@
   trigger.textContent=percent+'% off the second unit on eligible pairs';
   announcement.classList.add('pure-offer-active');
   fallback.replaceWith(trigger);
+  loop.refresh();
  }
  async function mountCountdown(root){
   if(!root)return;

@@ -12,9 +12,28 @@ function assertCurrentView(d,route){
  }
  assert.equal(d.querySelectorAll('#ap-main [data-promo-clock],#ap-main .nl-offer-grid').length,0,route+' has no old sale presentation');
 }
-async function setup(route,campaign=null){const errors=[];const console=new VirtualConsole();console.on('jsdomError',e=>errors.push(e.message));const dom=new JSDOM(read('public-build/index.html'),{url:'https://getpurelabs.com'+route,runScripts:'outside-only',virtualConsole:console}),w=dom.window;w.localStorage.setItem('ap-age-verified','true');w.matchMedia=()=>({matches:false});w.HTMLElement.prototype.scrollIntoView=()=>{};w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;};w.fetch=async url=>({ok:true,json:async()=>String(url).includes('campaign=window')?(campaign||{}):[]});w.AltaConversionConfig=require('../config/conversion.json');w.eval(read('public-build/quantity-pricing.js')+'\n'+read('public-build/membership-experience.js')+'\n'+read('public-build/conversion-ui.js')+'\n'+read('public-build/products.js')+'\n'+read('public-build/product-images.js')+'\n'+read('public-build/storefront-v2.js')+'\n'+read('public-build/workspace-v2.js'));await new Promise(r=>setTimeout(r,0));assert.deepEqual(errors,[],route);assertCurrentView(w.document,route);return{dom,w,d:w.document};}
+async function setup(route,campaign=null,quote=null){const errors=[];const console=new VirtualConsole();console.on('jsdomError',e=>errors.push(e.message));const dom=new JSDOM(read('public-build/index.html'),{url:'https://getpurelabs.com'+route,runScripts:'outside-only',virtualConsole:console}),w=dom.window;w.localStorage.setItem('ap-age-verified','true');w.matchMedia=()=>({matches:false});w.HTMLElement.prototype.scrollIntoView=()=>{};w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;};w.fetch=async url=>({ok:true,json:async()=>String(url).includes('campaign=window')?(campaign||{}):String(url).includes('checkout=cart')?quote:[]});w.AltaConversionConfig=require('../config/conversion.json');w.eval(read('public-build/quantity-pricing.js')+'\n'+read('public-build/membership-experience.js')+'\n'+read('public-build/conversion-ui.js')+'\n'+read('public-build/products.js')+'\n'+read('public-build/product-images.js')+'\n'+read('public-build/storefront-v2.js')+'\n'+read('public-build/workspace-v2.js'));await new Promise(r=>setTimeout(r,0));assert.deepEqual(errors,[],route);assertCurrentView(w.document,route);return{dom,w,d:w.document};}
 (async()=>{
  const now=Date.now();
+ {
+  const ends_at='2026-12-25T05:00:00.000Z';
+  const campaign={ends_at,server_time:'2026-12-10T16:00:00.000Z',eligible_variants:['bpc-157:10mg']};
+  const quote={pricing:{coupon_discount_cents:299,bogo_campaign:{ends_at,free_units:[{id:'bpc-157',size:'10mg',qty:1}]}}};
+  const {dom,d}=await setup('/',campaign,quote);
+  const set=d.querySelector('.pure-promo-set:not(.pure-promo-repeat)');
+  const [christmas,divider,blackFriday,shipping]=set.children;
+  assert.equal(christmas.querySelector('time').dateTime,ends_at);
+  assert.ok(divider.matches('.pure-promo-divider[aria-hidden="true"]'));
+  assert.equal(divider.textContent,'❄');
+  assert.equal(blackFriday.querySelector('[data-copy-offer]').dataset.copyOffer,'BLACKFRIDAY10');
+  assert.equal(shipping.getAttribute('href'),'/shipping-policy');
+  assert.equal(shipping.querySelector('.pure-offer-free').textContent,'$250+');
+  assert.equal(shipping.querySelector('.pure-offer-buy').textContent,'Free shipping');
+  assert.ok(d.querySelector('.pure-promo-repeat[aria-hidden="true"]'));
+  d.querySelector('.pure-promo-pause').click();
+  assert.ok(d.querySelector('.pure-promo-paused'));
+  dom.window.close();
+ }
  const offer={second_unit:{discount_bps:2500,eligible_variants:['bpc-157:10mg','ghk-cu:50mg']}};
  for(const route of ['/','/shop','/product/semaglutide?size=10mg','/product/bpc-157?size=10mg']){
   const {dom,d}=await setup(route,offer);
@@ -50,7 +69,7 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
  {
   const legacy={ends_at:new Date(now+60000).toISOString(),eligible_variants:['bpc-157:10mg']};
   const {dom,d}=await setup('/shop?offer=bogo',legacy);
-  assert.equal(d.querySelector('.pure-offer-trigger:not([data-default-offer]),.pure-card-sale'),null);
+  assert.equal(d.querySelector('.pure-offer-trigger:not([data-default-offer],.pure-shipping-slide),.pure-card-sale'),null);
   assert.ok(d.querySelector('#ap-catalog-grid article'),'legacy links open the regular catalog');
   assert.match(d.querySelector('.ap-announcement').textContent,/BLACKFRIDAY10/);
   dom.window.close();
@@ -59,6 +78,7 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
   const ribbon=d.querySelector('.ap-announcement .pure-offer-trigger[data-default-offer]');
   assert.equal(ribbon.querySelector('.pure-offer-action').getAttribute('href'),'/shop');
   assert.equal(ribbon.querySelector('.pure-offer-free').textContent,'BLACKFRIDAY10');
+  assert.ok(ribbon.nextElementSibling.matches('.pure-shipping-slide'));
   assert.match(d.querySelector('h1').textContent,/CUTTING EDGEPURITY/);
   // The Testing route remains discoverable in the footer.
   assert.equal(d.querySelector('#ap-nav a[href="/coas"]'),null);

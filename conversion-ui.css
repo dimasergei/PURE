@@ -231,7 +231,8 @@ html:root body.ap-site .ap-announcement.pure-offer-active {
   transform: translateY(-.1rem) rotate(45deg);
 }
 html:root body.ap-site .pure-offer-trigger a.pure-offer-action { display:inline-flex; color:#fff; text-decoration:none; transition:transform .18s ease }
-.pure-offer-trigger .pure-offer-free {border:0;font-family:inherit;cursor:copy}
+.pure-offer-trigger .pure-offer-free {border:0;font-family:inherit}
+.pure-offer-trigger [data-copy-offer] {cursor:copy}
 .pure-offer-trigger .pure-offer-free.is-copied {box-shadow:0 0 0 2px #aaa}
 .pure-offer-trigger :is(button,a):focus-visible {outline:2px solid white;outline-offset:3px}
 @media (hover:hover) and (prefers-reduced-motion:no-preference){
@@ -371,17 +372,27 @@ body.ap-site .nl-detail [data-campaign-product]:not([hidden]) {
   scrollbar-width: none;
 }
 .pure-promo-track, .pure-promo-set { display: flex; inline-size: max-content; height: 100%; }
-.pure-promo-track { animation: pure-promo-scroll 22s linear infinite; }
+.pure-promo-track { animation: pure-promo-scroll var(--promo-duration, 22s) linear infinite; }
+.pure-promo-set { flex: none; }
 .ap-announcement.pure-promo-loop .pure-promo-set .pure-offer-trigger {
   position: static;
   flex: none;
-  width: max(50vw, min(29rem, calc(100vw - var(--promo-control-width))));
+  width: max-content;
+  max-width: calc(100vw - var(--promo-control-width));
 }
+.pure-promo-loop [data-copy-offer] { display: grid; text-align: center; }
+.pure-promo-loop [data-copy-offer]::before {
+  content: attr(data-copy-offer);
+  visibility: hidden;
+  grid-area: 1 / 1;
+}
+.pure-promo-loop [data-copy-offer] span { grid-area: 1 / 1; }
+.pure-promo-divider { display: flex; align-items: center; }
 .pure-promo-paused .pure-promo-track { animation-play-state: paused; }
 @media (hover: hover) {
   .pure-promo-window:hover .pure-promo-track { animation-play-state: paused; }
 }
-@keyframes pure-promo-scroll { to { transform: translateX(-50%); } }
+@keyframes pure-promo-scroll { to { transform: translateX(var(--promo-distance, 0px)); } }
 .pure-promo-window:has(:focus-visible) { overflow-x: auto; }
 .pure-promo-window:has(:focus-visible) .pure-promo-track { animation: none; }
 .pure-promo-window:has(:focus-visible) .pure-promo-repeat { display: none; }

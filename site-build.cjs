@@ -7,6 +7,7 @@ vm.runInNewContext(fs.readFileSync('products.js','utf8')+';globalThis.catalog=CA
 const products=context.catalog;
 const variants=products.reduce((n,p)=>n+p.variants.length,0);
 const displayCurrencies=JSON.parse(fs.readFileSync('config/display-currencies.json','utf8')).supported_currencies;
+const {free_shipping_threshold_cents:freeShippingThreshold}=JSON.parse(fs.readFileSync('config/checkout.json','utf8'));
 function currencyControl(id,statusId){
  const options=displayCurrencies.map(code=>'<option value="'+code+'">'+code+'</option>').join('');
  return `<div class="pure-currency-control"><label class="ap-sr" for="${id}" data-currency-control-label>Display currency</label><span class="pure-currency-picker"><span aria-hidden="true" data-display-currency="code">USD</span><select id="${id}" data-currency-select aria-describedby="${statusId}"><option value="auto">Automatic (USD)</option>${options}</select></span><p id="${statusId}" class="ap-sr" data-currency-status role="status" aria-live="polite">Catalog prices in USD.</p></div>`;
@@ -28,7 +29,7 @@ const mobileNavigation=`<dialog id="ap-mobile-menu" class="ap-mobile-menu" aria-
  </div>
 </dialog>`;
 const header=`<a class="ap-skip" href="#ap-main">Skip to content</a>
-<div class="ap-announcement pure-offer-active"><div class="pure-offer-trigger" data-default-offer><span class="pure-offer-buy">10% off</span> <button type="button" class="pure-offer-free" data-copy-offer="BLACKFRIDAY10" aria-label="Copy code BLACKFRIDAY10"><span>BLACKFRIDAY10</span></button> <a class="pure-offer-action" href="/shop">Shop now</a><span class="ap-sr" role="status" data-offer-status></span></div></div>
+<div class="ap-announcement pure-offer-active" data-free-shipping-cents="${freeShippingThreshold}"><div class="pure-offer-trigger" data-default-offer><span class="pure-offer-buy">10% off</span> <button type="button" class="pure-offer-free" data-copy-offer="BLACKFRIDAY10" aria-label="Copy code BLACKFRIDAY10"><span>BLACKFRIDAY10</span></button> <a class="pure-offer-action" href="/shop">Shop now</a><span class="ap-sr" role="status" data-offer-status></span></div></div>
 <header class="ap-header ap-header-compact"><div class="ap-header-main ap-container"><button class="ap-icon ap-menu-toggle" aria-label="Open navigation" aria-expanded="false" aria-controls="ap-mobile-menu" aria-haspopup="dialog">☰</button>
  <a class="ap-brand" href="/" aria-label="PURE home"><span class="ap-mark" aria-hidden="true"><i></i><i></i><i></i></span><span><span class="pure-wordmark">PURE</span><small>RESEARCH, RECONSIDERED.</small></span></a>
  <nav id="ap-nav" class="ap-nav" aria-label="Main navigation">${menuLinks(primaryLinks)}</nav>
