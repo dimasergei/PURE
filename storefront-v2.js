@@ -149,24 +149,16 @@
   const pricing=window.PureQuantityPricing;
   const tiers=(pricing?.TIERS||[]).filter(tier=>tier.bps>0).slice().reverse();
   const products=featured.filter(p=>p.category!=='supplies').slice(0,3);
-  const headline=tiers.length?`Save up to ${tiers.at(-1).bps/100}% in bulk.`:'Bulk order savings';
   return `<section class="ap-container pure-home-volume" aria-labelledby="pure-home-volume-title">
-    <div class="pure-home-volume-copy">
-      <span class="ap-eyebrow">BULK ORDERS</span>
-      <h2 id="pure-home-volume-title">${headline}</h2>
-      <p>Mix strengths of the same compound to reach either tier.</p>
+    <header class="pure-home-volume-head">
+      <h2 id="pure-home-volume-title">Bulk Orders</h2>
       <a class="pure-home-volume-link" href="/bulk-orders">Build a Bulk Order</a>
-    </div>
-    <div class="pure-home-volume-details">
-      <div class="pure-home-volume-tiers">${tiers.map(tier=>`<div><strong>${tier.bps/100}% <small>OFF</small></strong><span>${tier.min}+ units per compound</span></div>`).join('')}</div>
-      <p><strong>Free 2-Day Express Shipping</strong><span>U.S. bulk orders · after dispatch</span></p>
-    </div>
-    ${pricing&&products.length?`<div class="pure-home-express" data-home-bulk>
-      <div class="pure-home-express-picker">
-        <h3>Featured compounds</h3>
-        <div class="pure-home-express-products">${products.map(homeBulkProduct).join('')}</div>
-      </div>
-      <aside class="pure-home-express-summary" aria-label="Bulk order summary">${homeBulkSummary()}</aside>
+    </header>
+    <p class="pure-home-volume-tiers">${tiers.map(tier=>`<span><strong>${tier.bps/100}% off</strong> at ${tier.min}+ units</span>`).join('')}<small>Per compound · mix strengths</small></p>
+    ${tiers.length&&products.length?`<div class="pure-home-express" data-home-bulk>
+      <div class="pure-home-express-products">${products.map(homeBulkProduct).join('')}</div>
+      <p class="pure-home-volume-note"><span>Bulk prices per unit starting at ${tiers[0].min}+</span><span>Free U.S. 2-day express after dispatch</span></p>
+      <aside class="pure-home-express-summary" aria-label="Bulk order summary" ${homeBulkDraft.length?'':'hidden'}>${homeBulkSummary()}</aside>
     </div>`:''}
   </section>`;
  }
@@ -184,7 +176,7 @@
   const retail=Math.round(price*100);
   const gross=retail*units;
   const net=Math.round((gross-pricing.bulkDiscountCents(gross,Math.max(minimum,count)))/units);
-  return `${homeBulkPrices(retail,net)}<small>${qualified?'Per unit':`Per unit at ${minimum}+`}</small>`;
+  return homeBulkPrices(retail,net);
  }
  function homeBulkProduct(p){
   const variants=p.variants.slice().sort((a,b)=>(parseFloat(a.size)-parseFloat(b.size))||a.size.localeCompare(b.size));
@@ -216,13 +208,15 @@
    return `<li><span><strong>${esc(p.name)}</strong><small>${esc(line.size)} · ${line.qty} units</small></span><span class="pure-home-express-line-price">${homeBulkPrices(gross,gross-discount)}</span><button type="button" data-home-bulk-remove="${esc(line.id)}" data-size="${esc(line.size)}" aria-label="Remove ${esc(p.name+' '+line.size)}">×</button></li>`;
   }).join('');
   return `<h3>Your bulk order</h3>
-   ${lines?`<ul>${lines}</ul>`:'<p>Add products to see your estimate.</p>'}
-   <div class="pure-home-express-total">${savings?`<div><span>Retail value</span><del>${priceMarkup(retail/100)}</del></div><div class="pure-order-savings"><span>Bulk savings</span><strong>−${priceMarkup(savings/100)}</strong></div>`:''}
-    ${ready?'<div class="pure-order-savings"><span>Free 2-Day Express Shipping <small>U.S. after dispatch</small></span><strong>FREE</strong></div>':''}
-    <div class="pure-home-express-estimate"><strong>Estimated total</strong><strong>${priceMarkup((retail-savings)/100)}</strong></div>
-   </div>
-   <button class="ap-button" type="button" data-home-bulk-checkout ${ready?'':'disabled'}>Checkout</button>
-   <p data-home-bulk-notice>${ready?'':'Add at least 10 units per compound.'}</p>`;
+   <ul>${lines}</ul>
+   <div class="pure-home-express-purchase">
+    <div class="pure-home-express-total">
+     <div class="pure-home-express-estimate"><span>Estimated total</span><span class="pure-home-express-line-price">${homeBulkPrices(retail,retail-savings)}</span></div>
+     ${savings?`<div class="pure-order-savings"><span>Bulk savings</span><strong>−${priceMarkup(savings/100)}</strong></div>`:''}
+    </div>
+    <button class="ap-button" type="button" data-home-bulk-checkout ${ready?'':'disabled'}>Checkout</button>
+    <p data-home-bulk-notice>${ready?'':'Add at least 10 units per compound.'}</p>
+   </div>`;
  }
  function refreshHomeBulkProduct(card){
   const p=product(card.dataset.homeBulkProduct);
@@ -250,7 +244,10 @@
   const builder=root.querySelector('[data-home-bulk]');
   if(!builder)return;
   const summary=builder.querySelector('.pure-home-express-summary');
-  const updateSummary=()=>{summary.innerHTML=homeBulkSummary();};
+  const updateSummary=()=>{
+   summary.hidden=!homeBulkDraft.length;
+   summary.innerHTML=homeBulkSummary();
+  };
   builder.addEventListener('change',event=>{
    const input=event.target,card=input.closest('[data-home-bulk-product]');
    if(!card)return;
