@@ -92,12 +92,13 @@ body.ap-site .pure-bogo-copy h1 {
   font-size: 1.87em;
   font-weight: inherit;
   line-height: .92;
+  filter: drop-shadow(0 0 .025em #fff7) drop-shadow(0 0 .12em #fff4);
 }
 @supports ((background-clip: text) or (-webkit-background-clip: text)) {
   .pure-bogo-copy h1 > strong {
     background-image:
-      linear-gradient(105deg, transparent 41%, #fff9 49%, transparent 57%),
-      linear-gradient(180deg, #fff 35%, #f0f0f0 68%, #d0d0d0 100%);
+      linear-gradient(105deg, transparent 39%, #fff 49%, transparent 58%),
+      linear-gradient(180deg, #fff 8%, #dedede 43%, #f5f5f5 57%, #d0d0d0 100%);
     background-size: 225% 100%, 100% 100%;
     background-repeat: no-repeat;
     background-clip: text;
@@ -204,8 +205,23 @@ body.ap-site .pure-bogo-cta {
   text-decoration: none;
   text-transform: uppercase;
 }
-body.ap-site .pure-bogo-cta:hover { background: #e9e9e9; border-color: #e9e9e9; }
+body.ap-site .pure-bogo-cta:hover { background-color: #e9e9e9; border-color: #e9e9e9; }
 body.ap-site .pure-bogo-cta:focus-visible { outline: 2px solid #fff; outline-offset: 4px; }
+.pure-bogo-vial-free > span,
+body.ap-site .pure-bogo-cta {
+  box-shadow: 0 0 7px #fff5, 0 0 15px #fff2;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .pure-bogo-vial-free > span,
+  body.ap-site .pure-bogo-cta {
+    background-image: linear-gradient(105deg, transparent 35%, #00000012 43%, #fff 50%, #00000012 57%, transparent 65%);
+    background-size: 225% 100%;
+    background-repeat: no-repeat;
+    animation: pure-bogo-shine 6s ease-in-out infinite;
+  }
+  .pure-bogo-vial-free > span { animation-delay: -1.2s; }
+  body.ap-site .pure-bogo-cta { animation-delay: -2.4s; }
+}
 .pure-bogo-highlights .nl-trust {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -275,6 +291,13 @@ body.ap-site:has(.pure-bogo-home.pure-sale-cta-visible) .spin-save-shortcut { vi
     background-image: none;
     -webkit-text-fill-color: CanvasText;
     -webkit-text-stroke: 0;
+    animation: none;
+    filter: none;
+  }
+  .pure-bogo-vial-free > span, body.ap-site .pure-bogo-cta {
+    animation: none;
+    background-image: none;
+    box-shadow: none;
   }
 }
 
