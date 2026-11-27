@@ -430,6 +430,11 @@ html:root body.ap-site #monthly-main:not(:has(.monthly-checkout-layout)) #monthl
     white-space: normal;
     overflow-wrap: anywhere;
   }
+  html:root body.ap-site :is(.ap-account-site .account-card, .monthly-account-nav) nav.account-nav .account-nav-logout {
+    grid-column: 1 / -1;
+    justify-self: center;
+    padding-inline: 16px;
+  }
 }
 
 
