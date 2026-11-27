@@ -152,7 +152,10 @@
   const variant=p.variants.find(v=>v.size===size)||homeBulkVariants(p)[0];
   const retail=Math.round(variant.price*100)*qty;
   const net=retail-window.PureQuantityPricing.bulkDiscountCents(retail,qty);
-  return `<span>Est. subtotal</span><strong>${priceMarkup(net/100)}</strong>`;
+  return `<span>Est. subtotal</span><span class="pure-home-express-prices">
+   <span class="ap-sr">Retail subtotal </span><del>${priceMarkup(retail/100)}</del>
+   <span class="ap-sr">Bulk subtotal </span><strong>${priceMarkup(net/100)}</strong>
+  </span>`;
  }
  function homeBulkPromo(featured){
   const tiers=(window.PureQuantityPricing?.TIERS||[]).filter(tier=>tier.bps>0).slice().reverse();

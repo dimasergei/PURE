@@ -135,14 +135,15 @@ body.ap-site .pure-bogo-copy h1 {
 .pure-bogo-backdrop {
   position: absolute;
   z-index: -1;
-  inset: 22% 0 auto;
+  inset: 17% 0 auto;
   color: #ffffff22;
-  font-size: clamp(75px, 13vw, 232px);
+  font-size: clamp(75px, 13vw, 218px);
   font-weight: 950;
   line-height: .85;
   letter-spacing: -.095em;
   text-align: center;
   white-space: nowrap;
+  transform: scaleX(1.12);
 }
 .pure-bogo-vial {
   position: absolute;
@@ -388,9 +389,8 @@ body.ap-site .pure-home-volume .pure-home-express-more {
 .pure-home-volume-options strong { font-size: .875rem; line-height: 1.2; }
 .pure-home-volume-options small { font-size: .75rem; line-height: 1.2; white-space: nowrap; }
 .pure-home-volume-options input:checked + span {
-  background: #333;
-  color: #fff;
-  box-shadow: inset 0 0 0 1px #858585;
+  background: #fff;
+  color: #111;
 }
 .pure-home-volume-options input:focus-visible + span,
 body.ap-site .pure-home-volume :is(select, a, button):focus-visible {
@@ -406,14 +406,15 @@ body.ap-site .pure-home-volume :is(select, a, button):focus-visible {
 .pure-home-express-fields label::after {
   position: absolute;
   inset-inline-end: 14px;
-  bottom: 19px;
-  width: 7px;
-  height: 7px;
+  bottom: 18px;
+  width: 9px;
+  height: 9px;
   border: solid currentColor;
-  border-width: 0 1.5px 1.5px 0;
+  border-width: 0 2px 2px 0;
+  border-bottom-right-radius: 1.5px;
   content: '';
   pointer-events: none;
-  transform: rotate(45deg);
+  transform: scale(1.12, .78) rotate(45deg);
 }
 body.ap-site .pure-home-express-fields select {
   width: 100%;
@@ -445,7 +446,20 @@ body.ap-site .pure-home-express-fields select {
   font-size: .75rem;
   line-height: 1.2;
 }
-.pure-home-express-estimate strong { color: #fff; font-size: 1.125rem; font-variant-numeric: tabular-nums; }
+.pure-home-express-prices {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  font-variant-numeric: tabular-nums;
+}
+.pure-home-express-prices del,
+.pure-home-express-prices del .pure-price-value {
+  color: #bdbdbd;
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+.pure-home-express-estimate strong { color: #fff; font-size: 1.125rem; }
 html:root body.ap-site .pure-home-volume [data-home-bulk-checkout] {
   width: 100%;
   min-height: 44px;

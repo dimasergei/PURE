@@ -174,6 +174,7 @@ async function setup(route,campaign=null,quote=null){const errors=[];const conso
    const retail=Math.round(variant.price*100)*quantity;
    const net=retail-w.PureQuantityPricing.bulkDiscountCents(retail,quantity);
    assert.equal(estimate.querySelector('span').textContent,'Est. subtotal');
+   assert.equal(estimate.querySelector('del').textContent,w.AltaStore.money(retail/100));
    assert.equal(estimate.querySelector('strong').textContent,w.AltaStore.money(net/100));
   };
   assertTotal(10);
