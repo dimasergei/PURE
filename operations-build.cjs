@@ -60,7 +60,7 @@ const homeEntry=`<div class="pure-home-entry" data-pure-home-hero data-pure-home
 fs.writeFileSync(path.join(out,'index.html'),page(shell,'/','PURE | Cutting Edge Purity','Research compounds, product documentation, and straightforward ordering for laboratories and research teams.',homeEntry));
 for(const [url,[title,description]] of Object.entries(routes)){
  const links=url==='/track-order'?'<a href="/account/purchases">Sign in to view account orders</a><p>Enable JavaScript to request order status by email. For help with a guest order, <a href="/contact">contact support</a> with your order number and checkout email.</p>':'<a href="/shop">Explore the catalog</a>';
- const contact = url === '/contact' ? '<!-- contact-page-business-address -->' : '';
+ const contact = url === '/contact' ? '<!-- business-contact -->' : '';
  const body='<section class="ap-container ap-page-intro"><h1>'+esc(title)+'</h1><p>'+esc(description)+'</p>'+contact+links+'</section>';
  fs.writeFileSync(path.join(out,url.slice(1)+'.html'),page(shell,url,title+' | PURE',description,body));
 }
