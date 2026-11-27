@@ -112,6 +112,7 @@ const pages = {
 const schemaContext = 'https://schema.org';
 const brandArtwork = '/assets/pure-packaging-studio.webp';
 const noindex = new Set(['/404', '/spin-and-save']);
+const pixelRoutes = new Set(['/', '/shop', '/privacy-policy']);
 const entities = {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'};
 const escape = value => String(value).replace(/[&<>"']/g, character => entities[character]);
 const textOf = element => (element?.textContent || '').replace(/\s+/g, ' ').trim();
@@ -210,6 +211,7 @@ function buildHeadSEO(out, site) {
   const indexed = new Set();
   if (!fs.existsSync(path.join(out, brandArtwork))) throw new Error('Missing release social artwork ' + brandArtwork);
   const meta = (attr, key, value) => '<meta ' + attr + '="' + key + '" content="' + escape(value) + '">';
+  fs.copyFileSync(path.join(__dirname, 'meta-pixel.js'), path.join(out, 'meta-pixel.js'));
 
   for (const relative of fs.readdirSync(out, {recursive: true}).filter(file => file.endsWith('.html'))) {
     const route = relative === 'index.html' ? '/' : '/' + relative.replace(/\/index\.html$/, '').replace(/\.html$/, '');
@@ -260,6 +262,9 @@ function buildHeadSEO(out, site) {
       // Reserve the first viewport while the report browser loads.
       if (route === '/coas' && !document.head.querySelector('style[data-pure-coa-space]')) {
         tags.push('<style data-pure-coa-space>#ap-main{min-block-size:100vh}</style>');
+      }
+      if (pixelRoutes.has(route) && !document.head.querySelector('#pure-meta-pixel')) {
+        tags.push('<script id="pure-meta-pixel" src="/meta-pixel.js" defer></script>');
       }
       fs.writeFileSync(file, applyHead(source, dom, tags.join('')));
     } finally {
