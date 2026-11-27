@@ -141,6 +141,7 @@ async function setup(route,campaign=null,quote=null){const errors=[];const conso
   assert.equal(d.querySelector('.nl-featured').nextElementSibling,bulk,'bulk savings follow featured products');
   assert.equal(d.querySelector('[data-mx-membership-home]'),null);
   const testing=d.querySelector('.nl-editorial');
+  assert.deepEqual([...testing.querySelectorAll(':scope > div:first-child > p')].map(p=>p.textContent),['Request the certificate for your fulfilled lot when you order.']);
   const callout=testing.nextElementSibling;
   assert.ok(callout.matches('.pure-home-research'));
   assert.equal(callout.querySelector('h2').textContent,'Ready to start your research?');
