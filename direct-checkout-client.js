@@ -24,6 +24,18 @@
  const paymentLabel=kind=>kind==='interac'?'Interac e-Transfer (CAD)':kind==='card'?'Card':'Crypto';
  const interacNote='Pay in Canadian dollars by Interac e-Transfer. Your final CAD total is shown before you place the order. Receiving details and your payment reference appear immediately afterward.';
  const validCadQuote=q=>q?.currency==='CAD'&&q.request_only!==true&&typeof q.fx_quote==='string'&&q.fx_quote.length>0&&typeof q.quote==='string'&&q.quote.length>0&&Number.isSafeInteger(q.total_cents)&&q.total_cents>0&&Number.isSafeInteger(q.pricing?.fx_ppm)&&q.pricing.fx_ppm>0;
+ const bulkTotals=['subtotal_cents','discount_cents','shipping_cents','tax_cents','total_cents'];
+ function sameBulkQuote(previous,current){
+  if(!previous||previous.currency!==current.currency||bulkTotals.some(key=>previous[key]!==current[key]))return false;
+  if((previous.points_redeemed||0)!==(current.points_redeemed||0)||(previous.credit_redeemed_cents||0)!==(current.credit_redeemed_cents||0))return false;
+  if(current.currency==='CAD'&&previous.pricing?.fx_ppm!==current.pricing?.fx_ppm)return false;
+  const amounts=({pricing})=>JSON.stringify([
+   pricing?.lines?.map(({id,size,qty,gross_cents,line_total_cents})=>[id,size,qty,gross_cents,line_total_cents]),
+   pricing?.delivery?.shipping_cents,
+   pricing?.delivery?.extras?.map(({id,amount_cents})=>[id,amount_cents])
+  ]);
+  return amounts(previous)===amounts(current);
+ }
  function methodAvailable(method,country){return !!paymentKind(method)&&method.active!==false&&Array.isArray(method.countries)&&method.countries.includes(country);}
  function directCryptoDescription(method,count,bulk){
   const network=usdcNetwork(method?.native_provider);
@@ -38,7 +50,8 @@
    const matching=methods.filter(item=>paymentKind(item)===kind),method=matching[0],isCrypto=kind==='crypto';
    const copy=kind==='interac'?interacNote:kind==='card'?'Secure card-to-crypto checkout. The provider displays fees, conversion rate and final charge before you pay. Cards and digital wallets depend on country, device and eligibility.':directCryptoDescription(method,matching.length,bulk);
    const picker=isCrypto&&matching.length>1?'<label data-dc-crypto-networks hidden>USDC network<select data-dc-crypto-network disabled></select></label>':'';
-   return '<label class="dc-method"><input type="radio" name="method_id" data-payment-kind="'+kind+'" value="'+esc(!isCrypto?method?.id||'':'')+'" '+(method?'':'disabled data-unavailable="true"')+' required><span><strong>'+paymentLabel(kind)+'</strong><small'+(isCrypto?' data-dc-crypto-description':'')+'>'+copy+'</small></span></label>'+picker;
+   const unavailable=bulk?'<small id="dc-'+kind+'-unavailable" data-dc-method-unavailable hidden>Unavailable for this destination.</small>':'';
+   return '<label class="dc-method"><input type="radio" name="method_id" data-payment-kind="'+kind+'" value="'+esc(!isCrypto?method?.id||'':'')+'" '+(method?'':'disabled data-unavailable="true"')+(bulk?' aria-labelledby="dc-'+kind+'-label"':'')+' required><span><strong'+(bulk?' id="dc-'+kind+'-label"':'')+'>'+paymentLabel(kind)+'</strong><small data-dc-method-description'+(isCrypto?' data-dc-crypto-description':'')+(bulk?' id="dc-'+kind+'-description" hidden':'')+'>'+copy+'</small>'+unavailable+'</span></label>'+picker;
   }).join('');
  }
  function gatewayPaymentUrl(value,origin){
@@ -121,7 +134,7 @@
    if(!cart.length){root.append(node('p',bulk?'Your bulk order is empty.':'Your cart is empty.'),link(bulk?'Build a bulk order':'Shop products',bulk?'/bulk-orders':'/shop'));return;}
    const methods=data.methods.filter(method=>(method.sale_scope==='both'||method.sale_scope==='goods')&&paymentKind(method)&&(!stack||['card','crypto'].includes(paymentKind(method))));
    const profile=user?.user_metadata?.alta_profile||{},address=profile.shipping||{};
-   const form=node('form');form.className='ap-form dc-form';form.dataset.bulkOrder=String(bulk);form.dataset.expressBulk=String(options.bulk===true||location.pathname?.replace(/\/$/,'')==='/bulk-orders/checkout');form.dataset.memberStack=String(stack);
+   const form=node('form');form.className='ap-form dc-form';form.dataset.bulkOrder=String(bulk);form.dataset.expressBulk=String(bulk);form.dataset.memberStack=String(stack);
    form.innerHTML=`<section class="dc-section"><span class="dc-kicker">01 · Delivery details</span><h2>Where should we send your order?</h2><p>Free priority shipping at $250 after discounts. See the shipping policy for eligibility. <a href="/account/profile">Manage saved details</a></p><div class="dc-fields"><label>Full name<input name="name" autocomplete="shipping name" maxlength="120" required value="${esc(address.name||user?.user_metadata?.full_name||'')}"></label><label>Laboratory / organization (optional)<input name="organization" maxlength="180" autocomplete="shipping organization" value="${esc(address.organization||profile.organization||'')}"></label><label>Street address<input name="line1" autocomplete="shipping address-line1" required minlength="3" maxlength="180" value="${esc(address.line1||'')}"></label><label>Apartment, suite, etc. (optional)<input name="line2" autocomplete="shipping address-line2" maxlength="180" value="${esc(address.line2||'')}"></label><div class="ap-form-row"><label>City<input name="city" required minlength="2" maxlength="80" autocomplete="shipping address-level2" value="${esc(address.city||'')}"></label><label>State<input name="region" required maxlength="80" autocomplete="shipping address-level1" value="${esc(address.region||'')}"></label></div><div class="ap-form-row"><label>ZIP code<input name="postal_code" required minlength="2" maxlength="20" autocomplete="shipping postal-code" value="${esc(address.postal_code||'')}"></label><label>Country<select name="country" autocomplete="shipping country"><option value="US">United States</option></select></label></div><p class="dc-note"><a href="/shipping-policy.html">See delivery estimates and shipping details</a></p></div></section><section class="dc-section"><span class="dc-kicker">02 · Payment</span><h2>Choose how to pay</h2><p>Review the total before placing your order.</p>${directPaymentRows(methods,bulk)}</section><section class="dc-section"><span class="dc-kicker">03 · Review</span><h2>Finish your order</h2><div class="dc-coupon"><label>Coupon code (optional)<input name="coupon" maxlength="40" placeholder="BLACKFRIDAY10" autocomplete="off"></label><small>Use BLACKFRIDAY10 for 10% off merchandise.</small><div class="ap-actions"><button type="button" class="ap-button ap-button-secondary" data-dc-apply-coupon>Apply</button><button type="button" class="ap-button ap-button-secondary" data-dc-remove-coupon hidden>Remove</button></div><p data-dc-coupon-status role="status" aria-live="polite"></p></div><details class="dc-rewards"><summary>Use points or store credit</summary><p class="dc-note">Available: ${Math.max(0,data.balances.points)} points · ${money(data.balances.credit_cents)} store credit.</p><div class="ap-form-row"><label>Points to use<input name="points" type="number" min="0" step="1" max="${Math.max(0,data.balances.points)}" value="0"></label><label>Store credit ($)<input name="credit" type="number" min="0" step="0.01" max="${(data.balances.credit_cents/100).toFixed(2)}" value="0"></label></div><p class="dc-note" data-dc-balance-note>100 points = $1; minimum 100 points. Points apply to merchandise; credit can also cover delivery.</p></details><div class="dc-fields"><label>Order note (optional)<textarea name="note" rows="2" maxlength="1000"></textarea></label><label class="ap-checkbox-label"><input name="research_use" type="checkbox" required> I am 21 or older. Products are for controlled laboratory research only, not human or animal use.</label><label class="ap-checkbox-label"><input name="consent" type="checkbox" required><span>I agree to the <a href="/commercial-terms.html" target="_blank" rel="noopener">checkout terms</a>, <a href="/shipping-policy.html" target="_blank" rel="noopener">shipping policy</a> and <a href="/refund-policy.html" target="_blank" rel="noopener">refund policy</a>.</span></label><button type="submit" class="ap-button">Review order total →</button></div></section>`;
    const countries=data.config.shipping_countries||['US'],countryNames=new Intl.DisplayNames(['en'],{type:'region'});
    form.elements.country.innerHTML=countries.map(code=>({code,label:countryNames.of(code)||code})).sort((a,b)=>a.label.localeCompare(b.label)).map(({code,label})=>'<option value="'+esc(code)+'">'+esc(label)+'</option>').join('');
@@ -131,6 +144,7 @@
     form.querySelector('.dc-coupon').remove();
     const deliveryCopy=form.querySelector('.dc-section p');
     deliveryCopy.textContent='US bulk orders include two-day express shipping after dispatch. Other destinations show available rates at checkout.';
+    form.querySelectorAll('.dc-section')[1].querySelector('p').textContent='Choose a payment method for your order.';
    }
    const preferred=options.method||new URLSearchParams(location.search).get('method');
    const cryptoRadio=form.querySelector('[data-payment-kind=crypto]'),cryptoPicker=form.querySelector('[data-dc-crypto-network]');
@@ -150,18 +164,29 @@
     for(const control of form.querySelectorAll('[name=method_id]')){
      const available=control===cryptoRadio?availableCrypto.length>0:methodAvailable(methods.find(m=>m.id===control.value),country);
      control.disabled=!available;control.dataset.unavailable=String(!available);if(!available)control.checked=false;
+     const unavailable=control.closest('.dc-method').querySelector('[data-dc-method-unavailable]');
+     if(unavailable)unavailable.hidden=available;
     }
     if(!form.querySelector('[name=method_id]:checked')){const preferredControl=[...form.querySelectorAll('[name=method_id]')].find(control=>!control.disabled&&control.value===preferred)||form.querySelector('[name=method_id]:not(:disabled)');if(preferredControl)preferredControl.checked=true;}
-    syncCryptoPicker();syncBalances();
+    syncPaymentDetails();syncBalances();
    }
-   function syncCryptoPicker(){
+   function syncPaymentDetails(){
+    if(bulk){
+     for(const control of form.querySelectorAll('[name=method_id]')){
+      const row=control.closest('.dc-method'),description=row.querySelector('[data-dc-method-description]');
+      description.hidden=!control.checked;
+      if(control.checked)control.setAttribute('aria-describedby',description.id);
+      else if(control.disabled)control.setAttribute('aria-describedby',row.querySelector('[data-dc-method-unavailable]').id);
+      else control.removeAttribute('aria-describedby');
+     }
+    }
     if(!cryptoPicker)return;
     const visible=cryptoRadio.checked&&cryptoPicker.options.length>1;
     cryptoPicker.parentElement.hidden=!visible;cryptoPicker.required=visible;cryptoPicker.disabled=!visible;cryptoPicker.dataset.unavailable=String(!visible);
    }
    syncPaymentAvailability();form.elements.country.addEventListener('change',syncPaymentAvailability);
    cryptoPicker?.addEventListener('change',()=>{cryptoRadio.value=cryptoPicker.value;cryptoRadio.dispatchEvent(new Event('change',{bubbles:true}));});
-   form.addEventListener('change',event=>{if(event.target.name==='method_id'){syncCryptoPicker();syncBalances();}});
+   form.addEventListener('change',event=>{if(event.target.name==='method_id'){syncPaymentDetails();syncBalances();}});
    const {box:aside,estimate}=cartSummary(cart),layout=node('div');layout.className='dc-layout';
    if(bulk){
     root.querySelector('.dc-heading h1').textContent='Complete your bulk order';
@@ -173,13 +198,19 @@
     aside.insertBefore(edit,estimate);
    }
    const review=node('div'),status=node('p');status.className='dc-confirm-status';status.setAttribute('role','status');status.setAttribute('aria-live','polite');aside.append(review,status);layout.append(form,aside);root.append(layout);const steps=checkoutSteps(form,root,data,cart);
-   if(form.dataset.expressBulk==='true'){
+   const button=form.querySelector('button[type="submit"]');
+   let visibleEstimate,reviewedQuote;
+   if(bulk){
     const [details,delivery,payment]=form.querySelectorAll(':scope > .dc-section');
     const left=node('div');left.className='dc-bulk-details';left.append(details,delivery);
     form.classList.add('dc-layout','dc-bulk-checkout');
     root.append(form);layout.remove();form.append(left,aside);aside.insertBefore(payment,review);
+    button.textContent='Place order';button.classList.add('dc-bulk-place');status.before(button);
    }
-   window.ReadinessUI.enhanceCheckout(form,aside,auth,cart,data);
+   window.ReadinessUI.enhanceCheckout(form,aside,auth,cart,data,bulk?(quote,pending)=>{
+    visibleEstimate=quote;
+    button.disabled=pending;
+   }:undefined);
     if(stack){
       form.querySelectorAll('[name=shipping_speed]').forEach(input=>{input.checked=input.value===stackShipping;input.disabled=input.value!==stackShipping;input.closest('label')?.toggleAttribute('hidden',input.value!==stackShipping);});
       form.querySelectorAll('[name=delivery_extra]').forEach(input=>{input.checked=false;input.disabled=true;input.closest('label')?.setAttribute('hidden','');});
@@ -188,31 +219,40 @@
     }
    if(bulk&&!user){
     const signIn=link('Sign in to complete your order','/account/login?returnTo='+encodeURIComponent('/bulk-orders/checkout'));
-    const submit=form.querySelector('button[type="submit"]');submit.replaceWith(signIn);
+    button.replaceWith(signIn);
     form.onsubmit=e=>e.preventDefault();
     return;
    }
    let busy=false,body,nmiWidget=null,nmiLocked=false,lastFingerprint=sessionStorage.getItem('ap-checkout-fingerprint')||'',requestId=sessionStorage.getItem('ap-checkout-id')||crypto.randomUUID();sessionStorage.setItem('ap-checkout-id',requestId);
-   const invalidateReview=event=>{if(!busy&&!review.contains(event.target)){nmiWidget?.destroy();nmiWidget=null;nmiLocked=false;review.replaceChildren();estimate.hidden=false;status.textContent='';}};
+   const invalidateReview=event=>{if(!busy&&!review.contains(event.target)){nmiWidget?.destroy();nmiWidget=null;nmiLocked=false;review.replaceChildren();estimate.hidden=false;status.textContent='';reviewedQuote=null;if(bulk)button.textContent='Place order';}};
    form.addEventListener('input',invalidateReview);form.addEventListener('change',invalidateReview);
-   form.onsubmit=async e=>{e.preventDefault();if(busy||form.dataset.couponPending==='true'||!steps.ready())return;busy=true;const button=form.querySelector('button[type="submit"]');button.disabled=true;status.textContent='Calculating your total…';
+   form.onsubmit=async e=>{e.preventDefault();if(busy||form.dataset.couponPending==='true'||!steps.ready())return;busy=true;button.disabled=true;status.textContent='Calculating your total…';
+    let placing=false;
+    const availableControls=[...form.elements].filter(control=>!control.disabled);
+    const unlock=()=>{busy=false;for(const control of availableControls)control.disabled=false;button.disabled=false;};
     try{
-     const d=Object.fromEntries(new FormData(form));for(const control of form.elements)control.disabled=true;const request={kind:'goods',bulk_order:bulk,...(stack?{research_builder_mode:'member_stack'}:{}),items:cart.map(({id,size,qty})=>({id,size,qty})),address:{line1:d.line1,line2:d.line2,city:d.city,region:d.region,postal_code:d.postal_code,country:d.country},research_use:d.research_use==='on',name:d.name,organization:d.organization,note:d.note,consent:d.consent==='on',method_id:d.method_id,points:stack?0:Number(d.points||0),credit_cents:stack?0:Math.round(Number(d.credit||0)*100),coupon:bulk||stack?'':form.dataset.appliedCoupon||'',delivery:stack?{shipping:stackShipping,extras:[]}:window.ReadinessUI.selection(form),checkout_version:data.config.version};
+     const d=Object.fromEntries(new FormData(form));const request={kind:'goods',bulk_order:bulk,...(stack?{research_builder_mode:'member_stack'}:{}),items:cart.map(({id,size,qty})=>({id,size,qty})),address:{line1:d.line1,line2:d.line2,city:d.city,region:d.region,postal_code:d.postal_code,country:d.country},research_use:d.research_use==='on',name:d.name,organization:d.organization,note:d.note,consent:d.consent==='on',method_id:d.method_id,points:stack?0:Number(d.points||0),credit_cents:stack?0:Math.round(Number(d.credit||0)*100),coupon:bulk||stack?'':form.dataset.appliedCoupon||'',delivery:stack?{shipping:stackShipping,extras:[]}:window.ReadinessUI.selection(form),checkout_version:data.config.version};
+     for(const control of form.elements)control.disabled=true;
      const fingerprint=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(request))))).map(x=>x.toString(16).padStart(2,'0')).join('');if(lastFingerprint&&lastFingerprint!==fingerprint){requestId=crypto.randomUUID();sessionStorage.setItem('ap-checkout-id',requestId);}lastFingerprint=fingerprint;sessionStorage.setItem('ap-checkout-fingerprint',fingerprint);
      if(form.querySelector('[name=method_id]:checked')===cryptoRadio&&!request.method_id)throw Error('Select a USDC network.');
+     const selected=methods.find(m=>m.id===request.method_id),kind=paymentKind(selected);
+     if(!methodAvailable(selected,request.address.country))throw Error('This payment method is unavailable for your destination.');
      body={...request,id:requestId,action:'quote',...(form.dataset.fxQuote?{fx_quote:form.dataset.fxQuote}:{})};let q=await api(auth,body);
-     const selected=methods.find(m=>m.id===body.method_id),kind=paymentKind(selected);
-     if(!methodAvailable(selected,body.address.country))throw Error('This payment method is unavailable for your destination.');
      if(kind==='interac'&&!validCadQuote(q))throw Error('Your CAD total could not be verified. Refresh checkout before placing the order.');
-     if(kind==='interac')body.fx_quote=q.fx_quote;
+     if(bulk&&(!q.quote||typeof q.quote!=='string'||q.currency!==(kind==='interac'?'CAD':'USD')||q.request_only===true||bulkTotals.some(key=>!Number.isSafeInteger(q[key])||q[key]<0)))throw Error('Your order total could not be verified. Try placing your order again.');
+     if(kind==='interac'){body.fx_quote=q.fx_quote;form.dataset.fxQuote=q.fx_quote;}
      window.ReadinessUI.syncCheckoutPrices?.(form,aside,cart,data,q);
-     estimate.hidden=true;review.replaceChildren(summary(q));review.scrollIntoView({behavior:'auto',block:'nearest'});status.textContent=kind==='interac'?'Your total is in CAD. Place your order to see the Interac payment details.':'Review the final total, then place your order.';
-     const place=node('button',kind==='interac'?'Place order · '+checkoutMoney(q.total_cents,'CAD'):q.total_cents===0?'Place order using account balance':kind==='card'?'Place order & pay by card':'Place order & pay with crypto');place.type='button';place.className='ap-button';review.append(place);
-     if(kind==='card'){const note=node('p','Your order is priced in USD. The payment provider displays its fees, conversion rate and final charge before you pay. Identity verification and country or device restrictions may apply.');note.className='dc-note';review.append(note);}
-     place.onclick=async()=>{if(busy)return;busy=true;place.disabled=true;button.disabled=true;for(const x of form.elements)x.disabled=true;status.textContent='Saving your order. Please wait…';
+     estimate.hidden=true;review.replaceChildren(summary(q));
+     const place=bulk?button:node('button',kind==='interac'?'Place order · '+checkoutMoney(q.total_cents,'CAD'):q.total_cents===0?'Place order using account balance':kind==='card'?'Place order & pay by card':'Place order & pay with crypto');
+     if(!bulk){
+      review.scrollIntoView({behavior:'auto',block:'nearest'});status.textContent=kind==='interac'?'Your total is in CAD. Place your order to see the Interac payment details.':'Review the final total, then place your order.';
+      place.type='button';place.className='ap-button';review.append(place);
+      if(kind==='card'){const note=node('p','Your order is priced in USD. The payment provider displays its fees, conversion rate and final charge before you pay. Identity verification and country or device restrictions may apply.');note.className='dc-note';review.append(note);}
+     }
+     const placeOrder=async()=>{busy=true;place.disabled=true;button.disabled=true;for(const x of form.elements)x.disabled=true;status.textContent='Saving your order. Please wait…';
       let savedOrder;
       try{
-       if(kind==='interac'){
+       if(kind==='interac'&&!bulk){
         status.textContent='Checking your current CAD total…';
         const refreshed=await api(auth,{...body,action:'quote'});
         if(!validCadQuote(refreshed))throw Error('Your CAD total could not be verified. Refresh checkout before placing the order.');
@@ -222,7 +262,7 @@
         review.querySelector('.dc-review-summary').replaceWith(summary(q));place.textContent='Place order · '+checkoutMoney(q.total_cents,'CAD');
         if(changed){
          status.textContent='Your CAD price has updated. Review the total above, then choose Place order to continue.';
-         busy=false;place.disabled=false;for(const control of form.elements)control.disabled=control.dataset.unavailable==='true';return;
+         place.disabled=false;unlock();return;
         }
        }
        savedOrder=body.id;const result=await api(auth,{...body,action:'place',quote:q.quote});if(result.id!==savedOrder)throw Error('The saved order reference could not be verified.');
@@ -246,10 +286,20 @@
         place.textContent='CHECK ORDER STATUS';place.disabled=true;
         return;
        }else status.textContent=err.message+' Your checkout reference is '+requestId+'.';
-       busy=false;place.disabled=false;button.disabled=false;for(const x of form.elements)x.disabled=x.dataset.unavailable==='true';
+       place.disabled=false;unlock();
       }
      };
-    }catch(err){status.textContent=err.message;}finally{busy=false;for(const control of form.elements)control.disabled=control.dataset.unavailable==='true';}
+     if(!bulk){place.onclick=()=>{if(!busy)return placeOrder();};return;}
+     const previous=reviewedQuote||visibleEstimate;
+     reviewedQuote=q;
+     if(!sameBulkQuote(previous,q)){
+      place.textContent='Place order · '+checkoutMoney(q.total_cents,q.currency);
+      status.textContent=previous?'Your '+(kind==='interac'?'CAD price':'order total')+' has updated. Review the total above, then choose Place order to continue.':'Review the total above, then choose Place order to continue.';
+      review.scrollIntoView({behavior:'auto',block:'nearest'});
+      return;
+     }
+     placing=true;await placeOrder();
+    }catch(err){status.textContent=err.message;}finally{if(!placing)unlock();}
    };
   }catch(e){root.replaceChildren(node('p',e.message));}
  }

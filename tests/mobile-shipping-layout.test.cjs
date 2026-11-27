@@ -40,4 +40,5 @@ test('mobile delivery radios stay outside the full-width address input styles', 
 
   assert.ok(card.matches(mobileCardRule.selectorText));
   assert.equal(mobileCardRule.style.getPropertyValue('grid-template-columns'), '19px minmax(0,1fr) max-content');
+  assert.equal(mobileCardRule.style.getPropertyValue('gap'), '14px');
 });

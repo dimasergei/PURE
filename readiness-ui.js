@@ -55,7 +55,7 @@
   const heading=aside.querySelector('h2'),label=form.dataset.bulkOrder==='true'?'Bulk order summary':'Your order';
   if(heading)heading.textContent=currency==='CAD'?label+' · CAD':label;
  }
- function enhanceCheckout(form,aside,auth,cart,data){
+ function enhanceCheckout(form,aside,auth,cart,data,onEstimate){
   // Card wallets are offered by the hosted provider when eligible; no placeholder native buttons.
 
   if(!cart.length||!form.elements.line1)return;
@@ -78,7 +78,7 @@
      input.closest('.rd-delivery')?.toggleAttribute('hidden',includedExpress&&input.value!=='express');
      if(includedExpress||leavingIncludedExpress)input.checked=eligible&&input.value===(includedExpress?'express':'economy');
     }
-    input.disabled=!eligible;if(!eligible)input.checked=false;
+    input.disabled=!eligible;input.dataset.unavailable=String(!eligible);if(!eligible)input.checked=false;
     input.closest('.rd-delivery')?.classList.toggle('rd-unavailable',!eligible);
     const price=form.querySelector('[data-rd-shipping-price="'+input.value+'"]');
     if(price&&!eligible)price.textContent='Unavailable';
@@ -98,6 +98,7 @@
   if(input)input.value=form.dataset.appliedCoupon;
   async function refresh(candidate=form.dataset.appliedCoupon,action='refresh'){
    const n=++sequence;form.dataset.couponPending='true';if(apply)apply.disabled=true;if(remove)remove.disabled=true;
+   onEstimate?.(null,true);
    if(status&&action!=='refresh')status.textContent=action==='remove'?'Removing coupon…':'Checking coupon…';
    try{
     const session=await auth.auth.getSession(),headers={'Content-Type':'application/json'};if(session.data.session)headers.Authorization='Bearer '+session.data.session.access_token;
@@ -114,10 +115,12 @@
     if(q.pricing?.coupon_discount_cents>0)rows.push(['BLACKFRIDAY10 (10%)',-q.pricing.coupon_discount_cents]);
     if(q.pricing?.crypto_discount_cents>0)rows.push(['Crypto discount (5%)',-q.pricing.crypto_discount_cents]);
     rows.push(['Delivery & options',q.shipping_cents]);if(q.tax_cents)rows.push(['Tax',q.tax_cents]);rows.push([interac?'Total (CAD)':'Estimated total',q.total_cents]);
-    estimate.innerHTML=rows.map(([label,v])=>`<div class="dc-total-row"><span>${label}</span><strong>${checkoutMoney(v,q.currency)}</strong></div>`).join('')+(q.pricing?.discount_source==='coupon_crypto'?'<p class="dc-note">Your coupon is applied first, then an extra 5% Crypto discount on the remaining merchandise.</p>':'')+(interac?'<p class="dc-note">Your total is in CAD. Interac receiving details appear after you place the order. USD points and store credit cannot be applied to this payment.</p>':'<p class="dc-note">Existing points and store credit are applied when you review the final total.</p>');
+    estimate.innerHTML=rows.map(([label,v])=>`<div class="dc-total-row"><span>${label}</span><strong>${checkoutMoney(v,q.currency)}</strong></div>`).join('')+(q.pricing?.discount_source==='coupon_crypto'?'<p class="dc-note">Your coupon is applied first, then an extra 5% Crypto discount on the remaining merchandise.</p>':'')+(interac?'<p class="dc-note">Your total is in CAD. Interac receiving details appear after you place the order. USD points and store credit cannot be applied to this payment.</p>':bulk?'<p class="dc-note">Any selected points or store credit appear in your final total.</p>':'<p class="dc-note">Existing points and store credit are applied when you review the final total.</p>');
     syncDelivery(q);
+    onEstimate?.(q,false);
    }catch(error){
     if(n===sequence){
+     onEstimate?.(null,false);
      if(status)status.textContent=error.message;
      else estimate.textContent=error.message;
     }
@@ -134,7 +137,7 @@
     try{sessionStorage.setItem(protectionKey,String(event.target.checked));}catch{}
    }
    if(event.target.name==='country')localStorage.setItem('ap-shipping-country',event.target.value);
-   sequence++;form.dataset.couponPending='true';syncDelivery();estimate.innerHTML='<p role="status">Calculating your order total…</p>';clearTimeout(timer);timer=setTimeout(()=>refresh(),180);
+   sequence++;form.dataset.couponPending='true';onEstimate?.(null,true);syncDelivery();estimate.innerHTML='<p role="status">Calculating your order total…</p>';clearTimeout(timer);timer=setTimeout(()=>refresh(),180);
   };
   form.addEventListener('input',onDeliveryChange);
   form.addEventListener('change',onDeliveryChange);

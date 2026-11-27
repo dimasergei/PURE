@@ -33,7 +33,10 @@ async function checkout(t, matches, { signedIn = false, geoCountry } = {}) {
   t.after(() => w.close());
   w.matchMedia = () => mediaQuery;
   if (geoCountry) w.AltaLocale = { country: geoCountry, countryReady: Promise.resolve() };
-  w.AltaStore = { cart: [item], catalog: [], product: () => item };
+  w.AltaStore = {
+    cart: [{ ...item }], catalog: [], product: () => item,
+    adjustQuantity: (key, change) => w.AltaStore.cart.find(line => line.key === key).qty += change
+  };
   w.fetch = async (url, options) => {
     if (url.endsWith(signedIn ? 'checkout=customer' : 'checkout=public')) return {
       ok: true,
@@ -48,14 +51,17 @@ async function checkout(t, matches, { signedIn = false, geoCountry } = {}) {
     const shipping = cents(shippingZones[body.country][body.delivery.shipping]);
     const extras = deliveryOptions.filter(option => body.delivery.extras.includes(option.id))
       .map(option => ({ id: option.id, label: option.label, amount_cents: cents(option.price_cents) }));
-    const subtotal = cents(4000);
+    const subtotal = cents(4000 * body.items.reduce((count, line) => count + line.qty, 0));
+    const coupon = body.coupon === 'BLACKFRIDAY10' ? body.coupon : '';
+    const discount = coupon ? Math.round(subtotal / 10) : 0;
     return {
       ok: true,
       json: async () => ({
         currency: cad ? 'CAD' : 'USD',
         fx_quote: cad ? 'fixture-cad-quote' : undefined,
-        total_cents: subtotal + shipping + extras.reduce((total, extra) => total + extra.amount_cents, 0),
-        pricing: { subtotal_cents: subtotal, fx_ppm: cad ? 1400000 : undefined, delivery: { shipping_cents: shipping, selection: body.delivery, extras } }
+        total_cents: subtotal - discount + shipping + extras.reduce((total, extra) => total + extra.amount_cents, 0),
+        pricing: { subtotal_cents: subtotal, coupon_code: coupon, coupon_discount_cents: discount,
+          fx_ppm: cad ? 1400000 : undefined, delivery: { shipping_cents: shipping, selection: body.delivery, extras } }
       })
     };
   };
@@ -78,11 +84,11 @@ test('phone checkout keeps contact, delivery and the current USD total in a two-
   assert.equal(actions.querySelector('[data-nlx-action-total]').hidden, false);
   assert.equal(actions.querySelector('[data-nlx-action-amount]').textContent, '$52.95');
   assert.equal(actions.querySelector('[data-nlx-next]').textContent, 'Continue to payment');
-  assert.equal(actions.querySelector('button').form, form);
+  assert.equal(actions.querySelector('[data-nlx-next]').form, form);
   assert.deepEqual([...root.querySelectorAll('[data-nlx-step]:not([hidden])')].map(step => step.textContent), ['1Contact & delivery', '2Payment']);
 
   contact(form);
-  actions.querySelector('button').click();
+  actions.querySelector('[data-nlx-next]').click();
   assert.equal(root.querySelector('[data-nlx-place]'), null, 'A guest email is still required before payment');
   form.elements.email.value = 'guest@example.test';
   form.elements.country.value = 'CA';
@@ -98,7 +104,7 @@ test('phone checkout keeps contact, delivery and the current USD total in a two-
   assert.equal(requestBodies.at(-1).country, 'CA');
   assert.deepEqual(requestBodies.at(-1).delivery, { shipping: 'standard', extras: ['priority', 'protection'] });
   assert.equal(actions.querySelector('[data-nlx-action-amount]').textContent, '$79.94');
-  actions.querySelector('button').click();
+  actions.querySelector('[data-nlx-next]').click();
   const pay = root.querySelector('[data-nlx-place]');
   assert.equal(pay.disabled, true, 'Payment still requires consent');
   assert.equal(pay.closest('.nlx-mobile-actions').querySelector('[data-nlx-action-amount]').textContent, '$79.94');
@@ -134,18 +140,59 @@ test('desktop checkout retains its Delivery step and a resize preserves the addr
   assert.equal(form.elements.delivery_speed.value, 'standard');
 });
 
+test('mobile order summary opens above the action, tracks edits and restores focus when closed', async t => {
+  const { root, w, form, resize, requestBodies } = await checkout(t, true);
+  const toggle = root.querySelector('[data-nlx-action-total]');
+  const summary = w.document.getElementById(toggle.getAttribute('aria-controls'));
+  assert.equal(toggle.getAttribute('aria-expanded'), 'false');
+  assert.equal(summary.hidden, true);
+  assert.equal(summary.parentElement, toggle.closest('.nlx-mobile-dock'));
+
+  toggle.click();
+  assert.equal(toggle.getAttribute('aria-expanded'), 'true');
+  assert.equal(summary.hidden, false);
+  assert.equal(w.document.activeElement.id, 'nlx-summary-title');
+  summary.querySelector('[data-nlx-qty="1"]').click();
+  await delay(0);
+  assert.equal(toggle.querySelector('[data-nlx-action-amount]').textContent, '$92.95');
+  summary.querySelector('[data-nlx-extra="protection"]').click();
+  await delay(0);
+  assert.equal(toggle.querySelector('[data-nlx-action-amount]').textContent, '$87.95');
+  summary.querySelector('[name=sidebar_coupon]').value = 'BLACKFRIDAY10';
+  summary.querySelector('[data-nlx-coupon]').click();
+  await delay(0);
+  assert.equal(toggle.querySelector('[data-nlx-action-amount]').textContent, '$79.95');
+  assert.equal(requestBodies.at(-1).coupon, 'BLACKFRIDAY10');
+
+  summary.querySelector('[name=sidebar_coupon]').dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  assert.equal(toggle.getAttribute('aria-expanded'), 'false');
+  assert.equal(summary.hidden, true);
+  assert.equal(w.document.activeElement, toggle);
+  resize(false);
+  assert.equal(summary.hidden, false);
+  assert.equal(summary.parentElement.className, 'nlx-columns');
+  assert.equal(toggle.hidden, true);
+  assert.ok(form.contains(root.querySelector('[data-nlx-next]')));
+  assert.equal(root.querySelectorAll('#nlx-order-summary').length, 1);
+  resize(true);
+  assert.equal(summary.hidden, true);
+  toggle.click();
+  assert.equal(summary.querySelector('[name=sidebar_coupon]').value, 'BLACKFRIDAY10');
+  assert.equal(summary.querySelector('[data-nlx-extra="protection"]').checked, false);
+});
+
 test('phone payment updates the displayed amount from the signed-in CAD quote', async t => {
   const { root, form, requestBodies } = await checkout(t, true, { signedIn: true });
   contact(form);
   assert.equal(form.elements.email.readOnly, true);
   root.querySelector('[data-nlx-next]').click();
-  assert.equal(root.querySelector('[data-nlx-action-currency]').textContent, 'Total · USD');
+  assert.equal(root.querySelector('[data-nlx-action-currency]').textContent, 'USD');
   assert.equal(root.querySelector('[data-nlx-action-amount]').textContent, '$59.95');
   form.querySelector('[name=payment_choice][value=interac]').click();
   assert.equal(root.querySelector('[data-nlx-place]').disabled, true);
   await delay(0);
   assert.equal(requestBodies.at(-1).method_id, interac.id);
-  assert.equal(root.querySelector('[data-nlx-action-currency]').textContent, 'Total · CAD');
+  assert.equal(root.querySelector('[data-nlx-action-currency]').textContent, 'CAD');
   assert.equal(root.querySelector('[data-nlx-action-amount]').textContent, '$83.93');
   assert.equal(root.querySelector('[data-nlx-place]').textContent, 'PLACE ORDER');
 });

@@ -342,7 +342,7 @@ test('balance and bulk checkout disable USD redemptions and show every amount in
  for(const mode of ['balance','bulk']){
   const f=fixture({country:'CA',interacReady:true,query:'?'+mode+'=1',balances:{points:500,credit_cents:1000}});
   try{
-   await f.open();const form=f.root.querySelector('form');form.querySelector('[data-step-next="0"]').click();form.querySelector('[data-step-next="1"]').click();
+   await f.open();const form=f.root.querySelector('form');form.querySelector('[data-step-next="0"]')?.click();form.querySelector('[data-step-next="1"]')?.click();
    form.elements.points.value='200';form.elements.credit.value='5';
    change(f,form.querySelector('[data-payment-kind=interac]'),true);
    assert.equal(form.elements.points.value,'0');assert.equal(form.elements.credit.value,'0');assert.equal(form.elements.points.disabled,true);assert.equal(form.elements.credit.disabled,true);
@@ -360,7 +360,7 @@ test('balance and bulk checkout disable USD redemptions and show every amount in
    assert.equal(form.elements.points.disabled,true);
    const request=f.requests.find(r=>r.body.action==='quote').body;assert.equal(request.points,0);assert.equal(request.credit_cents,0);assert.equal(request.bulk_order,mode==='bulk');
    assert.ok(f.requests.filter(r=>r.url.includes('checkout=cart')).every(r=>r.body.bulk_order===(mode==='bulk')));
-   const place=f.root.querySelector('.dc-summary button');assert.equal(place.textContent,'Place order · '+expected);await place.onclick();
+   const place=f.root.querySelector('.dc-summary button');assert.equal(place.textContent,mode==='bulk'?'Place order':'Place order · '+expected);if(mode==='balance')await place.onclick();
    assert.equal(request.fx_quote,f.fx.token);assert.equal(f.requests.find(r=>r.body.action==='place').body.fx_quote,f.fx.token);
    assert.equal(f.requests.filter(r=>r.body.action==='place').length,1);assert.equal(f.requests.find(r=>r.body.action==='place').body.bulk_order,mode==='bulk');assert.equal(f.requests.filter(r=>r.body.action==='pay').length,0);
    assert.equal(f.w.localStorage.getItem(mode==='bulk'?'ap-bulk-draft-v2':'pp-cart'),null);
@@ -368,38 +368,62 @@ test('balance and bulk checkout disable USD redemptions and show every amount in
  }
 });
 
-test('bulk placement renews an expired rate at the same CAD total before saving the order',async()=>{
- const f=fixture({country:'CA',interacReady:true,query:'?bulk=1&method='+interacMethod.id,finalQuotePatch:(_body,n)=>n>=2?{fx_quote:'renewed-fx-token',quote:'renewed-quote-hash'}:{}});
+test('bulk placement uses a refreshed rate token when the displayed CAD total is unchanged',async()=>{
+ const f=fixture({country:'CA',interacReady:true,query:'?bulk=1&method='+interacMethod.id,finalQuotePatch:{fx_quote:'renewed-fx-token',quote:'renewed-quote-hash'}});
  try{
-  await f.open();const form=f.root.querySelector('form');form.querySelector('[data-step-next="0"]').click();form.querySelector('[data-step-next="1"]').click();form.elements.research_use.checked=true;form.elements.consent.checked=true;
-  await form.onsubmit({preventDefault(){}});await f.root.querySelector('.dc-summary button').onclick();
-  assert.equal(f.requests.filter(r=>r.body.action==='quote').length,2);
+  await f.open();const form=f.root.querySelector('form');form.elements.research_use.checked=true;form.elements.consent.checked=true;
+  await form.onsubmit({preventDefault(){}});
+  assert.equal(f.requests.filter(r=>r.body.action==='quote').length,1);
   const placed=f.requests.find(r=>r.body.action==='place').body;assert.equal(placed.fx_quote,'renewed-fx-token');assert.equal(placed.quote,'renewed-quote-hash');
   assert.equal(f.w.localStorage.getItem('ap-bulk-draft-v2'),null);assert.equal(f.requests.filter(r=>r.body.action==='pay').length,0);
  }finally{f.dom.window.close();}
 });
 
+test('bulk checkout expands only the selected method and places the selected USDC network',async()=>{
+ const f=fixture({country:'CA',query:'?bulk=1',interacReady:true,otherMethods:[cryptoMethod,baseMethod]});
+ try{
+  await f.open();
+  const form=f.root.querySelector('form'),method=kind=>form.querySelector('[data-payment-kind='+kind+']');
+  const description=kind=>method(kind).closest('.dc-method').querySelector('[data-dc-method-description]');
+  const network=form.querySelector('[data-dc-crypto-network]'),place=form.querySelector('button[type=submit]');
+  assert.deepEqual(['card','crypto','interac'].map(kind=>description(kind).hidden),[false,true,true]);
+  assert.equal(network.closest('label').hidden,true);
+  change(f,method('crypto'),true);
+  assert.deepEqual(['card','crypto','interac'].map(kind=>description(kind).hidden),[true,false,true]);
+  assert.equal(network.closest('label').hidden,false);
+  assert.equal(place.disabled,true);
+  change(f,network,baseMethod.id);
+  await new Promise(resolve=>setTimeout(resolve,230));
+  form.elements.research_use.checked=true;form.elements.consent.checked=true;
+  await form.onsubmit({preventDefault(){}});
+  const placed=f.requests.find(r=>r.body.action==='place').body;
+  assert.equal(placed.method_id,baseMethod.id);
+  assert.equal(placed.quote,'fixture-verified-quote');
+  assert.equal(f.requests.filter(r=>r.body.action==='pay').length,0);
+ }finally{f.dom.window.close();}
+});
+
 test('bulk placement with an expired changed rate shows the new CAD price and requires another explicit click',async()=>{
  const f=fixture({country:'CA',interacReady:true,query:'?bulk=1&method='+interacMethod.id,
-  finalQuotePatch:(body,n,q,quote)=>n>=2?{...quote(body,{...q.pricing.fx,fx_ppm:1500000,token:'new-rate-token'}),quote:'new-rate-hash'}:{},
+  finalQuotePatch:(body,_n,q,quote)=>({...quote(body,{...q.pricing.fx,fx_ppm:1500000,token:'new-rate-token'}),quote:'new-rate-hash'}),
   placeResult:(_body,_w,result)=>({...result,total_cents:75750})});
  try{
-  await f.open();const form=f.root.querySelector('form');form.querySelector('[data-step-next="0"]').click();form.querySelector('[data-step-next="1"]').click();form.elements.research_use.checked=true;form.elements.consent.checked=true;
-  await form.onsubmit({preventDefault(){}});const place=f.root.querySelector('.dc-summary button');await place.onclick();
+  await f.open();const form=f.root.querySelector('form');form.elements.research_use.checked=true;form.elements.consent.checked=true;
+  const place=f.root.querySelector('.dc-summary button[type=submit]');await form.onsubmit({preventDefault(){}});
   assert.equal(f.requests.filter(r=>r.body.action==='place').length,0);assert.match(f.root.textContent,/CAD price has updated/);
   assert.equal(place.textContent,'Place order · $757.50');assert.equal(place.disabled,false);assert.equal(f.root.querySelector('[data-dc-line-price]').textContent,'$1,500.00 $750.00');
   assert.equal(f.root.querySelector('a[href^="/account/purchases?id="]'),null);assert.notEqual(f.w.localStorage.getItem('ap-bulk-draft-v2'),null);
-  await place.onclick();assert.equal(f.requests.filter(r=>r.body.action==='place').length,1);assert.equal(f.requests.find(r=>r.body.action==='place').body.fx_quote,'new-rate-token');assert.equal(f.w.localStorage.getItem('ap-bulk-draft-v2'),null);
+  await form.onsubmit({preventDefault(){}});assert.equal(f.requests.filter(r=>r.body.action==='place').length,1);assert.equal(f.requests.find(r=>r.body.action==='place').body.fx_quote,'new-rate-token');assert.equal(f.requests.find(r=>r.body.action==='place').body.quote,'new-rate-hash');assert.equal(f.w.localStorage.getItem('ap-bulk-draft-v2'),null);
  }finally{f.dom.window.close();}
 });
 
 test('a failed final CAD quote keeps bulk checkout editable without a nonexistent saved-order link',async()=>{
- const f=fixture({country:'CA',interacReady:true,query:'?bulk=1&method='+interacMethod.id,finalQuotePatch:(_body,n)=>{if(n===2)throw Error('CAD exchange rate temporarily unavailable.');return{};}});
+ const f=fixture({country:'CA',interacReady:true,query:'?bulk=1&method='+interacMethod.id,finalQuotePatch:(_body,n)=>{if(n===1)throw Error('CAD exchange rate temporarily unavailable.');return{};}});
  try{
-  await f.open();const form=f.root.querySelector('form');form.querySelector('[data-step-next="0"]').click();form.querySelector('[data-step-next="1"]').click();form.elements.research_use.checked=true;form.elements.consent.checked=true;
-  await form.onsubmit({preventDefault(){}});const place=f.root.querySelector('.dc-summary button');await place.onclick();
+  await f.open();const form=f.root.querySelector('form');form.elements.research_use.checked=true;form.elements.consent.checked=true;
+  const place=f.root.querySelector('.dc-summary button[type=submit]');await form.onsubmit({preventDefault(){}});
   assert.equal(f.requests.filter(r=>r.body.action==='place').length,0);assert.equal(place.disabled,false);assert.match(f.root.textContent,/exchange rate temporarily unavailable/);
   assert.equal(f.root.querySelector('a[href^="/account/purchases?id="]'),null);assert.notEqual(f.w.localStorage.getItem('ap-bulk-draft-v2'),null);
-  await place.onclick();assert.equal(f.requests.filter(r=>r.body.action==='place').length,1);
+  await form.onsubmit({preventDefault(){}});assert.equal(f.requests.filter(r=>r.body.action==='place').length,1);
  }finally{f.dom.window.close();}
 });

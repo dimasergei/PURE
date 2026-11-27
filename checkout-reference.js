@@ -93,33 +93,58 @@
   const div=document.createElement('div');div.className='nlx-page';root.replaceChildren(div);
   div.innerHTML='<div class="nlx-heading"><h1>'+(guest?'Guest checkout':'Checkout')+'</h1><p>'+(guest?'Have an account? <a href="'+esc(signIn)+'">Sign in</a>':'Complete your order securely')+'</p></div><div class="nlx-columns">'
     +'<section class="nlx-left"><nav class="nlx-progress" aria-label="Checkout steps">'+stepTitles.map((s,i)=>'<button type="button" data-nlx-step="'+i+'"><span>'+(i+1)+'</span>'+s+'</button>').join('')+'</nav><form id="nlx-form" novalidate></form></section>'
-    +'<aside class="nlx-right" aria-label="Order summary"><div class="nlx-summary"><div class="nlx-summary-head"><h2>Order Summary</h2><span data-nlx-item-count></span></div>'
+    +'<aside class="nlx-right" id="nlx-order-summary" aria-labelledby="nlx-summary-title"><div class="nlx-summary"><div class="nlx-summary-head"><h2 id="nlx-summary-title" tabindex="-1">Order Summary</h2><span data-nlx-item-count></span></div>'
     +'<div class="nlx-protect" data-nlx-protection></div><div class="nlx-products" data-nlx-products></div>'
     +'<p class="nlx-coupon-help">Use <strong>BLACKFRIDAY10</strong> for 10% off merchandise.</p><div class="nlx-coupon"><input aria-label="Coupon code" name="sidebar_coupon" placeholder="BLACKFRIDAY10" maxlength="40"><button type="button" data-nlx-coupon>APPLY</button><button type="button" data-nlx-remove-coupon hidden>REMOVE</button></div><p data-nlx-coupon-status role="status" aria-live="polite"></p>'
     +'<div class="nlx-total-rows" data-nlx-totals></div><div class="nlx-points" data-nlx-points></div><p class="nlx-quote-note" data-nlx-quote-note></p><div data-pure-membership-offer></div></div></aside></div>';
   const form=view('#nlx-form',div),detail=view('.nlx-summary',div),columns=view('.nlx-columns',div);
+  const summary=detail.parentElement,summaryTitle=view('#nlx-summary-title',summary);
+  const summaryHome=document.createComment('Order summary desktop position');summary.before(summaryHome);
+  const dock=el('div','nlx-mobile-dock');dock.hidden=true;columns.append(dock);
   const mobileLayout=window.matchMedia?.('(max-width: 770px)');
   const isMobile=()=>!!mobileLayout?.matches;
-  const actionTotal='<div class="nlx-mobile-total" data-nlx-action-total aria-live="polite" hidden><span data-nlx-action-currency></span><strong data-nlx-action-amount></strong></div>';
-  let stepActions=null,actionsHome=null;
+  const actionTotal='<button class="nlx-mobile-summary-toggle" type="button" data-nlx-action-total aria-expanded="false" aria-controls="nlx-order-summary" hidden><span>Order Summary <span class="nlx-summary-chevron" aria-hidden="true"></span></span><span class="nlx-mobile-total" aria-live="polite"><strong data-nlx-action-amount></strong> <small data-nlx-action-currency></small></span></button>';
+  let stepActions=null,actionsHome=null,summaryOpen=false;
+  const summaryToggle=()=>stepActions&&view('[data-nlx-action-total]',stepActions);
   function updateActionTotal(){
    if(!stepActions||!isMobile())return;
-   view('[data-nlx-action-currency]',stepActions).textContent='Total · '+paymentCurrency();
+   view('[data-nlx-action-currency]',stepActions).textContent=paymentCurrency();
    view('[data-nlx-action-amount]',stepActions).textContent=currentPreview?currentMoney(currentPreview.total_cents):loadingPreview?'Calculating…':'—';
   }
+  function setSummaryOpen(open,focus=false){
+   summaryOpen=open;
+   const toggle=summaryToggle();
+   if(focus&&!open)toggle?.focus({preventScroll:true});
+   toggle?.setAttribute('aria-expanded',String(open));
+   summary.hidden=isMobile()&&!open;
+   if(focus&&open){summary.scrollTop=0;summaryTitle.focus({preventScroll:true});}
+  }
+  dock.addEventListener('keydown',event=>{
+   if(event.key==='Escape'&&summaryOpen){event.preventDefault();setSummaryOpen(false,true);}
+  });
   // Use one action block to preserve the form binding and reading order.
   function positionActions(){
    if(!stepActions||!actionsHome)return;
-   stepActions.classList.toggle('nlx-mobile-actions',isMobile());
-   view('[data-nlx-action-total]',stepActions).hidden=!isMobile();
-   if(isMobile())columns.append(stepActions);else actionsHome.after(stepActions);
+   const mobile=isMobile(),toggle=summaryToggle();
+   stepActions.classList.toggle('nlx-mobile-actions',mobile);
+   toggle.hidden=!mobile;
+   if(mobile){
+    dock.hidden=false;
+    if(summary.parentElement!==dock)dock.prepend(summary);
+    if(stepActions.parentElement!==dock)dock.append(stepActions);
+   }else{
+    if(summary.parentElement===dock)summaryHome.after(summary);
+    actionsHome.after(stepActions);dock.hidden=true;summaryOpen=false;
+   }
+   setSummaryOpen(summaryOpen);
    updateActionTotal();
   }
   function restoreActions(){if(stepActions&&actionsHome?.parentNode)actionsHome.after(stepActions);stepActions=null;actionsHome=null;}
   function attachActions(){
    stepActions=view('.nlx-next,.nlx-payment-controls',form);
    if(!stepActions)return;
-   all('button',stepActions).forEach(button=>button.setAttribute('form',form.id));
+   view('.nlx-primary',stepActions).setAttribute('form',form.id);
+   summaryToggle().addEventListener('click',()=>setSummaryOpen(!summaryOpen,true));
    actionsHome=document.createComment('Checkout action desktop position');stepActions.before(actionsHome);positionActions();
   }
   function layoutChanged(){
@@ -385,6 +410,7 @@
    if(lastPlaced||onePayment){note('This order is already saved. Check its payment status before making a new order.',true);return;}
    const editingDelivery=isMobile()&&i===1;
    stage=editingDelivery?0:i;
+   summaryOpen=false;
    renderStep();
    if(scroll&&isMobile()){
     const section=editingDelivery?view('[data-nlx-inline-delivery]',form):view('.nlx-left',div);
@@ -460,7 +486,7 @@
    const next=view('[data-nlx-next]',div);
    if(next)next.textContent=isMobile()?'Continue to payment':'Continue';
   }
-  function lockCheckout(){all('input,select,textarea,button',div).forEach(control=>control.disabled=true);}
+  function lockCheckout(){all('input,select,textarea,button:not([data-nlx-action-total])',div).forEach(control=>control.disabled=true);}
   function updatePayment(){
    const button=view('[data-nlx-place]',div);if(!button)return;
    const method=selectedMethod();

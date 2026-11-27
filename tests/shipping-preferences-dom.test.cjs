@@ -41,7 +41,7 @@ for(const route of ['', '?bulk=1', '?balance=1'])test('Canadian next-day and def
   assert.equal(protection(f).checked,true);
   assert.deepEqual(f.requests.at(-1).delivery.extras,['protection']);
   assert.equal(f.quotes.at(-1).shipping_cents,route==='?bulk=1'?500:1995);
-  f.root.querySelector('[data-nlx-next],[data-step-next="0"]').click();await tick();
+  f.root.querySelector('[data-nlx-next],[data-step-next="0"]')?.click();await tick();
   const nextDay=f.root.querySelector('[name=delivery_speed][value=next_day],[name=shipping_speed][value=next_day]');
   assert.equal(nextDay.disabled,false);
   choose(f,nextDay,true);await tick();

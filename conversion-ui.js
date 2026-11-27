@@ -174,41 +174,56 @@
   const bonus=quote?.pricing?.bogo_campaign;
   if(!(quote?.pricing?.coupon_discount_cents>0)||bonus?.ends_at!==campaign.ends_at||
      !bonus.free_units?.some(item=>item.id===id&&item.size===size&&item.qty===1))return false;
-  const slide=document.createElement('a'),countdown=document.createElement('time'),next=document.createElement('button');
+  const slide=document.createElement('a'),countdown=document.createElement('time');
+  const viewport=document.createElement('div'),track=document.createElement('div'),set=document.createElement('div');
+  const pause=document.createElement('button');
   slide.className='pure-offer-trigger pure-christmas-slide';
   slide.href='/shop';
-  slide.innerHTML='<strong>Christmas BOGO Sale</strong><span class="pure-christmas-kicker">Extra 10% with BLACKFRIDAY10</span>';
+  slide.innerHTML='<span class="pure-christmas-snowflake" aria-hidden="true">❄</span><span class="pure-offer-buy pure-christmas-title"><i class="pure-christmas-hat" aria-hidden="true"></i>Christmas</span><strong class="pure-offer-free"><span>BOGO Sale</span></strong>';
   countdown.dateTime=new Date(end).toISOString();
   countdown.title='Ends at the end of December 24, Toronto time';
   slide.append(countdown);
-  next.type='button';
-  next.className='pure-promo-next';
-  next.setAttribute('aria-label','Show next promotion');
-  next.textContent='›';
-  slide.hidden=true;
-  announcement.append(slide,next);
-  announcement.classList.add('pure-promo-rotating');
-  const showChristmas=show=>{slide.hidden=!show;fallback.hidden=show;};
-  const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-  next.addEventListener('click',()=>showChristmas(slide.hidden));
-  const rotate=setInterval(()=>{
-   if(!reduced&&!announcement.matches(':hover,:focus-within')&&!document.hidden)showChristmas(slide.hidden);
-  },6500);
+  viewport.className='pure-promo-window';
+  track.className='pure-promo-track';
+  set.className='pure-promo-set';
+  fallback.before(viewport);
+  set.append(slide,fallback);
+  const repeat=set.cloneNode(true);
+  repeat.classList.add('pure-promo-repeat');
+  repeat.setAttribute('aria-hidden','true');
+  repeat.querySelectorAll('a,button').forEach(control=>control.tabIndex=-1);
+  repeat.querySelectorAll('[role=status]').forEach(status=>status.removeAttribute('role'));
+  track.append(set,repeat);
+  viewport.append(track);
+  pause.type='button';
+  pause.className='pure-promo-pause';
+  pause.setAttribute('aria-label','Pause promotions');
+  pause.textContent='Ⅱ';
+  pause.addEventListener('click',()=>{
+   const paused=announcement.classList.toggle('pure-promo-paused');
+   pause.setAttribute('aria-label',paused?'Play promotions':'Pause promotions');
+   pause.textContent=paused?'▶':'Ⅱ';
+  });
+  viewport.addEventListener('focusout',event=>{
+   if(!viewport.contains(event.relatedTarget))viewport.scrollLeft=0;
+  });
+  announcement.append(pause);
+  announcement.classList.add('pure-promo-loop');
+  const displays=[countdown,repeat.querySelector('time')];
   function tick(){
    const remaining=Math.ceil((end-Date.now()-offset)/1000);
    if(remaining<=0){
-    clearInterval(rotate);clearInterval(clock);
-    showChristmas(false);
-    slide.remove();next.remove();
-    announcement.classList.remove('pure-promo-rotating');
+    clearInterval(clock);
+    viewport.replaceWith(fallback);
+    pause.remove();
+    announcement.classList.remove('pure-promo-loop','pure-promo-paused');
     return;
    }
    const days=Math.floor(remaining/86400);
    const time=[Math.floor(remaining/3600)%24,Math.floor(remaining/60)%60,remaining%60].map(value=>String(value).padStart(2,'0')).join(':');
-   countdown.textContent=(days?days+'d ':'')+time;
+   for(const display of displays)display.textContent=(days?days+'d ':'')+time;
   }
   const clock=setInterval(tick,1000);
-  showChristmas(true);
   tick();
   return true;
  }
@@ -252,7 +267,7 @@
   }catch{}
  }
  window.PureCampaign={mountCountdown,mountDispatch,eligible:(id,size)=>eligibleVariants.has(id+':'+size),get status(){return campaignStatus;},get discountPercent(){return discountPercent;}};
- if(/^\/(?:$|index(?:\.html)?$|shop(?:\.html)?\/?$|product\/)/.test(location.pathname)){
+ if(document.querySelector('.ap-announcement [data-default-offer]')||/^\/(?:$|index(?:\.html)?$|shop(?:\.html)?\/?$|product\/)/.test(location.pathname)){
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mountCampaignStrip,{once:true});
   else mountCampaignStrip();
  }

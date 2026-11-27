@@ -45,8 +45,8 @@ body.ap-checkout-page #account-root{box-shadow:none!important;border:0!important
 .nlx-delivery-card{display:flex;align-items:center;gap:13px;border:2px solid var(--nx-border);border-radius:14px;padding:16px 17px;min-height:67px;cursor:pointer;background:#fff}
 .nlx-delivery-card.nlx-chosen{border-color:#d4d4d4}
 .nlx-delivery-card.nlx-disabled{opacity:.5;cursor:not-allowed}
-.nlx-delivery-card input{accent-color:#111;width:19px;height:19px;flex:none}
-.nlx-delivery-desc{flex:1;min-width:0}.nlx-delivery-desc strong{font-size:13px;display:block;line-height:1.4}.nlx-delivery-desc small{display:block;color:#666;line-height:1.35;font-size:11px}
+.nlx-delivery-card input{accent-color:#111;width:19px;height:19px;flex:none;margin:0}
+.nlx-delivery-desc{flex:1;min-width:0}.nlx-delivery-desc strong{font-size:13px;display:block;line-height:1.4}.nlx-delivery-desc small{display:block;color:#666;line-height:1.35;font-size:11px;margin-top:3px}
 .nlx-delivery-price{font-weight:800;font-size:13px;color:#111}
 .nlx-addons{display:grid;gap:10px;margin:18px 0 20px}
 .nlx-extra-box{display:flex;justify-content:space-between;align-items:center;gap:12px;border:2px solid #d4d4d4;border-radius:14px;background:#f5f5f5;padding:14px 17px;font-size:12px;cursor:pointer}
@@ -382,22 +382,34 @@ body.ap-checkout-page #account-root{box-shadow:none!important;border:0!important
 @media(max-width:770px){
  .nlx-left,[data-nlx-inline-delivery]{scroll-margin-top:130px}
  .nlx-columns{padding-bottom:calc(65px + env(safe-area-inset-bottom,0px))}
- .nlx-columns>.nlx-mobile-actions{
-  position:fixed;inset-inline:0;bottom:0;z-index:55;
+ .nlx-columns>.nlx-mobile-dock{
+  position:fixed;inset-inline:0;bottom:0;z-index:55;display:flex;flex-direction:column;
+  max-height:90vh;max-height:90dvh;border-top:1px solid var(--nx-border);background:#fff;box-shadow:0 -6px 24px #00000012;
+ }
+ .nlx-mobile-dock>.nlx-right{min-height:0;max-height:65vh;max-height:65dvh;overflow:auto;overscroll-behavior:contain}
+ .nlx-mobile-dock .nlx-summary{border:0;border-radius:0;overflow:visible}
+ .nlx-mobile-dock[hidden],.nlx-mobile-dock>.nlx-right[hidden]{display:none}
+ .nlx-mobile-dock>.nlx-mobile-actions{
+  flex:none;
   display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;column-gap:14px;
   margin:0;padding:10px max(16px,env(safe-area-inset-right,0px))
     calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));
-  border-top:1px solid var(--nx-border);background:#fff;box-shadow:0 -6px 24px #00000012;
+  background:#fff;
  }
+ .nlx-mobile-dock>.nlx-right:not([hidden])+.nlx-mobile-actions{border-top:1px solid var(--nx-border)}
  .nlx-mobile-actions .nlx-status{grid-column:1/-1;min-height:0;margin:0}
  .nlx-mobile-actions .nlx-status:not(:empty){max-height:25vh;max-height:25dvh;overflow:auto;margin-bottom:8px}
  .nlx-mobile-actions .nlx-primary{width:100%;min-height:46px;padding:9px 12px;font-size:13px;line-height:1.15}
- .nlx-mobile-total{display:grid;gap:3px;line-height:1.1}
- .nlx-mobile-total span{font-size:11px;color:var(--nx-muted)}
+ .nlx-mobile-actions .nlx-mobile-summary-toggle{display:grid;justify-items:start;align-content:center;gap:4px;min-height:44px;padding:0 4px;border:0;background:#fff;color:#111;font-size:12px;font-weight:750;text-align:left}
+ .nlx-mobile-summary-toggle:focus-visible{outline:2px solid #111;outline-offset:3px}
+ .nlx-summary-chevron{display:inline-block;width:6px;height:6px;margin-inline-start:4px;vertical-align:2px;border:solid currentColor;border-width:1.5px 0 0 1.5px;transform:rotate(45deg)}
+ .nlx-mobile-summary-toggle[aria-expanded=true] .nlx-summary-chevron{transform:rotate(225deg);vertical-align:3px}
+ .nlx-mobile-total{display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;line-height:1.1}
+ .nlx-mobile-total small{font-size:10px;color:var(--nx-muted)}
  .nlx-mobile-total strong{font-size:18px;font-variant-numeric:tabular-nums}
  [data-nlx-inline-delivery]{margin-top:22px;border-top:1px solid var(--nx-border)}
  [data-nlx-inline-delivery] .nlx-delivery-card{
-  display:grid;grid-template-columns:19px minmax(0,1fr) max-content;min-width:0;gap:10px;padding:12px;
+  display:grid;grid-template-columns:19px minmax(0,1fr) max-content;min-width:0;gap:14px;padding:12px;
  }
  [data-nlx-inline-delivery] .nlx-delivery-card input[type=radio]{margin:0}
  [data-nlx-inline-delivery] .nlx-delivery-desc{overflow-wrap:anywhere}

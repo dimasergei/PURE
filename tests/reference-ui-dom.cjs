@@ -90,7 +90,6 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
   assert.deepEqual([...testing.querySelectorAll('a[href="/coas"]')], [
    testing.querySelector('.nl-doc-bottom > a')
   ], 'Explore Testing appears only inside the documentation card');
-  assert.equal(bulk.querySelector('a[href="/bulk-orders"]'),null);
   assert.equal(bulk.querySelector('h2').textContent,'Bulk Orders');
   assert.doesNotMatch(bulk.textContent,/BOGO|monthly auto.?billing/i);
   const tiers=[...bulk.querySelectorAll('.pure-home-volume-tiers > span')];
@@ -99,74 +98,60 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
   assert.doesNotMatch(bulk.textContent,/mix strengths/i);
   const bulkSummary=bulk.querySelector('.pure-home-express-summary');
   assert.equal(bulkSummary.hidden,true);
-  const bulkRows=[...bulk.querySelectorAll('[data-home-bulk-product]')];
+  const rail=bulk.querySelector('#pure-home-bulk-track');
+  const bulkRows=[...rail.querySelectorAll('[data-home-bulk-product]')];
   assert.equal(bulkRows.length,3);
+  assert.equal(rail.children.length,bulkRows.length+1);
+  assert.equal(rail.lastElementChild.querySelector('a[href="/bulk-orders"]').textContent,'View More');
+  assert.equal(bulk.querySelector('[data-home-bulk-slide="-1"]').getAttribute('aria-disabled'),'true');
+  assert.equal(bulk.querySelector('[data-home-bulk-slide="1"]').getAttribute('aria-controls'),rail.id);
+  assert.equal(bulk.querySelector('input,[data-home-bulk-adjust]'),null);
   for(const row of bulkRows){
    const p=w.AltaStore.product(row.dataset.homeBulkProduct);
    const strengths=[...row.querySelector('[data-home-bulk-size]').options].map(option=>option.value);
    assert.deepEqual(strengths,[...p.variants].sort((a,b)=>(parseFloat(a.size)-parseFloat(b.size))||a.size.localeCompare(b.size)).map(v=>v.size));
-   assert.ok(row.firstElementChild.querySelector('img[src]'));
-   assert.ok(row.lastElementChild.matches('.pure-home-express-price'));
-   assert.deepEqual([...row.lastElementChild.children].map(child=>child.tagName),['DEL','STRONG']);
+   assert.ok(row.querySelector('.pure-home-express-image img[src]'));
+   assert.equal(row.querySelector('h3').textContent,p.name);
+   assert.deepEqual([...row.querySelector('.pure-home-express-price').children].map(child=>child.tagName),['DEL','STRONG']);
   }
-  const id=bulkRows[0].dataset.homeBulkProduct;
-  const bulkRow=()=>bulk.querySelector(`[data-home-bulk-product="${id}"]`);
+  const row=bulkRows[0],id=row.dataset.homeBulkProduct;
+  const select=row.querySelector('[data-home-bulk-size]');
   const chooseStrength=index=>{
-   const select=bulkRow().querySelector('[data-home-bulk-size]');
    select.selectedIndex=index;
    select.dispatchEvent(new w.Event('change',{bubbles:true}));
   };
-  const enterQty=qty=>{
-   const input=bulkRow().querySelector('[data-home-bulk-quantity]');
-   input.value=qty;
-   input.dispatchEvent(new w.Event('input',{bubbles:true}));
-  };
-  const shownBulkPrice=()=>bulkRow().querySelector('.pure-home-express-price strong').textContent;
+  const step=row.querySelector('[data-home-bulk-step="10"]');
+  const count=row.querySelector('[data-home-bulk-count]');
+  const shownBulkPrice=()=>row.querySelector('.pure-home-express-price strong').textContent;
   const entryTier=shownBulkPrice();
-  const addTen=()=>bulkRow().querySelector('[data-home-bulk-step="10"]').click();
-  const minus=()=>bulkRow().querySelector('[data-home-bulk-adjust="-1"]');
-  const plus=()=>bulkRow().querySelector('[data-home-bulk-adjust="1"]');
-  const step=()=>bulkRow().querySelector('[data-home-bulk-step="10"]');
-  assert.equal(minus().disabled,true);
-  assert.equal(step().textContent,'Add 10');
-  assert.equal(step().closest('.pure-home-express-quantity'),null);
-  plus().click();
-  assert.equal(bulkRow().querySelector('[data-home-bulk-quantity]').value,'1');
-  minus().click();
-  assert.equal(minus().disabled,true);
-  assert.equal(bulkSummary.hidden,true);
-  enterQty('99');
-  addTen();
-  assert.equal(bulkRow().querySelector('[data-home-bulk-quantity]').value,'100');
-  assert.equal(plus().disabled,true);
-  assert.equal(step().disabled,true);
-  minus().click();
-  assert.equal(bulkRow().querySelector('[data-home-bulk-quantity]').value,'99');
-  assert.equal(plus().disabled,false);
-  enterQty('0');
-  addTen();
-  addTen();
+  assert.equal(step.textContent,'Add 10');
+  assert.equal(count.textContent,'');
+  step.click();
+  step.click();
   assert.equal(bulkSummary.hidden,false);
-  assert.equal(bulkRow().querySelector('[data-home-bulk-quantity]').value,'20');
-  enterQty('6');
-  assert.equal(bulk.querySelector('[data-home-bulk-checkout]').disabled,true);
-  assert.equal(bulk.querySelector('.pure-home-express-line-price del'),null);
+  assert.equal(count.textContent,'20 selected');
   chooseStrength(1);
-  assert.equal(bulkRow().querySelector('[data-home-bulk-quantity]').value,'0');
-  enterQty('4');
+  assert.equal(count.textContent,'');
+  step.click();
+  assert.equal(count.textContent,'10 selected');
   assert.equal(bulk.querySelector('[data-home-bulk-checkout]').disabled,false);
   for(const line of bulk.querySelectorAll('.pure-home-express-line-price')){
    assert.deepEqual([...line.children].map(child=>child.tagName),['DEL','STRONG']);
   }
   chooseStrength(0);
-  assert.equal(bulkRow().querySelector('[data-home-bulk-quantity]').value,'6');
-  enterQty('46');
-  const retail=w.AltaStore.product(id).variants.find(variant=>variant.size===bulkRow().querySelector('select').value).price;
+  assert.equal(count.textContent,'20 selected');
+  step.click();
+  step.click();
+  const retail=w.AltaStore.product(id).variants.find(variant=>variant.size===select.value).price;
   assert.equal(shownBulkPrice(),'Bulk '+w.AltaStore.money(Math.round(retail*40)/100));
   assert.notEqual(shownBulkPrice(),entryTier);
-  enterQty('0');
-  chooseStrength(1);
-  enterQty('0');
+  for(let i=0;i<6;i++)step.click();
+  assert.equal(count.textContent,'100 selected');
+  assert.equal(step.disabled,true);
+  bulkSummary.querySelector('[data-home-bulk-remove]').click();
+  assert.equal(step.disabled,false);
+  assert.equal(count.textContent,'');
+  bulkSummary.querySelector('[data-home-bulk-remove]').click();
   assert.equal(bulkSummary.hidden,true);
   const faqLinks=d.querySelector('.pure-home-faq-links');
   assert.deepEqual([...faqLinks.children].map(link=>[link.tagName,link.textContent,link.getAttribute('href')]),[
