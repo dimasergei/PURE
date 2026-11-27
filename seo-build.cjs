@@ -3,7 +3,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { JSDOM } = require('jsdom');
-const { getPublishedGuides } = require('./scripts/editorial-guides.cjs');
 
 const pages = {
   '/': [
@@ -53,10 +52,6 @@ const pages = {
   '/faq': [
     'Frequently Asked Questions',
     'Find answers about research-use-only orders, product documentation, account features, shipping policies and where to contact PURE support.'
-  ],
-  '/learn': [
-    'Laboratory Documentation Guides',
-    'Read PURE guides to certificates of analysis, reported purity, storage documentation and research recordkeeping.'
   ],
   '/research-documentation': [
     'Research Documentation',
@@ -116,9 +111,6 @@ const pages = {
 
 const schemaContext = 'https://schema.org';
 const brandArtwork = '/assets/pure-packaging-studio.webp';
-const educationArtwork = '/assets/learn-social.webp';
-const educationArtworkAlt = 'PURE Laboratory documentation guides';
-const educationSitemap = 'sitemap-information.xml';
 const noindex = new Set(['/404', '/spin-and-save']);
 const entities = {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'};
 const escape = value => String(value).replace(/[&<>"']/g, character => entities[character]);
@@ -143,7 +135,6 @@ function visibleFAQs(main, canonical) {
 function breadcrumbs(route, name, origin) {
   const chain = [['Home', '/']];
   if (route.startsWith('/product/')) chain.push(['Research Catalog', '/shop']);
-  if (route.startsWith('/learn/')) chain.push(['Laboratory Documentation Guides', '/learn']);
   chain.push([name, route]);
   return {
     '@type': 'BreadcrumbList', '@id': origin + route + '#breadcrumbs',
@@ -182,34 +173,6 @@ function siteSchema(site, home, searchRoute) {
   return [organization, website];
 }
 
-function educationSchema(document, canonical, description, origin, guide) {
-  const main = document.querySelector('main');
-  const name = textOf(main?.querySelector('h1'));
-  if (!name) throw new Error('Missing education heading at ' + canonical);
-
-  const webPage = {
-    '@type': guide ? 'WebPage' : 'CollectionPage', '@id': canonical + '#webpage',
-    url: canonical, name, description, inLanguage: document.documentElement.lang || 'en',
-    isPartOf: {'@id': origin + '/#website'},
-    breadcrumb: {'@id': canonical + '#breadcrumbs'}
-  };
-  if (!guide) return [webPage];
-
-  const article = {
-    '@type': 'Article', '@id': canonical + '#article', headline: name, description,
-    url: canonical, inLanguage: webPage.inLanguage,
-    mainEntityOfPage: {'@id': webPage['@id']}, publisher: {'@id': origin + '/#organization'}
-  };
-  const links = new Set([...main.querySelectorAll('a[href]')].map(link => link.getAttribute('href')));
-  const sources = guide.sources.filter(source => links.has(source.url));
-  if (sources.length) article.citation = sources.map(({title, url}) => ({'@type': 'CreativeWork', name: title, url}));
-  if (guide.publishedOn && [...main.querySelectorAll('time')].some(time => time.dateTime === guide.publishedOn)) {
-    article.datePublished = guide.publishedOn;
-  }
-  webPage.mainEntity = {'@id': article['@id']};
-  return [webPage, article];
-}
-
 function applyHead(source, dom, markup) {
   const head = dom.window.document.head;
   const location = dom.nodeLocation(head);
@@ -244,19 +207,14 @@ function buildHeadSEO(out, site) {
   const manifest = require('./assets/products-pure/manifest.json');
   const images = new Map(manifest.map(image => [image.product_id + ':' + image.size, '/' + image.file]));
   const searchRoute = require('./vercel.json').rewrites?.some(rule => rule.source === '/shop/browse');
-  const publishedGuides = new Map(getPublishedGuides().map(guide => ['/learn/' + guide.slug, guide]));
   const indexed = new Set();
-  const educationUrls = [];
   if (!fs.existsSync(path.join(out, brandArtwork))) throw new Error('Missing release social artwork ' + brandArtwork);
-  if (!fs.existsSync(path.join(out, educationArtwork))) throw new Error('Missing education social artwork ' + educationArtwork);
   const meta = (attr, key, value) => '<meta ' + attr + '="' + key + '" content="' + escape(value) + '">';
 
   for (const relative of fs.readdirSync(out, {recursive: true}).filter(file => file.endsWith('.html'))) {
     const route = relative === 'index.html' ? '/' : '/' + relative.replace(/\/index\.html$/, '').replace(/\.html$/, '');
     const product = route.startsWith('/product/') && products.get(route.slice('/product/'.length));
-    const guide = publishedGuides.get(route);
-    const education = route === '/learn' || Boolean(guide);
-    if (!product && !guide && !Object.hasOwn(pages, route)) continue;
+    if (!product && !Object.hasOwn(pages, route)) continue;
     const file = path.join(out, relative);
     const source = fs.readFileSync(file, 'utf8');
     const dom = new JSDOM(source, {includeNodeLocations: true});
@@ -266,11 +224,11 @@ function buildHeadSEO(out, site) {
       const canonical = origin + route;
       const label = product
         ? product.name + (product.variants.length === 1 ? ' ' + product.variants[0].size : '')
-        : guide ? guide.seoTitle || guide.title : pages[route][0];
+        : pages[route][0];
       const title = label + ' | ' + site.name;
       const description = product
         ? 'View ' + label + ' pricing, catalog sizes and documentation for laboratory research.'
-        : guide ? guide.seoDescription || guide.description : pages[route][1];
+        : pages[route][1];
       const graph = [];
       if (route === '/') graph.push(...siteSchema(site, origin + '/', searchRoute));
       else if (!noindex.has(route)) graph.push(breadcrumbs(route, label, origin));
@@ -279,33 +237,27 @@ function buildHeadSEO(out, site) {
         const image = productImage && fs.existsSync(path.join(out, productImage)) ? origin + productImage : null;
         graph.push(productSchema(product, canonical, currency, image, site.name));
       }
-      if (education) {
-        graph.push(...educationSchema(document, canonical, description, origin, guide));
-        educationUrls.push(route);
-      }
       const faq = visibleFAQs(main, canonical);
       if (faq && !noindex.has(route)) graph.push(faq);
       const tags = ['<title>' + escape(title) + '</title>', meta('name', 'description', description)];
       if (route !== '/404') tags.push('<link rel="canonical" href="' + escape(canonical) + '">');
       if (noindex.has(route)) tags.push(meta('name', 'robots', 'noindex, follow'));
       else indexed.add(route);
-      const imageURL = origin + (education ? educationArtwork : brandArtwork);
+      const imageURL = origin + brandArtwork;
       const openGraph = {
-        'og:type': product ? 'product' : guide ? 'article' : 'website', 'og:url': canonical, 'og:title': title,
+        'og:type': product ? 'product' : 'website', 'og:url': canonical, 'og:title': title,
         'og:description': description, 'og:site_name': site.name, 'og:image': imageURL,
-        'og:image:alt': education ? educationArtworkAlt : 'Black PURE packaging on a white background',
-        ...(education ? {'og:image:width': '1200', 'og:image:height': '630'} : {})
+        'og:image:alt': 'Black PURE packaging on a white background'
       };
       for (const [key, value] of Object.entries(openGraph)) tags.push(meta('property', key, value));
       for (const [key, value] of Object.entries({
-        'twitter:card': 'summary_large_image', 'twitter:title': title, 'twitter:description': description, 'twitter:image': imageURL,
-        ...(education ? {'twitter:image:alt': educationArtworkAlt} : {})
+        'twitter:card': 'summary_large_image', 'twitter:title': title, 'twitter:description': description, 'twitter:image': imageURL
       })) tags.push(meta('name', key, value));
       if (graph.length) {
         const schema = JSON.stringify({'@context': schemaContext, '@graph': graph}).replace(/</g, '\\u003c');
         tags.push('<script type="application/ld+json">' + schema + '</script>');
       }
-      // Reserve the COA page's first viewport before its report browser loads.
+      // Reserve the first viewport while the report browser loads.
       if (route === '/coas' && !document.head.querySelector('style[data-pure-coa-space]')) {
         tags.push('<style data-pure-coa-space>#ap-main{min-block-size:100vh}</style>');
       }
@@ -315,21 +267,10 @@ function buildHeadSEO(out, site) {
     }
   }
   const urls = [...indexed].sort();
-  writeSitemap(out, 'sitemap.xml', origin, urls);
-  writeSitemap(out, educationSitemap, origin, educationUrls.sort());
-  const robotsFile = path.join(out, 'robots.txt');
-  const robots = fs.readFileSync(robotsFile, 'utf8');
-  const directive = 'Sitemap: ' + origin + '/' + educationSitemap;
-  if (!robots.split(/\r?\n/).includes(directive)) {
-    fs.appendFileSync(robotsFile, (robots.endsWith('\n') ? '' : '\n') + directive + '\n');
-  }
-  return urls;
-}
-
-function writeSitemap(out, name, origin, urls) {
   const xml = ['<?xml version="1.0" encoding="UTF-8"?>', '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'];
   for (const route of urls) xml.push('  <url><loc>' + escape(origin + route) + '</loc></url>');
-  fs.writeFileSync(path.join(out, name), [...xml, '</urlset>', ''].join('\n'));
+  fs.writeFileSync(path.join(out, 'sitemap.xml'), [...xml, '</urlset>', ''].join('\n'));
+  return urls;
 }
 
 module.exports = {buildHeadSEO};

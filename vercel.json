@@ -39,14 +39,6 @@
       "destination": "/faq.html"
     },
     {
-      "source": "/learn",
-      "destination": "/learn.html"
-    },
-    {
-      "source": "/learn/:article",
-      "destination": "/learn/:article.html"
-    },
-    {
       "source": "/:policy(commercial-terms|corrections-policy|medical-disclaimer|membership-terms|partner-terms|payment-options|privacy-policy|refund-policy|research-documentation|research-use-policy|shipping-policy|shipping-protection|terms-and-conditions)",
       "destination": "/:policy.html"
     },
@@ -254,12 +246,7 @@
       "statusCode": 301
     },
     {
-      "source": "/learn/:article.html",
-      "destination": "/learn/:article",
-      "statusCode": 301
-    },
-    {
-      "source": "/:page(about|bulk-orders|cart|checkout|coas|contact|faq|gift-cards|learn|memberships|monthly-orders|partner-program|shop|spin-and-save|subscribe-and-save|track-order|commercial-terms|corrections-policy|medical-disclaimer|membership-terms|partner-terms|payment-options|privacy-policy|refund-policy|research-documentation|research-use-policy|shipping-policy|shipping-protection|terms-and-conditions).html",
+      "source": "/:page(about|bulk-orders|cart|checkout|coas|contact|faq|gift-cards|memberships|monthly-orders|partner-program|shop|spin-and-save|subscribe-and-save|track-order|commercial-terms|corrections-policy|medical-disclaimer|membership-terms|partner-terms|payment-options|privacy-policy|refund-policy|research-documentation|research-use-policy|shipping-policy|shipping-protection|terms-and-conditions).html",
       "destination": "/:page",
       "statusCode": 301
     }

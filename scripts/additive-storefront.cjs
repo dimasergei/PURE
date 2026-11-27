@@ -3,8 +3,6 @@ const fs = require('node:fs');
 const path = require('node:path');
 const {JSDOM} = require('jsdom');
 
-const {buildLearnPages} = require('./editorial-guides.cjs');
-
 function homeFaq(site) {
   return [
     ['Who can order from PURE?', 'Orders are for laboratory research by purchasers aged '+site.minimumAge+' or older who meet applicable local requirements. '+site.ruo],
@@ -70,14 +68,13 @@ function buildAddedPages(out, site) {
     dom.window.close();
   }
 
-  buildLearnPages(out, site);
   const faq = homeFaq(site);
   writePolicy('faq','Frequently asked questions',
     'Answers about research materials, lab reports, shipping, order tracking, returns and PURE account features.',
     'CUSTOMER SUPPORT',
     faq.map(({question,answer}) => '<details><summary>' + escapeHtml(question) + '</summary><p>' +
       escapeHtml(answer) + '</p></details>').join('') +
-    '<p><a href="/coas">Lab Testing &amp; COAs</a> · <a href="/learn">Research guides</a> · <a href="/contact">Contact PURE</a></p>',
+    '<p><a href="/coas">Lab Testing &amp; COAs</a> · <a href="/contact">Contact PURE</a></p>',
     {'@context':'https://schema.org','@type':'FAQPage',mainEntity:faq.map(({question,answer})=>({
       '@type':'Question',name:question,acceptedAnswer:{'@type':'Answer',text:answer}
     }))});
