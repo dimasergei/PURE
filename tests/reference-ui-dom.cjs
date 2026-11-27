@@ -27,7 +27,7 @@ async function setup(route,campaign=null,quote=null){const errors=[];const conso
   assert.ok(html.indexOf('/storefront-v2.js?')<html.indexOf('@supabase/supabase-js'));
   staticHome.window.close();
   const ends_at='2026-12-25T05:00:00.000Z';
-  const campaign={ends_at,server_time:'2026-12-10T16:00:00.000Z',eligible_variants:['bpc-157:10mg']};
+  const campaign={ends_at,server_time:'2026-12-10T16:00:00.000Z',eligible_variants:['bpc-157:10mg','ghk-cu:50mg']};
   const quote={pricing:{coupon_discount_cents:299,bogo_campaign:{ends_at,free_units:[{id:'bpc-157',size:'10mg',qty:1}]}}};
   let confirm;
   const verification=new Promise(resolve=>{confirm=resolve;});
@@ -37,6 +37,7 @@ async function setup(route,campaign=null,quote=null){const errors=[];const conso
   const accept=age.querySelector('[data-action="age-confirm"]');
   assert.ok(pending);
   assert.equal(d.querySelector('.nl-hero,.pure-bogo-home'),null);
+  assert.equal(d.querySelector('.pure-card-bogo'),null);
   assert.equal(age.open,true);
   accept.click();
   assert.equal(age.open,true,'an early confirmation waits for the hero');
@@ -71,6 +72,9 @@ async function setup(route,campaign=null,quote=null){const errors=[];const conso
   assert.equal(hero.querySelector('.pure-bogo-vial-free span').textContent,'Free');
   assert.equal(hero.querySelector('[data-pure-sale-cta]').getAttribute('href'),'/shop?category=Peptides');
   assert.doesNotMatch(hero.textContent,/BLACKFRIDAY10/);
+  const badge=d.querySelector('#nl-featured [data-product="ghk-cu"] .ap-product-image .pure-card-bogo');
+  assert.equal(badge?.textContent,'BOGO');
+  assert.equal(d.querySelector('#nl-featured [data-product="bpc-157"] .pure-card-bogo'),null,'only the displayed eligible SKU is badged');
   assert.ok(d.querySelector('.pure-promo-repeat[aria-hidden="true"]'));
   d.querySelector('.pure-promo-pause').click();
   assert.ok(d.querySelector('.pure-promo-paused'));
@@ -84,8 +88,15 @@ async function setup(route,campaign=null,quote=null){const errors=[];const conso
   await new Promise(resolve=>setTimeout(resolve,0));
   assert.equal(otherAge.open,false,'a malformed checkout estimate cannot keep the dialog open');
   assert.equal(unverified.d.querySelector('.pure-bogo-home,[data-pure-home-pending]'),null);
+  assert.equal(unverified.d.querySelector('.pure-card-bogo'),null);
   assert.ok(unverified.d.querySelector('.nl-hero'));
   unverified.dom.window.close();
+  const shop=await setup('/shop',campaign,quote);
+  assert.equal(shop.d.querySelector('#ap-catalog-grid [data-product="ghk-cu"] .pure-card-bogo')?.textContent,'BOGO');
+  shop.d.querySelector('[data-filter-group="Supplies"]').click();
+  assert.ok(shop.d.querySelector('#ap-catalog-grid article'));
+  assert.equal(shop.d.querySelector('.pure-card-bogo'),null);
+  shop.dom.window.close();
  }
  {
   const {dom,d,w}=await setup('/cart');

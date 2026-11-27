@@ -74,6 +74,10 @@
   return selected||eligible[0]||p.variants[0];
  }
  function cardBadge(p,v){
+  const holiday=window.PureCampaign?.holiday;
+  if(holiday?.eligibleVariants.includes(p.id+':'+v.size)&&['/','/index','/shop'].includes(route())){
+   return '<span class="pure-card-sale pure-card-bogo">BOGO</span>';
+  }
   if(!window.PureCampaign?.eligible?.(p.id,v.size))return '';
   return '<span class="pure-card-sale">Second unit '+esc(window.PureCampaign.discountPercent)+'% off</span>';
  }

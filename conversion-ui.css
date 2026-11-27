@@ -258,6 +258,23 @@ html:root body.ap-site .pure-offer-active a.pure-offer-trigger { display: flex; 
   letter-spacing: .06em;
   line-height: 1.2;
 }
+.ap-product-card .pure-card-bogo {
+  padding: .28rem .55rem;
+  border-color: #ffffff30;
+  border-radius: 999px;
+  font-size: .6875rem;
+  font-weight: 900;
+  line-height: 1;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ap-product-card .pure-card-bogo {
+    background-image: linear-gradient(105deg, transparent 35%, #fff4 50%, transparent 65%);
+    background-size: 225% 100%;
+    background-repeat: no-repeat;
+    animation: pure-bogo-shine 6s ease-in-out infinite;
+  }
+  .ap-product-card:nth-child(even) .pure-card-bogo { animation-delay: -2s; }
+}
 .ap-product-card .ap-product-image { position: relative; }
 body.ap-site .nl-detail [data-campaign-product]:not([hidden]) {
   display: flex;
