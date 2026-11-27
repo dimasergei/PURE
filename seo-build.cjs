@@ -225,7 +225,7 @@ function buildHeadSEO(out, site) {
       const label = product
         ? product.name + (product.variants.length === 1 ? ' ' + product.variants[0].size : '')
         : pages[route][0];
-      const title = label + ' | ' + site.name;
+      const title = route === '/' ? site.name + ' — ' + label : label + ' | ' + site.name;
       const description = product
         ? 'View ' + label + ' pricing, catalog sizes and documentation for laboratory research.'
         : pages[route][1];

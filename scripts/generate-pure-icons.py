@@ -13,7 +13,7 @@ TRANSLATE_X, TRANSLATE_Y, SKEW = 32 / 3, 7, -1 / 3
 
 svg = '''<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 32 32" role="img" aria-labelledby="title">
   <title id="title">PURE</title>
-  <rect width="32" height="32" rx="5.333333" fill="#111"/>
+  <rect width="32" height="32" fill="#000"/>
   <g fill="#fff" transform="matrix(1 0 -0.3333333333 1 10.6666666667 7)">
     <rect x="0" y="4" width="4" height="10"/>
     <rect x="6" y="0" width="4" height="18"/>
@@ -26,17 +26,18 @@ svg = '''<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox=
 
 def render(size):
     scale = size * 8 / 32
-    image = Image.new("RGBA", (size * 8, size * 8), (0, 0, 0, 0))
+    image = Image.new("RGBA", (size * 8, size * 8), "#000000")
     draw = ImageDraw.Draw(image)
-    draw.rounded_rectangle((0, 0, size * 8 - 1, size * 8 - 1),
-                           radius=32 / 6 * scale, fill="#111111")
     for x, y, width, height in BARS:
         corners = ((x, y), (x + width, y),
                    (x + width, y + height), (x, y + height))
         points = [((px + SKEW * py + TRANSLATE_X) * scale,
                    (py + TRANSLATE_Y) * scale) for px, py in corners]
         draw.polygon(points, fill="#ffffff")
-    return image.resize((size, size), Image.Resampling.LANCZOS)
+    icon = image.resize((size, size), Image.Resampling.LANCZOS)
+    # Supersampling can leave faint edge pixels at the smallest tab size.
+    ImageDraw.Draw(icon).rectangle((0, 0, size - 1, size - 1), outline="#000000")
+    return icon
 
 
 sizes = (16, 32, 48, 64, 96, 128, 180, 256)

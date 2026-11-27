@@ -13,7 +13,9 @@ for(const [source,target] of [['pure-icon.svg','favicon.svg'],['pure-icon.svg','
 // Self-host authentic payment marks from the reviewed assets directory.
 fs.mkdirSync(path.join(out,'assets','payment-brands'),{recursive:true});
 fs.cpSync(path.join(process.cwd(),'assets','payment-brands'),path.join(out,'assets','payment-brands'),{recursive:true});
-const iconLinks='<link rel="icon" type="image/svg+xml" sizes="any" href="/favicon-pure.svg?v=20261117b"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-pure-16.png?v=20261117b"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-pure-32.png?v=20261117b"><link rel="icon" type="image/png" sizes="96x96" href="/favicon-pure-96.png?v=20261117b"><link rel="shortcut icon" type="image/x-icon" href="/favicon-pure-20261117b.ico"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=20261117b"><meta name="theme-color" content="#ffffff">';
+const iconLinks=(version,shortcut)=>`<link rel="icon" type="image/svg+xml" sizes="any" href="/favicon-pure.svg?v=${version}"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-pure-16.png?v=${version}"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-pure-32.png?v=${version}"><link rel="icon" type="image/png" sizes="96x96" href="/favicon-pure-96.png?v=${version}"><link rel="shortcut icon" type="image/x-icon" href="${shortcut}"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=${version}"><meta name="theme-color" content="#ffffff">`;
+const storefrontIconLinks=iconLinks('20261126-square','/favicon.ico?v=20261126-square');
+const adminIconLinks=iconLinks('20261117b','/favicon-pure-20261117b.ico');
 const organization='<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"PURE","url":"https://getpurelabs.com/","logo":"https://getpurelabs.com/brand-logo.png"}</script>';
 let count=0;
 for(const file of fs.readdirSync(out,{recursive:true}).filter(f=>f.endsWith('.html'))){
@@ -31,12 +33,12 @@ for(const file of fs.readdirSync(out,{recursive:true}).filter(f=>f.endsWith('.ht
     html=html.replace(/href="\/admin-fulfillment\.css(?:\?[^"]*)?"/g,'href="/admin-fulfillment.css?v=20261125-order-rows"');
     html=html.replace(/<link\b[^>]*href=["']\/admin-violet\.css[^"']*["'][^>]*>/gi,'');
     html=html.replace(/href="\/(admin-dashboard|operations)\.css(?:\?[^"]*)?"/g,'href="/$1.css?v=20261117b"');
-    html=html.replace('</head>','<link rel="stylesheet" href="/admin-violet.css?v=20261117b">'+iconLinks+'</head>');
+    html=html.replace('</head>','<link rel="stylesheet" href="/admin-violet.css?v=20261117b">'+adminIconLinks+'</head>');
     fs.writeFileSync(target,html);continue;
   }
   const themeLink=html.includes('href="/brand-theme.css"')?'':'<link rel="stylesheet" href="/brand-theme.css?v=20261123-hero-labels">';
   const mobileLink=html.includes('href="/mobile-parity.css')?'':'<link rel="stylesheet" media="(max-width: 767px)" href="/mobile-parity.css?v=20261126-shop-mobile">';
-  html=html.replace('</head>',`${themeLink}${mobileLink}${iconLinks}</head>`);
+  html=html.replace('</head>',`${themeLink}${mobileLink}${storefrontIconLinks}</head>`);
   const body=html.match(/<body\b([^>]*)>/i);
   if(body){
     let attrs=body[1];
