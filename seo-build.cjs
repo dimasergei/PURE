@@ -6,7 +6,7 @@ const { JSDOM } = require('jsdom');
 
 const pages = {
   '/': [
-    'Research Compounds for Laboratories',
+    'Premium Research Peptides | Third-Party Lab Reports',
     'Explore research-use-only compounds, compare sizes and prices, and review supplier laboratory reports for controlled laboratory research.'
   ],
   '/shop': [

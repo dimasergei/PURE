@@ -9,12 +9,35 @@ fs.copyFileSync('pure-brand.css',path.join(out,'pure-brand.css'));
 fs.copyFileSync('mobile-parity.css',path.join(out,'mobile-parity.css'));
 fs.copyFileSync('unified-palette.css',path.join(out,'unified-palette.css'));
 for(const file of ['pure-layout.css','pure-bulk-layout.css','pure-coa.css','pure-currency.css'])fs.copyFileSync(file,path.join(out,file));
-for(const [source,target] of [['pure-icon.svg','favicon.svg'],['pure-icon.svg','favicon-pure.svg'],['pure-icon-16.png','favicon-pure-16.png'],['pure-icon-32.png','favicon-pure-32.png'],['pure-icon-48.png','favicon-48.png'],['pure-icon-96.png','favicon-pure-96.png'],['pure-icon.ico','favicon.ico'],['pure-icon.ico','favicon-pure-20261117.ico'],['pure-icon.ico','favicon-pure-20261117b.ico'],['pure-icon-180.png','apple-touch-icon.png'],['pure-icon-96.png','brand-logo.png']])fs.copyFileSync(path.join(process.cwd(),'assets',source),path.join(out,target));
+const iconFiles={
+  'pure-mark.svg':['favicon.svg','favicon-pure-mark.svg'],
+  'pure-mark.ico':['favicon.ico','favicon-pure-mark.ico'],
+  'pure-mark-32.png':['favicon-pure-mark-32.png'],
+  'pure-mark-48.png':['favicon-48.png','favicon-pure-mark-48.png'],
+  'pure-mark-96.png':['favicon-pure-mark-96.png'],
+  'pure-icon-180.png':['apple-touch-icon.png','apple-touch-icon-pure.png'],
+  'pure-icon.svg':['favicon-pure.svg'],
+  'pure-icon-16.png':['favicon-pure-16.png'],
+  'pure-icon-32.png':['favicon-pure-32.png'],
+  'pure-icon-96.png':['favicon-pure-96.png','brand-logo.png'],
+  'pure-icon.ico':['favicon-pure-20261117.ico','favicon-pure-20261117b.ico'],
+};
+for(const [source,targets] of Object.entries(iconFiles)){
+  for(const target of targets)fs.copyFileSync(path.join('assets',source),path.join(out,target));
+}
 // Self-host authentic payment marks from the reviewed assets directory.
 fs.mkdirSync(path.join(out,'assets','payment-brands'),{recursive:true});
 fs.cpSync(path.join(process.cwd(),'assets','payment-brands'),path.join(out,'assets','payment-brands'),{recursive:true});
 const iconLinks=(version,shortcut)=>`<link rel="icon" type="image/svg+xml" sizes="any" href="/favicon-pure.svg?v=${version}"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-pure-16.png?v=${version}"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-pure-32.png?v=${version}"><link rel="icon" type="image/png" sizes="96x96" href="/favicon-pure-96.png?v=${version}"><link rel="shortcut icon" type="image/x-icon" href="${shortcut}"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=${version}"><meta name="theme-color" content="#ffffff">`;
-const storefrontIconLinks=iconLinks('20261126-square','/favicon.ico?v=20261126-square');
+const storefrontIconLinks=[
+  '<link rel="shortcut icon" type="image/x-icon" href="/favicon-pure-mark.ico">',
+  '<link rel="icon" type="image/png" sizes="32x32" href="/favicon-pure-mark-32.png">',
+  '<link rel="icon" type="image/png" sizes="48x48" href="/favicon-pure-mark-48.png">',
+  '<link rel="icon" type="image/png" sizes="96x96" href="/favicon-pure-mark-96.png">',
+  '<link rel="icon" type="image/svg+xml" sizes="any" href="/favicon-pure-mark.svg">',
+  '<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-pure.png">',
+  '<meta name="theme-color" content="#ffffff">',
+].join('');
 const adminIconLinks=iconLinks('20261117b','/favicon-pure-20261117b.ico');
 const organization='<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"PURE","url":"https://getpurelabs.com/","logo":"https://getpurelabs.com/brand-logo.png"}</script>';
 let count=0;
@@ -91,6 +114,7 @@ for(const file of fs.readdirSync(out,{recursive:true}).filter(f=>f.endsWith('.ht
   html=html.replace(/\b(src|href)="\/((?:account-experience|readiness-ui)\.(?:js|css))(?:\?[^"]*)?"/g,'$1="/$2?v=20261126-account-contrast"');
   html=html.replace(/href="\/cart-reference\.css(?:\?[^"]*)?"/g,'href="/cart-reference.css?v=20261126-reward-glow"');
   html=html.replace(/\b(src|href)="\/((?:storefront-v2|conversion-ui|checkout-reference|readiness-ui)\.(?:js|css)|direct-checkout-client\.js)(?:\?[^"\n]*)?"/g,'$1="/$2?v=20261126-checkout-carousel"');
+  html=html.replace(/\b(src|href)="\/(storefront-v2\.(?:js|css))(?:\?[^"\n]*)?"/g,'$1="/$2?v=20261126-research-card"');
   if(file==='bulk-orders.html')html=html.replace(/\b(src|href)="\/(workspace-v2\.js|pure-bulk-layout\.css)(?:\?[^"\n]*)?"/g,'$1="/$2?v=20261126-bulk-coa-card"');
   if(file==='contact.html')html=html.replace(/href="\/reference-ui\.css(?:\?[^"]*)?"/g,'href="/reference-ui.css?v=20261126-contact-wordmark"');
   fs.writeFileSync(target,html);

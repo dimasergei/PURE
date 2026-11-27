@@ -86,7 +86,12 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
   assert.equal(d.querySelector('.nl-featured').nextElementSibling,bulk,'bulk savings follow featured products');
   assert.equal(d.querySelector('[data-mx-membership-home]'),null);
   const testing=d.querySelector('.nl-editorial');
-  assert.equal(testing.nextElementSibling.id,'faq');
+  const callout=testing.nextElementSibling;
+  assert.ok(callout.matches('.pure-home-research'));
+  assert.equal(callout.querySelector('h2').textContent,'Ready to start your research?');
+  assert.match(callout.querySelector('p').textContent,/available Certificates of Analysis/);
+  assert.equal(callout.querySelector('a[href="/shop"]').textContent.trim(),'Shop All Compounds');
+  assert.equal(callout.nextElementSibling.id,'faq');
   assert.deepEqual([...testing.querySelectorAll('a[href="/coas"]')], [
    testing.querySelector('.nl-doc-bottom > a')
   ], 'Explore Testing appears only inside the documentation card');
@@ -158,6 +163,11 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
    ['A','Track Order','/track-order'], ['A','Shipping','/shipping-policy'], ['A','Contact Us','/contact']
   ]);
   assert.equal(faqLinks.querySelector('span,p'),null);
+  const club=d.querySelector('.pure-home-email');
+  assert.equal(club.querySelector('.pure-home-email-club').textContent,'PURE CLUB');
+  assert.equal(club.querySelector('h2').textContent,'Get 10% off your first order.');
+  assert.equal(club.querySelector('.pure-home-email-copy p').textContent,'New compounds, restocks, and COAs first. One code, straight to your inbox.');
+  assert.equal(club.querySelector('button[type="submit"]').textContent.trim(),'Get my 10% off');
   dom.window.close();
  }
  {const{dom,d,w}=await setup('/shop');

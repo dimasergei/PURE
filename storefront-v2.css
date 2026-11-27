@@ -257,6 +257,18 @@ body.ap-site .pure-home-email {
   color: #fff;
 }
 
+.pure-home-email-club {
+  display: inline-block;
+  margin-bottom: 12px;
+  padding: 5px 11px;
+  border: 1px solid #777;
+  border-radius: 999px;
+  color: #fff;
+  font-size: .75rem;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
 body.ap-site .pure-home-email h2 {
   margin: 0 0 10px;
   color: #fff;
@@ -337,6 +349,49 @@ body.ap-site .pure-home-email .ap-button-light:disabled { opacity: .65; cursor: 
 
 .pure-home-email .ap-form-status:not(:empty) { margin-top: 12px; color: #fff; }
 
+body.ap-site .pure-home-research {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: clamp(22px, 4vw, 54px);
+  padding: clamp(28px, 5vw, 64px);
+  border: 1px solid #333;
+  border-radius: 24px;
+  background: linear-gradient(122deg, transparent 66%, #ffffff08 66%, #ffffff15 100%), #111;
+  color: #fff;
+}
+
+body.ap-site .pure-home-research h2 {
+  margin: 0;
+  color: inherit;
+  font-size: clamp(1.875rem, 3.8vw, 3.75rem);
+  font-weight: 900;
+  letter-spacing: -.04em;
+  line-height: 1.04;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+
+.pure-home-research p {
+  max-inline-size: 46ch;
+  margin: 12px 0 0;
+  color: #d5d5d5;
+  font-size: clamp(.95rem, 1.4vw, 1.125rem);
+  line-height: 1.5;
+}
+
+body.ap-site .pure-home-research .ap-button-light {
+  gap: 12px;
+  min-height: 48px;
+  padding-inline: clamp(16px, 3vw, 28px);
+  border-color: #fff;
+  background: #fff;
+  color: #111 !important;
+  text-align: center;
+}
+body.ap-site .pure-home-research .ap-button-light:hover { background: #e5e5e5; }
+body.ap-site .pure-home-research .ap-button-light:focus-visible { outline: 2px solid #fff !important; outline-offset: 4px; }
+
 html:root body.ap-site .pure-home-faq .pure-faq-intro {
   align-self: start;
   min-height: 0;
@@ -373,6 +428,13 @@ html:root body.ap-site .pure-home-faq .pure-faq-list summary { min-height: 52px;
 .pure-home-faq .pure-faq-list p a { text-decoration: underline; text-underline-offset: .2em; }
 
 @media (max-width: 767px) {
+  body.ap-site .pure-home-research {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    border-radius: 18px;
+    text-align: center;
+  }
+  .pure-home-research p { margin-inline: auto; }
   body.ap-site .pure-home-email { grid-template-columns: minmax(0, 1fr); gap: 20px; border-radius: 18px; }
   .pure-home-email .ap-newsletter-form { padding: 18px 0 0; border: 0; border-top: 1px solid #484848; }
 }

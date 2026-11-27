@@ -1,4 +1,4 @@
-"""Build the PURE tab/touch icons from one parallel-bar construction.
+"""Build the PURE tab and touch icons from one parallel-bar construction.
 
 Run with Python and Pillow. Supersampling keeps the same geometry at 16px,
 32px and larger sizes; the ICO contains native small sizes for browser tabs.
@@ -22,21 +22,31 @@ svg = '''<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox=
 </svg>
 '''
 (ASSETS / "pure-icon.svg").write_text(svg)
+(ASSETS / "pure-mark.svg").write_text(svg.replace(
+    '  <rect width="32" height="32" fill="#000"/>\n',
+    '''  <style>
+    g { fill: #161616; stroke: #ededed; stroke-width: 1.4; stroke-linejoin: round; paint-order: stroke fill; }
+    @media (prefers-color-scheme: dark) { g { fill: #fff; stroke: #161616; } }
+  </style>\n''',
+).replace('<g fill="#fff"', '<g'))
 
 
-def render(size):
+def render(size, *, transparent=False):
     scale = size * 8 / 32
-    image = Image.new("RGBA", (size * 8, size * 8), "#000000")
+    background = (0, 0, 0, 0) if transparent else "#000000"
+    image = Image.new("RGBA", (size * 8, size * 8), background)
     draw = ImageDraw.Draw(image)
     for x, y, width, height in BARS:
         corners = ((x, y), (x + width, y),
                    (x + width, y + height), (x, y + height))
         points = [((px + SKEW * py + TRANSLATE_X) * scale,
                    (py + TRANSLATE_Y) * scale) for px, py in corners]
+        if transparent:
+            # A tight dark edge keeps the white glyph visible on light chrome.
+            draw.line(points + points[:1], fill="#161616", width=round(1.8 * scale), joint="curve")
         draw.polygon(points, fill="#ffffff")
     icon = image.resize((size, size), Image.Resampling.LANCZOS)
-    # Supersampling can leave faint edge pixels at the smallest tab size.
-    ImageDraw.Draw(icon).rectangle((0, 0, size - 1, size - 1), outline="#000000")
+    ImageDraw.Draw(icon).rectangle((0, 0, size - 1, size - 1), outline=background)
     return icon
 
 
@@ -45,7 +55,11 @@ images = {size: render(size) for size in sizes}
 for size in (16, 32, 48, 96, 180):
     images[size].save(ASSETS / f"pure-icon-{size}.png", optimize=True)
 ico_sizes = (16, 32, 48, 64, 96, 128, 256)
-images[256].save(ASSETS / "pure-icon.ico", format="ICO",
-                 sizes=[(size, size) for size in ico_sizes],
-                 append_images=[images[size] for size in ico_sizes[:-1]])
-print("Built PURE SVG, native 16/32px tab icons, PNGs, and multi-size ICO.")
+marks = {size: render(size, transparent=True) for size in ico_sizes}
+for size in (32, 48, 96):
+    marks[size].save(ASSETS / f"pure-mark-{size}.png", optimize=True)
+for name, icons in (("pure-icon", images), ("pure-mark", marks)):
+    icons[256].save(ASSETS / f"{name}.ico", format="ICO",
+                    sizes=[(size, size) for size in ico_sizes],
+                    append_images=[icons[size] for size in ico_sizes[:-1]])
+print("Built PURE dark tiles and transparent browser icons.")

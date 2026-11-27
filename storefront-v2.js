@@ -294,6 +294,15 @@
    }
   });
  }
+ function homeResearchCallout(){
+  return `<section class="ap-container pure-home-research" aria-labelledby="pure-home-research-title">
+    <div>
+      <h2 id="pure-home-research-title">Ready to start your research?</h2>
+      <p>Browse the full catalog and review available Certificates of Analysis before you order.</p>
+    </div>
+    <a class="ap-button ap-button-light" href="/shop">Shop All Compounds <span aria-hidden="true">→</span></a>
+  </section>`;
+ }
  function homeFAQ(){
   const questions=[
    ['Who are PURE products intended for?', 'PURE products are for controlled laboratory research only, with no human or veterinary use. Purchasers must be 21 or older.'],
@@ -324,10 +333,10 @@
  }
  function homeEmailUpdates(){
   return `<section class="ap-container pure-home-email" aria-labelledby="pure-home-email-title">
-    <div class="pure-home-email-copy"><h2 id="pure-home-email-title">PURE updates</h2><p>Get product announcements and current offers by email.</p></div>
+    <div class="pure-home-email-copy"><span class="pure-home-email-club">PURE CLUB</span><h2 id="pure-home-email-title">Get 10% off your first order.</h2><p>New compounds, restocks, and COAs first. One code, straight to your inbox.</p></div>
     <form class="ap-newsletter-form">
       <label class="pure-home-email-label" for="pure-home-email-address">Email address</label>
-      <div class="pure-home-email-fields"><input id="pure-home-email-address" type="email" name="email" autocomplete="email" maxlength="254" placeholder="you@example.com" required><button class="ap-button ap-button-light" type="submit">Sign up</button></div>
+      <div class="pure-home-email-fields"><input id="pure-home-email-address" type="email" name="email" autocomplete="email" maxlength="254" placeholder="you@example.com" required><button class="ap-button ap-button-light" type="submit">Get my 10% off</button></div>
       <label class="pure-home-email-consent"><input type="checkbox" name="consent" required> I agree to receive email updates from PURE.</label>
       <p class="ap-form-status" role="status" aria-live="polite"></p>
     </form>
@@ -347,7 +356,7 @@
  const featured=['retatrutide','bpc-157','ghk-cu','nad'].map(product).filter(Boolean);
  featured.push(...catalog.filter(x=>!featured.includes(x)).slice(0,10-featured.length));
  const hero=['nad','retatrutide','bpc-157','ghk-cu','tirzepatide'].map(product).filter(Boolean);
- return `<section class="nl-hero"><div class="ap-container nl-hero-inner"><div class="nl-hero-copy"><h1>CUTTING EDGE<br><em>PURITY</em></h1><p class="nl-hero-description">Research compounds, product documentation, and straightforward ordering for laboratories and research teams.</p>${homeHeroActions()}</div><div class="nl-vial-stage" aria-label="Featured PURE products"><svg class="ap-vial-clip" width="0" height="0" aria-hidden="true"><defs><clipPath id="ap-vial-outline" clipPathUnits="objectBoundingBox"><path d="M .296 .127 C .296 .094 .409 .079 .499 .079 C .592 .079 .705 .095 .705 .128 L .705 .168 Q .705 .179 .691 .186 L .691 .239 Q .691 .259 .648 .267 L .648 .311 C .696 .328 .713 .342 .720 .372 L .725 .379 L .727 .824 Q .727 .879 .681 .880 L .319 .880 Q .273 .879 .272 .827 L .277 .379 L .283 .373 C .289 .343 .307 .327 .355 .312 L .355 .268 Q .310 .260 .310 .238 L .310 .187 Q .296 .180 .296 .168 Z"/></clipPath></defs></svg>${hero.map((p,i)=>`<a class="nl-vial nl-vial-${i}" href="/product/${p.id}"><img src="${esc(image(p,p.variants[0].size))}" alt="${esc(p.name+' '+p.variants[0].size)}" ${i===2?'fetchpriority="high"':''}></a>`).join('')}<span class="nl-stage-word" aria-hidden="true">PURE</span></div>${homeHighlights()}</div></section><section class="ap-container nl-featured"><div class="ap-section-head"><div><span class="ap-eyebrow">THE COLLECTION</span><h2>Featured Compounds</h2></div><div class="nl-carousel-controls"><button data-carousel="-1" aria-label="Previous products">‹</button><button data-carousel="1" aria-label="Next products">›</button></div></div><div class="nl-carousel" id="nl-featured">${featured.map(p=>card(p,{featured:true,quickAdd:true})).join('')}</div><div class="nl-center"><a class="ap-button" href="/shop">View All Products</a></div></section>${homeBulkPromo(featured)}${homePackaging()}<section class="ap-container nl-editorial"><div><span class="nl-capsule">PURE DOCUMENTATION</span><h2>KNOW WHAT’S<br>IN YOUR ORDER.</h2><p>Explore certificates of analysis by product, strength, laboratory or report ID.</p><p class="ap-fine">Request the certificate for your fulfilled lot when you order.</p></div><div class="nl-doc-art"><span>PURE</span><strong>Certificate<br>of Analysis</strong><div class="nl-doc-purity"><span class="nl-doc-purity-check" aria-hidden="true">✓</span><span><b>Testing reports</b><small>See available product documentation</small></span></div><div><b>Retatrutide</b> / 60mg</div><hr><div><b>Janoshik</b> / Report ID</div><hr><div><b>PURE</b> / Lot</div><a class="ap-button" href="/coas">View COAS</a></div></section>${homeFAQ()}${homeEmailUpdates()}<a class="pure-floating-shop" href="/shop">Shop Now</a>`;
+ return `<section class="nl-hero"><div class="ap-container nl-hero-inner"><div class="nl-hero-copy"><h1>CUTTING EDGE<br><em>PURITY</em></h1><p class="nl-hero-description">Research compounds, product documentation, and straightforward ordering for laboratories and research teams.</p>${homeHeroActions()}</div><div class="nl-vial-stage" aria-label="Featured PURE products"><svg class="ap-vial-clip" width="0" height="0" aria-hidden="true"><defs><clipPath id="ap-vial-outline" clipPathUnits="objectBoundingBox"><path d="M .296 .127 C .296 .094 .409 .079 .499 .079 C .592 .079 .705 .095 .705 .128 L .705 .168 Q .705 .179 .691 .186 L .691 .239 Q .691 .259 .648 .267 L .648 .311 C .696 .328 .713 .342 .720 .372 L .725 .379 L .727 .824 Q .727 .879 .681 .880 L .319 .880 Q .273 .879 .272 .827 L .277 .379 L .283 .373 C .289 .343 .307 .327 .355 .312 L .355 .268 Q .310 .260 .310 .238 L .310 .187 Q .296 .180 .296 .168 Z"/></clipPath></defs></svg>${hero.map((p,i)=>`<a class="nl-vial nl-vial-${i}" href="/product/${p.id}"><img src="${esc(image(p,p.variants[0].size))}" alt="${esc(p.name+' '+p.variants[0].size)}" ${i===2?'fetchpriority="high"':''}></a>`).join('')}<span class="nl-stage-word" aria-hidden="true">PURE</span></div>${homeHighlights()}</div></section><section class="ap-container nl-featured"><div class="ap-section-head"><div><span class="ap-eyebrow">THE COLLECTION</span><h2>Featured Compounds</h2></div><div class="nl-carousel-controls"><button data-carousel="-1" aria-label="Previous products">‹</button><button data-carousel="1" aria-label="Next products">›</button></div></div><div class="nl-carousel" id="nl-featured">${featured.map(p=>card(p,{featured:true,quickAdd:true})).join('')}</div><div class="nl-center"><a class="ap-button" href="/shop">View All Products</a></div></section>${homeBulkPromo(featured)}${homePackaging()}<section class="ap-container nl-editorial"><div><span class="nl-capsule">PURE DOCUMENTATION</span><h2>KNOW WHAT’S<br>IN YOUR ORDER.</h2><p>Explore certificates of analysis by product, strength, laboratory or report ID.</p><p class="ap-fine">Request the certificate for your fulfilled lot when you order.</p></div><div class="nl-doc-art"><span>PURE</span><strong>Certificate<br>of Analysis</strong><div class="nl-doc-purity"><span class="nl-doc-purity-check" aria-hidden="true">✓</span><span><b>Testing reports</b><small>See available product documentation</small></span></div><div><b>Retatrutide</b> / 60mg</div><hr><div><b>Janoshik</b> / Report ID</div><hr><div><b>PURE</b> / Lot</div><a class="ap-button" href="/coas">View COAS</a></div></section>${homeResearchCallout()}${homeFAQ()}${homeEmailUpdates()}<a class="pure-floating-shop" href="/shop">Shop Now</a>`;
 }
  function catalogResults(){
   const lowest=p=>Math.min(...(state.group==='Offers'?eligibleSizes(p):p.variants).map(v=>v.price));
@@ -492,11 +501,12 @@
    const response=await fetch('/api/customer-config?campaign=signup',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({email:data.get('email'),consent:data.get('consent')==='on'})
+    body:JSON.stringify({email:data.get('email'),consent:data.get('consent')==='on',source:'pure-club'})
    });
    const result=await response.json();
    if(!response.ok||!result.code)throw Error(result.error||'Signup is temporarily unavailable.');
-   status.textContent='You’re subscribed. Use '+result.code+' at checkout.';
+   status.textContent='You’re subscribed. Use '+result.code+' at checkout. '+
+    (result.email_sent?'Check your inbox for a copy of your code.':'Email delivery is temporarily unavailable.');
    form.reset();
   }catch(error){
    status.textContent=error.message;
