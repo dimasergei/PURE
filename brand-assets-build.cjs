@@ -82,6 +82,7 @@ for(const file of fs.readdirSync(out,{recursive:true}).filter(f=>f.endsWith('.ht
   html=html.replace(/\b(src|href)="\/((?:storefront-v2|workspace-v2|reference-ui|conversion-ui|subscribe-and-save)\.(?:js|css)|(?:pure-bulk-layout|cart-reference)\.css)(?:\?[^"]*)?"/g,'$1="/$2?v=20261126-holiday-layout"');
   html=html.replace(/\b(src|href)="\/(storefront-v2\.(?:js|css))(?:\?[^"]*)?"/g,'$1="/$2?v=20261126-home-bulk-approved"');
   if(file==='bulk-orders.html')html=html.replace(/\b(src|href)="\/(workspace-v2\.js|pure-bulk-layout\.css)(?:\?[^"\n]*)?"/g,'$1="/$2?v=20261126-bulk-coa-card"');
+  if(file==='contact.html')html=html.replace(/href="\/reference-ui\.css(?:\?[^"]*)?"/g,'href="/reference-ui.css?v=20261126-contact-wordmark"');
   fs.writeFileSync(target,html);
   count++;
 }
