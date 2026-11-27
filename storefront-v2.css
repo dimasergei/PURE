@@ -12,13 +12,23 @@
 .ap-nmi-express-dialog{width:min(1100px,96vw);max-height:90dvh;overflow:auto}.ap-nmi-modal-body{padding:10px}.ap-cart-express{margin:14px 0;padding:16px 0;border-block:1px solid #e5e5e5}.ap-cart-express .ap-button{width:100%}
 
 body.ap-site .pure-home-volume {
+  --home-bulk-inset: clamp(14px,2.2vw,24px);
   max-width: 1060px;
   margin: 0 auto clamp(28px,4vw,56px);
-  padding: clamp(14px,2.2vw,24px);
+  padding: var(--home-bulk-inset);
   border: 1px solid #dcdcdc;
   border-radius: 14px;
   background: #fff;
-  color: #141414;
+  color: var(--ap-ink);
+}
+
+.pure-home-volume-intro {
+  margin-block-start: calc(-1 * var(--home-bulk-inset));
+  margin-inline: calc(-1 * var(--home-bulk-inset));
+  padding: var(--home-bulk-inset) var(--home-bulk-inset) 10px;
+  border-radius: 13px 13px 0 0;
+  background: var(--ap-deep);
+  color: #fff;
 }
 
 .pure-home-volume-head {
@@ -31,6 +41,7 @@ body.ap-site .pure-home-volume {
 
 body.ap-site .pure-home-volume h2 {
   margin: 0;
+  color: inherit;
   font-size: clamp(23px,2.3vw,32px);
   font-weight: 850;
   line-height: 1.1;
@@ -43,17 +54,18 @@ html:root body.ap-site .pure-home-volume-link {
   justify-content: center;
   min-height: 44px;
   padding: 8px 13px;
-  border: 1px solid #8a8a8a;
+  border: 1px solid #fff;
   border-radius: 8px;
   background: #fff;
-  color: #202020;
+  color: var(--ap-ink);
   font-size: 13px;
   font-weight: 700;
   line-height: 1.2;
   text-decoration: none;
   white-space: nowrap;
 }
-html:root body.ap-site .pure-home-volume-link:hover { border-color: #111; background: #f2f2f2; }
+html:root body.ap-site .pure-home-volume-link:hover { border-color: #e8e8e8; background: #e8e8e8; }
+html:root body.ap-site .pure-home-volume-link:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 
 .pure-home-volume-tiers {
   display: flex;
@@ -61,15 +73,15 @@ html:root body.ap-site .pure-home-volume-link:hover { border-color: #111; backgr
   flex-wrap: wrap;
   column-gap: 10px;
   row-gap: 3px;
-  margin: 3px 0 10px;
-  color: #333;
+  margin: 3px 0 0;
+  color: #e0e0e0;
   font-size: 13px;
 }
 
 .pure-home-volume-tiers > span { white-space: nowrap; }
-.pure-home-volume-tiers > span + span { border-inline-start: 1px solid #d6d6d6; padding-inline-start: 10px; }
-.pure-home-volume-tiers strong { color: #111; }
-.pure-home-volume-tiers small { color: #595959; font-size: 12px; }
+.pure-home-volume-tiers > span + span { border-inline-start: 1px solid #777; padding-inline-start: 10px; }
+.pure-home-volume-tiers strong { color: #fff; font-weight: 800; }
+.pure-home-volume-tiers small { color: #c8c8c8; font-size: 12px; }
 
 body.ap-site .pure-home-email {
   display: grid;
@@ -251,7 +263,7 @@ html:root body.ap-site .pure-home-faq .pure-faq-list summary { min-height: 52px;
   min-width: 0;
   min-height: 44px;
   border: 1px solid #d1d1d1;
-  border-radius: 6px;
+  border-radius: 8px;
   background: #fff;
   color: #111;
   font: inherit;
@@ -263,12 +275,10 @@ html:root body.ap-site .pure-home-faq .pure-faq-list summary { min-height: 52px;
   appearance: none;
   padding-inline: 10px 24px;
   border-color: #8a8a8a;
-  border-radius: 8px;
   background: #f5f5f5;
 }
 .pure-home-express-strength select:hover { border-color: #111; background: #eee; }
-body.ap-site .pure-home-express-strength select:focus-visible,
-html:root body.ap-site .pure-home-volume-link:focus-visible { outline: 2px solid #111; outline-offset: 2px; }
+body.ap-site .pure-home-express-strength select:focus-visible { outline: 2px solid #111; outline-offset: 2px; }
 @media (forced-colors: active) {
   .pure-home-express-strength::after { content: none; }
   .pure-home-express-strength select { appearance: auto; padding-inline-end: 4px; }
