@@ -295,11 +295,17 @@ test('bulk ordering grows and clears its summary while preserving exact prices, 
   assert.equal(d.querySelector('[data-action="bulk-checkout"]').disabled,true,'one unit is below the bulk minimum');
   card.querySelector('[data-action="bulk-qty"][data-delta="10"]').click();
   assert.equal(draft()[0].qty,11);assert.equal(summary(),format(first.price*11));assert.match(summaryNode().querySelector('.nl-bulk-tier-savings').textContent,/Bulk savings/);assert.match(summaryNode().querySelector('.nl-bulk-net').textContent,/After bulk savings/);
+  assert.equal(summaryNode().querySelector('.nl-bulk-included-shipping span').textContent,'Free 2-Day Express Shipping');
+  assert.equal(summaryNode().querySelector('.nl-bulk-included-shipping strong').textContent,'FREE');
+  assert.doesNotMatch(summaryNode().textContent,/Your regular cart stays saved separately|U\.S\. orders after dispatch|Strengths of each product count together/);
   let input=card.querySelector('[data-bulk-id]');input.value='100';input.dispatchEvent(new w.Event('input',{bubbles:true}));
   assert.equal(draft()[0].qty,100);assert.equal(summary(),format(first.price*100));
   assert.equal(card.querySelector('[data-delta="1"]').disabled,true);
+  const adjacentCard=card.nextElementSibling;
   card.querySelector('[data-action="bulk-size"][data-size="'+second.size+'"]').click();
   card=d.querySelector('[data-bulk-product="'+id+'"]');
+  assert.equal(card.nextElementSibling,adjacentCard,'switching strength does not replace other cards');
+  assert.equal(d.activeElement,card.querySelector('[data-action="bulk-size"][aria-pressed="true"]'));
   assert.equal(card.querySelector('[data-bulk-id]').value,'0');
   assert.equal(card.querySelector('[data-action="bulk-size"][aria-pressed="true"] del').textContent,format(second.price));
   card.querySelector('[data-delta="1"]').click();

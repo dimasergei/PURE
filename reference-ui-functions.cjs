@@ -31,7 +31,7 @@ function bulkPage() {
   <section class="nl-wide-hero nl-bulk-hero">
    <div class="ap-container">
     <span class="nl-capsule">BULK ORDERS</span>
-    <h1>Buy in bulk.<br>Save up to <strong>60%</strong>.</h1>
+    <h1>Buy in bulk. Save up to <strong>60%</strong>.</h1>
     <p>Save 50% at 10 units and 60% at 50 units per compound. Combine strengths of the same compound to reach either tier.</p>
     <a class="nl-bulk-hero-action" href="#ap-bulk-catalog">Build your order</a>
    </div>
@@ -72,7 +72,7 @@ function bulkPage() {
     <details><summary>Can I combine strengths or compounds?</summary><p>Strengths of the same compound count together. Different compounds can go in one order, and each compound reaches its own tier.</p></details>
     <details><summary>Can I apply other offers to bulk pricing?</summary><p>The bulk tier is your merchandise discount. Buy-one-get-one offers, coupon and partner codes, membership discounts and Crypto savings are available on eligible retail orders.</p></details>
     <details><summary>How is shipping calculated?</summary><p>US bulk orders include free two-day express shipping after dispatch. Other destinations show available delivery options and rates at checkout.</p></details>
-    <details><summary>How do I complete my order?</summary><p>Choose your strengths and quantities, then select Checkout to review the order. Your regular cart stays saved separately.</p></details>
+    <details><summary>How do I complete my order?</summary><p>Choose your strengths and quantities, then select Checkout to review the order.</p></details>
    </div>
   </section>`;
 }
