@@ -11,13 +11,6 @@
 
 .ap-nmi-express-dialog{width:min(1100px,96vw);max-height:90dvh;overflow:auto}.ap-nmi-modal-body{padding:10px}.ap-cart-express{margin:14px 0;padding:16px 0;border-block:1px solid #e5e5e5}.ap-cart-express .ap-button{width:100%}
 
-.pure-home-featured-offer {
-  margin: 6px 0 0;
-  color: #525252;
-  font-size: 14px;
-  line-height: 1.5;
-}
-
 body.ap-site .pure-home-volume {
   max-width: 1060px;
   margin: 0 auto clamp(28px,4vw,56px);
@@ -350,6 +343,8 @@ body.ap-site .pure-home-express-summary .ap-button:disabled { opacity: .52; }
   .pure-home-express-purchase { grid-template-columns: minmax(0,1fr); gap: 7px; }
 }
 @media (max-width: 365px) {
+  .pure-home-volume-head { column-gap: 8px; }
+  html:root body.ap-site .pure-home-volume-link { padding-inline: 7px; font-size: 12px; }
   .pure-home-express-price { flex-wrap: wrap; gap: 1px 5px; }
   .pure-home-express-products h4 { font-size: 13px; }
 }
