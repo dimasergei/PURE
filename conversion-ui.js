@@ -170,13 +170,14 @@
   const offset=serverTime-Date.now();
   const id=key.slice(0,separator),size=key.slice(separator+1);
   // Read the estimate from the same pricing engine used by checkout.
-  const quote=await request('checkout=cart',{items:[{id,size,qty:1}],country:'US'}).catch(()=>null);
+  const quote=await request('checkout=cart',{items:[{id,size,qty:1}],country:'US',coupon:'BLACKFRIDAY10'}).catch(()=>null);
   const bonus=quote?.pricing?.bogo_campaign;
-  if(bonus?.ends_at!==campaign.ends_at||!bonus.free_units?.some(item=>item.id===id&&item.size===size&&item.qty===1))return false;
+  if(!(quote?.pricing?.coupon_discount_cents>0)||bonus?.ends_at!==campaign.ends_at||
+     !bonus.free_units?.some(item=>item.id===id&&item.size===size&&item.qty===1))return false;
   const slide=document.createElement('a'),countdown=document.createElement('time'),next=document.createElement('button');
   slide.className='pure-offer-trigger pure-christmas-slide';
   slide.href='/shop';
-  slide.innerHTML='<strong>Christmas BOGO Sale</strong><span class="pure-christmas-kicker">Buy One, Get One Free</span>';
+  slide.innerHTML='<strong>Christmas BOGO Sale</strong><span class="pure-christmas-kicker">Extra 10% with BLACKFRIDAY10</span>';
   countdown.dateTime=new Date(end).toISOString();
   countdown.title='Ends at the end of December 24, Toronto time';
   slide.append(countdown);

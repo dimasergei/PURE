@@ -83,8 +83,8 @@ for(const file of fs.readdirSync(out,{recursive:true}).filter(f=>f.endsWith('.ht
   html=html.replace(/src="\/((?:workspace-v2|supplier-coas|monthly-orders)\.js)(?:\?[^"]*)?"/g,'src="/$1?v=20261126-builder-polish"');
   html=html.replace(/\b(src|href)="\/((?:storefront-v2|workspace-v2|reference-ui|conversion-ui|subscribe-and-save)\.(?:js|css)|(?:pure-bulk-layout|cart-reference)\.css)(?:\?[^"]*)?"/g,'$1="/$2?v=20261126-holiday-layout"');
   html=html.replace(/\b(src|href)="\/(storefront-v2\.(?:js|css))(?:\?[^"]*)?"/g,'$1="/$2?v=20261126-home-testing-card"');
-  html=html.replace(/href="\/storefront-v2\.css(?:\?[^"]*)?"/g,'href="/storefront-v2.css?v=20261126-sticky-shimmer"');
-  html=html.replace(/src="\/conversion-ui\.js(?:\?[^"]*)?"/g,'src="/conversion-ui.js?v=20261126-christmas-banner"');
+  html=html.replace(/href="\/storefront-v2\.css(?:\?[^"]*)?"/g,'href="/storefront-v2.css?v=20261126-bulk-controls"');
+  html=html.replace(/\b(src|href)="\/(conversion-ui\.(?:js|css))(?:\?[^"\n]*)?"/g,'$1="/$2?v=20261126-christmas-bogo"');
   html=html.replace(/\b(src|href)="\/((?:storefront-v2|reference-ui)\.js|(?:reference-ui|brand-theme)\.css)(?:\?[^"]*)?"/g,'$1="/$2?v=20261126-product-price-line"');
   html=html.replace(/src="\/((?:locale|checkout-reference|direct-checkout-client|readiness-ui|membership-checkout)\.js)(?:\?[^"]*)?"/g,'src="/$1?v=20261126-cad-price-symbol"');
   html=html.replace(/\b(src|href)="\/((?:account|readiness-ui|monthly-orders)\.js|readiness-ui\.css)(?:\?[^"]*)?"/g,'$1="/$2?v=20261126-account-subscription"');

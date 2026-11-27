@@ -370,8 +370,10 @@ html:root body.ap-site .ap-announcement.pure-promo-rotating [hidden] { display: 
 .pure-christmas-slide time { min-width: 9ch; padding: 4px 5px; border: 1px solid #858585; border-radius: 4px; font-size: .69rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .ap-announcement .pure-promo-next { position: absolute; inset-block: 0; inset-inline-end: 2px; min-width: 30px; border: 0; background: transparent; color: #fff; font-size: 20px; cursor: pointer; }
 .ap-announcement .pure-promo-next:focus-visible { outline: 2px solid #fff; outline-offset: -3px; }
-@media(max-width: 440px) {
+@media(max-width: 550px) {
   .pure-christmas-kicker { display: none; }
+}
+@media(max-width: 440px) {
   .ap-announcement.pure-promo-rotating .pure-offer-action { margin-left: 0; }
   .ap-announcement.pure-promo-rotating .pure-offer-action::after { display: none; }
 }

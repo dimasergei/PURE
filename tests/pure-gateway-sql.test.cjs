@@ -15,6 +15,7 @@ const reversalMigration='20261126011403_verified_pure_gateway_reversals.sql';
 const guestMigration='20261126013508_guest_checkout.sql';
 const guestPaymentsMigration='20261126024818_guest_interac_and_crypto.sql';
 const directUsdcNetworksMigration='20261126032739_direct_usdc_networks.sql';
+const christmasBogoMigration='20261127035820_christmas_bogo_checkout.sql';
 const tag=gw.configuration({PURE_GATEWAY_URL:'https://pay.example.test'}).account_tag;
 const catalog=[
  {id:'fixture-a',name:'Fixture A',category:'injectables',variants:[{size:'5mg',price:99.99}]},
@@ -97,10 +98,10 @@ test('the pure_gateway card route is registered, priced and settled atomically i
    assert.deepEqual((await db.query('select countries from commerce_gateway_accounts where method_id=$1',[route.id])).rows[0].countries,['US','CA']);
   });
 
-  async function make({method=route.id,country='US',kind='goods',customer=randomUUID(),products=catalog}={}){
+  async function make({method=route.id,country='US',kind='goods',customer=randomUUID(),products=catalog,coupon=''}={}){
    const row=(await db.query('select * from commerce_payment_methods where id=$1',[method])).rows[0],user={id:customer,email:'gateway-fixture@example.test'};
    const body={id:randomUUID(),kind,plan:kind==='membership'?'vip':undefined,billing_period:kind==='membership'?'monthly':undefined,method_id:method,checkout_version:config.version,consent:true,research_use:true,name:'Isolated researcher',
-    coupon:'',points:0,credit_cents:0,items:products.map(x=>({id:x.id,size:x.variants[0].size,qty:1})),
+    coupon,points:0,credit_cents:0,items:products.map(x=>({id:x.id,size:x.variants[0].size,qty:1})),
     address:{line1:'123 Fixture Street',city:'Fixture City',region:'NY',postal_code:'10001',country},delivery:{shipping:'standard',extras:[]}};
    const record=await checkout.normalize({},user,body,products);
    const quote=checkout.price(record,row,null,{points:0,credit_cents:0},null,delivery.defaults,null,null);
@@ -276,12 +277,12 @@ test('the pure_gateway card route is registered, priced and settled atomically i
    assert.equal((await db.query('select points from commerce_balance_accounts where customer_id=$1',[order.customer])).rows[0].points,0);
   });
   await db.exec(read(guestPaymentsMigration));
-  await t.test('a Canadian guest can save a fixed CAD Interac order without a receipt or account rewards',async()=>{
+  async function makeGuestInterac(coupon=''){
    const customer=randomUUID(), item=catalog[0], now=new Date();
    const method=(await db.query('select * from commerce_payment_methods where id=$1',[interac])).rows[0];
    const record=await checkout.normalize({}, {id:customer,email:'guest-cad@example.test'}, {
     id:randomUUID(),kind:'goods',name:'Fixture guest',method_id:interac,checkout_version:config.version,
-    consent:true,research_use:true,items:[{id:item.id,size:item.variants[0].size,qty:1}],
+    consent:true,research_use:true,coupon,items:[{id:item.id,size:item.variants[0].size,qty:1}],
     address:{line1:'100 Fixture Street',city:'Waterloo',region:'ON',postal_code:'N2L 1A1',country:'CA'},
     delivery:{shipping:'economy',extras:[]}
    },catalog);
@@ -293,8 +294,13 @@ test('the pure_gateway card route is registered, priced and settled atomically i
    const fx={fx_ppm:1375000,source:'Bank of Canada',series:'FXUSDCAD',
     rate_date:new Intl.DateTimeFormat('en-CA',{timeZone:'America/Toronto',year:'numeric',month:'2-digit',day:'2-digit'}).format(now),
     quoted_at:now.toISOString(),expires_at:new Date(now.getTime()+900000).toISOString(),token:'fixture'};
-   const order={...record,...checkout.price(record,method,null,{points:0,credit_cents:0},null,delivery.defaults,fx),
+   return {...record,...checkout.price(record,method,null,{points:0,credit_cents:0},null,delivery.defaults,fx),
     checkout_version:checkout.INTERAC_VERSION};
+  }
+  await t.test('a Canadian guest can save a fixed CAD Interac order without a receipt or account rewards',async()=>{
+   const order=await makeGuestInterac();
+   const method=(await db.query('select * from commerce_payment_methods where id=$1',[interac])).rows[0];
+   const customer=order.customer_id;
    await assert.rejects(rpc('commerce_place_interac_checkout',[{...order,earned_points:1}]),/points earning basis changed/);
    const result=await rpc('commerce_place_interac_checkout',[order]);
    assert.equal(result.status,'accepted');
@@ -486,6 +492,59 @@ test('the pure_gateway card route is registered, priced and settled atomically i
     [`public.commerce_finish_${n.provider}_payment(uuid,text,jsonb)`])).rows;
     assert.deepEqual(privileges,{signed_in:false,backend:true,internal:false});
    });
+  });
+  await t.test('Christmas BOGO can accompany BLACKFRIDAY10 while preserving checkout and fulfillment validation',async()=>{
+   const endsAt=new Date(Date.now()+600000).toISOString();
+   const coupon='BLACKFRIDAY10';
+   const fixture={...catalog[0],variants:[{...catalog[0].variants[0],price:350}]};
+   const award=order=>{
+    const {id,size,qty}=order.request.items[0];
+    order.pricing.bogo_campaign={ends_at:endsAt,free_units:[{id,size,qty}]};
+    return order;
+   };
+
+   const discounted=award(await make({products:[fixture],coupon}));
+   await assert.rejects(place(discounted),/Automatic gifts cannot be combined/);
+   await db.exec(read(christmasBogoMigration));
+   assert.equal(discounted.subtotal_cents,35000);
+   assert.equal(discounted.pricing.coupon_discount_cents,3500);
+   assert.equal(discounted.total_cents,31500);
+   assert.equal(discounted.shipping_cents,0);
+   assert.equal(discounted.pricing.campaign_bac,undefined);
+   assert.equal((await place(discounted)).status,'accepted');
+   let saved=await load(discounted.id);
+   assert.deepEqual(saved.pricing.bogo_campaign,discounted.pricing.bogo_campaign);
+   assert.equal(saved.request_data.items[0].qty,1);
+   assert.equal(saved.total_cents,31500);
+
+   const attempt=await begin(discounted),session='pi_christmasFixture123456';
+   await rpc('commerce_bind_pure_gateway_session',[attempt.id,session,redirect(session),tag]);
+   assert.equal((await finish(attempt.id,'pure-gateway-paid:'+session,'approved','ch_christmasFixture123456',31500,'USD')).state,'paid');
+   saved=await load(discounted.id);
+   assert.equal(saved.pricing.first_order_bac,undefined);
+   const physical=(await db.query('select item from commerce_fulfillment_items where invoice_id=$1',[discounted.id])).rows.map(row=>row.item);
+   assert.deepEqual(physical.map(({id,qty,bogo_free_qty})=>({id,qty,bogo_free_qty})),[{id:fixture.id,qty:2,bogo_free_qty:1}]);
+
+   const undiscounted=award(await make());
+   assert.equal((await place(undiscounted)).status,'accepted');
+   const cad=award(await makeGuestInterac(coupon));
+   assert.equal((await rpc('commerce_place_interac_checkout',[cad])).status,'accepted');
+   assert.equal((await load(cad.id)).total_cents,cad.total_cents);
+
+   for(const [change,error] of [
+    [order=>{order.pricing.bogo_campaign.ends_at='2000-01-01T00:00:00Z';},/BOGO offer changed/],
+    [order=>{order.pricing.bogo_campaign.free_units[0].qty=2;},/Invalid complimentary quantity/],
+    [order=>{order.pricing.bogo_campaign.free_units[0].size='10mg';},/Invalid complimentary quantity/],
+    [order=>{order.pricing.bogo_campaign.free_units.push(order.pricing.bogo_campaign.free_units[0]);},/Invalid complimentary quantity/],
+    [order=>{order.pricing.merchandise_offer='second_unit';},/BOGO offer cannot be combined/],
+    [order=>{order.pricing.merchandise_offer='membership';},/BOGO offer cannot be combined/],
+    [order=>{order.pricing.campaign_bac=true;},/Automatic gifts cannot be combined/]
+   ]){
+    const order=award(await make({products:[fixture],coupon}));
+    change(order);
+    await assert.rejects(place(order),error);
+    assert.equal(await load(order.id),undefined);
+   }
   });
  }finally{await db.close();}
 });

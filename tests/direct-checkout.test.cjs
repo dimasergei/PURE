@@ -13,7 +13,7 @@ function dbMock({balance={points:1000,credit_cents:5000},membership=null,existin
   const q={select(){return q;},eq(){return q;},in(){return q;},ilike(){return q;},is(){return q;},lte(){return q;},gt(){return q;},order(){return q;},limit(){return q;},maybeSingle(){return q;},then(resolve,reject){return Promise.resolve({data:value}).then(resolve,reject);}};return q;},rpc:async(name,args)=>{calls.push({name,args});return{data:{id,status:'accepted'}};}};
 }
 const request=(b,headers={})=>({method:'POST',headers:{origin:env.SITE_URL,'content-type':'application/json',authorization:'Bearer fixture-auth-token-long-enough',...headers},body:b});
-async function call(b,{db=dbMock(),cat=catalog,params='',headers={},deps={}}={}){const res=response();await checkout.handle(request(b,headers),res,new URLSearchParams(params),{env,db,catalog:cat,rateLimit:async()=>{},...deps});return{res,db};}
+async function call(b,{db=dbMock(),cat=catalog,params='',headers={},deps={}}={}){const res=response();await checkout.handle(request(b,headers),res,new URLSearchParams(params),{env,db,catalog:cat,rateLimit:async()=>{},now:Date.parse('2026-11-26T23:59:59.999Z'),...deps});return{res,db};}
 
 test('checkout quotes require the canonical production origin and never place orders',async()=>{
  for(const configured of ['https://getpurelabs.com','https://altapurelabs.com'])for(const origin of ['https://getpurelabs.com','https://altapurelabs.com']){
@@ -63,6 +63,35 @@ test('removing the explicit coupon restores regular price and invalidates the pr
  const {res:q,db}=await call({...b,action:'quote'});assert.equal(q.body.discount_cents,2000);assert.equal(q.body.total_cents,18795);
  const {res:r}=await call({...b,coupon:'',action:'quote'},{db});assert.equal(r.body.discount_cents,0);assert.equal(r.body.total_cents,20795);
  const {res:stale}=await call({...b,coupon:'',action:'place',quote:q.body.quote},{db});assert.equal(stale.code,409);assert.equal(db.calls.length,0);
+});
+test('Christmas BOGO stacks with BLACKFRIDAY10 across cart, quote and placement through December 24',async()=>{
+ const end='2026-12-25T05:00:00.000Z',clock={now:Date.parse(end)-1};
+ const cat=[...catalog,{id:'fixture-supply',name:'Fixture supply',category:'supplies',variants:[{size:'1 pack',price:10}]}];
+ const purchase={...body,coupon:'BLACKFRIDAY10',items:[{...body.items[0],qty:2},{id:'fixture-supply',size:'1 pack',qty:1}],
+  pricing:{bogo_campaign:{ends_at:'2099-01-01T00:00:00.000Z',free_units:[{id:'fixture-supply',size:'1 pack',qty:100}]}}};
+ const award={ends_at:end,free_units:[{id:catalog[0].id,size:'5mg',qty:2}]};
+ const {res:cart,db}=await call({...purchase,country:'US'},{cat,params:'checkout=cart',headers:{authorization:''},deps:clock});
+ const {res:quote}=await call({...purchase,action:'quote'},{cat,db,deps:clock});
+ assert.equal(cart.code,200);assert.equal(quote.code,200);
+ for(const result of [cart.body,quote.body]){
+  assert.equal(result.subtotal_cents,21000);
+  assert.equal(result.pricing.coupon_discount_cents,2100);
+  assert.equal(result.pricing.merchandise_offer,'coupon');
+  assert.deepEqual(result.pricing.bogo_campaign,award);
+  assert.deepEqual(result.pricing.lines.map(line=>line.qty),[2,1]);
+ }
+ const {res:withoutCoupon}=await call({...purchase,coupon:'',action:'quote'},{cat,db,deps:clock});
+ assert.equal(withoutCoupon.body.discount_cents,0);
+ assert.deepEqual(withoutCoupon.body.pricing.bogo_campaign,award);
+ const {res:stale}=await call({...purchase,action:'place',quote:quote.body.quote},{cat,db,deps:{now:Date.parse(end)}});
+ assert.equal(stale.code,409);assert.equal(db.calls.length,0);
+ const {res:placed}=await call({...purchase,action:'place',quote:quote.body.quote},{cat,db,deps:clock});
+ assert.equal(placed.code,201);
+ assert.deepEqual(db.calls[0].args.p_data.pricing.bogo_campaign,award);
+ assert.equal(db.calls[0].args.p_data.total_cents,quote.body.total_cents);
+ const {res:expired}=await call({...purchase,action:'quote'},{cat,db,deps:{now:Date.parse(end)}});
+ assert.equal(expired.code,200);assert.equal(expired.body.pricing.bogo_campaign,undefined);
+ assert.equal(expired.body.total_cents,quote.body.total_cents);
 });
 test('CARDTEST gives the approved account a one-item live Card quote with a US$1 merchandise floor',async()=>{
  const environment={...env,VERCEL_ENV:'production',PURE_GATEWAY_ENABLED:'true',

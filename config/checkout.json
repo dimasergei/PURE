@@ -256,6 +256,12 @@
   "promotions": {
     "version": "blackfriday10-2026-11-v1",
     "bogo": false,
+    "christmas_bogo": {
+      "enabled": true,
+      "starts_at": "2026-11-27T00:00:00.000Z",
+      "ends_at": "2026-12-25T05:00:00.000Z",
+      "scope": "catalog"
+    },
     "second_unit": {
       "enabled": false,
       "discount_bps": 2500

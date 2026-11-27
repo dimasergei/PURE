@@ -30,6 +30,21 @@ test('expired rollout configuration cannot grant free units or enable an unappro
   assert.equal(quote({ promo: offer }).discount_cents, 0);
 });
 
+test('the dedicated Christmas campaign uses the approved catalog and Toronto cutoff', () => {
+  const start=Date.parse('2026-11-27T00:00:00.000Z'), end=Date.parse('2026-12-25T05:00:00.000Z');
+  const variant={size:'5mg'};
+  const products=[{id:'fixture',variants:[variant]}, {id:'equipment',category:'equipment',variants:[variant]},
+    {id:'supply',form:'supply',variants:[variant]}, {id:'needles',variants:[variant]}];
+  const expiredEnv={...env,BOGO_VARIANTS:'supply:5mg'};
+  for(const at of [start,end-1]){
+    const holiday=checkoutCampaign(expiredEnv,at,products);
+    assert.equal(holiday.scope,'catalog');
+    assert.equal(holiday.ends_at,new Date(end).toISOString());
+    assert.deepEqual(holiday.eligible_variants,['fixture:5mg']);
+  }
+  for(const at of [start-1,end])assert.equal(checkoutCampaign(expiredEnv,at,products).ends_at,null);
+});
+
 test('a selected pair receives one price discount, never a complimentary unit or stacked coupon', () => {
   const promo = { discount_bps: 2500, eligible_variants: ['fixture:5mg'] };
   const paired = quote({ coupon: 'BLACKFRIDAY10', promo });
