@@ -75,6 +75,8 @@ html:root body.ap-site .nl-bulk-benefit-rate > span {
 html:root body.ap-site .nl-bulk-tier-head .nl-bulk-best-value {
   position: static;
   flex: none;
+  margin: 2px 0 0;
+  font-size: 10px;
   text-transform: uppercase;
   background: var(--ap-white);
   color: var(--ap-ink);
@@ -592,6 +594,7 @@ html:root body.ap-site .nl-bulk-faq details p {
     padding: 11px 13px;
   }
   html:root body.ap-site .nl-bulk-benefit-rate { font-size: 30px !important; }
+  html:root body.ap-site .nl-bulk-tier-head .nl-bulk-best-value { padding-inline: 6px; font-size: 9px; }
   html:root body.ap-site .nl-bulk-benefit-copy { font-size: 13px !important; }
   html:root body.ap-site .nl-bulk-benefit > small { font-size: 12px; }
   html:root body.ap-site .nl-bulk-benefit .nl-bulk-coa-proof { gap: 6px; padding-inline: 6px; }
