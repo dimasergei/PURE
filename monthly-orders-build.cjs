@@ -19,7 +19,7 @@ if (!shopMain.test(shell) || !monthlyMain || !title || !privatePage || !styles |
 
 const html = shell
   .replace(/<title>[\s\S]*?<\/title>/, title)
-  .replace(/<meta name="description"[^>]*>/, '<meta name="description" content="Manage your monthly orders and Subscribe &amp; Save plan at PURE.">')
+  .replace(/<meta name="description"[^>]*>/, '<meta name="description" content="Manage your subscription and review your Subscribe &amp; Save deliveries at PURE.">')
   .replace(/<meta property="og:[^"]+"[^>]*>/g, '')
   .replace(/<link rel="canonical"[^>]*>/, '')
   .replace('href="#ap-main"', 'href="#monthly-main"')

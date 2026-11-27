@@ -13,7 +13,7 @@ function homeFaq(site) {
     ['When should I expect my order?', site.shipping.processingEstimate+' '+site.shipping.transitEstimate],
     ['Is shipping protection optional?',site.shipping.protectionSummary],
     ['Where can I review quantity pricing?', 'Bulk Orders lets you select quantities by compound and strength and review the applicable merchandise tier before checkout.'],
-    ['Can I see my subscription or order history?', 'Sign in to Account with the email used for your order. Open Monthly orders to manage recurring orders or Orders to review purchases.'],
+    ['Can I see my subscription or order history?', 'Sign in to Account with the email used for your order. Open Subscription to manage recurring orders or Orders to review purchases.'],
     ['What is the returns window?', site.returns.summary]
   ].map(([question,answer])=>({question,answer}));
 }

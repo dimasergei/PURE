@@ -17,7 +17,7 @@
     const response = await fetch('/api/customer-config?repeat_orders='+(publicView?'checkout':'1'),{method:body?'POST':'GET',cache:'no-store',
       headers:{...(session?{Authorization:'Bearer '+session.access_token}:{}),...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});
     const data = await response.json();
-    if (!response.ok) throw Error(data.error || 'Monthly orders are temporarily unavailable.');
+    if (!response.ok) throw Error(data.error || 'Subscription details are temporarily unavailable.');
     return data;
   };
   const line = (name,value,cls='') => {
@@ -98,7 +98,7 @@
   }
   async function loadPlans() {
     overview = await api();
-    root.innerHTML = '<h2>Your invoice plans</h2>'+(overview.plans.length ? overview.plans.map(plan=>{
+    root.innerHTML = '<h2>Your subscription plans</h2>'+(overview.plans.length ? overview.plans.map(plan=>{
       const s=plan.snapshot,active=plan.status==='active';
       const threeDelivery=threeDeliveryPlan(plan);
       const action=(id,label)=>'<button type="button" class="secondary" data-action="'+id+'">'+label+'</button>';
@@ -114,7 +114,7 @@
         '<div class="actions">'+link('/account/purchases?id='+encodeURIComponent(plan.invoice_id),'Latest order')+
         actions+'</div>'+
         (threeDelivery&&plan.status!=='completed'&&plan.status!=='canceled'?'<p class="muted">For help with your plan or to request early cancellation, <a href="/contact">contact PURE support</a>.</p>':'')+'</article>';
-    }).join(''):'<p>You have no monthly invoice plans.</p>')+'<p><a href="/shop">Return to catalog</a></p>';
+    }).join(''):'<p>You have no subscription plans.</p>')+'<p><a href="/shop">Return to catalog</a></p>';
     root.onclick=async event=>{
       const btn=event.target.closest('button[data-action]');
       if (!btn) return;
@@ -292,7 +292,7 @@
     auth=window.supabase.createClient(config.supabaseUrl,config.anonKey,{auth:{persistSession:true,autoRefreshToken:true,flowType:'pkce'}});
     const session=(await auth.auth.getSession()).data.session;
     if (!session && (!builderRoute&&!params.has('product')||params.has('edit')||params.has('invoice'))) {
-      root.innerHTML='<p>Sign in to set up or manage your monthly invoice plan.</p>'+link('/account/login?returnTo='+encodeURIComponent(location.pathname+location.search),'Sign in to PURE');return;
+      root.innerHTML='<p>Sign in to set up or manage your subscription.</p>'+link('/account/login?returnTo='+encodeURIComponent(location.pathname+location.search),'Sign in to PURE');return;
     }
     user=session?.user;
     if(params.has('invoice')){renderPayment(await api({action:'payment_options',id:params.get('invoice')}));return;}

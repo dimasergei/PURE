@@ -119,12 +119,14 @@ test('expired, unavailable, canceled, or wrong-currency Interac invoices never r
  }
 });
 
-test('account overview keeps paid USD and CAD totals separate and labels unpriced CAD requests',async()=>{
+test('account overview omits summary tiles and retains recent orders and balances',async()=>{
  const f=fixture({allInvoices:[invoice({status:'paid',currency:'USD',total_cents:10000}),invoice({id:'55555555-5555-4555-8555-555555555555',status:'paid',total_cents:29719}),invoice({id:'66666666-6666-4666-8666-666666666666',status:'requested',total_cents:null,currency:null})]});
  try{
   await f.w.ReadinessUI.overview(f.root,f.auth,{user_metadata:{full_name:'Fixture Researcher'}});
-  const stat=f.root.querySelectorAll('.rd-stat-grid article')[1].textContent;
-  assert.match(stat,/\$100\.00 · CA\$297\.19/);assert.doesNotMatch(stat,/\$397\.19/);
+  assert.equal(f.root.querySelector('.rd-stat-grid'),null);
+  assert.doesNotMatch(f.root.textContent,/Orders in current checkout|Paid order total|Available store credit|Auto-Stack/i);
+  assert.ok(f.root.querySelector('#rewards-and-credit'));
+  assert.match(f.root.querySelector('tbody').textContent,/\$100\.00/);
   assert.match(f.root.querySelector('tbody').textContent,/CA\$297\.19/);assert.match(f.root.querySelector('tbody').textContent,/CAD order total pending/);
  }finally{f.dom.window.close();}
 });

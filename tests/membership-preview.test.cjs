@@ -11,7 +11,7 @@ const {JSDOM}=require('jsdom');
 const root=path.resolve(__dirname,'..');
 const read=file=>fs.readFileSync(path.join(root,file),'utf8');
 
-test('account navigation separates prepaid Membership from Monthly orders and marks the current location',()=>{
+test('account navigation separates prepaid Membership from Subscription and marks the current location',()=>{
  const build=read('account-experience-build.cjs');
  const match=build.match(/`(function accountNav\(active\)\{[\s\S]*?\n)`\+s\.slice\(end\)/);
  assert.ok(match,'The account build exposes the generated navigation function.');
@@ -23,7 +23,7 @@ test('account navigation separates prepaid Membership from Monthly orders and ma
    assert.equal(document.querySelectorAll('a[href="/account/membership"]').length,1);
    const monthly=document.querySelectorAll('a[href="/monthly-orders"]');
    assert.equal(monthly.length,1);
-   assert.equal(monthly[0].textContent,'Monthly orders');
+   assert.equal(monthly[0].textContent,'Subscription');
    assert.equal(document.querySelector('a[aria-current="page"]').getAttribute('href'),route);
    assert.equal(document.querySelectorAll('#logout').length,1);
    assert.equal(document.querySelector('a[href="/account/subscriptions"],a[href="/account/stack"]'),null);
