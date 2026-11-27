@@ -34,11 +34,11 @@
   align-items: center;
   gap: 9px;
   padding: 7px 14px;
-  border: 1px solid #e6aa30;
+  border: 1px solid #d3a35a;
   border-radius: 999px;
-  box-shadow: 0 0 22px #ffb42355, inset 0 0 12px #ffb42326;
+  box-shadow: 0 0 18px #eda94d42, inset 0 0 12px #eda94d21;
   background: #22170a;
-  color: #ffdb68;
+  color: #ffdb91;
   font-size: .75rem;
   font-weight: 850;
   line-height: 1.15;
@@ -51,16 +51,16 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #f3b33c;
-  box-shadow: 0 0 3px 1px #ffb72f45;
+  background: #e3ac52;
+  box-shadow: 0 0 3px 1px #e7ae5245;
 }
 .pure-bogo-badge > span::after {
   content: '';
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: #fff1a6;
-  box-shadow: 0 0 10px 3px #ffba3adb;
+  background: #fff0c4;
+  box-shadow: 0 0 9px 2px #efb14dc9;
   opacity: .75;
   animation: pure-bogo-badge-glow 3.2s ease-in-out infinite;
 }
@@ -82,13 +82,19 @@ body.ap-site .pure-bogo-copy h1 {
 .pure-bogo-copy h1 > strong {
   display: block;
   margin-top: .02em;
-  color: #ffcb3d;
+  color: #eeb555;
   font-size: 1.87em;
   font-weight: inherit;
   line-height: .92;
-  filter: drop-shadow(0 0 .035em #ffca3daf) drop-shadow(0 0 .21em #ff9b275d);
+  filter: drop-shadow(0 0 .025em #edb45582) drop-shadow(0 0 .15em #db943a46);
 }
 @supports ((background-clip: text) or (-webkit-background-clip: text)) {
+  .pure-bogo-inline-free {
+    background-image: linear-gradient(180deg, #fff3cc 10%, #edbb65 43%, #ffedbf 52%, #d99a45 95%);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
   .pure-bogo-copy h1 :where(.pure-bogo-buy, .pure-bogo-get, strong) {
     background-image: linear-gradient(105deg, #f6f7fa 28%, #e0e4ec 39%, #fff 49%, #edf0f6 59%, #f6f7fa 72%);
     background-size: 225% auto;
@@ -98,7 +104,11 @@ body.ap-site .pure-bogo-copy h1 {
     animation: pure-bogo-shine 6s ease-in-out infinite;
   }
   .pure-bogo-copy h1 > strong {
-    background-image: linear-gradient(105deg, #ffca3e 26%, #ffae21 39%, #fff7cd 48%, #ffd959 52%, #f7a419 59%, #ffca3e 72%);
+    background-image:
+      linear-gradient(105deg, transparent 41%, #fff7e0b8 49%, transparent 57%),
+      linear-gradient(180deg, #ffedc1 0%, #edb34f 31%, #ffe8ae 49%, #df9e3e 56%, #c5812d 100%);
+    background-size: 225% 100%, 100% 100%;
+    background-repeat: no-repeat;
   }
   @supports (-webkit-text-stroke: 1px white) {
     .pure-bogo-copy h1 .pure-bogo-buy {
@@ -118,6 +128,12 @@ body.ap-site .pure-bogo-copy h1 {
   color: #ded9d2;
   font-size: clamp(.875rem, 1.55vw, 1.125rem);
   line-height: 1.45;
+}
+.pure-bogo-inline-free {
+  display: inline-block;
+  color: #ffd68a;
+  font-weight: 900;
+  filter: drop-shadow(0 0 4px #efad547d);
 }
 
 .pure-bogo-art {
@@ -171,11 +187,11 @@ body.ap-site .pure-bogo-copy h1 {
   top: 12%;
   left: 61%;
   padding: 5px 9px;
-  border: 1px solid #ffe58d;
+  border: 1px solid #f5ce89;
   border-radius: 5px;
-  background: linear-gradient(115deg, #f3a41e, #ffe683 56%, #ffbf35 80%, #ee9e17);
+  background: linear-gradient(115deg, #ce8c38, #ffe7b4 50%, #e8b557 70%, #ce8c38);
   color: #201812;
-  box-shadow: 0 0 8px #ffc43eaa, 0 0 23px #ffb124aa;
+  box-shadow: 0 0 6px #edb7588c, 0 0 17px #d99a416f;
   font-size: clamp(.65rem, 1.3vw, .9rem);
   font-weight: 950;
   letter-spacing: .08em;
@@ -191,10 +207,10 @@ body.ap-site .pure-bogo-cta {
   gap: 12px;
   min-height: 52px;
   padding: 10px 25px;
-  border: 1px solid #ffe88d;
+  border: 1px solid #f5ce89;
   border-radius: 999px;
-  background: linear-gradient(105deg, #ffe88b, #ffce4c 51%, #f6ad21);
-  box-shadow: inset 0 1px 0 #fffbca99, 0 0 15px #ffc22a4d, 0 6px 30px #ffb0206b;
+  background: linear-gradient(105deg, #edbc65, #ffe7af 39%, #f2cc7c 61%, #d99a3f);
+  box-shadow: inset 0 1px 0 #fff3d199, 0 0 12px #ecb34f40, 0 5px 23px #dda34d54;
   color: #17110b !important;
   font-family: 'Archivo', Arial, sans-serif;
   font-size: 1rem;
@@ -203,10 +219,10 @@ body.ap-site .pure-bogo-cta {
   text-decoration: none;
   text-transform: uppercase;
 }
-body.ap-site .pure-bogo-cta:hover { box-shadow: inset 0 1px 0 #fffbca99, 0 0 18px #ffc22a66, 0 6px 34px #ffb0208c; }
+body.ap-site .pure-bogo-cta:hover { box-shadow: inset 0 1px 0 #fff3d199, 0 0 16px #ecb34f59, 0 5px 28px #dda34d70; }
 body.ap-site .pure-bogo-cta:focus-visible { outline: 2px solid #fff; outline-offset: 4px; }
 .pure-bogo-action p { margin: 10px 0 0; color: #ded9d2; font-size: .8rem; line-height: 1.35; }
-.pure-bogo-action strong { color: #ffda60; }
+.pure-bogo-action strong { color: #f8cf84; }
 .pure-bogo-highlights .nl-trust {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -271,7 +287,7 @@ body.ap-site:has(.pure-bogo-home.pure-sale-cta-visible) .spin-save-shortcut { vi
 @media (forced-colors: active) {
   .pure-bogo-badge > span { background: CanvasText; }
   .pure-bogo-badge > span::after { display: none; }
-  .pure-bogo-copy h1 :is(.pure-bogo-buy, .pure-bogo-get, strong) {
+  .pure-bogo-copy h1 :is(.pure-bogo-buy, .pure-bogo-get, strong), .pure-bogo-inline-free {
     background-image: none;
     -webkit-text-fill-color: CanvasText;
     -webkit-text-stroke: 0;

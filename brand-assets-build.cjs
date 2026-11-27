@@ -114,7 +114,7 @@ for(const file of fs.readdirSync(out,{recursive:true}).filter(f=>f.endsWith('.ht
   html=html.replace(/\b(src|href)="\/((?:account-experience|readiness-ui)\.(?:js|css))(?:\?[^"]*)?"/g,'$1="/$2?v=20261126-account-contrast"');
   html=html.replace(/href="\/cart-reference\.css(?:\?[^"]*)?"/g,'href="/cart-reference.css?v=20261126-reward-glow"');
   html=html.replace(/\b(src|href)="\/((?:storefront-v2|conversion-ui|checkout-reference|readiness-ui)\.(?:js|css)|direct-checkout-client\.js)(?:\?[^"\n]*)?"/g,'$1="/$2?v=20261126-checkout-carousel"');
-  html=html.replace(/\b(src|href)="\/(storefront-v2\.(?:js|css))(?:\?[^"\n]*)?"/g,'$1="/$2?v=20261127-hero-highlights"');
+  html=html.replace(/\b(src|href)="\/(storefront-v2\.(?:js|css))(?:\?[^"\n]*)?"/g,'$1="/$2?v=20261127-metallic-gold"');
   html=html.replace(/\b(src|href)="\/(conversion-ui\.(?:js|css))(?:\?[^"\n]*)?"/g,'$1="/$2?v=20261126-sale-loop"');
   html=html.replace(/\b(src|href)="\/((?:storefront-navigation\.(?:js|css)|mobile-parity\.css|cart-reference\.css))(?:\?[^"\n]*)?"/g,'$1="/$2?v=20261126-header-cart"');
   html=html.replace(/href="\/cart-reference\.css(?:\?[^"\n]*)?"/g,'href="/cart-reference.css?v=20261126-quick-add-contrast"');

@@ -287,7 +287,7 @@
      <div class="pure-bogo-copy">
       <span class="pure-bogo-badge"><span aria-hidden="true"></span>Black Friday Sale</span>
       <h1 id="pure-bogo-title"><span class="pure-bogo-lead"><span class="pure-bogo-buy">Buy one,</span> <span class="pure-bogo-get">get one</span></span> <strong>Free</strong></h1>
-      <p>Buy an eligible vial and get a matching one free, added automatically. Through ${esc(closingDate)}.</p>
+      <p>Buy an eligible vial and get a matching one <strong class="pure-bogo-inline-free">FREE</strong>, added automatically. Through ${esc(closingDate)}.</p>
      </div>
      <div class="pure-bogo-art" role="img" aria-label="Two matching PURE vials, one marked free">
       ${homeVialOutline()}
