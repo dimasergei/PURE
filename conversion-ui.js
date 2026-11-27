@@ -3,7 +3,7 @@
  'use strict';
  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const money=n=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(n/100);
- async function request(path,body,auth){const headers={'Content-Type':'application/json'};if(auth){const {data}=await auth.auth.getSession();if(data.session)headers.Authorization='Bearer '+data.session.access_token;}const r=await fetch('/api/customer-config?'+path,{method:body?'POST':'GET',cache:'no-store',credentials:'same-origin',keepalive:path==='partner=visit',headers,...(body?{body:JSON.stringify(body)}:{})});const data=await r.json();if(!r.ok)throw Error(data.error||'Please try again.');return data;}
+ async function request(path,body,auth,signal){const headers={'Content-Type':'application/json'};if(auth){const {data}=await auth.auth.getSession();if(data.session)headers.Authorization='Bearer '+data.session.access_token;}const r=await fetch('/api/customer-config?'+path,{method:body?'POST':'GET',cache:'no-store',credentials:'same-origin',keepalive:path==='partner=visit',headers,signal,...(body?{body:JSON.stringify(body)}:{})});const data=await r.json();if(!r.ok)throw Error(data.error||'Please try again.');return data;}
  async function cart(root){return window.AltaCartNmi?.offer?.(root);}
  function dateLabel(value){const date=new Date(value);return value&&Number.isFinite(date.getTime())?new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',year:'numeric'}).format(date):null;}
  function membershipCards(config,period='monthly',active=null){return window.PureMemberships?.renderCards(config,period,{active,context:'account'})||'';}
@@ -144,8 +144,14 @@
   }catch(e){root.textContent=e.message;}
  }
  let campaignRequest;
+ let holidayOffer=null;
+ function requestCampaign(path,body){
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),4500);
+  return request(path,body,null,controller.signal).finally(()=>clearTimeout(timeout));
+ }
  function readCampaign(){
-  campaignRequest ||= request('campaign=window').catch(error=>{campaignRequest=null;throw error;});
+  campaignRequest ||= requestCampaign('campaign=window').catch(error=>{campaignRequest=null;throw error;});
   return campaignRequest;
  }
  let eligibleVariants=new Set(),campaignStatus='loading',discountPercent=0;
@@ -194,10 +200,15 @@
    if(!viewport.contains(event.relatedTarget))viewport.scrollLeft=0;
   });
   announcement.append(pause);
-  let copies=[],width=0,duration=0;
-  function sizeLoop(removedWidth=0){
+  let copies=[],width=0,period=0;
+  function sizeLoop(removedWidth=0,rebuild=false){
    const nextWidth=set.getBoundingClientRect().width;
-   const needed=nextWidth?Math.max(1,Math.ceil(viewport.clientWidth/nextWidth)):1;
+   const needed=nextWidth?Math.max(1,Math.ceil((viewport.clientWidth+4)/nextWidth)):1;
+   if(!rebuild&&nextWidth===width&&copies.length===needed)return;
+   const elapsed=set.getAnimations?.()[0]?.currentTime;
+   const cycles=period&&Number.isFinite(elapsed)?Math.floor(elapsed/period):0;
+   const offset=period&&Number.isFinite(elapsed)?(elapsed-cycles*period)/period*width:0;
+   if(rebuild)while(copies.length)copies.pop().remove();
    while(copies.length>needed)copies.pop().remove();
    while(copies.length<needed){
     const repeat=set.cloneNode(true);
@@ -214,23 +225,23 @@
     copies.push(repeat);
     track.append(repeat);
    }
-   if(nextWidth===width)return;
-   const animation=track.getAnimations?.().find(item=>item.animationName==='pure-promo-scroll');
-   const elapsed=animation?.currentTime;
-   const offset=duration&&Number.isFinite(elapsed)?elapsed%duration/duration*width:null;
+   if(!nextWidth)return;
    width=nextWidth;
-   duration=Math.max(6000,width*1000/64);
-   track.style.setProperty('--promo-distance',-width+'px');
-   track.style.setProperty('--promo-duration',duration+'ms');
-   if(offset!==null&&width){
-    // Keep the same pixels in view when fonts, viewport width or the offer set changes.
-    animation.currentTime=Math.max(0,offset-removedWidth)%width/width*duration;
+   period=Math.max(6000,width*1000/64);
+   const sets=[set,...copies];
+   track.style.setProperty('--promo-entry',copies.length*width+'px');
+   track.style.setProperty('--promo-exit',-width+'px');
+   track.style.setProperty('--promo-duration',sets.length*period+'ms');
+   // Each repeat restarts past the clipped edges while the other repeats stay in motion.
+   sets.forEach((group,index)=>group.style.setProperty('--promo-delay',(index-copies.length)*period+'ms'));
+   const phase=cycles*period+Math.max(0,offset-removedWidth)%width/width*period;
+   for(const group of sets){
+    const animation=group.getAnimations?.()[0];
+    if(animation)animation.currentTime=phase;
    }
   }
   function refresh(removedWidth){
-   copies.forEach(copy=>copy.remove());
-   copies=[];
-   sizeLoop(removedWidth);
+   sizeLoop(removedWidth,true);
   }
   function start(){
    announcement.classList.add('pure-promo-loop');
@@ -248,16 +259,17 @@
  const christmas=Date.parse('2026-12-25T00:00:00-05:00');
  async function readChristmasOffer(campaign){
   const end=Date.parse(campaign?.ends_at),serverTime=Date.parse(campaign?.server_time);
-  const key=campaign?.eligible_variants?.[0],separator=typeof key==='string'?key.indexOf(':'):-1;
+  const variants=Array.isArray(campaign?.eligible_variants)?campaign.eligible_variants:[];
+  const key=variants[0],separator=typeof key==='string'?key.indexOf(':'):-1;
   if(!Number.isFinite(serverTime)||end!==christmas||serverTime>=end||separator<=0)return null;
   const offset=serverTime-Date.now();
   const id=key.slice(0,separator),size=key.slice(separator+1);
   // Read the estimate from the same pricing engine used by checkout.
-  const quote=await request('checkout=cart',{items:[{id,size,qty:1}],country:'US',coupon:'BLACKFRIDAY10'}).catch(()=>null);
+  const quote=await requestCampaign('checkout=cart',{items:[{id,size,qty:1}],country:'US',coupon:'BLACKFRIDAY10'}).catch(()=>null);
   const bonus=quote?.pricing?.bogo_campaign;
   if(!(quote?.pricing?.coupon_discount_cents>0)||bonus?.ends_at!==campaign.ends_at||
-     !bonus.free_units?.some(item=>item.id===id&&item.size===size&&item.qty===1))return null;
-  return {end,offset};
+     !bonus.free_units?.some(item=>item.id===id&&item.size===size&&item.qty===1)||Date.now()+offset>=end)return null;
+  return {end,offset,campaign:Object.freeze({endsAt:campaign.ends_at,eligibleVariants:Object.freeze([...variants])})};
  }
  function mountChristmasOffer(loop,{end,offset}){
   const slide=document.createElement('a'),countdown=document.createElement('time'),snowflake=document.createElement('span');
@@ -276,11 +288,13 @@
    const remaining=Math.ceil((end-Date.now()-offset)/1000);
    if(remaining<=0){
     clearInterval(clock);
+    holidayOffer=null;
     const removedWidth=slide.getBoundingClientRect().width+snowflake.getBoundingClientRect().width;
     if(document.activeElement===slide)loop.set.querySelector('[data-copy-offer]')?.focus();
     slide.remove();
     snowflake.remove();
     if(loop.track.isConnected&&loop.track.closest('.pure-promo-loop'))loop.refresh(removedWidth);
+    window.dispatchEvent(new Event('pure:campaign'));
     return;
    }
    const days=Math.floor(remaining/86400);
@@ -300,7 +314,10 @@
   const active=fallback?.contains(document.activeElement)?document.activeElement:null;
   // Keep the static coupon visible until the complete initial offer set can move together.
   const loop=fallback&&mountPromoLoop(announcement,fallback);
-  if(holiday)mountChristmasOffer(loop,holiday);
+  if(holiday){
+   holidayOffer=holiday.campaign;
+   mountChristmasOffer(loop,holiday);
+  }
   if(offer&&fallback){
    const trigger=document.createElement('a');
    trigger.href='/shop?offer=second-unit';
@@ -333,7 +350,7 @@
    root.hidden=false;
   }catch{}
  }
- window.PureCampaign={mountCountdown,mountDispatch,eligible:(id,size)=>eligibleVariants.has(id+':'+size),get status(){return campaignStatus;},get discountPercent(){return discountPercent;}};
+ window.PureCampaign={mountCountdown,mountDispatch,eligible:(id,size)=>eligibleVariants.has(id+':'+size),get status(){return campaignStatus;},get discountPercent(){return discountPercent;},get holiday(){return holidayOffer;}};
  if(document.querySelector('.ap-announcement [data-default-offer]')||/^\/(?:$|index(?:\.html)?$|shop(?:\.html)?\/?$|product\/)/.test(location.pathname)){
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mountCampaignStrip,{once:true});
   else mountCampaignStrip();

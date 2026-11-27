@@ -114,8 +114,8 @@ for(const file of fs.readdirSync(out,{recursive:true}).filter(f=>f.endsWith('.ht
   html=html.replace(/\b(src|href)="\/((?:account-experience|readiness-ui)\.(?:js|css))(?:\?[^"]*)?"/g,'$1="/$2?v=20261126-account-contrast"');
   html=html.replace(/href="\/cart-reference\.css(?:\?[^"]*)?"/g,'href="/cart-reference.css?v=20261126-reward-glow"');
   html=html.replace(/\b(src|href)="\/((?:storefront-v2|conversion-ui|checkout-reference|readiness-ui)\.(?:js|css)|direct-checkout-client\.js)(?:\?[^"\n]*)?"/g,'$1="/$2?v=20261126-checkout-carousel"');
-  html=html.replace(/\b(src|href)="\/(storefront-v2\.(?:js|css))(?:\?[^"\n]*)?"/g,'$1="/$2?v=20261126-compact-bulk"');
-  html=html.replace(/\b(src|href)="\/(conversion-ui\.(?:js|css))(?:\?[^"\n]*)?"/g,'$1="/$2?v=20261126-promo-smooth"');
+  html=html.replace(/\b(src|href)="\/(storefront-v2\.(?:js|css))(?:\?[^"\n]*)?"/g,'$1="/$2?v=20261126-sale-hero"');
+  html=html.replace(/\b(src|href)="\/(conversion-ui\.(?:js|css))(?:\?[^"\n]*)?"/g,'$1="/$2?v=20261126-sale-loop"');
   html=html.replace(/\b(src|href)="\/((?:storefront-navigation\.(?:js|css)|mobile-parity\.css|cart-reference\.css))(?:\?[^"\n]*)?"/g,'$1="/$2?v=20261126-header-cart"');
   if(file==='bulk-orders.html')html=html.replace(/\b(src|href)="\/(workspace-v2\.js|pure-bulk-layout\.css)(?:\?[^"\n]*)?"/g,'$1="/$2?v=20261126-bulk-coa-card"');
   if(file==='contact.html')html=html.replace(/href="\/reference-ui\.css(?:\?[^"]*)?"/g,'href="/reference-ui.css?v=20261126-contact-wordmark"');

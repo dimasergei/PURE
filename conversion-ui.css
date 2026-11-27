@@ -369,15 +369,22 @@ body.ap-site .nl-detail [data-campaign-product]:not([hidden]) {
   z-index: 1;
   inset: 0 var(--promo-control-width) 0 0;
   overflow: hidden;
+  overflow: clip;
   scrollbar-width: none;
 }
 .pure-promo-track, .pure-promo-set { display: flex; inline-size: max-content; height: 100%; }
-.pure-promo-track { animation: pure-promo-scroll var(--promo-duration, 22s) linear infinite; }
+.pure-promo-track { position: relative; inline-size: 100%; }
+.pure-promo-set {
+  position: absolute;
+  inset: 0 auto 0 0;
+  flex: none;
+  will-change: transform;
+  animation: pure-promo-scroll var(--promo-duration, 22s) linear var(--promo-delay, 0s) infinite;
+}
 html:root body.ap-site .ap-announcement.pure-promo-loop::before {
   display: none !important;
   animation: none !important;
 }
-.pure-promo-set { flex: none; }
 .ap-announcement.pure-promo-loop .pure-promo-set .pure-offer-trigger {
   position: static;
   flex: none;
@@ -394,16 +401,16 @@ html:root body.ap-site .ap-announcement.pure-promo-loop::before {
 }
 .pure-promo-loop [data-copy-offer] span { grid-area: 1 / 1; }
 .pure-promo-divider { display: flex; align-items: center; }
-.pure-promo-paused .pure-promo-track { animation-play-state: paused; }
+.pure-promo-paused .pure-promo-set { animation-play-state: paused; }
 @media (hover: hover) {
-  .pure-promo-window:hover .pure-promo-track { animation-play-state: paused; }
+  .pure-promo-window:hover .pure-promo-set { animation-play-state: paused; }
 }
 @keyframes pure-promo-scroll {
-  from { transform: translate3d(0, 0, 0); }
-  to { transform: translate3d(var(--promo-distance, 0px), 0, 0); }
+  from { transform: translate3d(var(--promo-entry, 0px), 0, 0); }
+  to { transform: translate3d(var(--promo-exit, 0px), 0, 0); }
 }
 .pure-promo-window:has(:focus-visible) { overflow-x: auto; }
-.pure-promo-window:has(:focus-visible) .pure-promo-track { animation: none; }
+.pure-promo-window:has(:focus-visible) .pure-promo-set { position: static; will-change: auto; animation: none; }
 .pure-promo-window:has(:focus-visible) .pure-promo-repeat { display: none; }
 
 .ap-announcement .pure-promo-pause {
@@ -472,6 +479,6 @@ html:root body.ap-site .pure-promo-loop :is(a,button):focus-visible { outline: 2
 }
 @media (prefers-reduced-motion: reduce) {
   .pure-promo-window { --promo-control-width: 0px; overflow-x: auto; }
-  .pure-promo-track { animation: none; }
+  .pure-promo-set { position: static; will-change: auto; animation: none; }
   .pure-promo-loop :is(.pure-promo-pause,.pure-promo-repeat) { display: none; }
 }

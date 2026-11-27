@@ -133,167 +133,86 @@
  function homeHeroActions(){
   return '<div class="ap-actions"><a class="ap-button nl-primary" href="/shop">SHOP NOW</a></div>';
  }
- const homeBulkDraft=[];
  const homeBulkSizes=new Map();
- let activeHomeBulkProduct;
+ let activeHomeBulkProduct,homeBulkQuantity,homeBulkSubmitting=false;
+ window.addEventListener('pageshow',event=>{
+  if(!event.persisted||!homeBulkSubmitting)return;
+  homeBulkSubmitting=false;
+  const checkout=document.querySelector('[data-home-bulk-checkout]');
+  if(checkout)checkout.disabled=false;
+ });
+ function homeBulkVariants(p){
+  return p.variants.slice().sort((a,b)=>(parseFloat(a.size)-parseFloat(b.size))||a.size.localeCompare(b.size));
+ }
+ function homeBulkStrengthOptions(p){
+  const selected=homeBulkSizes.get(p.id);
+  return homeBulkVariants(p).map(v=>`<option value="${esc(v.size)}"${v.size===selected?' selected':''}>${esc(v.size)}</option>`).join('');
+ }
+ function homeBulkEstimate(p,size,qty){
+  const variant=p.variants.find(v=>v.size===size)||homeBulkVariants(p)[0];
+  const retail=Math.round(variant.price*100)*qty;
+  const net=retail-window.PureQuantityPricing.bulkDiscountCents(retail,qty);
+  return `<span>${qty} units · Est. subtotal</span><strong>${priceMarkup(net/100)}</strong>`;
+ }
  function homeBulkPromo(featured){
-  const pricing=window.PureQuantityPricing;
-  const tiers=(pricing?.TIERS||[]).filter(tier=>tier.bps>0).slice().reverse();
-  const products=featured.filter(p=>p.category!=='supplies').slice(0,3);
-  const active=products.some(p=>p.id===activeHomeBulkProduct)?activeHomeBulkProduct:products[0]?.id;
+  const tiers=(window.PureQuantityPricing?.TIERS||[]).filter(tier=>tier.bps>0).slice().reverse();
+  const products=featured.filter(p=>p.category!=='supplies'&&p.variants.length).slice(0,3);
+  const active=products.find(p=>p.id===activeHomeBulkProduct)||products[0];
+  const quantity=tiers.find(tier=>tier.min===homeBulkQuantity)?.min??tiers[0]?.min;
   const browse='<a class="pure-home-express-more" href="/bulk-orders">View all bulk products <span aria-hidden="true">→</span></a>';
   return `<section class="ap-container pure-home-volume" aria-labelledby="pure-home-volume-title">
-    <header class="pure-home-volume-offer">
-      <h2 id="pure-home-volume-title">Bulk Orders</h2>
-      <p class="pure-home-volume-tiers">${tiers.map(tier=>`<span><strong>${tier.bps/100}% off</strong> at ${tier.min}+ units per compound</span>`).join('')}</p>
-    </header>
-    ${tiers.length&&products.length?`<div class="pure-home-express" data-home-bulk>
-      <div class="pure-home-express-navigation" role="group" aria-label="Choose a bulk product">
-        ${products.map(p=>`<button type="button" data-home-bulk-tab="${esc(p.id)}" aria-controls="pure-home-bulk-${esc(p.id)}" aria-pressed="${p.id===active}">${esc(p.name)}</button>`).join('')}
+    <h2 id="pure-home-volume-title">Bulk Orders</h2>
+    ${active&&quantity?`<form class="pure-home-express" data-home-bulk>
+      <fieldset class="pure-home-volume-tiers">
+        <legend class="ap-sr">Bulk quantity</legend>
+        ${tiers.map(tier=>`<label><input class="ap-sr" type="radio" name="quantity" value="${tier.min}" data-home-bulk-tier${tier.min===quantity?' checked':''}><span><strong>${tier.bps/100}% off</strong><small>${tier.min} units</small></span></label>`).join('')}
+      </fieldset>
+      <div class="pure-home-express-fields">
+        <label>Compound<select name="compound" data-home-bulk-compound>${products.map(p=>`<option value="${esc(p.id)}"${p===active?' selected':''}>${esc(p.name)}</option>`).join('')}</select></label>
+        <label>Strength<select name="strength" data-home-bulk-size>${homeBulkStrengthOptions(active)}</select></label>
       </div>
-      <div class="pure-home-express-products">
-        ${products.map(p=>homeBulkProduct(p,p.id===active)).join('')}
-      </div>
-      <aside class="pure-home-express-summary" aria-label="Bulk order summary" ${homeBulkDraft.length?'':'hidden'}>${homeBulkSummary()}</aside>
-      ${browse}
-    </div>`:browse}
+      <p class="pure-home-express-estimate" data-home-bulk-estimate role="status">${homeBulkEstimate(active,homeBulkSizes.get(active.id),quantity)}</p>
+      <button class="ap-button ap-button-light" type="submit" data-home-bulk-checkout ${homeBulkSubmitting?'disabled':''}>Bulk Checkout</button>
+      <p data-home-bulk-notice role="status"></p>
+    </form>`:''}
+    ${browse}
   </section>`;
- }
- function homeBulkPrices(retail,net){
-  return net<retail
-   ? `<del><span class="ap-sr">Retail </span>${priceMarkup(retail/100)}</del><strong><span class="ap-sr">Bulk </span>${priceMarkup(net/100)}</strong>`
-   : `<strong>${priceMarkup(retail/100)}</strong>`;
- }
- function homeBulkUnitPrice(id,price,quantity){
-  const pricing=window.PureQuantityPricing;
-  const minimum=pricing.TIERS.filter(tier=>tier.bps>0).at(-1).min;
-  const count=homeBulkDraft.reduce((units,line)=>units+(line.id===id?line.qty:0),0);
-  const qualified=pricing.bulkRate(count)>0;
-  const units=qualified?(quantity||1):minimum;
-  const retail=Math.round(price*100);
-  const gross=retail*units;
-  const net=Math.round((gross-pricing.bulkDiscountCents(gross,Math.max(minimum,count)))/units);
-  return homeBulkPrices(retail,net)+'<small>/ unit</small>';
- }
- function homeBulkProduct(p,active){
-  const variants=p.variants.slice().sort((a,b)=>(parseFloat(a.size)-parseFloat(b.size))||a.size.localeCompare(b.size));
-  const variant=variants.find(v=>v.size===homeBulkSizes.get(p.id))||variants[0];
-  const {size,price}=variant;
-  const quantity=homeBulkDraft.find(line=>line.id===p.id&&line.size===size)?.qty||0;
-  return `<article id="pure-home-bulk-${esc(p.id)}" data-home-bulk-product="${esc(p.id)}" ${active?'':'hidden'}>
-    <div class="pure-home-express-image"><img src="${esc(image(p,size))}" alt="" loading="lazy" width="56" height="72"></div>
-    <div class="pure-home-express-meta">
-      <h3>${esc(p.name)}</h3>
-      <div class="pure-home-express-price">${homeBulkUnitPrice(p.id,price,quantity)}</div>
-    </div>
-    <div class="pure-home-express-controls">
-      <label class="pure-home-express-strength"><span class="ap-sr">Strength for ${esc(p.name)}</span><select data-home-bulk-size>${variants.map(v=>`<option value="${esc(v.size)}"${v.size===size?' selected':''}>${esc(v.size)}</option>`).join('')}</select></label>
-      <button type="button" class="pure-home-express-add" data-home-bulk-step="10" aria-label="Add 10 units of ${esc(p.name+' '+size)}" ${quantity===100?'disabled':''}>Add 10</button>
-    </div>
-    <small class="pure-home-express-count" data-home-bulk-count aria-live="polite">${quantity?`${quantity} selected`:''}</small>
-  </article>`;
- }
- function homeBulkSummary(expanded=false){
-  const pricing=window.PureQuantityPricing;
-  const counts=new Map();
-  for(const line of homeBulkDraft)counts.set(line.id,(counts.get(line.id)||0)+line.qty);
-  const ready=counts.size>0&&[...counts.values()].every(units=>pricing.bulkRate(units)>0);
-  let retail=0,savings=0;
-  const lines=homeBulkDraft.map(line=>{
-   const p=product(line.id),variant=p.variants.find(v=>v.size===line.size);
-   const gross=Math.round(variant.price*100)*line.qty;
-   const discount=pricing.bulkDiscountCents(gross,counts.get(line.id));
-   retail+=gross;savings+=discount;
-   return `<li><span><strong>${esc(p.name)}</strong><small>${esc(line.size)} · ${line.qty} units</small></span><span class="pure-home-express-line-price">${homeBulkPrices(gross,gross-discount)}</span><button type="button" data-home-bulk-remove="${esc(line.id)}" data-size="${esc(line.size)}" aria-label="Remove ${esc(p.name+' '+line.size)}">×</button></li>`;
-  }).join('');
-  const units=[...counts.values()].reduce((sum,quantity)=>sum+quantity,0);
-  return `<div class="pure-home-express-purchase">
-    <div class="pure-home-express-total">
-     <div class="pure-home-express-estimate"><span>Estimated total</span><span class="pure-home-express-line-price">${homeBulkPrices(retail,retail-savings)}</span></div>
-     ${savings?`<div class="pure-order-savings"><span>Bulk savings</span><strong>−${priceMarkup(savings/100)}</strong></div>`:''}
-    </div>
-    <button class="ap-button" type="button" data-home-bulk-checkout ${ready?'':'disabled'}>Checkout</button>
-    <p role="status" data-home-bulk-notice>${ready?'':'Add at least 10 units per compound.'}</p>
-   </div>
-   <details class="pure-home-express-selection" ${expanded?'open':''}>
-    <summary>${units} units selected</summary><ul>${lines}</ul>
-   </details>`;
- }
- function refreshHomeBulkProduct(card){
-  const id=card.dataset.homeBulkProduct,p=product(id);
-  const size=card.querySelector('[data-home-bulk-size]').value;
-  const variant=p.variants.find(item=>item.size===size);
-  const quantity=homeBulkDraft.find(line=>line.id===id&&line.size===size)?.qty||0;
-  const img=card.querySelector('img'),src=image(p,size);
-  if(img.getAttribute('src')!==src)img.src=src;
-  card.querySelector('.pure-home-express-price').innerHTML=homeBulkUnitPrice(id,variant.price,quantity);
-  card.querySelector('[data-home-bulk-count]').textContent=quantity?`${quantity} selected`:'';
-  const add=card.querySelector('[data-home-bulk-step]');
-  add.setAttribute('aria-label',`Add 10 units of ${p.name} ${size}`);
-  add.disabled=quantity===100;
- }
- function setHomeBulkQuantity(id,size,qty){
-  const index=homeBulkDraft.findIndex(line=>line.id===id&&line.size===size);
-  if(!Number.isSafeInteger(qty)||qty<0||qty>100)return false;
-  if(index>=0){
-   if(qty)homeBulkDraft[index].qty=qty;
-   else homeBulkDraft.splice(index,1);
-  }else if(qty)homeBulkDraft.push({id,size,qty});
-  return true;
  }
  function mountHomeBulk(root){
   const builder=root.querySelector('[data-home-bulk]');
   if(!builder)return;
-  const summary=builder.querySelector('.pure-home-express-summary');
-  const tabs=[...builder.querySelectorAll('[data-home-bulk-tab]')];
-  const cards=[...builder.querySelectorAll('[data-home-bulk-product]')];
-  const updateSummary=()=>{
-   summary.hidden=!homeBulkDraft.length;
-   summary.innerHTML=homeBulkSummary(summary.querySelector('details')?.open);
-  };
+  const compound=builder.querySelector('[data-home-bulk-compound]');
+  const strength=builder.querySelector('[data-home-bulk-size]');
+  const estimate=builder.querySelector('[data-home-bulk-estimate]');
+  const button=builder.querySelector('[data-home-bulk-checkout]');
+  const notice=builder.querySelector('[data-home-bulk-notice]');
+  const quantity=()=>Number(builder.querySelector('[data-home-bulk-tier]:checked').value);
   builder.addEventListener('change',event=>{
-   if(!event.target.matches('[data-home-bulk-size]'))return;
-   const card=event.target.closest('[data-home-bulk-product]');
-   homeBulkSizes.set(card.dataset.homeBulkProduct,event.target.value);
-   refreshHomeBulkProduct(card);
+   const active=product(compound.value);
+   if(event.target===compound){
+    activeHomeBulkProduct=active.id;
+    strength.innerHTML=homeBulkStrengthOptions(active);
+   }
+   if(event.target===strength)homeBulkSizes.set(active.id,strength.value);
+   homeBulkQuantity=quantity();
+   estimate.innerHTML=homeBulkEstimate(active,strength.value,homeBulkQuantity);
   });
-  builder.addEventListener('click',async event=>{
-   const button=event.target.closest('button');
-   if(!button)return;
-   if(button.hasAttribute('data-home-bulk-tab')){
-    activeHomeBulkProduct=button.dataset.homeBulkTab;
-    for(const tab of tabs)tab.setAttribute('aria-pressed',String(tab===button));
-    for(const card of cards)card.hidden=card.dataset.homeBulkProduct!==activeHomeBulkProduct;
+  builder.addEventListener('submit',async event=>{
+   event.preventDefault();
+   if(homeBulkSubmitting)return;
+   const chosen=[{id:compound.value,size:strength.value,qty:quantity()}];
+   if(!write('ap-bulk-draft-v2',chosen)){
+    notice.textContent='Allow browser storage to carry this order to checkout.';
+    return;
    }
-   if(button.hasAttribute('data-home-bulk-step')){
-    const card=button.closest('[data-home-bulk-product]');
-    const id=card.dataset.homeBulkProduct,size=card.querySelector('[data-home-bulk-size]').value;
-    const qty=homeBulkDraft.find(line=>line.id===id&&line.size===size)?.qty||0;
-    setHomeBulkQuantity(id,size,Math.min(100,qty+10));
-    refreshHomeBulkProduct(card);
-    updateSummary();
+   homeBulkSubmitting=true;
+   button.disabled=true;
+   if(window.PurePartnerVisit){
+    let timer;
+    await Promise.race([window.PurePartnerVisit,new Promise(resolve=>{timer=setTimeout(resolve,1500);})]).catch(()=>{});
+    clearTimeout(timer);
    }
-   if(button.hasAttribute('data-home-bulk-remove')){
-    setHomeBulkQuantity(button.dataset.homeBulkRemove,button.dataset.size,0);
-    const card=cards.find(product=>product.dataset.homeBulkProduct===button.dataset.homeBulkRemove);
-    refreshHomeBulkProduct(card);
-    updateSummary();
-    (summary.querySelector('details[open] [data-home-bulk-remove]')||builder.querySelector('[aria-pressed="true"]'))?.focus();
-   }
-   if(button.hasAttribute('data-home-bulk-checkout')&&!button.disabled){
-    const chosen=homeBulkDraft.map(line=>({...line}));
-    if(!write('ap-bulk-draft-v2',chosen)){
-     builder.querySelector('[data-home-bulk-notice]').textContent='Allow browser storage to carry this order to checkout.';
-     return;
-    }
-    button.disabled=true;
-    if(window.PurePartnerVisit){
-     let timer;
-     await Promise.race([window.PurePartnerVisit,new Promise(resolve=>{timer=setTimeout(resolve,1500);})]).catch(()=>{});
-     clearTimeout(timer);
-    }
-    location.assign('/bulk-orders/checkout');
-   }
+   location.assign('/bulk-orders/checkout');
   });
  }
  function homeResearchCallout(){
@@ -347,11 +266,55 @@
   const rating=reviewSummary?'<p class="nl-trust-rating">'+reviewSummary.rating.toFixed(1)+'/5 · '+reviewSummary.count+' '+(reviewSummary.count===1?'review':'reviews')+'<small>Review credit offered</small></p>':'';
   return '<div class="nl-trust" aria-label="PURE product and delivery highlights">'+highlights.map(label=>'<div>'+check+'<span>'+label+'</span></div>').join('')+rating+'</div>';
  }
+ function homeVialOutline(){
+  return '<svg class="ap-vial-clip" width="0" height="0" aria-hidden="true"><defs><clipPath id="ap-vial-outline" clipPathUnits="objectBoundingBox"><path d="M .296 .127 C .296 .094 .409 .079 .499 .079 C .592 .079 .705 .095 .705 .128 L .705 .168 Q .705 .179 .691 .186 L .691 .239 Q .691 .259 .648 .267 L .648 .311 C .696 .328 .713 .342 .720 .372 L .725 .379 L .727 .824 Q .727 .879 .681 .880 L .319 .880 Q .273 .879 .272 .827 L .277 .379 L .283 .373 C .289 .343 .307 .327 .355 .312 L .355 .268 Q .310 .260 .310 .238 L .310 .187 Q .296 .180 .296 .168 Z"/></clipPath></defs></svg>';
+ }
+ function homeSaleHero(holiday){
+  const eligible=new Set(holiday.eligibleVariants);
+  const products=['bpc-157','retatrutide','ghk-cu'].map(product).filter(Boolean);
+  let vial;
+  for(const p of products){
+   const variant=p.variants.find(v=>eligible.has(p.id+':'+v.size));
+   if(variant){vial={product:p,variant};break;}
+  }
+  if(!vial)return '';
+  const source=esc(image(vial.product,vial.variant.size));
+  const closingDate=new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',timeZone:'America/Toronto'})
+   .format(new Date(Date.parse(holiday.endsAt)-1));
+  return `<section class="pure-bogo-home" data-pure-home-hero aria-labelledby="pure-bogo-title">
+   <div class="pure-bogo-hero">
+    <div class="ap-container pure-bogo-inner">
+     <div class="pure-bogo-copy">
+      <span class="pure-bogo-badge"><span aria-hidden="true"></span>Black Friday Sale</span>
+      <h1 id="pure-bogo-title"><span>Buy one, get one</span> <strong>Free</strong></h1>
+      <p>Buy an eligible vial and get a matching one free, added automatically. Through ${esc(closingDate)}.</p>
+     </div>
+     <div class="pure-bogo-art" role="img" aria-label="Two matching PURE vials, one marked free">
+      ${homeVialOutline()}
+      <span class="pure-bogo-backdrop" aria-hidden="true">BOGO</span>
+      <div class="pure-bogo-vial"><img src="${source}" alt="" width="1081" height="1455" fetchpriority="high"></div>
+      <div class="pure-bogo-vial pure-bogo-vial-free"><img src="${source}" alt="" width="1081" height="1455"><span aria-hidden="true">Free</span></div>
+     </div>
+     <div class="pure-bogo-action">
+      <a class="pure-bogo-cta" href="/shop?category=Peptides" data-pure-sale-cta>Shop the Sale <span aria-hidden="true">→</span></a>
+      <p>Extra 10% with <strong>BLACKFRIDAY10</strong></p>
+     </div>
+    </div>
+   </div>
+   <div class="ap-container pure-bogo-highlights">${homeHighlights()}</div>
+  </section>`;
+ }
+ function homeHero(){
+  const holiday=window.PureCampaign?.holiday;
+  const sale=holiday&&homeSaleHero(holiday);
+  if(sale)return sale;
+ const hero=['nad','retatrutide','bpc-157','ghk-cu','tirzepatide'].map(product).filter(Boolean);
+ return `<section class="nl-hero" data-pure-home-hero><div class="ap-container nl-hero-inner"><div class="nl-hero-copy"><h1>CUTTING EDGE<br><em>PURITY</em></h1><p class="nl-hero-description">Research compounds, product documentation, and straightforward ordering for laboratories and research teams.</p>${homeHeroActions()}</div><div class="nl-vial-stage" aria-label="Featured PURE products">${homeVialOutline()}${hero.map((p,i)=>`<a class="nl-vial nl-vial-${i}" href="/product/${p.id}"><img src="${esc(image(p,p.variants[0].size))}" alt="${esc(p.name+' '+p.variants[0].size)}" ${i===2?'fetchpriority="high"':''}></a>`).join('')}<span class="nl-stage-word" aria-hidden="true">PURE</span></div>${homeHighlights()}</div></section>`;
+ }
  function home() {
  const featured=['retatrutide','bpc-157','ghk-cu','nad'].map(product).filter(Boolean);
  featured.push(...catalog.filter(x=>!featured.includes(x)).slice(0,10-featured.length));
- const hero=['nad','retatrutide','bpc-157','ghk-cu','tirzepatide'].map(product).filter(Boolean);
- return `<section class="nl-hero"><div class="ap-container nl-hero-inner"><div class="nl-hero-copy"><h1>CUTTING EDGE<br><em>PURITY</em></h1><p class="nl-hero-description">Research compounds, product documentation, and straightforward ordering for laboratories and research teams.</p>${homeHeroActions()}</div><div class="nl-vial-stage" aria-label="Featured PURE products"><svg class="ap-vial-clip" width="0" height="0" aria-hidden="true"><defs><clipPath id="ap-vial-outline" clipPathUnits="objectBoundingBox"><path d="M .296 .127 C .296 .094 .409 .079 .499 .079 C .592 .079 .705 .095 .705 .128 L .705 .168 Q .705 .179 .691 .186 L .691 .239 Q .691 .259 .648 .267 L .648 .311 C .696 .328 .713 .342 .720 .372 L .725 .379 L .727 .824 Q .727 .879 .681 .880 L .319 .880 Q .273 .879 .272 .827 L .277 .379 L .283 .373 C .289 .343 .307 .327 .355 .312 L .355 .268 Q .310 .260 .310 .238 L .310 .187 Q .296 .180 .296 .168 Z"/></clipPath></defs></svg>${hero.map((p,i)=>`<a class="nl-vial nl-vial-${i}" href="/product/${p.id}"><img src="${esc(image(p,p.variants[0].size))}" alt="${esc(p.name+' '+p.variants[0].size)}" ${i===2?'fetchpriority="high"':''}></a>`).join('')}<span class="nl-stage-word" aria-hidden="true">PURE</span></div>${homeHighlights()}</div></section><section class="ap-container nl-featured"><div class="ap-section-head"><div><span class="ap-eyebrow">THE COLLECTION</span><h2>Featured Compounds</h2></div><div class="nl-carousel-controls"><button data-carousel="-1" aria-label="Previous products">‹</button><button data-carousel="1" aria-label="Next products">›</button></div></div><div class="nl-carousel" id="nl-featured">${featured.map(p=>card(p,{featured:true,quickAdd:true})).join('')}</div><div class="nl-center"><a class="ap-button" href="/shop">View All Products</a></div></section>${homeBulkPromo(featured)}${homePackaging()}<section class="ap-container nl-editorial"><div><span class="nl-capsule">PURE DOCUMENTATION</span><h2>KNOW WHAT’S<br>IN YOUR ORDER.</h2><p>Explore certificates of analysis by product, strength, laboratory or report ID.</p><p class="ap-fine">Request the certificate for your fulfilled lot when you order.</p></div><div class="nl-doc-art"><span>PURE</span><strong>Certificate<br>of Analysis</strong><div class="nl-doc-purity"><span class="nl-doc-purity-check" aria-hidden="true">✓</span><span><b>Testing reports</b><small>See available product documentation</small></span></div><div><b>Retatrutide</b> / 60mg</div><hr><div><b>Janoshik</b> / Report ID</div><hr><div><b>PURE</b> / Lot</div><a class="ap-button" href="/coas">View COAS</a></div></section>${homeResearchCallout()}${homeFAQ()}${homeEmailUpdates()}<a class="pure-floating-shop" href="/shop">Shop Now</a>`;
+ return `${homeHero()}<section class="ap-container nl-featured"><div class="ap-section-head"><div><span class="ap-eyebrow">THE COLLECTION</span><h2 class="pure-home-featured-title">Featured Compounds</h2></div><div class="nl-carousel-controls"><button data-carousel="-1" aria-label="Previous products">‹</button><button data-carousel="1" aria-label="Next products">›</button></div></div><div class="nl-carousel" id="nl-featured">${featured.map(p=>card(p,{featured:true,quickAdd:true})).join('')}</div><div class="nl-center"><a class="ap-button" href="/shop">View All Products</a></div></section>${homeBulkPromo(featured)}${homePackaging()}<section class="ap-container nl-editorial"><div><span class="nl-capsule">PURE DOCUMENTATION</span><h2>KNOW WHAT’S<br>IN YOUR ORDER.</h2><p>Explore certificates of analysis by product, strength, laboratory or report ID.</p><p class="ap-fine">Request the certificate for your fulfilled lot when you order.</p></div><div class="nl-doc-art"><span>PURE</span><strong>Certificate<br>of Analysis</strong><div class="nl-doc-purity"><span class="nl-doc-purity-check" aria-hidden="true">✓</span><span><b>Testing reports</b><small>See available product documentation</small></span></div><div><b>Retatrutide</b> / 60mg</div><hr><div><b>Janoshik</b> / Report ID</div><hr><div><b>PURE</b> / Lot</div><a class="ap-button" href="/coas">View COAS</a></div></section>${homeResearchCallout()}${homeFAQ()}${homeEmailUpdates()}<a class="pure-floating-shop" href="/shop">Shop Now</a>`;
 }
  function catalogResults(){
   const lowest=p=>Math.min(...(state.group==='Offers'?eligibleSizes(p):p.variants).map(v=>v.price));
@@ -390,6 +353,13 @@
  }
  window.addEventListener('pure:campaign',()=>{
   if(route()==='/shop'){renderCatalogResults();return;}
+  const hero=$('[data-pure-home-hero]');
+  if(hero&&hero.classList.contains('pure-bogo-home')!==Boolean(window.PureCampaign?.holiday)){
+   const restoreFocus=hero.contains(document.activeElement);
+   hero.outerHTML=homeHero();
+   if(restoreFocus)$('[data-pure-home-hero] :is(.pure-bogo-cta,.nl-primary)')?.focus({preventScroll:true});
+   syncHomeFloatingShop();
+  }
   for(const item of $$('#nl-featured .ap-product-card,.ap-related .ap-product-card')){
    const p=product(item.dataset.product);
    if(p)item.outerHTML=card(p,{featured:true,quickAdd:!!item.querySelector('.ap-catalog-actions')});
@@ -451,7 +421,19 @@
  function updateCompare(){const bar=$('#ap-compare-bar');if(!bar)return;bar.hidden=compared.length===0;bar.innerHTML=`${compared.length} selected <button class="ap-button ap-button-small" data-action="compare-open">Compare compounds ↗</button> <button class="ap-text-button" data-action="compare-clear">Clear</button>`;$$('[data-compare]').forEach(x=>x.checked=compared.includes(x.dataset.compare));}
  function renderCompare(){const rows=compared.map(product).filter(Boolean);$('#ap-compare-content').innerHTML=`<div class="ap-compare-grid" style="--cols:${rows.length||1}">${rows.map(p=>`<div><img src="${esc(image(p,selections[p.id]))}" alt="${esc(p.name)}"><h3>${esc(p.name)}</h3><p>${esc(p.group)}</p><p>${esc(p.blurb)}</p><p>${p.variants.map(v=>esc(v.size)+' · '+priceMarkup(v.price)).join('<br>')}</p><a class="ap-button ap-button-small" href="/product/${p.id}">View product ↗</a></div>`).join('')}</div>`;}
  function validReport(r){if(!r||r.status!=='verified'||r.publication_approved!==true||!product(r.product_id)||!r.lot||!r.report_id||!r.lab_name||!r.reviewer||!r.evidence_reference)return false;try{const u=new URL(r.document_url);return u.origin==='https://getpurelabs.com'&&!u.username&&!u.password;}catch{return false;}}
- function render(){const root=$('#ap-main');if(!root)return;const r=route();if(r==='/'||r==='/index'){root.innerHTML=home();mountHomeBulk(root);}else if(r==='/shop'){root.innerHTML=shop();renderCatalogResults();}else if(r.startsWith('/product/')){let id;try{id=decodeURIComponent(r.slice(9));}catch{id='';}root.innerHTML=detail(id);window.PureCampaign?.mountDispatch(root.querySelector('[data-pure-dispatch-cutoff]'));window.PureCampaign?.mountCountdown(root.querySelector('[data-pure-campaign-countdown]'));}else if(window.AltaWorkspace)window.AltaWorkspace.render(r,root);else root.innerHTML=heading('Research workspace','Loading your workspace…');translateShell();updateCompare();}
+ let homeSaleVisibility;
+ function syncHomeFloatingShop(){
+  homeSaleVisibility?.disconnect();
+  const sticky=$('.pure-floating-shop'),sale=$('[data-pure-sale-cta]');
+  if(!sticky||!sale||!window.IntersectionObserver){if(sticky)sticky.hidden=false;return;}
+  const hero=sale.closest('.pure-bogo-home');
+  homeSaleVisibility=new IntersectionObserver(([entry])=>{
+   sticky.hidden=entry.isIntersecting;
+   hero.classList.toggle('pure-sale-cta-visible',entry.isIntersecting);
+  });
+  homeSaleVisibility.observe(sale);
+ }
+ function render(){const root=$('#ap-main');if(!root)return;const r=route();if(r==='/'||r==='/index'){root.innerHTML=home();mountHomeBulk(root);syncHomeFloatingShop();}else if(r==='/shop'){root.innerHTML=shop();renderCatalogResults();}else if(r.startsWith('/product/')){let id;try{id=decodeURIComponent(r.slice(9));}catch{id='';}root.innerHTML=detail(id);window.PureCampaign?.mountDispatch(root.querySelector('[data-pure-dispatch-cutoff]'));window.PureCampaign?.mountCountdown(root.querySelector('[data-pure-campaign-countdown]'));}else if(window.AltaWorkspace)window.AltaWorkspace.render(r,root);else root.innerHTML=heading('Research workspace','Loading your workspace…');translateShell();updateCompare();}
  function translateShell(){$$('[data-ap-i18n]').forEach(el=>el.textContent=t(el.dataset.apI18n));}
  async function inquiry(payload){const response=await fetch('/api/customer-config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...payload,request_id:payload.request_id||crypto.randomUUID()})});let result;try{result=await response.json();}catch{throw Error('The inquiry service could not respond. Please try again or email support@getpurelabs.com.');}if(!response.ok||result.received!==true)throw Error(result.error||'Request not sent. Please try again.');return result;}
  window.AltaStore={catalog,groups,shopCategories,categoryOf,$,$$,esc,t,money,priceMarkup,image,product,card,heading,featureLinks,normalizeLines,addItems,adjustQuantity,exportLines,toast,read,write,inquiry,render,get cart(){return [...cart];},get saved(){return [...saved];},get selections(){return selections;},get reports(){return [...reports];},route};
