@@ -513,12 +513,44 @@ html:root body.ap-site.ap-account-site .rd-points .rd-balance-note{margin:12px 0
 @media(max-width:370px){html:root body.ap-site .nl-doc-edition{font-size:8px}html:root body.ap-site .nl-doc-bottom>a{width:100%;justify-content:center}}
 @media(prefers-reduced-motion:reduce){html:root body.ap-site .nl-editorial .nl-doc-art,html:root body.ap-site .nl-doc-bottom>a,html:root body.ap-site .pure-faq-cta{transition:none}}
 
-.pure-home-packaging { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center; margin-block: 42px; }
-.pure-home-packaging img { display: block; width: 100%; height: auto; aspect-ratio: 1.65; object-fit: cover; border-radius: 18px; }
+html:root body.ap-site .pure-home-dark-pill {
+  max-width: 100%;
+  border: 1px solid #3c3c3c;
+  background: #111;
+  color: #fff;
+  font-weight: 800;
+  letter-spacing: .1em;
+}
+.pure-home-volume-kicker {
+  margin: 0 auto 12px;
+  text-align: center;
+}
+.pure-home-packaging {
+  display: grid;
+  gap: clamp(16px, 3vw, 26px);
+  justify-items: center;
+  margin-block: clamp(38px, 6vw, 64px);
+  text-align: center;
+}
+.pure-home-packaging-copy .pure-home-dark-pill { margin-bottom: 14px; }
+.pure-home-packaging-media {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(8px, 2vw, 18px);
+  width: min(100%, 880px);
+}
+.pure-home-packaging-media img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+  border: 1px solid #e8e8e8;
+  border-radius: clamp(11px, 2vw, 18px);
+}
 .pure-home-packaging h2,.pure-home-close h2 { margin: 0 0 12px; font-size: clamp(1.8rem,3.2vw,3rem); line-height: 1.05; letter-spacing: -.04em; }
-.pure-home-packaging > div { text-align: center; }
-.pure-home-packaging h2 { font-weight: 900; text-wrap: balance; }
-.pure-home-packaging p { max-width: 35ch; margin: 0 auto 20px; line-height: 1.55; }
+.pure-home-packaging h2 { font-weight: 900; text-transform: uppercase; text-wrap: balance; }
+.pure-home-packaging p { max-width: 56ch; margin: 0 auto; line-height: 1.55; text-wrap: pretty; }
 .pure-home-close { text-align: center; border-top: 1px solid #ddd; padding-block: 42px 58px; }
 .pure-home-close > div { display: flex; gap: 18px; flex-wrap: wrap; justify-content: center; align-items: center; }
 #nl-featured .nl-featured-meta .ap-catalog-actions { grid-column: 1/-1; width: 100%; }
@@ -556,7 +588,6 @@ html:root body.ap-site.ap-account-site .rd-points .rd-balance-note{margin:12px 0
   }
 }
 @media(max-width:700px) {
-  .pure-home-packaging { grid-template-columns: 1fr; gap: 18px; }
   .pure-home-packaging h2 { font-size: clamp(1.25rem, 6vw, 2rem); }
   html:root body.ap-site .pure-faq-intro { min-height: auto; background: transparent; text-align: center; padding: 12px 0; }
   html:root body.ap-site .pure-faq-intro::before { content: none; }

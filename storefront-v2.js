@@ -172,7 +172,9 @@
   const active=products.find(p=>p.id===activeHomeBulkProduct)||products[0];
   const quantity=tiers.find(tier=>tier.min===homeBulkQuantity)?.min??tiers[0]?.min;
   const browse='<a class="pure-home-express-more" href="/bulk-orders" aria-label="View all bulk products">View all <span aria-hidden="true">→</span></a>';
-  return `<section class="ap-container pure-home-volume" aria-labelledby="pure-home-volume-title">
+  return `<div class="pure-home-volume-section">
+  <div class="pure-home-volume-kicker"><span class="nl-capsule pure-glow-pill pure-home-dark-pill">BULK ORDERS · SALE PRICING</span></div>
+  <section class="ap-container pure-home-volume" aria-labelledby="pure-home-volume-title">
     <header class="pure-home-volume-header"><h2 id="pure-home-volume-title">Bulk Orders</h2>${browse}</header>
     ${active&&quantity?`<form class="pure-home-express" data-home-bulk>
       <div class="pure-home-express-fields">
@@ -191,7 +193,7 @@
       </div>
       <p data-home-bulk-notice role="status"></p>
     </form>`:''}
-  </section>`;
+  </section></div>`;
  }
  function mountHomeBulk(root){
   const builder=root.querySelector('[data-home-bulk]');
@@ -256,8 +258,16 @@
  }
  function homePackaging(){
   return `<section class="ap-container pure-home-packaging" aria-labelledby="pure-packaging-title">
-    <img src="/assets/pure-packaging-studio.webp" alt="A PURE vial next to its black branded box" width="1344" height="816" loading="lazy">
-    <div><h2 id="pure-packaging-title">PACKAGING &amp; DELIVERY</h2><p>Each vial comes in its own rigid PURE-branded box with a magnetic closure. Choose your shipping option at checkout. We’ll email you tracking details once your order ships.</p><a class="ap-button" href="/shop">Shop now</a></div>
+    <header class="pure-home-packaging-copy">
+      <span class="nl-capsule pure-glow-pill pure-home-dark-pill">PURE PREMIUM PACKAGING</span>
+      <h2 id="pure-packaging-title">Every order ships in the box.</h2>
+      <p>A rigid magnetic-close case with a fitted insert that holds every vial in place. Sealed and protected from our lab to yours, included free with every order at no extra cost.</p>
+    </header>
+    <div class="pure-home-packaging-media">
+      <img src="/assets/pure-packaging-studio.webp" alt="A PURE vial next to its black branded box" width="1344" height="816" loading="lazy" decoding="async">
+      <img src="/assets/pure-four-vial-case.webp" alt="Mockup of the open PURE magnetic case with four branded vials seated in its fitted insert" width="1536" height="1024" loading="lazy" decoding="async">
+    </div>
+    <a class="ap-button" href="/shop">Shop now</a>
   </section>`;
  }
  function homeEmailUpdates(){

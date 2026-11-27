@@ -202,11 +202,16 @@ async function setup(route,campaign=null,quote=null,Observer=null){const errors=
    assert.doesNotMatch(card.textContent,/per unit|\(\d+\s*mg\)/i);
   }
   const bulk=d.querySelector('.pure-home-volume');
-  assert.equal(d.querySelector('.nl-featured').nextElementSibling,bulk,'bulk savings follow featured products');
+  assert.equal(d.querySelector('.nl-featured').nextElementSibling,bulk.parentElement,'bulk savings follow featured products');
+  assert.equal(bulk.previousElementSibling.querySelector('.pure-glow-pill').textContent,'BULK ORDERS · SALE PRICING');
   assert.equal(d.querySelector('[data-mx-membership-home]'),null);
   const testing=d.querySelector('.nl-editorial');
   assert.equal(testing.querySelector('.nl-capsule.pure-glow-pill').textContent,'PURE DOCUMENTATION');
-  assert.equal(d.querySelector('#pure-packaging-title').textContent,'PACKAGING & DELIVERY');
+  const packaging=d.querySelector('.pure-home-packaging');
+  assert.equal(packaging.querySelector('.pure-glow-pill').textContent,'PURE PREMIUM PACKAGING');
+  assert.equal(packaging.querySelector('h2').textContent,'Every order ships in the box.');
+  assert.equal(packaging.querySelector('p').textContent,'A rigid magnetic-close case with a fitted insert that holds every vial in place. Sealed and protected from our lab to yours, included free with every order at no extra cost.');
+  assert.deepEqual([...packaging.querySelectorAll('.pure-home-packaging-media img')].map(img=>img.getAttribute('src')),['/assets/pure-packaging-studio.webp','/assets/pure-four-vial-case.webp']);
   assert.deepEqual([...testing.querySelectorAll(':scope > div:first-child > p')].map(p=>p.textContent),['Request the certificate for your fulfilled lot when you order.']);
   const callout=testing.nextElementSibling;
   assert.ok(callout.matches('.pure-home-research'));

@@ -49,7 +49,7 @@ for(const file of fs.readdirSync(out,{recursive:true}).filter(f=>f.endsWith('.ht
   html=html.replace(/<link\b[^>]*href=["']\/pure-brand\.css[^"']*["'][^>]*>/gi,'');
   html=html.replace(/<link\b[^>]*href=["']https:\/\/fonts\.(?:googleapis|gstatic)\.com[^"']*["'][^>]*>/gi,'');
   const fontPreload=html.includes('href="/assets/fonts/archivo-latin-variable.woff"')?'':'<link rel="preload" href="/assets/fonts/archivo-latin-variable.woff" as="font" type="font/woff" crossorigin>';
-  html=html.replace('</head>',fontPreload+'<link rel="stylesheet" href="/pure-brand.css?v=20261127-centered-logout"></head>');
+  html=html.replace('</head>',fontPreload+'<link rel="stylesheet" href="/pure-brand.css?v=20261127-four-vial-packaging"></head>');
   html=html.replace(/<link\b[^>]*\brel=["'](?:(?:shortcut )?icon|apple-touch-icon)["'][^>]*>/gi,'');
   html=html.replace(/<meta\b[^>]*\bname=["'](?:theme-color|altapure-promo-end)["'][^>]*>/gi,'');
   if(path.basename(file).startsWith('admin-')){
@@ -119,6 +119,7 @@ for(const file of fs.readdirSync(out,{recursive:true}).filter(f=>f.endsWith('.ht
   html=html.replace(/\b(src|href)="\/((?:storefront-v2|conversion-ui|checkout-reference|readiness-ui)\.(?:js|css)|direct-checkout-client\.js)(?:\?[^"\n]*)?"/g,'$1="/$2?v=20261126-checkout-carousel"');
   html=html.replace(/\b(src|href)="\/((?:storefront-v2|workspace-v2)\.js|(?:storefront-v2|reference-ui|pure-bulk-layout)\.css)(?:\?[^"\n]*)?"/g,'$1="/$2?v=20261127-storefront-polish"');
   html=html.replace(/\b(src|href)="\/(storefront-v2\.(?:js|css))(?:\?[^"\n]*)?"/g,'$1="/$2?v=20261127-sticky-shop-motion"');
+  html=html.replace(/src="\/storefront-v2\.js(?:\?[^"\n]*)?"/g,'src="/storefront-v2.js?v=20261127-four-vial-packaging"');
   html=html.replace(/src="\/workspace-v2\.js(?:\?[^"\n]*)?"/g,'src="/workspace-v2.js?v=20261127-business-contact"');
   html=html.replace(/\b(src|href)="\/(membership-checkout\.js|checkout-reference\.(?:js|css))(?:\?[^"\n]*)?"/g,'$1="/$2?v=20261127-checkout-pure-white"');
   html=html.replace(/\b(src|href)="\/(checkout-reference\.(?:js|css))(?:\?[^"\n]*)?"/g,'$1="/$2?v=20261127-checkout-review-wrap"');
