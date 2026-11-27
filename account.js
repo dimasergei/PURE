@@ -1,27 +1,7 @@
 (()=>{const root=document.getElementById('account-root');document.getElementById('year').textContent=new Date().getFullYear();let auth,user,recovery=false;
-const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),money=(v,c='USD')=>new Intl.NumberFormat('en-US',{style:'currency',currency:(c||'USD').toUpperCase()}).format((Number(v)||0)/100),date=v=>v?new Intl.DateTimeFormat('en-US',{dateStyle:'medium',timeStyle:'short'}).format(new Date(v)):'Date unavailable',status=v=>String(v||'pending').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase()),msg=(v,b=false)=>'<div class="'+(b?'account-error':'account-message')+'" role="'+(b?'alert':'status')+'">'+esc(v)+'</div>',dis='<div class="account-disclaimer"><strong>Research use only.</strong> Products are supplied for controlled laboratory research only. They are not for human or veterinary use, ingestion, injection, diagnosis, treatment, or consumption.</div>',head=(h,s='')=>'<p class="account-eyebrow">PURE · Customer account</p><h1>'+h+'</h1>'+(s?'<p class="account-muted">'+s+'</p>':''),go=p=>location.assign(p),valid=e=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e),strong=p=>p.length>=12&&p.length<=128&&/[a-z]/.test(p)&&/[A-Z]/.test(p)&&/[0-9]/.test(p)&&/[^A-Za-z0-9]/.test(p);
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),money=(v,c='USD')=>new Intl.NumberFormat('en-US',{style:'currency',currency:(c||'USD').toUpperCase()}).format((Number(v)||0)/100),date=v=>v?new Intl.DateTimeFormat('en-US',{dateStyle:'medium',timeStyle:'short'}).format(new Date(v)):'Date unavailable',status=v=>String(v||'pending').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase()),msg=(v,b=false)=>'<div class="'+(b?'account-error':'account-message')+'" role="'+(b?'alert':'status')+'">'+esc(v)+'</div>',dis='<div class="account-disclaimer"><strong>Research use only.</strong> Products are supplied for controlled laboratory research only. They are not for human or veterinary use, ingestion, injection, diagnosis, treatment, or consumption.</div>',head=(h,s='')=>'<p class="account-eyebrow">PURE · Customer account</p><h1>'+h+'</h1>'+(s?'<p class="account-muted">'+s+'</p>':''),valid=e=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e),strong=p=>p.length>=12&&p.length<=128&&/[a-z]/.test(p)&&/[A-Z]/.test(p)&&/[0-9]/.test(p)&&/[^A-Za-z0-9]/.test(p);
 const liveAccountOrigin='https://getpurelabs.com';
-function collapseAccountNav(toggle){
- if(toggle?.getAttribute('aria-expanded')!=='true')return;
- toggle.setAttribute('aria-expanded','false');
- toggle.focus({preventScroll:true});
-}
-root.addEventListener('click',event=>{
- const toggle=event.target.closest('.account-nav')?.querySelector('.account-nav-toggle');
- if(!toggle)return;
- if(toggle.contains(event.target)){
-  toggle.setAttribute('aria-expanded',String(toggle.getAttribute('aria-expanded')==='false'));
- }else if(event.target.closest('.account-nav-options :is(a,button)')){
-  collapseAccountNav(toggle);
- }
-});
-root.addEventListener('keydown',event=>{
- if(event.key!=='Escape')return;
- const toggle=event.target.closest('.account-nav')?.querySelector('.account-nav-toggle[aria-expanded="true"]');
- if(!toggle)return;
- event.preventDefault();
- collapseAccountNav(toggle);
-});
+window.PureAccountNavigation?.bind(root);
 const googleClientId='259510881588-qk99i7meksolpbd3dpihclkt43ah5lov.apps.googleusercontent.com';
 let googleLibrary;
 function accountAuthOrigin(){
@@ -34,15 +14,46 @@ function accountReturnDestination(path){
  const search=query.toString();
  return path+(search?'?'+search:'');
 }
-async function start(){try{
+// Sign-in guards replace the loading page so Back returns to the previous screen.
+function go(path){
+ if(/^\/account\/login(?:\?|$)/.test(path))location.replace(path);
+ else location.assign(path);
+}
+let accountStartup,renderedUserId;
+function loadAccount(restored=false){
+ accountStartup??=start(restored).finally(()=>{accountStartup=null;});
+}
+async function start(restored){try{
  if(location.origin!==accountAuthOrigin()){
   const canonical=new URL(accountAuthOrigin());
   canonical.pathname=location.pathname;
   canonical.search=location.search;
-  return go(canonical.href);
+  return location.replace(canonical.href);
  }
- const r=await fetch('/api/customer-config',{cache:'no-store'}),c=await r.json();if(!r.ok)throw Error();auth=window.supabase.createClient(c.supabaseUrl,c.anonKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:'pkce'}});auth.auth.onAuthStateChange((e,s)=>{user=s?.user||null;if(e==='PASSWORD_RECOVERY'){recovery=true;reset(true);}});const {data}=await auth.auth.getSession();user=data.session?.user||null;if(user&&!valid(String(user.email||''))){await auth.auth.signOut();user=null;root.innerHTML=head('Email required')+msg('Google did not provide an email address, so we could not connect your orders. Please sign in with an account that has a verified email address.',true)+'<a href="/account/login">Return to sign in</a>';return;}route();}catch(e){root.innerHTML=head('Account unavailable')+msg('Customer accounts are temporarily unavailable. Please try again later.',true);}}
-function route(){const p=location.pathname.replace(/^\/my-account(?=\/|$)/,'/account').replace(/\/$/,'')||'/account';if(p==='/account/stack'||p==='/account/subscriptions')return go('/account/membership');if(p==='/account/invoices'){if(!user)return go('/account/login?returnTo='+encodeURIComponent(location.pathname+location.search));root.innerHTML=head('Invoices & manual orders')+accountNav(p)+'<section id="manual-invoices-root"></section>';document.getElementById('logout').onclick=logout;window.ManualCommerce.render(document.getElementById('manual-invoices-root'),auth,user);return;}if(p==='/account/requests'){if(!user)return go('/account/login?returnTo=%2Faccount%2Frequests');root.innerHTML=head('Your requests')+accountNav(p)+'<section id="ap-requests-panel"></section>';document.getElementById('logout').onclick=logout;window.AltaOperationsUI.renderRequests(document.getElementById('ap-requests-panel'),auth);return;}if(p==='/account/reset-password'&&(recovery||new URLSearchParams(location.search).get('type')==='recovery'))return reset(true);if(p==='/account/login')return login();if(p==='/account/signup')return signup();if(p==='/account/reset-password')return reset(false);if(p==='/account/profile'){if(!user)return go('/account/login');return profile();}if(p==='/account/tracking'){if(!user)return go('/account/login?returnTo=%2Faccount%2Ftracking');return tracking();}if(['/account/points','/account/store-credit','/account/partner','/account/membership'].includes(p)){if(!user)return go('/account/login?returnTo='+encodeURIComponent(accountReturnDestination(p)));return placeholder(p);}if(p==='/account/orders'||p.startsWith('/account/orders/')){if(!user)return go('/account/login?returnTo='+encodeURIComponent(location.pathname+location.search));return p==='/account/orders'?orders():detail(decodeURIComponent(p.slice('/account/orders/'.length)));}if(user)return overview();root.innerHTML=head('Your account','Sign in to view your order history and tracking, or create an account using the email address used at checkout.')+'<div class="account-tabs"><a href="/account/login">Sign in</a><a href="/account/signup">Create account</a><a href="/account/reset-password">Forgot password</a></div>'+googleOption()+'<div class="account-actions"><a class="pill pill-dark" href="/account/login">Sign in →</a><a class="pill pill-ghost" href="/account/signup">Create account</a></div>'+dis;bindGoogle();}
+ if(!auth){
+  const response=await fetch('/api/customer-config',{cache:'no-store'});
+  if(!response.ok)throw Error();
+  const config=await response.json();
+  auth=window.supabase.createClient(config.supabaseUrl,config.anonKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:'pkce'}});
+  auth.auth.onAuthStateChange((event,session)=>{
+   user=session?.user||null;
+   if(event==='PASSWORD_RECOVERY'){recovery=true;reset(true);}
+  });
+ }
+ const {data}=await auth.auth.getSession();
+ user=data.session?.user||null;
+ const userId=user?.id??null;
+ if(restored&&renderedUserId===userId&&!root.querySelector('[data-account-loading], #google-signin:disabled, #google-identity[inert], #login button:disabled, #signup button:disabled'))return;
+ if(user&&!valid(String(user.email||''))){
+  await auth.auth.signOut();
+  user=null;
+  root.innerHTML=head('Email required')+msg('Google did not provide an email address, so we could not connect your orders. Please sign in with an account that has a verified email address.',true)+'<a href="/account/login">Return to sign in</a>';
+  return;
+ }
+ renderedUserId=userId;
+ route();
+}catch(e){root.innerHTML=head('Account unavailable')+msg('Customer accounts are temporarily unavailable. Please try again later.',true);}}
+function route(){const p=location.pathname.replace(/^\/my-account(?=\/|$)/,'/account').replace(/\/$/,'')||'/account';if(p==='/account/stack'||p==='/account/subscriptions')return location.replace('/account/membership');if(p==='/account/invoices'){if(!user)return go('/account/login?returnTo='+encodeURIComponent(location.pathname+location.search));root.innerHTML=head('Invoices & manual orders')+accountNav(p)+'<section id="manual-invoices-root"></section>';document.getElementById('logout').onclick=logout;window.ManualCommerce.render(document.getElementById('manual-invoices-root'),auth,user);return;}if(p==='/account/requests'){if(!user)return go('/account/login?returnTo=%2Faccount%2Frequests');root.innerHTML=head('Your requests')+accountNav(p)+'<section id="ap-requests-panel"></section>';document.getElementById('logout').onclick=logout;window.AltaOperationsUI.renderRequests(document.getElementById('ap-requests-panel'),auth);return;}if(p==='/account/reset-password'&&(recovery||new URLSearchParams(location.search).get('type')==='recovery'))return reset(true);if(p==='/account/login')return login();if(p==='/account/signup')return signup();if(p==='/account/reset-password')return reset(false);if(p==='/account/profile'){if(!user)return go('/account/login');return profile();}if(p==='/account/tracking'){if(!user)return go('/account/login?returnTo=%2Faccount%2Ftracking');return tracking();}if(['/account/points','/account/store-credit','/account/partner','/account/membership'].includes(p)){if(!user)return go('/account/login?returnTo='+encodeURIComponent(accountReturnDestination(p)));return placeholder(p);}if(p==='/account/orders'||p.startsWith('/account/orders/')){if(!user)return go('/account/login?returnTo='+encodeURIComponent(location.pathname+location.search));return p==='/account/orders'?orders():detail(decodeURIComponent(p.slice('/account/orders/'.length)));}if(user)return overview();root.innerHTML=head('Your account','Sign in to view your order history and tracking, or create an account using the email address used at checkout.')+'<div class="account-tabs"><a href="/account/login">Sign in</a><a href="/account/signup">Create account</a><a href="/account/reset-password">Forgot password</a></div>'+googleOption()+'<div class="account-actions"><a class="pill pill-dark" href="/account/login">Sign in →</a><a class="pill pill-ghost" href="/account/signup">Create account</a></div>'+dis;bindGoogle();}
 function googleOption(){return '<div class="account-divider" aria-label="or"><span>or</span></div><div id="google-identity" class="google-identity-slot" hidden></div><button type="button" id="google-signin" class="google-button"><img class="pure-google-mark" src="/assets/payment-brands/google-g-clean.svg" width="23" height="23" alt="" aria-hidden="true"><span>Continue with Google</span></button><p id="google-error" class="google-error" role="alert" aria-live="polite"></p>';}
 function signInCallbackUrl(){
  const destination=new URLSearchParams(location.search).get('returnTo')||sessionStorage.getItem('ap-account-return');
@@ -164,4 +175,8 @@ async function tracking(){
  }catch(e){root.innerHTML=head('Shipment tracking')+msg('Shipment information is temporarily unavailable. Please try again.',true)+'<a href="/account/orders">Return to orders</a>';}
 }
 async function detail(number){root.innerHTML=head('Order details','Loading…');try{const d=await api(number),o=d.order,a=o.shipping_address||{},address=[o.shipping_name||a.name,a.line1,a.line2,[a.city,a.state,a.postal_code].filter(Boolean).join(', '),a.country].filter(Boolean).join('\n');root.innerHTML=head('Order '+esc(o.order_number),'Placed '+esc(date(o.created_at)))+accountNav('/account/orders')+'<div class="account-actions"><a href="/account/orders">← Back to orders</a></div><div class="account-grid"><div>Payment status<p class="account-status">'+esc(status(o.payment_status))+'</p></div><div>Fulfillment status<p class="account-status">'+esc(status(o.fulfillment_status))+'</p></div></div><section class="account-order"><h2>Items</h2><div class="account-items">'+lines(o,true)+'</div><p>Subtotal <strong>'+esc(money(o.subtotal_cents,o.currency))+'</strong></p><p>Shipping <strong>'+esc(money(o.shipping_cents,o.currency))+'</strong></p><p class="account-total">Total '+esc(money(o.total_cents,o.currency))+'</p></section><section class="account-order"><h2>Shipping address</h2><p class="account-address">'+esc(address||'No shipping address recorded.')+'</p></section><section class="account-order"><h2>Shipment tracking</h2><p>'+esc(o.tracking_carrier||'Carrier not assigned')+'</p><p>'+esc(o.tracking_number||'Tracking number not available')+'</p>'+(o.tracking_url?'<a href="'+esc(o.tracking_url)+'" target="_blank" rel="noopener noreferrer">Track shipment ↗</a>':'')+'</section>'+dis;document.getElementById('logout').onclick=logout;}catch(e){root.innerHTML=head('Order not found')+msg('Order not found.',true)+'<a href="/account/orders">Return to order history</a>';}}
-async function logout(){await auth.auth.signOut();user=null;go('/account');}start();})();
+async function logout(){await auth.auth.signOut();user=null;go('/account');}
+window.addEventListener('pageshow',event=>{
+ if(event.persisted&&/^\/(?:account|my-account)(?:\/|$)/.test(location.pathname))loadAccount(true);
+});
+loadAccount();})();

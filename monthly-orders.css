@@ -18,6 +18,35 @@
   width: min(1160px, calc(100% - clamp(28px, 6vw, 72px)));
 }
 
+.monthly-account-view :is(h1, #monthly-content, #monthly-status) {
+  text-align: center;
+}
+
+.monthly-account-view #monthly-content :is(.line, .actions) {
+  justify-content: center;
+}
+
+.monthly-account-view #monthly-content .line {
+  flex-wrap: wrap;
+  gap: .35rem .55rem;
+}
+
+.monthly-account-nav .account-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin: 0 0 24px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--monthly-border);
+}
+
+.monthly-account-nav .account-nav-options :is(a, button) {
+  padding-inline: 8px;
+  font-size: .8125rem;
+}
+
 .monthly-main :is(h1, h2, h3, p) {
   margin-top: 0;
 }
@@ -363,7 +392,7 @@
   font-weight: 750;
 }
 
-.monthly-main :is(button, .button) {
+.monthly-main :where(#monthly-content) :is(button, .button) {
   display: inline-flex;
   align-items: center;
   justify-content: center;

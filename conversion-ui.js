@@ -17,7 +17,32 @@
    const pending=active?null:data.membership_pending;
    const tier=active?.plan||'member',plan=config.plans[tier],name=window.PureMemberships.displayName(tier);
    const benefits=window.PureMemberships.benefits(config,tier),expires=dateLabel(active?.expires_at);
-   root.innerHTML=`<div class="cv-programs"><section class="cv-member-status cv-member-${tier==='elite'?'black':tier==='vip'?'white':'free'}"><div class="cv-program-heading"><span class="cv-program-kicker">YOUR MEMBERSHIP</span><span class="cv-program-badge">${active?'ACTIVE':'FREE ACCOUNT'}</span></div><h2>${esc(name)}</h2><p>${active?`Your paid benefits are active${expires?' through '+esc(expires):''}. Sign in at checkout to use your eligible member savings.`:'Your account brings your orders, tracking, points and store credit together. Choose a paid tier for more benefits.'}</p><div class="cv-member-metrics"><div><strong>${plan.discount_bps?plan.discount_bps/100+'%':'—'}</strong><span>${plan.discount_bps?'Eligible merchandise savings':'Paid tier savings available'}</span></div><div><strong>${plan.points_per_dollar||0}×</strong><span>Points per eligible $1</span></div><div><strong>${active?'Paid':'Free'}</strong><span>${active?'Current membership term':'No membership fee'}</span></div></div>${active?`<ul class="cv-member-benefits">${benefits.map(benefit=>`<li><span aria-hidden="true">✓</span><span>${esc(benefit.text)}${benefit.creditTerms?'<a class="mx-benefit-footnote" href="/membership-terms.html#pure-black-credit" aria-label="Read the PURE BLACK monthly credit terms"><span aria-hidden="true">†</span></a>':benefit.detail?'<small>'+esc(benefit.detail)+'</small>':''}</span></li>`).join('')}</ul>`:''}<div class="cv-program-actions"><a class="cv-program-primary" href="/shop">Shop with your account <span aria-hidden="true">↗</span></a><a class="cv-program-link" href="/account/points">View points & credit</a></div></section>${active?`<section class="cv-program-note"><h3>Your paid term</h3><p>Your benefits are available until ${esc(expires||'the end of your paid term')}. To continue, purchase a new term when this one ends.</p><a href="/membership-terms.html">Membership terms ↗</a></section><details class="cv-tier-options"><summary>Compare membership tiers <span aria-hidden="true">+</span></summary><div data-cv-memberships></div></details>`:'<section class="cv-tier-options"><h2>Choose your membership</h2><p class="cv-program-intro">Choose a monthly or annual term. Benefits start when your payment is confirmed; extend with another invoice at term end.</p><div data-cv-memberships></div></section>'}</div>`;
+   root.innerHTML=`<div class="cv-programs">
+    <section class="cv-member-status cv-member-${tier==='elite'?'black':tier==='vip'?'white':'free'}">
+     <div class="cv-member-summary">
+      <div class="cv-program-heading"><span class="cv-program-kicker">YOUR MEMBERSHIP</span><span class="cv-program-badge">${active?'ACTIVE':'FREE ACCOUNT'}</span></div>
+      <h2><button class="cv-member-toggle" type="button" aria-expanded="false" aria-controls="cv-member-details" aria-label="${esc(name)} membership details">${esc(name)}</button></h2>
+      <a class="cv-program-primary cv-member-shop" href="/shop" aria-label="Shop with your account">Shop</a>
+     </div>
+     <div class="cv-member-details" id="cv-member-details" hidden>
+      <p>${active?`Your paid benefits are active${expires?' through '+esc(expires):''}. Sign in at checkout to use your eligible member savings.`:'Your account brings your orders, tracking, points and store credit together. Choose a paid tier for more benefits.'}</p>
+      <div class="cv-member-metrics">
+       <div><strong>${plan.discount_bps?plan.discount_bps/100+'%':'—'}</strong><span>${plan.discount_bps?'Eligible merchandise savings':'Paid tier savings available'}</span></div>
+       <div><strong>${plan.points_per_dollar||0}×</strong><span>Points per eligible $1</span></div>
+       <div><strong>${active?'Paid':'Free'}</strong><span>${active?'Current membership term':'No membership fee'}</span></div>
+      </div>
+      ${active?`<ul class="cv-member-benefits">${benefits.map(benefit=>`<li><span aria-hidden="true">✓</span><span>${esc(benefit.text)}${benefit.creditTerms?'<a class="mx-benefit-footnote" href="/membership-terms.html#pure-black-credit" aria-label="Read the PURE BLACK monthly credit terms"><span aria-hidden="true">†</span></a>':benefit.detail?'<small>'+esc(benefit.detail)+'</small>':''}</span></li>`).join('')}</ul>`:''}
+      <div class="cv-program-actions"><a class="cv-program-link" href="/account/points">View points & credit</a></div>
+     </div>
+    </section>
+    ${active?`<section class="cv-program-note"><h3>Your paid term</h3><p>Your benefits are available until ${esc(expires||'the end of your paid term')}. To continue, purchase a new term when this one ends.</p><a href="/membership-terms.html">Membership terms ↗</a></section><details class="cv-tier-options"><summary>Compare membership tiers <span aria-hidden="true">+</span></summary><div data-cv-memberships></div></details>`:'<section class="cv-tier-options"><h2>Choose your membership</h2><p class="cv-program-intro">Choose a monthly or annual term. Benefits start when your payment is confirmed; extend with another invoice at term end.</p><div data-cv-memberships></div></section>'}
+   </div>`;
+   const toggle=root.querySelector('.cv-member-toggle'),details=root.querySelector('#cv-member-details');
+   toggle.addEventListener('click',()=>{
+    const expanded=details.hidden;
+    toggle.setAttribute('aria-expanded',String(expanded));
+    details.hidden=!expanded;
+   });
    if(pending){
     const pendingName=pending.name||window.PureMemberships.displayName(pending.plan),needsReview=pending.expired===true||pending.requires_review===true;
     const pendingExpiry=dateLabel(pending.expires_at)?new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'}).format(new Date(pending.expires_at)):null;
@@ -49,7 +74,7 @@
   return `<section class="ae-panel rd-referral" data-partner-links>
    <small>PARTNER DASHBOARD · ${esc(partner.status)}</small>
    <h2>Your referral link</h2>
-   <p>Choose the page your research audience will see. Copy a caption to include your commission disclosure.</p>
+   <p>Choose a destination. Copy the link or a caption with your commission disclosure.</p>
    <div class="rd-referral-fields">
     <label>Destination<select data-link-destination><option value="/">PURE homepage</option><option value="/shop">Full catalog</option><option value="/bulk-orders">Bulk order builder</option>${productOptions ? '<optgroup label="Products">'+productOptions+'</optgroup>' : ''}</select></label>
     ${bulkOptions ? `<label data-bulk-link-field hidden>Product and strength<select data-bulk-link-variant><option value="/bulk-orders">All bulk products</option>${bulkOptions}</select></label>` : ''}
@@ -58,7 +83,7 @@
    <input data-referral-url readonly aria-label="Your referral link">
    <div class="rd-referral-actions">
     <button type="button" class="ap-button" data-copy-link>Copy link</button>
-    <button type="button" class="ap-button secondary" data-copy-caption>Copy caption</button>
+    <button type="button" class="ap-button ap-button-secondary" data-copy-caption>Copy caption</button>
    </div>
    <details class="pure-partner-disclosure"><summary>Caption &amp; disclosure</summary>
     <textarea data-referral-caption aria-label="Referral caption" readonly rows="5"></textarea>
@@ -119,29 +144,186 @@
   update();
  }
 
+ function partnerMetrics(items){
+  return `<dl class="rd-stat-grid">${items.map(([label,value])=>`<div><dt>${esc(label)}</dt><dd>${esc(value)}</dd></div>`).join('')}</dl>`;
+ }
+
  function partnerActivity(stats){
   if(!stats)return '<section class="ae-panel"><h3>Last 30 days</h3><p>Partner activity is temporarily unavailable.</p></section>';
-  return `<section class="ae-panel"><h3>Last 30 days</h3><div class="rd-stat-grid">
-    <article><strong>${esc(stats.starts)}</strong><span>New link starts</span></article>
-    <article><strong>${esc(stats.paid_orders)}</strong><span>Paid orders</span></article>
-    <article><strong>${money(stats.merchandise_cents)}</strong><span>Commissionable sales · USD</span></article></div>
+  return `<section class="ae-panel"><h3>Last 30 days</h3>
+    ${partnerMetrics([['New link starts',stats.starts],['Paid orders',stats.paid_orders],['Commissionable sales · USD',money(stats.merchandise_cents)]])}
     <p>${esc(stats.first_orders)} first orders · ${esc(stats.repeat_orders)} repeat · ${esc(stats.delivered_orders)} delivered</p>
     <details><summary>How activity is counted</summary><p>Link counting began on ${esc(stats.tracking_since)} (UTC). A start counts when a referral link issues a fresh cookie. A new device or cleared cookie can count again. Privacy opt-outs and recognized automated visits are excluded.</p>
-    <p>Orders include link and code referrals, grouped by payment date in UTC. Reversals are excluded. Commissionable sales are the merchandise amount used to calculate commission.</p></details></section>`;
+    <p>Orders include link and code referrals, grouped by payment date in UTC. Reversals are excluded. Commissionable sales are the merchandise amount used to calculate commission.</p></details>
+   </section>`;
  }
- async function partner(root,auth){
+
+ function partnerCodes(codes,primaryCode,sharing,codeField){
+  return `<section class="ae-panel rd-partner-codes"><h3>Your referral codes</h3>
+   ${sharing?'<p>Use up to three codes. Each code tracks referrals to this account.</p>':''}
+   <div class="rd-code-list">${codes.map(({code})=>`<div><span><code>${esc(code)}</code>${code===primaryCode?'<small>Primary</small>':''}</span>${sharing?`<button type="button" data-copy="${esc(code)}" aria-label="Copy ${esc(code)}">Copy</button>`:''}</div>`).join('')}</div>
+   <p role="status" data-code-status></p>
+   ${sharing&&codes.length<3?`<form class="ap-form rd-code-form">${codeField}<button class="ap-button">Create code</button><p role="status"></p></form>`:''}
+  </section>`;
+ }
+
+ function partnerCommissions(summary,events){
+  return `<section class="ae-panel"><h3>Commission summary</h3>
+    ${partnerMetrics([['Total commission',money(summary.earned_cents||0)],['Eligible for payout',money(summary.eligible_cents||0)],['Paid',money(summary.paid_cents||0)]])}
+    ${partnerMetrics([['First-order commission','40%'],['Repeat-order commission','10%'],['Lifetime orders incl. reversals',summary.orders||0]])}
+   </section>
+   <section class="ae-panel"><h3>Referral activity</h3>
+    ${events.length?`<div class="rd-table"><table><thead><tr><th scope="col">Order</th><th scope="col">Commission</th><th scope="col">Status</th></tr></thead>
+      <tbody>${events.map(event=>`<tr><td>${esc(event.invoice_id.slice(0,8).toUpperCase())}</td><td>${money(event.amount_cents)} (${event.rate_bps/100}%)</td><td>${esc(event.status)}</td></tr>`).join('')}</tbody></table></div>`:
+      '<div class="rd-empty"><strong>No commissions yet</strong><p>Verified referred orders appear here after payment.</p></div>'}
+   </section>`;
+ }
+
+ function partnerWallet(d,summary,notice){
+  return `<section class="ae-panel"><h3>Payout balances</h3>
+    ${partnerMetrics([['Accruing / on hold',money(summary.pending_cents||0)],['Eligible for payout',money(summary.eligible_cents||0)],['Total paid',money(summary.paid_cents||0)]])}
+   </section>
+   <section class="ae-panel"><h3>Payout method</h3>
+    ${d.bank?`<p>Direct deposit · ${esc(d.bank.bank_name)} · ${esc(d.bank.account_type)} ending in ${esc(d.bank.last4)}</p>`:'<p>Add your US bank details to receive partner commissions.</p>'}
+    <p role="status">${esc(notice)}</p>
+    ${d.bank_setup_available?'':'<p>Secure bank setup is temporarily unavailable.</p>'}
+    <details><summary>${d.bank?'Change payout details':'Set up payout details'}</summary>
+     <form class="ap-form rd-bank-form">
+      <div class="rd-bank-fields">
+       <label>Name on bank account<input name="holder" maxlength="120" required autocomplete="name"></label>
+       <label>Phone<input name="phone" maxlength="40" minlength="7" required type="tel" autocomplete="tel"></label>
+       <label>Bank name<input name="bank_name" maxlength="120" required></label>
+       <label>Account type<select name="account_type"><option value="checking">Checking</option><option value="savings">Savings</option></select></label>
+       <input type="hidden" name="country" value="US">
+       <label class="rd-bank-address">Account holder address<input name="address" maxlength="300" minlength="5" required autocomplete="street-address"></label>
+       <label class="rd-bank-address">Routing number<input name="routing_number" inputmode="numeric" pattern="[0-9]{9}" maxlength="9" required autocomplete="off"></label>
+       <label>Account number<input name="account_number" type="password" inputmode="numeric" pattern="[0-9]{4,17}" maxlength="17" required autocomplete="off"></label>
+       <label>Confirm account number<input name="confirm_account" type="password" inputmode="numeric" pattern="[0-9]{4,17}" maxlength="17" required autocomplete="off"></label>
+      </div>
+      <label class="ap-checkbox-label"><input name="authorized" type="checkbox" required> I confirm that I control this account and authorize PURE to use these details for partner commission deposits.</label>
+      <p class="dc-note">Bank details are encrypted and displayed with only the last four account digits. Saving does not initiate a transfer or debit. For a bank outside the US, contact support for payout setup.</p>
+      <button class="ap-button" ${d.bank_setup_available?'':'disabled data-unavailable="true"'}>Save payout details</button>
+      <p role="status"></p>
+     </form>
+    </details>
+   </section>
+   <section class="ae-panel"><h3>Payout schedule</h3><p>Monthly manual payouts, minimum $100. Delivered orders become eligible on the first day of the following month (UTC). Refunded commissions reverse; refunds after payout offset later earnings.</p><a href="/partner-terms.html">Program terms →</a></section>`;
+ }
+
+ const partnerTabs=[['overview','Overview'],['commissions','Commissions'],['wallet','Wallet']];
+
+ function mountPartnerTabs(root){
+  const tabs=[...root.querySelectorAll('[data-partner-tab]')];
+  const panels=[...root.querySelectorAll('[data-partner-panel]')];
+
+  function select(index){
+   tabs.forEach((tab,i)=>{
+    tab.setAttribute('aria-selected',String(i===index));
+    tab.tabIndex=i===index?0:-1;
+    panels[i].hidden=i!==index;
+   });
+  }
+  tabs.forEach((tab,index)=>{
+   tab.onclick=()=>select(index);
+   tab.onkeydown=event=>{
+    let next;
+    switch(event.key){
+     case 'ArrowLeft':next=(index+tabs.length-1)%tabs.length;break;
+     case 'ArrowRight':next=(index+1)%tabs.length;break;
+     case 'Home':next=0;break;
+     case 'End':next=tabs.length-1;break;
+     default:return;
+    }
+    event.preventDefault();
+    select(next);
+    tabs[next].focus();
+   };
+  });
+ }
+
+ async function partner(root,auth,activeTab='overview',notice=''){
   root.textContent='Loading your partner dashboard…';
-  try{const d=await request('partner=dashboard',null,auth);
+  try{
+   const d=await request('partner=dashboard',null,auth);
    const codeField='<label>Choose your referral code<input name="code" maxlength="24" minlength="3" pattern="[A-Za-z0-9][A-Za-z0-9_-]{2,23}" placeholder="YOURNAME" required autocomplete="off"><small>3–24 letters, numbers, hyphens or underscores.</small></label>';
-   if(!d.partner){root.innerHTML=`<section class="ae-panel"><h2>Become a PURE partner</h2><p>Join free, choose your code and receive a referral link immediately. No application review.</p><p>Earn 40% on eligible first orders and 10% on future orders.</p><form class="ap-form rd-partner-form">${codeField}<label class="ap-checkbox-label"><input type="checkbox" required> I accept the <a href="/partner-terms.html" target="_blank" rel="noopener">partner terms</a>.</label><button class="ap-button">Join and Get My Code</button><p role="status"></p></form></section>`;root.querySelector('form').onsubmit=async e=>{e.preventDefault();const f=e.target,b=f.querySelector('button');b.disabled=true;try{await request('partner=dashboard',{action:'join',code:f.elements.code.value,accepted:true,terms_version:d.terms.version},auth);await partner(root,auth);}catch(err){f.querySelector('[role=status]').textContent=err.message;b.disabled=false;}};return;}
-   const codes=d.codes?.length?d.codes:[{code:d.partner.code}],summary=d.summary||{},sharing=d.partner.status==='active';
-   root.innerHTML=`${referralTools(d.partner,codes)}<nav class="ae-subnav rd-partner-tabs" aria-label="Partner dashboard"><button type="button" data-partner-tab="overview" aria-selected="true">Overview</button><button type="button" data-partner-tab="commissions">Commissions</button><button type="button" data-partner-tab="wallet">Wallet</button></nav><section data-partner-panel="overview"><section class="ae-panel"><h3>Your referral codes</h3>${sharing?'<p>Use up to three codes. Each code tracks referrals to this account.</p>':''}<div class="rd-code-list">${codes.map(c=>`<div><code>${esc(c.code)}</code>${c.code===d.partner.code?'<small>PRIMARY</small>':''}${sharing?`<button type="button" data-copy="${esc(c.code)}">Copy</button>`: ''}</div>`).join('')}</div>${sharing&&codes.length<3?`<form class="ap-form rd-code-form">${codeField}<button class="ap-button">Create code</button><p role="status"></p></form>`:''}</section>${partnerActivity(d.performance)}<div class="rd-stat-grid"><article><strong>40%</strong><span>First-order commission</span></article><article><strong>10%</strong><span>Repeat-order commission</span></article><article><strong>${summary.orders||0}</strong><span>Lifetime orders incl. reversals</span></article></div><div class="cv-partner-metrics"><article><small>Total commission</small><strong>${money(summary.earned_cents||0)}</strong></article><article><small>Eligible for payout</small><strong>${money(summary.eligible_cents||0)}</strong></article><article><small>Paid</small><strong>${money(summary.paid_cents||0)}</strong></article></div></section><section data-partner-panel="commissions" hidden><section class="ae-panel"><h3>Referral activity</h3>${d.events.length?'<div class="rd-table"><table><thead><tr><th>Order</th><th>Commission</th><th>Status</th></tr></thead><tbody>'+d.events.map(e=>`<tr><td>${esc(e.invoice_id.slice(0,8).toUpperCase())}</td><td>${money(e.amount_cents)} (${e.rate_bps/100}%)</td><td>${esc(e.status)}</td></tr>`).join('')+'</tbody></table></div>':'<div class="rd-empty"><h3>No commissions yet</h3><p>Verified referred orders appear here after payment.</p></div>'}</section></section><section data-partner-panel="wallet" hidden><div class="rd-stat-grid"><article><strong>${money(summary.pending_cents||0)}</strong><span>Accruing / on hold</span></article><article><strong>${money(summary.eligible_cents||0)}</strong><span>Eligible for payout</span></article><article><strong>${money(summary.paid_cents||0)}</strong><span>Total paid</span></article></div><section class="ae-panel"><h3>Payout method</h3>${d.bank?`<p>Direct deposit · ${esc(d.bank.bank_name)} · ${esc(d.bank.account_type)} ending in ${esc(d.bank.last4)}</p>`:'<p>Add your US bank details to receive partner commissions.</p>'}<details ${d.bank?'':'open'}><summary>${d.bank?'Change payout details':'Set up payout details'}</summary><form class="ap-form rd-bank-form"><div class="ae-fields"><label>Name on bank account<input name="holder" maxlength="120" required autocomplete="name"></label><label>Phone<input name="phone" maxlength="40" minlength="7" required type="tel" autocomplete="tel"></label><label>Bank name<input name="bank_name" maxlength="120" required></label><label>Account type<select name="account_type"><option value="checking">Checking</option><option value="savings">Savings</option></select></label></div><input type="hidden" name="country" value="US"><label>Account holder address<input name="address" maxlength="300" minlength="5" required autocomplete="street-address"></label><div class="ae-fields"><label>Routing number<input name="routing_number" inputmode="numeric" pattern="[0-9]{9}" maxlength="9" required autocomplete="off"></label><label>Account number<input name="account_number" type="password" inputmode="numeric" pattern="[0-9]{4,17}" maxlength="17" required autocomplete="off"></label><label>Confirm account number<input name="confirm_account" type="password" inputmode="numeric" pattern="[0-9]{4,17}" maxlength="17" required autocomplete="off"></label></div><label class="ap-checkbox-label"><input name="authorized" type="checkbox" required> I confirm that I control this account and authorize PURE to use these details for partner commission deposits.</label><p class="dc-note">Bank details are encrypted and displayed with only the last four account digits. Saving does not initiate a transfer or debit. For a bank outside the US, contact support for payout setup.</p><button class="ap-button" ${d.bank_setup_available?'':'disabled data-unavailable="true"'}>Save payout details</button><p role="status">${d.bank_setup_available?'':'Secure bank setup is temporarily unavailable.'}</p></form></details></section><section class="ae-panel"><h3>Payout schedule</h3><p>Monthly manual payouts, minimum $100. Delivered orders become eligible on the first day of the following month (UTC). Refunded commissions reverse; refunds after payout offset later earnings.</p><a href="/partner-terms.html">Program terms →</a></section></section>`;
+   if(!d.partner){
+    root.innerHTML=`<section class="ae-panel"><h2>Become a PURE partner</h2><p>Join free, choose your code and receive a referral link immediately. No application review.</p><p>Earn 40% on eligible first orders and 10% on future orders.</p><form class="ap-form rd-partner-form">${codeField}<label class="ap-checkbox-label"><input type="checkbox" required> I accept the <a href="/partner-terms.html" target="_blank" rel="noopener">partner terms</a>.</label><button class="ap-button">Join and Get My Code</button><p role="status"></p></form></section>`;
+    root.querySelector('form').onsubmit=async event=>{
+     event.preventDefault();
+     const form=event.target,button=form.querySelector('button');
+     button.disabled=true;
+     try{
+      await request('partner=dashboard',{action:'join',code:form.elements.code.value,accepted:true,terms_version:d.terms.version},auth);
+      await partner(root,auth);
+     }catch(error){
+      form.querySelector('[role=status]').textContent=error.message;
+      button.disabled=false;
+     }
+    };
+    return;
+   }
+
+   const codes=d.codes?.length?d.codes:[{code:d.partner.code}];
+   const summary=d.summary||{},sharing=d.partner.status==='active';
+   const panels={
+    overview:`${referralTools(d.partner,codes)}<div class="rd-partner-overview">${partnerCodes(codes,d.partner.code,sharing,codeField)}${partnerActivity(d.performance)}</div>`,
+    commissions:partnerCommissions(summary,d.events),
+    wallet:partnerWallet(d,summary,notice)
+   };
+   root.innerHTML=`<div class="rd-partner-dashboard">
+    <div class="rd-partner-tabs" role="tablist" aria-label="Partner dashboard">
+     ${partnerTabs.map(([id,label])=>`<button type="button" role="tab" id="rd-partner-tab-${id}" data-partner-tab="${id}" aria-controls="rd-partner-panel-${id}" aria-selected="${id===activeTab}" tabindex="${id===activeTab?0:-1}">${label}</button>`).join('')}
+    </div>
+    ${partnerTabs.map(([id])=>`<section role="tabpanel" tabindex="0" id="rd-partner-panel-${id}" data-partner-panel="${id}" aria-labelledby="rd-partner-tab-${id}"${id===activeTab?'':' hidden'}>${panels[id]}</section>`).join('')}
+   </div>`;
+   mountPartnerTabs(root);
    mountReferralTools(root,d.partner.code);
-   const show=id=>{root.querySelectorAll('[data-partner-panel]').forEach(x=>x.hidden=x.dataset.partnerPanel!==id);root.querySelectorAll('[data-partner-tab]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.partnerTab===id)));};root.querySelectorAll('[data-partner-tab]').forEach(b=>b.onclick=()=>show(b.dataset.partnerTab));
-   root.querySelectorAll('[data-copy]').forEach(b=>b.onclick=async()=>{try{await navigator.clipboard.writeText(b.dataset.copy);b.textContent='Copied';}catch{root.querySelector('[role=status]').textContent='Select the text and copy it manually.';}});
-   const codesForm=root.querySelector('.rd-code-form');if(codesForm)codesForm.onsubmit=async e=>{e.preventDefault();const b=codesForm.querySelector('button');b.disabled=true;try{await request('partner=dashboard',{action:'add_code',code:codesForm.elements.code.value},auth);await partner(root,auth);}catch(err){codesForm.querySelector('[role=status]').textContent=err.message;b.disabled=false;}};
-   const bank=root.querySelector('.rd-bank-form');bank.onsubmit=async e=>{e.preventDefault();const b=bank.querySelector('button');b.disabled=true;try{await request('partner=dashboard',{...Object.fromEntries(new FormData(bank)),action:'save_bank',authorized:bank.elements.authorized.checked},auth);bank.reset();await partner(root,auth);root.querySelector('[data-partner-tab=wallet]').click();root.querySelector('.rd-bank-form [role=status]').textContent='Payout details saved securely.';}catch(err){bank.querySelector('[role=status]').textContent=err.message;b.disabled=false;}};
-  }catch(e){root.textContent=e.message;}
+
+   const codeStatus=root.querySelector('[data-code-status]');
+   root.querySelectorAll('[data-copy]').forEach(button=>button.onclick=async()=>{
+    try{
+     await navigator.clipboard.writeText(button.dataset.copy);
+     codeStatus.textContent='Referral code copied.';
+    }catch{
+     codeStatus.textContent='Select the code and copy it manually.';
+    }
+   });
+
+   const codesForm=root.querySelector('.rd-code-form');
+   if(codesForm){
+    codesForm.onsubmit=async event=>{
+     event.preventDefault();
+     const button=codesForm.querySelector('button');
+     button.disabled=true;
+     try{
+      await request('partner=dashboard',{action:'add_code',code:codesForm.elements.code.value},auth);
+      await partner(root,auth);
+     }catch(error){
+      codesForm.querySelector('[role=status]').textContent=error.message;
+      button.disabled=false;
+     }
+    };
+   }
+
+   const bank=root.querySelector('.rd-bank-form');
+   bank.onsubmit=async event=>{
+    event.preventDefault();
+    const button=bank.querySelector('button');
+    if(button.disabled)return;
+    button.disabled=true;
+    try{
+     await request('partner=dashboard',{...Object.fromEntries(new FormData(bank)),action:'save_bank',authorized:bank.elements.authorized.checked},auth);
+     bank.reset();
+     await partner(root,auth,'wallet','Payout details saved securely.');
+     root.querySelector('[data-partner-tab=wallet]')?.focus();
+    }catch(error){
+     bank.querySelector('[role=status]').textContent=error.message;
+     button.disabled=false;
+    }
+   };
+  }catch(error){
+   root.textContent=error.message;
+  }
  }
  let campaignRequest;
  let holidayOffer=null;

@@ -66,7 +66,7 @@ test('public standalone checkout and separate subscription links are removed',()
  assert.doesNotMatch(shell,/<a href="\/research-builder">/);
  assert.match(shell,/href="\/memberships"/);
  const account=fs.readFileSync('public-build/account.js','utf8');
- const tabSource=account.slice(account.indexOf('function accountNav'),account.indexOf('async function overview'));
+ const tabSource=fs.readFileSync('public-build/account-navigation.js','utf8');
  assert.doesNotMatch(tabSource,/Member Stack|\/account\/stack/);
  assert.match(tabSource,/Membership/);
  assert.doesNotMatch(account,/Auto-Stack™/);

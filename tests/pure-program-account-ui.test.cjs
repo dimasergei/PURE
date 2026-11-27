@@ -26,6 +26,27 @@ test('active WHITE account shows the paid term and benefits without another purc
   assert.ok(env.root.querySelector('a[href="/membership-terms.html"]'));
   env.dom.window.close();
 });
+test('the membership summary starts collapsed and keeps its shop action available',async()=>{
+  const env=setup({membership:null,terms:{conversion:config}});
+  try{
+    await env.w.ConversionUI.mountMembership(env.root,auth);
+    const card=env.root.querySelector('.cv-member-status');
+    const toggle=card.querySelector('button[aria-expanded]');
+    const details=env.w.document.getElementById(toggle.getAttribute('aria-controls'));
+    assert.equal(toggle.textContent,'MEMBER');
+    assert.equal(toggle.getAttribute('aria-expanded'),'false');
+    assert.ok(details.hidden);
+    assert.ok(card.querySelector('.cv-member-summary a[href="/shop"]'));
+    assert.ok(details.querySelector('.cv-member-metrics'));
+    assert.ok(details.querySelector('a[href="/account/points"]'));
+    toggle.click();
+    assert.equal(toggle.getAttribute('aria-expanded'),'true');
+    assert.equal(details.hidden,false);
+    toggle.click();
+    assert.equal(toggle.getAttribute('aria-expanded'),'false');
+    assert.equal(details.hidden,true);
+  }finally{env.w.close();}
+});
 test('active BLACK account discloses credit qualification, BAC gift and priority',async()=>{
   const env=setup({membership:{plan:'elite',expires_at:'2099-12-31T00:00:00Z'},terms:{conversion:config}});
   await env.w.ConversionUI.mountMembership(env.root,auth);
@@ -83,6 +104,7 @@ function setupMonthly(payload,{ok=true}={}) {
   const source=fs.readFileSync('monthly-orders.js','utf8');
   const dom=new JSDOM(html,{url:'https://pure.example/monthly-orders',runScripts:'outside-only'});
   const w=dom.window,calls=[];
+  w.eval(fs.readFileSync('account-navigation.js','utf8'));
   w.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:{
     access_token:'fixture_account_token_123456',user:{id:'fixture-owner',email:'owner@example.test'}
   }}})}})};
@@ -112,10 +134,14 @@ test('account with no monthly invoices states that no plans exist',async()=>{
   const env=setupMonthly({plans:[],builder_terms:'pure-monthly-invoice-v2'});
   try {
     await env.render();
-    assert.equal(env.root.querySelector('h2').textContent,'Your invoice plans');
-    assert.match(env.root.textContent,/You have no monthly invoice plans/);
+    assert.equal(env.root.querySelector('h2').textContent,'Your subscription plans');
+    assert.match(env.root.textContent,/You have no subscription plans/);
+    const menu=env.w.document.querySelector('.monthly-account-nav');
+    assert.equal(menu.hidden,false);
+    assert.equal(menu.querySelector('[aria-current="page"]').textContent,'Subscription');
+    assert.equal(menu.querySelector('.account-nav-toggle').getAttribute('aria-expanded'),'false');
     assert.equal(env.root.querySelector('article'),null);
-    assert.ok(env.root.querySelector('a[href="/shop"]'));
+    assert.equal(env.root.querySelector('a.button[href="/subscribe-and-save"]').textContent,'Subscribe & Save');
     assert.equal(env.calls[1].url,'/api/customer-config?repeat_orders=1');
     assert.equal(env.calls[1].options.method,'GET');
     assert.equal(env.calls[1].options.cache,'no-store');

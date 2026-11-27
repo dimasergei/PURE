@@ -208,7 +208,7 @@ html:root body.ap-site .nl-bulk-faq { padding-top: 0; padding-bottom: var(--pure
 /* PURE account: understated tab underline instead of filled selection boxes. */
 .account-nav-toggle { display: none; }
 .account-nav-options { display: contents; }
-html:root body.ap-site.ap-account-site .account-card nav.account-nav :is(a,.account-nav-logout){
+html:root body.ap-site :is(.ap-account-site .account-card, .monthly-account-nav) nav.account-nav :is(a,.account-nav-logout){
   position:relative;
   display:inline-flex;
   align-items:center;
@@ -227,7 +227,7 @@ html:root body.ap-site.ap-account-site .account-card nav.account-nav :is(a,.acco
   line-height:1.3;
   transition:color .2s ease;
 }
-html:root body.ap-site.ap-account-site .account-card nav.account-nav :is(a,.account-nav-logout)::after{
+html:root body.ap-site :is(.ap-account-site .account-card, .monthly-account-nav) nav.account-nav :is(a,.account-nav-logout)::after{
   content:"";
   position:absolute;
   left:8px;
@@ -240,24 +240,32 @@ html:root body.ap-site.ap-account-site .account-card nav.account-nav :is(a,.acco
   transition:transform .22s ease;
   pointer-events:none;
 }
-html:root body.ap-site.ap-account-site .account-card nav.account-nav a[aria-current=page],
-html:root body.ap-site.ap-account-site .account-card nav.account-nav a.active,
-html:root body.ap-site.ap-account-site .account-card nav.account-nav :is(a,.account-nav-logout):hover,
-html:root body.ap-site.ap-account-site .account-card nav.account-nav :is(a,.account-nav-logout):focus-visible{
+html:root body.ap-site :is(.ap-account-site .account-card, .monthly-account-nav) nav.account-nav a[aria-current=page],
+html:root body.ap-site :is(.ap-account-site .account-card, .monthly-account-nav) nav.account-nav a.active,
+html:root body.ap-site :is(.ap-account-site .account-card, .monthly-account-nav) nav.account-nav :is(a,.account-nav-logout):hover,
+html:root body.ap-site :is(.ap-account-site .account-card, .monthly-account-nav) nav.account-nav :is(a,.account-nav-logout):focus-visible{
   color:#111!important;
   -webkit-text-fill-color:#111!important;
   background:transparent!important;
   box-shadow:none!important;
 }
-html:root body.ap-site.ap-account-site .account-card nav.account-nav a[aria-current=page]::after,
-html:root body.ap-site.ap-account-site .account-card nav.account-nav a.active::after,
-html:root body.ap-site.ap-account-site .account-card nav.account-nav :is(a,.account-nav-logout):hover::after,
-html:root body.ap-site.ap-account-site .account-card nav.account-nav :is(a,.account-nav-logout):focus-visible::after{
+html:root body.ap-site :is(.ap-account-site .account-card, .monthly-account-nav) nav.account-nav a[aria-current=page]::after,
+html:root body.ap-site :is(.ap-account-site .account-card, .monthly-account-nav) nav.account-nav a.active::after,
+html:root body.ap-site :is(.ap-account-site .account-card, .monthly-account-nav) nav.account-nav :is(a,.account-nav-logout):hover::after,
+html:root body.ap-site :is(.ap-account-site .account-card, .monthly-account-nav) nav.account-nav :is(a,.account-nav-logout):focus-visible::after{
   transform:scaleX(1);
 }
-html:root body.ap-site.ap-account-site .account-card nav.account-nav :is(a,.account-nav-logout):focus-visible{
+html:root body.ap-site :is(.ap-account-site .account-card, .monthly-account-nav) nav.account-nav :is(a,.account-nav-logout):focus-visible{
   outline:2px solid #111;
   outline-offset:3px;
+}
+html:root body.ap-site :is(.ap-account-site .account-card, .monthly-account-nav) nav.account-nav
+  :is(.account-nav-logout, .account-nav-logout:hover, .account-nav-logout:focus-visible) {
+  color: #a71924 !important;
+  -webkit-text-fill-color: currentColor !important;
+}
+html:root body.ap-site :is(.ap-account-site .account-card, .monthly-account-nav) nav.account-nav .account-nav-logout::after {
+  background: currentColor;
 }
 html:root body.ap-site.ap-account-site .account-card :is(.cv-program-primary,.ap-subscriptions-empty a.ap-button){
   display:inline-flex;
@@ -299,12 +307,12 @@ html:root body.ap-site.ap-auth-page .google-button img.pure-google-mark{
   flex:none;
 }
 @media(prefers-reduced-motion:reduce){
-  html:root body.ap-site.ap-account-site .account-card nav.account-nav :is(a,.account-nav-logout),
-  html:root body.ap-site.ap-account-site .account-card nav.account-nav :is(a,.account-nav-logout)::after{transition:none}
+  html:root body.ap-site :is(.ap-account-site .account-card, .monthly-account-nav) nav.account-nav :is(a,.account-nav-logout),
+  html:root body.ap-site :is(.ap-account-site .account-card, .monthly-account-nav) nav.account-nav :is(a,.account-nav-logout)::after{transition:none}
 }
 @media(max-width:800px){
-  html:root body.ap-site.ap-account-site .account-card nav.account-nav{scrollbar-width:thin;scroll-padding:16px}
-  html:root body.ap-site.ap-account-site .account-card nav.account-nav :is(a,.account-nav-logout){flex:none;white-space:nowrap;min-height:44px}
+  html:root body.ap-site :is(.ap-account-site .account-card, .monthly-account-nav) nav.account-nav{scrollbar-width:thin;scroll-padding:16px}
+  html:root body.ap-site :is(.ap-account-site .account-card, .monthly-account-nav) nav.account-nav :is(a,.account-nav-logout){flex:none;white-space:nowrap;min-height:44px}
 }
 
 /* Match the storefront display type, panels and controls across account tabs. */
@@ -359,7 +367,7 @@ html:root body.ap-site.ap-account-site:not(.ap-auth-page,.ap-checkout-page) .acc
 }
 
 html:root body.ap-site.ap-account-site:not(.ap-auth-page,.ap-checkout-page) .account-card .ap-button,
-html:root body.ap-site #monthly-main:not(:has(.monthly-checkout-layout)) :is(button,.button) {
+html:root body.ap-site #monthly-main:not(:has(.monthly-checkout-layout)) #monthly-content :is(button,.button) {
   min-height: 44px;
   border-radius: 999px;
   font-weight: 800;
@@ -368,7 +376,7 @@ html:root body.ap-site #monthly-main:not(:has(.monthly-checkout-layout)) :is(but
 }
 
 @media (max-width: 700px) {
-  html:root body.ap-site.ap-account-site .account-card nav.account-nav {
+  html:root body.ap-site :is(.ap-account-site .account-card, .monthly-account-nav) nav.account-nav {
     display: grid;
     grid-template-columns: repeat(3,minmax(0,1fr));
     gap: 4px;
@@ -376,13 +384,13 @@ html:root body.ap-site #monthly-main:not(:has(.monthly-checkout-layout)) :is(but
     padding-bottom: 4px;
   }
 
-  html:root body.ap-site.ap-account-site .account-card nav.account-nav:has(> .account-nav-toggle) {
+  html:root body.ap-site :is(.ap-account-site .account-card, .monthly-account-nav) nav.account-nav:has(> .account-nav-toggle) {
     margin-block: 0 16px;
     padding-bottom: 0;
     border-bottom: 0;
   }
 
-  html:root body.ap-site.ap-account-site .account-nav > .account-nav-toggle {
+  html:root body.ap-site .account-nav > .account-nav-toggle {
     grid-column: 1 / -1;
     display: flex;
     align-items: center;
@@ -413,7 +421,7 @@ html:root body.ap-site #monthly-main:not(:has(.monthly-checkout-layout)) :is(but
   .account-nav-toggle:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
   .account-nav-toggle[aria-expanded="false"] + .account-nav-options { display: none; }
 
-  html:root body.ap-site.ap-account-site .account-card nav.account-nav :is(a,.account-nav-logout) {
+  html:root body.ap-site :is(.ap-account-site .account-card, .monthly-account-nav) nav.account-nav :is(a,.account-nav-logout) {
     min-width: 0;
     margin: 0;
     padding: 6px 3px;

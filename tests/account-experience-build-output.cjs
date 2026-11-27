@@ -1,10 +1,12 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const read=f=>fs.readFileSync('public-build/'+f,'utf8');
-for(const file of ['account-experience.js','direct-checkout-client.js','account.js','workspace-v2.js'])new vm.Script(read(file),{filename:file});
-const account=read('account.js'),nav=account.slice(account.indexOf('function accountNav'),account.indexOf('async function overview'));
-for(const name of ['Overview','Orders','Membership','Profile','Partner','Support'])assert.ok(nav.includes("['"+name+"'"));
-for(const name of ['Member Stack','Points','Store Credit','Tracking','Historical orders','Subscriptions','Rewards'])assert.ok(!nav.includes("['"+name+"'"));
+for(const file of ['account-navigation.js','account-experience.js','direct-checkout-client.js','account.js','workspace-v2.js'])new vm.Script(read(file),{filename:file});
+const account=read('account.js');
+assert.match(account,/function accountNav\(active\)\{return window\.PureAccountNavigation\.render\(active\);\}/);
+assert.match(read('account.html'),/account-navigation\.js/);
+assert.match(read('monthly-orders.html'),/account-navigation\.js/);
+assert.match(read('monthly-orders.js'),/PureAccountNavigation\.render\('\/monthly-orders'\)/);
 assert.match(account,/AccountExperience\.profile/);assert.doesNotMatch(account,/AccountExperience\.membership/);assert.match(account,/AccountExperience\.orders/);
 assert.match(account,/account\/purchases\?view=tracking/);assert.match(account,/account\/purchases\?view=history/);
 assert.match(read('workspace-v2.js'),/Partner inquiry<\/h2>\$\{inquiryForm\('partner'\)\}/);

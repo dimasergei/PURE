@@ -14,10 +14,13 @@ test('the account hover menu has four destinations and the dashboard retains Mem
   assert.deepEqual(links,[['Overview','/my-account'],['Orders','/account/purchases'],['Track','/track-order'],['Profile','/account/profile']]);
   page.window.close();
  }
- const source=read('public-build/account.js');
- const nav=source.slice(source.indexOf('function accountNav'),source.indexOf('async function overview'));
- assert.ok(nav.includes("['Membership','/account/membership']"));
- assert.doesNotMatch(nav,/Member Stack|\/account\/stack/);
+ const {window}=new JSDOM('',{runScripts:'outside-only'});
+ window.eval(read('public-build/account-navigation.js'));
+ window.document.body.innerHTML=window.PureAccountNavigation.render('/account/membership');
+ const nav=window.document.querySelector('.account-nav');
+ assert.equal(nav.querySelector('[aria-current="page"]').getAttribute('href'),'/account/membership');
+ assert.equal(nav.querySelector('a[href="/account/stack"]'),null);
+ window.close();
  const workspace=read('public-build/workspace-v2.js');
  assert.match(workspace,/if\(path==='\/account\/membership'\)return window\.ConversionUI\.mountMembership/);
  assert.doesNotMatch(workspace,/if\(path==='\/account\/stack'\)/);

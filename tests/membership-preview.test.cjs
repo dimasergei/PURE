@@ -12,12 +12,11 @@ const root=path.resolve(__dirname,'..');
 const read=file=>fs.readFileSync(path.join(root,file),'utf8');
 
 test('account navigation separates prepaid Membership from Subscription and marks the current location',()=>{
- const build=read('account-experience-build.cjs');
- const match=build.match(/`(function accountNav\(active\)\{[\s\S]*?\n)`\+s\.slice\(end\)/);
- assert.ok(match,'The account build exposes the generated navigation function.');
+ const globals={window:{}};
+ vm.runInNewContext(read('account-navigation.js'),globals);
+ const {render,bind}=globals.window.PureAccountNavigation;
  for(const route of ['/account/membership','/monthly-orders']){
-  const output=vm.runInNewContext(match[1]+'\naccountNav('+JSON.stringify(route)+');');
-  const {window}=new JSDOM(output);
+  const {window}=new JSDOM(render(route));
   try{
    const {document}=window;
    assert.equal(document.querySelectorAll('a[href="/account/membership"]').length,1);
@@ -28,7 +27,14 @@ test('account navigation separates prepaid Membership from Subscription and mark
    const toggle=document.querySelector('.account-nav-toggle');
    assert.equal(toggle.textContent,document.querySelector('a[aria-current="page"]').textContent);
    assert.equal(toggle.getAttribute('aria-expanded'),'false');
-   assert.equal(document.getElementById(toggle.getAttribute('aria-controls')).querySelectorAll('a').length,7);
+   const options=document.getElementById(toggle.getAttribute('aria-controls'));
+   assert.deepEqual([...options.querySelectorAll('a')].map(link=>link.textContent),['Overview','Orders','Partner','Subscription','Profile','Membership']);
+   bind(document.body);
+   toggle.click();
+   assert.equal(toggle.getAttribute('aria-expanded'),'true');
+   options.querySelector('a').addEventListener('click',event=>event.preventDefault());
+   options.querySelector('a').click();
+   assert.equal(toggle.getAttribute('aria-expanded'),'false');
    assert.equal(document.querySelectorAll('#logout').length,1);
    assert.equal(document.querySelector('a[href="/account/subscriptions"],a[href="/account/stack"]'),null);
   }finally{window.close();}

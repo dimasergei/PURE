@@ -4,6 +4,9 @@
   const status = document.getElementById('monthly-status');
   const params = new URLSearchParams(location.search);
   const builderRoute=location.pathname.replace(/\/$/,'')==='/subscribe-and-save/checkout'||params.has('builder');
+  const accountView = !builderRoute && !['product','edit','invoice'].some(key => params.has(key));
+  const page = document.getElementById('monthly-main');
+  if (accountView) page.classList.add('monthly-account-view');
   const esc = value => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const money = cents => new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(cents/100);
   const when = value => new Date(value).toLocaleDateString(undefined,{dateStyle:'medium'});
@@ -114,7 +117,7 @@
         '<div class="actions">'+link('/account/purchases?id='+encodeURIComponent(plan.invoice_id),'Latest order')+
         actions+'</div>'+
         (threeDelivery&&plan.status!=='completed'&&plan.status!=='canceled'?'<p class="muted">For help with your plan or to request early cancellation, <a href="/contact">contact PURE support</a>.</p>':'')+'</article>';
-    }).join(''):'<p>You have no subscription plans.</p>')+'<p><a href="/shop">Return to catalog</a></p>';
+    }).join(''):'<p>You have no subscription plans.</p><p>'+link('/subscribe-and-save','Subscribe & Save')+'</p>');
     root.onclick=async event=>{
       const btn=event.target.closest('button[data-action]');
       if (!btn) return;
@@ -295,6 +298,24 @@
       root.innerHTML='<p>Sign in to set up or manage your subscription.</p>'+link('/account/login?returnTo='+encodeURIComponent(location.pathname+location.search),'Sign in to PURE');return;
     }
     user=session?.user;
+    if (accountView && user && window.PureAccountNavigation) {
+      const menu = page.querySelector('.monthly-account-nav');
+      menu.innerHTML = window.PureAccountNavigation.render('/monthly-orders');
+      window.PureAccountNavigation.bind(menu);
+      const logout = menu.querySelector('#logout');
+      logout.addEventListener('click', async () => {
+        logout.disabled = true;
+        try {
+          const {error} = await auth.auth.signOut();
+          if (error) throw error;
+          location.assign('/account');
+        } catch {
+          status.textContent = 'Could not sign out. Please try again.';
+          logout.disabled = false;
+        }
+      });
+      menu.hidden = false;
+    }
     if(params.has('invoice')){renderPayment(await api({action:'payment_options',id:params.get('invoice')}));return;}
     if (!builderRoute&&!params.has('product')&&!params.has('edit')) {await loadPlans();return;}
     overview=await api(null,!user);

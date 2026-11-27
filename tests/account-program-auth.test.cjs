@@ -22,8 +22,8 @@ function generatedAccount(){
 const source=generatedAccount(),user={id:'fixture-member',email:'researcher@example.test',user_metadata:{full_name:'Fixture Researcher'}};
 const tick=()=>new Promise(resolve=>setTimeout(resolve,0));
 async function page(route,{signedIn=false,storedReturn=null,origin='https://pure.example',google='',rejectGoogleToken=false}={}){
- const dom=new JSDOM('<body class="ap-site ap-account-site"><main class="account-page"><div class="account-shell"><section id="account-root" class="account-card"></section></div></main><span id="year"></span></body>',{url:origin+route});
- const w=dom.window,assigned=[],panels=[],signins=[],signups=[],oauth=[],resets=[],requests=[],idTokens=[],googleInitializations=[],googleButtons=[];
+ const dom=new JSDOM('<body class="ap-site ap-account-site"><main class="account-page"><div class="account-shell"><section id="account-root" class="account-card"><h1 data-account-loading>Loading your account…</h1></section></div></main><span id="year"></span></body>',{url:origin+route});
+ const w=dom.window,assigned=[],replaced=[],panels=[],signins=[],signups=[],oauth=[],resets=[],requests=[],idTokens=[],googleInitializations=[],googleButtons=[];
  if(google){
   Object.defineProperty(w.crypto,'subtle',{value:{digest:async(algorithm,bytes)=>{
    assert.equal(algorithm,'SHA-256');return createHash('sha256').update(bytes).digest();
@@ -52,11 +52,15 @@ async function page(route,{signedIn=false,storedReturn=null,origin='https://pure
  w.AltaWorkspace={renderAccountPanel:(route,element)=>{panels.push(route);element.textContent='Authenticated '+route;}};
  w.AccountExperience={profile:()=>panels.push('/account/profile')};
  w.DirectCheckout={overview:()=>panels.push('/account'),checkout:()=>panels.push('/checkout')};
- const url=new URL(w.location.href),location={origin:url.origin,pathname:url.pathname,search:url.search,assign:next=>assigned.push(next)};
+ const {origin:currentOrigin,pathname,search}=new URL(w.location.href);
+ const location={origin:currentOrigin,pathname,search,assign:next=>assigned.push(next),replace:next=>replaced.push(next)};
  const context={window:w,document:w.document,location,sessionStorage:w.sessionStorage,FormData:w.FormData,URL,URLSearchParams,Intl,Date,
   fetch:async endpoint=>{requests.push(endpoint);assert.equal(endpoint,'/api/customer-config');return {ok:true,json:async()=>({supabaseUrl:'https://fixture.invalid',anonKey:'fixture-public-key'})};}};
+ vm.runInNewContext(read('account-navigation.js'),context,{timeout:1000});
  vm.runInNewContext(source,context,{timeout:1000});await tick();
- return {dom,w,assigned,panels,signins,signups,oauth,resets,requests,idTokens,googleInitializations,googleButtons,recovery:()=>onState('PASSWORD_RECOVERY',{user})};
+ const restore=async()=>{w.dispatchEvent(new w.PageTransitionEvent('pageshow',{persisted:true}));await tick();};
+ return {dom,w,assigned,replaced,panels,signins,signups,oauth,resets,requests,idTokens,googleInitializations,googleButtons,restore,
+  signOut:()=>{signedIn=false;},recovery:()=>onState('PASSWORD_RECOVERY',{user})};
 }
 function authLink(env,route){
  const link=[...env.w.document.querySelectorAll('a[href]')].find(a=>new URL(a.href).pathname===route);
@@ -81,8 +85,9 @@ for(const route of ['/account/membership','/account/partner'])test(route+' keeps
  const guest=await page(destination);
  let login,signed,callback;
  try{
-  assert.equal(guest.assigned.length,1);
-  const loginUrl=new URL(guest.assigned[0],'https://pure.example');
+  assert.deepEqual(guest.assigned,[],'the protected loading page is excluded from browser history');
+  assert.equal(guest.replaced.length,1);
+  const loginUrl=new URL(guest.replaced[0],'https://pure.example');
   assert.equal(loginUrl.pathname,'/account/login');
   assert.equal(loginUrl.searchParams.get('returnTo'),destination);
   assert.deepEqual(guest.panels,[],'unauthenticated visitors never mount private program panels');
@@ -106,7 +111,7 @@ for(const route of ['/account/membership','/account/partner'])test(route+' keeps
 
 test('account aliases preserve a safe canonical program destination',async()=>{
  const env=await page('/my-account/membership/?view=benefits');
- try{assert.equal(new URL(env.assigned[0],'https://pure.example').searchParams.get('returnTo'),'/account/membership?view=benefits');}
+ try{assertDestination(env.replaced[0],'/account/login','/account/membership?view=benefits');}
  finally{env.dom.window.close();}
 });
 
@@ -114,10 +119,45 @@ test('the legacy subscriptions link reaches the canonical membership sign-in',as
  const alias=await page('/account/subscriptions');
  let canonical;
  try{
-  assert.deepEqual(alias.assigned,['/account/membership']);
-  canonical=await page(alias.assigned[0]);
-  assertDestination(canonical.assigned[0],'/account/login','/account/membership');
+  assert.deepEqual(alias.replaced,['/account/membership']);
+  canonical=await page(alias.replaced[0]);
+  assertDestination(canonical.replaced[0],'/account/login','/account/membership');
  }finally{alias.dom.window.close();canonical?.dom.window.close();}
+});
+
+test('browser Back restores the account landing page and reflects a changed session',async()=>{
+ const guest=await page('/my-account'),member=await page('/my-account',{signedIn:true});
+ try{
+  const root=guest.w.document.getElementById('account-root');
+  root.innerHTML='<h1 data-account-loading>Loading your account…</h1>';
+  await guest.restore();
+  assert.equal(root.querySelector('h1').textContent,'Your account');
+  assert.equal(authLink(guest,'/account/login'),'/account/login');
+  assert.deepEqual(guest.requests,['/api/customer-config'],'restore reuses the original auth client');
+  assert.deepEqual(guest.assigned,[]);
+  assert.deepEqual(guest.replaced,[]);
+  assert.deepEqual(member.panels,['/account']);
+  await member.restore();
+  assert.deepEqual(member.panels,['/account'],'returning to the active account preserves rendered state');
+  member.signOut();
+  await member.restore();
+  assert.equal(member.w.document.querySelector('h1').textContent,'Your account');
+  assert.ok(authLink(member,'/account/login'));
+ }finally{guest.dom.window.close();member.dom.window.close();}
+});
+
+test('browser Back re-enables sign-in after cancelling Google and preserves checkout form state',async()=>{
+ const login=await page('/account/login'),checkout=await page('/checkout',{signedIn:true});
+ try{
+  const button=login.w.document.getElementById('google-signin');
+  await button.onclick();
+  assert.equal(button.disabled,true);
+  await login.restore();
+  assert.equal(login.w.document.getElementById('google-signin').disabled,false);
+  assert.ok(login.w.document.getElementById('login'));
+  await checkout.restore();
+  assert.deepEqual(checkout.panels,['/checkout']);
+ }finally{login.dom.window.close();checkout.dom.window.close();}
 });
 
 test('auth cross-links retain partner enrollment and membership checkout in fresh page contexts and through password reset feedback',async()=>{
@@ -261,7 +301,7 @@ test('partner Google and signup callbacks use one exact route and retain enrollm
   assert.deepEqual(arrived.panels,[destination]);
   assert.equal(arrived.w.sessionStorage.getItem('ap-account-return'),null);
   const unsigned=await page(address);pages.push(unsigned);
-  assertDestination(unsigned.assigned[0],'/account/login',destination);
+  assertDestination(unsigned.replaced[0],'/account/login',destination);
   assert.deepEqual(unsigned.panels,[]);
   const priorCallback=await page('/account?returnTo=%2Faccount%2Fpartner&code=fixture-code',{signedIn:true,storedReturn:'/account/membership'});pages.push(priorCallback);
   assert.deepEqual(priorCallback.assigned,[destination]);
@@ -274,7 +314,7 @@ test('production aliases reach the canonical browser origin before creating an a
  for(const origin of ['https://altapurelabs.com','https://www.altapurelabs.com','https://www.getpurelabs.com','http://getpurelabs.com']){
   const alias=await page(route,{origin});
   try{
-   assert.deepEqual(alias.assigned,['https://getpurelabs.com'+route]);
+   assert.deepEqual(alias.replaced,['https://getpurelabs.com'+route]);
    assert.deepEqual(alias.requests,[]);
   }finally{alias.dom.window.close();}
  }
