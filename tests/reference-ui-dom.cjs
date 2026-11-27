@@ -34,7 +34,7 @@ async function setup(route,campaign=null,quote=null){const errors=[];const conso
   assert.equal(shipping.querySelector('.pure-offer-buy').textContent,'Free shipping');
   const hero=d.querySelector('.pure-bogo-home');
   assert.equal(hero.querySelector('h1').textContent,'Buy one, get one Free');
-  assert.match(hero.querySelector('.pure-bogo-copy p').textContent,/eligible vial.*Dec 24/);
+  assert.equal(hero.querySelector('.pure-bogo-copy p').textContent,'Buy one, get one of the same unit FREE, added to your cart automatically. Stack with no limit, through Dec 24.');
   assert.equal(hero.querySelector('.pure-bogo-badge').textContent,'Black Friday Sale');
   const photos=hero.querySelectorAll('.pure-bogo-art img');
   assert.equal(photos.length,2);
