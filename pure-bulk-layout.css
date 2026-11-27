@@ -46,7 +46,7 @@ html:root body.ap-site .nl-bulk-benefits > :is([data-bulk-threshold="10"], .nl-b
 }
 html:root body.ap-site .nl-bulk-benefits > .nl-bulk-benefit-best {
   border-color: var(--ap-ink) !important;
-  background: var(--ap-ink) !important;
+  background: linear-gradient(135deg, var(--ap-ink), #2b2b2b) !important;
   color: var(--ap-white) !important;
 }
 html:root body.ap-site .nl-bulk-benefit-rate {
@@ -54,6 +54,14 @@ html:root body.ap-site .nl-bulk-benefit-rate {
   font-weight: 900;
   line-height: 1;
   letter-spacing: -.04em;
+}
+html:root body.ap-site .nl-bulk-benefit-rate > span {
+  display: inline;
+  margin: 0;
+  color: inherit;
+  font-size: .48em;
+  font-weight: inherit;
+  letter-spacing: 0;
 }
 .nl-bulk-tier-head {
   display: flex;
@@ -85,11 +93,52 @@ html:root body.ap-site .nl-bulk-benefit > small {
   font-size: 13px;
   line-height: 1.35;
 }
-html:root body.ap-site .nl-bulk-benefit .nl-bulk-coa-proof { display: flex; margin: 0 0 8px; }
+html:root body.ap-site .nl-bulk-benefit .nl-bulk-coa-proof {
+  display: inline-flex;
+  align-items: center;
+  width: max-content;
+  max-width: 100%;
+  min-height: 44px;
+  margin: 0 0 8px;
+  padding: 6px 9px;
+  border: 1px solid var(--ap-line);
+  border-radius: 12px;
+  background: var(--ap-white);
+  white-space: normal;
+}
+html:root body.ap-site .nl-bulk-coa-proof > .nl-bulk-coa-check {
+  display: grid;
+  place-items: center;
+  flex: 0 0 26px;
+  width: 26px;
+  height: 26px;
+  margin: 0;
+  background: var(--ap-cream);
+  color: var(--ap-ink);
+  line-height: 1;
+}
+.nl-bulk-coa-proof > div { min-width: 0; }
+html:root body.ap-site .nl-bulk-coa-proof > div > strong {
+  font-size: 15px;
+  font-weight: 850;
+}
+html:root body.ap-site .nl-bulk-coa-proof > div > small {
+  display: block;
+  color: var(--ap-muted);
+  white-space: normal;
+}
+html:root body.ap-site .nl-bulk-benefit-coa > small > span {
+  display: inline;
+  margin: 0;
+}
 html:root body.ap-site .nl-bulk-benefit-shipping > .nl-bulk-shipping-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
   align-self: flex-start;
   background: var(--ap-ink);
   color: var(--ap-white);
+  box-shadow: none;
 }
 html:root body.ap-site .nl-bulk-benefit-shipping > .nl-bulk-benefit-copy { margin-top: auto !important; }
 html:root body.ap-site .nl-bulk-benefit-coa:hover {
@@ -545,6 +594,8 @@ html:root body.ap-site .nl-bulk-faq details p {
   html:root body.ap-site .nl-bulk-benefit-rate { font-size: 30px !important; }
   html:root body.ap-site .nl-bulk-benefit-copy { font-size: 13px !important; }
   html:root body.ap-site .nl-bulk-benefit > small { font-size: 12px; }
+  html:root body.ap-site .nl-bulk-benefit .nl-bulk-coa-proof { gap: 6px; padding-inline: 6px; }
+  html:root body.ap-site .nl-bulk-coa-proof > div > strong { font-size: 12px; }
   html:root body.ap-site .nl-bulk-layout { padding-top: 16px; }
   html:root body.ap-site .nl-bulk-categories {
     gap: 8px;
@@ -721,14 +772,7 @@ html:root body.ap-site .nl-bulk-rate-badge {
   background: var(--ap-ink) !important;
   color: var(--ap-white) !important;
 }
-html:root body.ap-site .nl-bulk-benefit[data-tier-active="true"] {
-  background: #111 !important;
-  border-color: #111 !important;
-  color: #fff !important;
-}
-html:root body.ap-site .nl-bulk-benefit[data-tier-active="true"] :is(.nl-bulk-benefit-rate, .nl-bulk-benefit-copy, small) {
-  color: inherit !important;
-}
+html:root body.ap-site .nl-bulk-benefits > .nl-bulk-benefit[data-tier-active="true"] { border-color: #777 !important; }
 html:root body.ap-site .nl-bulk-product .nl-bulk-tier-key {
   justify-content: center;
   gap: 5px;

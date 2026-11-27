@@ -37,18 +37,21 @@ function bulkPage() {
   </section>
   <section class="ap-container nl-wide-benefits nl-bulk-benefits" aria-label="Bulk order highlights">
    <article class="nl-bulk-benefit" data-bulk-threshold="10">
-    <strong class="nl-bulk-benefit-rate">50%</strong><span class="nl-bulk-benefit-copy">Off every unit at 10+</span><small>Per compound, strengths combined</small>
+    <strong class="nl-bulk-benefit-rate">50<span>%</span></strong><span class="nl-bulk-benefit-copy">Off every unit at 10+</span><small>Per compound, strengths combined</small>
    </article>
    <article class="nl-bulk-benefit nl-bulk-benefit-best" data-bulk-threshold="50">
-    <div class="nl-bulk-tier-head"><strong class="nl-bulk-benefit-rate">60%</strong><span class="nl-bulk-best-value">Best value</span></div>
+    <div class="nl-bulk-tier-head"><strong class="nl-bulk-benefit-rate">60<span>%</span></strong><span class="nl-bulk-best-value">Best value</span></div>
     <span class="nl-bulk-benefit-copy">Off every unit at 50+</span><small>Applies to the full compound quantity</small>
    </article>
    <a class="nl-bulk-benefit nl-bulk-benefit-coa" href="/coas">
-    <div class="nl-bulk-coa-proof"><span class="nl-bulk-coa-check" aria-hidden="true">✓</span><strong>Lab reports</strong></div>
-    <span class="nl-bulk-benefit-copy">Product documentation</span><small>Browse available COAs <span aria-hidden="true">↗</span></small>
+    <div class="nl-bulk-coa-proof">
+     <span class="nl-bulk-coa-check" aria-hidden="true">✓</span>
+     <div><strong>HPLC + MS</strong><small>Reported test methods</small></div>
+    </div>
+    <span class="nl-bulk-benefit-copy">Certificates of Analysis</span><small>View available COAs <span aria-hidden="true">→</span></small>
    </a>
    <article class="nl-bulk-benefit nl-bulk-benefit-shipping">
-    <span class="nl-bulk-shipping-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M2 6h12v11H2zM14 10h4l4 4v3h-8"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></svg></span>
+    <span class="nl-bulk-shipping-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M9 16h5V5H2v11h3m9-7h4l4 4v3h-2m-6 0h2"/><circle cx="7" cy="17" r="2"/><circle cx="18" cy="17" r="2"/></svg></span>
     <span class="nl-bulk-benefit-copy">Free 2-day express shipping</span><small>U.S. bulk orders · after dispatch</small>
    </article>
   </section>
