@@ -85,7 +85,11 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
   const bulk=d.querySelector('.pure-home-volume');
   assert.equal(d.querySelector('.nl-featured').nextElementSibling,bulk,'bulk savings follow featured products');
   assert.equal(d.querySelector('[data-mx-membership-home]'),null);
-  assert.equal(d.querySelector('.nl-editorial').nextElementSibling.id,'faq');
+  const testing=d.querySelector('.nl-editorial');
+  assert.equal(testing.nextElementSibling.id,'faq');
+  assert.deepEqual([...testing.querySelectorAll('a[href="/coas"]')], [
+   testing.querySelector('.nl-doc-bottom > a')
+  ], 'Explore Testing appears only inside the documentation card');
   assert.equal(bulk.querySelector('a[href="/bulk-orders"]'),null);
   assert.equal(bulk.querySelector('h2').textContent,'Bulk Orders');
   assert.doesNotMatch(bulk.textContent,/BOGO|monthly auto.?billing/i);
