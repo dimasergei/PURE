@@ -223,6 +223,7 @@ test('product page shows only Subscribe & Save and bulk savings paths, with regu
   const {d,w}=f,product=w.AltaStore.product('retatrutide');
   assert.equal(d.querySelector('#ap-detail-quantity').value,'1');
   assert.equal(d.querySelector('[data-bundle-quantity]'),null);
+  assert.equal(d.querySelector('[data-bundle-estimate]'),null);
   const offers=[...d.querySelectorAll('.nl-product-saving-card')];
   assert.equal(offers.length,2);
   assert.match(offers[0].getAttribute('href'),/^\/subscribe-and-save\?product=/);
@@ -232,8 +233,8 @@ test('product page shows only Subscribe & Save and bulk savings paths, with regu
   const price=product.variants[0].price;
   const input=d.querySelector('#ap-detail-quantity');
   input.value='10';input.dispatchEvent(new w.Event('input',{bubbles:true}));
-  assert.match(d.querySelector('[data-bundle-estimate]').textContent,/for 10 vials/);
-  assert.doesNotMatch(d.querySelector('[data-bundle-estimate]').textContent,/SAVE|off/i);
+  assert.equal(d.querySelector('[data-bundle-estimate]'),null);
+  assert.doesNotMatch(d.querySelector('.ap-detail-copy').textContent,/for \d+ (?:vials?|packs?)/i);
   d.querySelector('[data-action="detail-add"]').click();
   assert.equal(w.AltaStore.cart[0].qty,10);assert.equal(w.AltaStore.cart[0].price,price);
   assert.doesNotMatch(d.querySelector('.ap-detail-copy').textContent,/BOGO|additional free/i);

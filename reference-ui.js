@@ -14,10 +14,8 @@
   if(!group||!input)return;
   const qty=Number(input.value),unit=Number(group.dataset.unitPrice);
   if(!Number.isInteger(qty)||qty<1||qty>100)return;
-  const cents=Math.round(unit*100),tier=window.PureQuantityPricing,rate=tier?.basisPoints(qty)||0,total=(tier?.totalCents(cents,qty)??cents*qty)/100,unitLabel=group.dataset.unitLabel||'vial';
+  const cents=Math.round(unit*100),tier=window.PureQuantityPricing,rate=tier?.basisPoints(qty)||0,total=(tier?.totalCents(cents,qty)??cents*qty)/100;
   const format=n=>window.AltaLocale?.price?window.AltaLocale.price(Math.round(n*100),{compact:true}):new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(n);
-  const estimate=document.querySelector('[data-bundle-estimate]');
-  if(estimate)estimate.innerHTML='<strong>'+format(total)+'</strong> for '+qty+' '+unitLabel+(qty===1?'':'s')+(rate?' <span class="pure-tier-saving">SAVE '+rate/100+'% · '+format(unit*qty-total)+' OFF</span>':'');
   const monthly=document.querySelector('.nl-product-saving-card-member');
   if(monthly&&monthlyReady){
    const link=new URL(monthly.href);
