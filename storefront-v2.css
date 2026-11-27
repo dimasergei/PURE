@@ -217,6 +217,22 @@ body.ap-site .pure-bogo-cta:focus-visible { outline: 2px solid #fff; outline-off
 .pure-bogo-highlights .nl-trust > div { display: flex; justify-content: center; align-items: center; gap: 6px; text-align: center; }
 .pure-bogo-highlights .nl-trust > div > span { font-size: .75rem; font-weight: 800; text-transform: uppercase; }
 .pure-bogo-highlights .nl-trust-check { flex: 0 0 15px; width: 15px; fill: none; stroke: currentColor; stroke-width: 2; }
+body.ap-site [data-pure-home-hero] .nl-trust { column-gap: 8px; }
+[data-pure-home-hero] .nl-trust > div + div { position: relative; }
+[data-pure-home-hero] .nl-trust > div + div::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: -4px;
+  inline-size: 1px;
+  block-size: clamp(30px, 5vw, 42px);
+  margin-block: auto;
+  background: linear-gradient(transparent, #fff 32%, #fff 68%, transparent);
+  pointer-events: none;
+}
+@media (forced-colors: active) {
+  [data-pure-home-hero] .nl-trust > div + div::before { border-inline-start: 1px solid CanvasText; background: none; }
+}
 body.ap-site .pure-floating-shop[hidden] { display: none !important; }
 body.ap-site:has(.pure-bogo-home.pure-sale-cta-visible) .spin-save-shortcut { visibility: hidden; }
 

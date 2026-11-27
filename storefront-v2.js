@@ -260,7 +260,7 @@
   const check='<svg class="nl-trust-check" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>';
   const highlights=[
    '<strong title="Applies to qualifying shipments to the U.S. and Canada after discounts">Free shipping over '+priceMarkup(250,{trimWhole:true})+'</strong>',
-   '<a href="/coas?product=5-amino-1mq&amp;size=50mg" aria-label="99%+ Purity on the linked supplier sample" title="See the purity result for the tested 5-Amino-1MQ sample">99%+ Purity</a>',
+   '<a href="/coas?product=5-amino-1mq&amp;size=50mg" aria-label="99%+ Purity on the linked supplier sample" title="See the purity result for the tested 5-Amino-1MQ sample">99%+<br> Purity</a>',
    '<a href="/coas">Verified Lab Testing</a>'
   ];
   const rating=reviewSummary?'<p class="nl-trust-rating">'+reviewSummary.rating.toFixed(1)+'/5 · '+reviewSummary.count+' '+(reviewSummary.count===1?'review':'reviews')+'<small>Review credit offered</small></p>':'';
