@@ -155,6 +155,14 @@ body.ap-site .pure-bogo-copy h1 {
   width: min(71%, 93cqh);
   transform: translate(-50%, -50%) rotate(9deg);
 }
+@media (prefers-reduced-motion: no-preference) {
+  .pure-bogo-vial { animation: pure-bogo-vial-drift 7s ease-in-out infinite; }
+  .pure-bogo-vial-free { animation-delay: -1.4s; }
+}
+@keyframes pure-bogo-vial-drift {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 -3px; }
+}
 .pure-bogo-vial img {
   display: block;
   width: 100%;
