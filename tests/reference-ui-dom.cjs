@@ -85,10 +85,13 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
   assert.equal(d.querySelector('[data-mx-membership-home]'),null);
   assert.equal(d.querySelector('.nl-editorial').nextElementSibling.id,'faq');
   assert.equal(bulk.querySelector('a').getAttribute('href'),'/bulk-orders');
-  assert.match(bulk.querySelector('h2').textContent,/Save up to 60%/);
+  assert.equal(bulk.querySelector('h2').textContent,'Bulk Orders');
   assert.doesNotMatch(bulk.textContent,/BOGO|monthly auto.?billing/i);
-  const tiers=[...bulk.querySelectorAll('.pure-home-volume-tiers > div')];
-  assert.deepEqual(tiers.map(tier=>tier.textContent),['50% OFF10+ units per compound','60% OFF50+ units per compound']);
+  const tiers=[...bulk.querySelectorAll('.pure-home-volume-tiers > span')];
+  assert.deepEqual(tiers.map(tier=>tier.textContent),['50% off at 10+ units','60% off at 50+ units']);
+  assert.match(bulk.querySelector('.pure-home-volume-note').textContent,/starting at 10\+/);
+  const bulkSummary=bulk.querySelector('.pure-home-express-summary');
+  assert.equal(bulkSummary.hidden,true);
   const bulkRows=[...bulk.querySelectorAll('[data-home-bulk-product]')];
   assert.equal(bulkRows.length,3);
   for(const row of bulkRows){
@@ -97,8 +100,7 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
    assert.deepEqual(strengths,[...p.variants].sort((a,b)=>(parseFloat(a.size)-parseFloat(b.size))||a.size.localeCompare(b.size)).map(v=>v.size));
    assert.ok(row.firstElementChild.querySelector('img[src]'));
    assert.ok(row.lastElementChild.matches('.pure-home-express-price'));
-   assert.deepEqual([...row.lastElementChild.children].map(child=>child.tagName),['DEL','STRONG','SMALL']);
-   assert.match(row.lastElementChild.querySelector('small').textContent,/10\+/);
+   assert.deepEqual([...row.lastElementChild.children].map(child=>child.tagName),['DEL','STRONG']);
   }
   const id=bulkRows[0].dataset.homeBulkProduct;
   const bulkRow=()=>bulk.querySelector(`[data-home-bulk-product="${id}"]`);
@@ -117,6 +119,7 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
   const addTen=()=>bulkRow().querySelector('[data-home-bulk-step="10"]').click();
   addTen();
   addTen();
+  assert.equal(bulkSummary.hidden,false);
   assert.equal(bulkRow().querySelector('[data-home-bulk-quantity]').value,'20');
   enterQty('6');
   assert.equal(bulk.querySelector('[data-home-bulk-checkout]').disabled,true);
@@ -134,6 +137,10 @@ async function setup(route,campaign=null){const errors=[];const console=new Virt
   const retail=w.AltaStore.product(id).variants.find(variant=>variant.size===bulkRow().querySelector('select').value).price;
   assert.equal(shownBulkPrice(),'Bulk '+w.AltaStore.money(Math.round(retail*40)/100));
   assert.notEqual(shownBulkPrice(),entryTier);
+  enterQty('0');
+  chooseStrength(1);
+  enterQty('0');
+  assert.equal(bulkSummary.hidden,true);
   const faqLinks=d.querySelector('.pure-home-faq-links');
   assert.deepEqual([...faqLinks.children].map(link=>[link.tagName,link.textContent,link.getAttribute('href')]),[
    ['A','Track Order','/track-order'], ['A','Shipping','/shipping-policy'], ['A','Contact Us','/contact']
