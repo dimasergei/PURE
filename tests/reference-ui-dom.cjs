@@ -34,6 +34,23 @@ async function setup(route,campaign=null,quote=null){const errors=[];const conso
   assert.ok(d.querySelector('.pure-promo-paused'));
   dom.window.close();
  }
+ {
+  const {dom,d,w}=await setup('/cart');
+  d.querySelector('header [data-action="cart"]').click();
+  const drawer=d.querySelector('#ap-cart-dialog');
+  const title=d.getElementById(drawer.getAttribute('aria-labelledby'));
+  assert.equal(drawer.open,true);
+  assert.equal(title.textContent,'Your Cart');
+  w.AltaStore.addItems([{id:'bpc-157',size:'10mg',qty:2}]);
+  assert.equal(title.textContent,'Your Cart (2)');
+  drawer.querySelector('[data-action="cart-quantity"][data-step="-1"]').click();
+  assert.equal(title.textContent,'Your Cart (1)');
+  drawer.querySelector('[data-action="cart-remove"]').click();
+  assert.equal(title.textContent,'Your Cart');
+  drawer.querySelector('[aria-label="Close cart"]').click();
+  assert.equal(drawer.open,false);
+  dom.window.close();
+ }
  const offer={second_unit:{discount_bps:2500,eligible_variants:['bpc-157:10mg','ghk-cu:50mg']}};
  for(const route of ['/','/shop','/product/semaglutide?size=10mg','/product/bpc-157?size=10mg']){
   const {dom,d}=await setup(route,offer);
@@ -188,6 +205,30 @@ async function setup(route,campaign=null,quote=null){const errors=[];const conso
   assert.equal(club.querySelector('h2').textContent,'Get 10% off your first order.');
   assert.equal(club.querySelector('.pure-home-email-copy p').textContent,'New compounds, restocks, and COAs first. One code, straight to your inbox.');
   assert.equal(club.querySelector('button[type="submit"]').textContent.trim(),'Get my 10% off');
+  dom.window.close();
+ }
+ {
+  const {dom,d,w}=await setup('/');
+  d.querySelector('[data-action="cart"]').click();
+  const dialog=d.querySelector('#ap-cart-dialog');
+  const empty=dialog.querySelector('.nlc-empty-cart');
+  assert.ok(dialog.open);
+  assert.equal(empty.querySelector('a.ap-button[href="/shop"]').textContent,'Continue Shopping');
+  const suggestions=[...empty.querySelectorAll('.nlc-empty-add')];
+  assert.deepEqual(suggestions.map(button=>button.dataset.id),['retatrutide','bpc-157','ghk-cu']);
+  for(const button of suggestions){
+   const product=w.AltaStore.product(button.dataset.id);
+   const variant=product.variants.find(v=>v.size===button.dataset.size);
+   assert.ok(button.closest('li').querySelector('small').textContent.includes(variant.size));
+   assert.ok(variant.price>0);
+  }
+  const {id,size}=suggestions[0].dataset;
+  suggestions[0].click();
+  assert.equal(dialog.querySelector('.nlc-empty-cart'),null);
+  assert.deepEqual(JSON.parse(w.localStorage.getItem('pp-cart')).map(({id,size,qty})=>({id,size,qty})),[{id,size,qty:1}]);
+  assert.equal(d.activeElement,dialog.querySelector('.ap-cart-line a'));
+  dialog.querySelector('[data-action="cart-remove"]').click();
+  assert.equal(dialog.querySelectorAll('.nlc-empty-add').length,3);
   dom.window.close();
  }
  {const{dom,d,w}=await setup('/shop');

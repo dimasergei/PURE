@@ -56,9 +56,6 @@
    document.querySelector('.ap-header-actions [data-action="cart"]')?.click();
   });
   mobileMenu.addEventListener('close',()=>mobileToggle.setAttribute('aria-expanded','false'));
-  window.matchMedia('(min-width: 1191px)').addEventListener?.('change',event=>{
-   if(event.matches&&mobileMenu.open)mobileMenu.close();
-  });
  }
  const footerSections = document.querySelectorAll('.pure-footer-links');
  if(footerSections.length){

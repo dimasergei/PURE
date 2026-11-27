@@ -20,6 +20,12 @@ test('desktop and mobile share the four primary links while FAQ stays available 
   const dom = new JSDOM(files.get('index.html'));
   try {
     const {document} = dom.window;
+    const header = document.querySelector('.ap-header-main');
+    assert.deepEqual([...header.children].map(node => node.className), ['ap-header-start', 'ap-brand', 'ap-header-actions']);
+    assert.equal(header.querySelector('.ap-header-start > [data-action="search"]').getAttribute('aria-label'), 'Search products');
+    assert.ok(header.querySelector('.ap-header-start > [aria-controls="ap-mobile-menu"]'));
+    assert.ok(header.querySelector('.ap-header-actions a[href="/my-account"]'));
+    assert.ok(header.querySelector('.ap-header-actions > [data-action="cart"]'));
     const labels = ['Products', 'Bulk Orders', 'Contact Us', 'Partner'];
     for (const menu of ['#ap-nav','#ap-mobile-menu nav']) {
       const nav = document.querySelector(menu);

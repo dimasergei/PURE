@@ -19,8 +19,8 @@
     max-width: 100% !important;
     min-height: 60px !important;
     height: 60px !important;
-    padding: 0 14px !important;
-    gap: 8px !important;
+    padding: 0 8px !important;
+    gap: 4px !important;
   }
   .ap-site .ap-header-compact .ap-header-main:has(.ap-nav.ap-open) {
     height: auto !important;
@@ -34,31 +34,6 @@
   }
   .ap-site .ap-header-compact .ap-brand > span:last-child {
     font-size: clamp(10px,3.3vw,14px) !important;
-  }
-  .ap-site .ap-header-compact .ap-header-actions {
-    gap: 5px !important;
-    min-width: 0;
-  }
-  .ap-site .ap-header-compact .ap-header-actions .ap-icon {
-    width: 44px;
-    height: 44px;
-    flex: 0 0 auto;
-  }
-  .ap-site .ap-header-compact .ap-menu-toggle {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0 !important;
-    width: 44px !important;
-  }
-  .ap-site .ap-header-compact .ap-menu-toggle::before {
-    content: "";
-    display: block;
-    width: 23px;
-    height: 19px;
-    background: linear-gradient(#111111,#111111) 0 1px/100% 1.5px no-repeat,
-                linear-gradient(#111111,#111111) 0 9px/100% 1.5px no-repeat,
-                linear-gradient(#111111,#111111) 0 17px/100% 1.5px no-repeat;
   }
   .ap-site .ap-header-compact .ap-nav.ap-open {
     max-height: calc(100dvh - 120px);

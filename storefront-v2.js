@@ -42,7 +42,8 @@
  let reviewSummary=null;
  let toastTimer;
  function toast(text){const node=$('#ap-toast');if(!node)return;clearTimeout(toastTimer);node.textContent=text;node.hidden=false;toastTimer=setTimeout(()=>{node.hidden=true;},3400);}
- function syncCart(modified=false){if(modified)write('ap-research-cart-origin-v1',null);write('pp-cart',cart);$$('.ap-cart-count').forEach(n=>{const count=cart.reduce((sum,x)=>sum+x.qty,0);n.textContent=String(count);n.hidden=count===0;});if($('#ap-cart-dialog')?.open)renderCart();window.dispatchEvent(new CustomEvent('alta:cart',{detail:{count:cart.length}}));}
+ function cartItemCount(){return cart.reduce((sum,line)=>sum+line.qty,0);}
+ function syncCart(modified=false){if(modified)write('ap-research-cart-origin-v1',null);write('pp-cart',cart);const count=cartItemCount();$$('.ap-cart-count').forEach(n=>{n.textContent=String(count);n.hidden=count===0;});if($('#ap-cart-dialog')?.open)renderCart();window.dispatchEvent(new CustomEvent('alta:cart',{detail:{count:cart.length}}));}
  function addItems(input){
   const valid=normalizeLines(input);
   if(!Array.isArray(input)||valid.length!==input.length)throw Error('Invalid product selection.');
@@ -400,9 +401,27 @@
  selections[p.id]=v.size;document.title=p.name+' '+v.size+' | PURE';
  return `<div class="ap-container nl-product-breadcrumb"><a href="/">Home</a> / <a href="/shop">Products</a> / ${esc(p.name)}</div><section class="ap-container ap-product-layout nl-detail"><div class="ap-detail-image"><img src="${esc(image(p,v.size))}" alt="${esc(p.name+' '+v.size+' label')}" fetchpriority="high"></div><div class="ap-detail-copy"><span class="ap-eyebrow">${esc(p.group)}</span><h1>${esc(p.name)} <span>(${esc(v.size)})</span></h1><p>${esc(p.blurb)}</p><p data-pure-dispatch-cutoff hidden></p><p data-pure-campaign-countdown data-campaign-product="${esc(p.id+':'+v.size)}" hidden></p><div class="ap-detail-price">${priceMarkup(v.price)} <span class="ap-fine">per unit</span></div><p class="nl-label">Strength: <strong>${esc(v.size)}</strong></p><div class="ap-size-options">${p.variants.map(x=>`<button data-action="detail-size" data-id="${p.id}" data-size="${esc(x.size)}" aria-pressed="${x.size===v.size}">${esc(x.size)}</button>`).join('')}</div><div class="ap-actions nl-purchase" data-unit-price="${v.price}"><label class="ap-quantity"><span class="ap-sr">Quantity</span><button data-action="detail-quantity" data-step="-1" type="button" aria-label="Decrease quantity">−</button><input id="ap-detail-quantity" type="number" min="1" max="100" value="1" aria-label="Quantity"><button data-action="detail-quantity" data-step="1" type="button" aria-label="Increase quantity">+</button></label><button class="ap-button" data-action="detail-add" data-id="${p.id}" data-size="${esc(v.size)}">Add to Cart</button></div><div class="ap-mobile-purchase"><span>${esc(p.name)} · ${esc(v.size)}<strong data-mobile-total></strong></span><button class="ap-button" data-action="detail-add" data-id="${p.id}" data-size="${esc(v.size)}">Add to Cart</button></div><div class="nl-mini-benefits"><span>✓ Clear unit pricing</span><span>✓ Tracked delivery</span></div><a class="nl-document-link" href="/coas?product=${encodeURIComponent(p.id)}&amp;size=${encodeURIComponent(v.size)}">▤ View testing reports for ${esc(v.size)}</a><div class="ap-detail-tabs"><details open><summary>Description</summary><p>${esc(p.blurb)} ${esc(v.size)}. Laboratory research only. Not for human or animal use.</p></details><details><summary>Shipping & delivery</summary><p>Free priority shipping on merchandise totals of $250 or more after any coupon and before points or store credit. Available delivery options and fees are confirmed at checkout. <a href="/shipping-policy.html">Shipping policy</a></p></details><details><summary>COAS & supplier documentation</summary><p>Original supplier reports are available where matched to this product and strength. They are not proof of the lot you will receive. Request the fulfilled-lot COA with your order.</p></details></div></div></section><section class="ap-container ap-section"><div class="ap-section-head"><h2>Related Products</h2></div><div class="ap-grid">${catalog.filter(x=>x.id!==p.id&&(x.group===p.group||p.premixed_blend&&x.premixed_blend)).sort((a,b)=>p.premixed_blend?Number(!!b.premixed_blend)-Number(!!a.premixed_blend):0).slice(0,5).map(x=>card(x)).join('')}</div></section>`;
 }
+ function renderEmptyCart(root){
+  const cards=['retatrutide','bpc-157','ghk-cu'].map(product).filter(Boolean).map(p=>{
+   const variant=p.variants.find(v=>Number.isFinite(v.price)&&v.price>0);
+   if(!variant)return '';
+   const url='/product/'+encodeURIComponent(p.id)+'?size='+encodeURIComponent(variant.size);
+   return `<li class="nlc-empty-product">
+    <img src="${esc(image(p,variant.size))}" alt="" width="52" height="62" loading="lazy">
+    <div><a href="${url}"><strong>${esc(p.name)}</strong></a><small>${esc(variant.size)} · ${priceMarkup(variant.price)}</small></div>
+    <button type="button" class="nlc-empty-add" data-action="add" data-id="${esc(p.id)}" data-size="${esc(variant.size)}" aria-label="${esc('Add '+p.name+' '+variant.size+' to cart')}">Add</button>
+   </li>`;
+  }).join('');
+  root.innerHTML=`<div class="nlc-empty-cart">
+   <div class="nlc-empty-intro"><p>Your cart is empty.</p><a class="ap-button" href="/shop">Continue Shopping</a></div>
+   ${cards?`<section aria-labelledby="nlc-empty-quick-title"><h3 id="nlc-empty-quick-title">Quick add</h3><ul>${cards}</ul></section>`:''}
+  </div>`;
+ }
  function renderCart() {
- const root=$('#ap-cart-content');if(!root)return;$('#ap-cart-title').textContent='Your Cart';
- if(!cart.length){root.innerHTML='<div class="ap-empty"><h3>Your cart is empty.</h3><a class="ap-button" href="/shop">Shop Products</a></div>';return;}
+ const root=$('#ap-cart-content');if(!root)return;
+ const count=cartItemCount();
+ $('#ap-cart-title').textContent=count>0?`Your Cart (${count})`:'Your Cart';
+ if(!cart.length)return renderEmptyCart(root);
  const subtotal=cart.reduce((n,x)=>n+x.qty*x.price,0);
  root.innerHTML=cart.map(x=>`<div class="ap-cart-line"><img src="${esc(image(product(x.id),x.size))}" alt="${esc(x.name+' '+x.size)}"><div><a href="/product/${x.id}?size=${encodeURIComponent(x.size)}"><strong>${esc(x.name)}</strong></a><small>${esc(x.size)} · ${priceMarkup(x.price)} each</small><div class="ap-quantity"><button data-action="cart-quantity" data-key="${esc(x.key)}" data-step="-1" aria-label="Decrease ${esc(x.name)} quantity">−</button><input value="${x.qty}" readonly aria-label="Quantity"><button data-action="cart-quantity" data-key="${esc(x.key)}" data-step="1" aria-label="Increase ${esc(x.name)} quantity">+</button></div></div><div><strong>${priceMarkup(x.qty*x.price)}</strong><button class="ap-remove" data-action="cart-remove" data-key="${esc(x.key)}">Remove</button></div></div>`).join('')+`<div class="ap-cart-totals"><strong>Merchandise subtotal</strong><strong>${priceMarkup(subtotal)}</strong></div><p class="ap-fine">Coupons, delivery, tax, points and store credit are confirmed at checkout. Final totals and payment currency are confirmed at checkout.</p><a class="ap-button" href="/checkout">Proceed to Checkout</a><a class="ap-button ap-button-secondary" href="/shop">Continue Shopping</a>`;
  window.AltaCartNmi?.offer(root);
@@ -449,6 +468,7 @@
    try{addItems([{id,size:button.dataset.size,qty}]);}
    catch(error){toast(error.message);return;}
    if(detail||button.hasAttribute('data-open-cart'))openCart();
+   if(button.classList.contains('nlc-empty-add'))$('#ap-cart-content :is(.nlc-product-title,.ap-cart-line) a')?.focus({preventScroll:true});
    return;
   }
   if(action==='save'){if(!product(id))return;saved=saved.includes(id)?saved.filter(x=>x!==id):[...saved,id];write('ap-wishlist',saved);$$(`[data-action="save"][data-id="${id}"]`).forEach(b=>{b.setAttribute('aria-pressed',String(saved.includes(id)));b.textContent=b.classList.contains('ap-save')?(saved.includes(id)?'♥':'♡'):(saved.includes(id)?'♥ '+t('saved'):'♡ '+t('save'));});toast(saved.includes(id)?'Saved on this device.':'Removed from saved products.');return;}

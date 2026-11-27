@@ -92,7 +92,7 @@ function buildAddedPages(out, site) {
   const shopRoute = "const route=()=>location.pathname.replace(/\\.html$/,'').replace(/\\/$/,'')||'/';";
   if (!client || !source.includes(shopRoute)) throw Error('Unable to use original shop client for the cart entry.');
   fs.writeFileSync(path.join(out,'saved-cart-storefront.js'),source.replace(shopRoute,"const route=()=>'/shop';"));
-  client.src='/saved-cart-storefront.js';
+  client.src=client.getAttribute('src').replace('/storefront-v2.js','/saved-cart-storefront.js');
   const entry = doc.createElement('script');
   entry.src='/saved-cart-entry.js';
   doc.body.append(entry);

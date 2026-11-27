@@ -381,8 +381,9 @@ body.ap-site .nl-detail [data-campaign-product]:not([hidden]) {
   max-width: calc(100vw - var(--promo-control-width));
   padding-inline: .25rem;
 }
-.pure-promo-loop [data-copy-offer] { display: grid; text-align: center; }
-.pure-promo-loop [data-copy-offer]::before {
+.pure-promo-loop [data-copy-offer] { display: grid; place-items: center; text-align: center; }
+/* Reserve the default label width. The mobile badge uses ::before for its background. */
+.pure-promo-loop [data-copy-offer]::after {
   content: attr(data-copy-offer);
   visibility: hidden;
   grid-area: 1 / 1;

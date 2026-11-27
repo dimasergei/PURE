@@ -5,13 +5,16 @@ const { resolve } = require("node:path");
 
 const read = (path) => readFileSync(resolve(__dirname, "..", path), "utf8");
 
-test("storefront header orders Search, Account, then Cart", () => {
+test("storefront header puts menu and search before PURE and account and cart after it", () => {
   const html = read("site-build.cjs");
+  const start = html.slice(html.indexOf('<div class="ap-header-start">'), html.indexOf('aria-label="PURE home"><span class="ap-mark"'));
   const actions = html.slice(html.indexOf('<div class="ap-header-actions">'), html.indexOf('const footer='));
-  const search = actions.indexOf('data-action="search"');
+  const menu = start.indexOf('aria-controls="ap-mobile-menu"');
+  const search = start.indexOf('data-action="search"');
   const account = actions.indexOf('href="/my-account" aria-label="My account"');
   const cart = actions.indexOf('data-action="cart"');
-  assert.ok(search >= 0 && account > search && cart > account);
+  assert.ok(menu >= 0 && search > menu);
+  assert.ok(account >= 0 && cart > account);
   assert.match(actions.slice(account, cart), /<svg[\s\S]*?<circle cx="12" cy="8"/);
 });
 
