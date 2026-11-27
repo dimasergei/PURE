@@ -12,23 +12,13 @@
 .ap-nmi-express-dialog{width:min(1100px,96vw);max-height:90dvh;overflow:auto}.ap-nmi-modal-body{padding:10px}.ap-cart-express{margin:14px 0;padding:16px 0;border-block:1px solid #e5e5e5}.ap-cart-express .ap-button{width:100%}
 
 body.ap-site .pure-home-volume {
-  --home-bulk-inset: clamp(14px,2.2vw,24px);
   max-width: 1060px;
   margin: 0 auto clamp(28px,4vw,56px);
-  padding: var(--home-bulk-inset);
+  padding: clamp(14px,2.2vw,24px);
   border: 1px solid #dcdcdc;
   border-radius: 14px;
   background: #fff;
   color: var(--ap-ink);
-}
-
-.pure-home-volume-intro {
-  margin-block-start: calc(-1 * var(--home-bulk-inset));
-  margin-inline: calc(-1 * var(--home-bulk-inset));
-  padding: var(--home-bulk-inset) var(--home-bulk-inset) 10px;
-  border-radius: 13px 13px 0 0;
-  background: var(--ap-deep);
-  color: #fff;
 }
 
 .pure-home-volume-head {
@@ -54,34 +44,41 @@ html:root body.ap-site .pure-home-volume-link {
   justify-content: center;
   min-height: 44px;
   padding: 8px 13px;
-  border: 1px solid #fff;
+  border: 1px solid var(--ap-ink);
   border-radius: 8px;
-  background: #fff;
-  color: var(--ap-ink);
+  background: var(--ap-ink);
+  color: #fff;
   font-size: 13px;
   font-weight: 700;
   line-height: 1.2;
   text-decoration: none;
   white-space: nowrap;
 }
-html:root body.ap-site .pure-home-volume-link:hover { border-color: #e8e8e8; background: #e8e8e8; }
-html:root body.ap-site .pure-home-volume-link:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+html:root body.ap-site .pure-home-volume-link:hover { border-color: #333; background: #333; }
+html:root body.ap-site .pure-home-volume-link:focus-visible { outline: 2px solid #111; outline-offset: 2px; }
 
 .pure-home-volume-tiers {
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
-  column-gap: 10px;
+  column-gap: 8px;
   row-gap: 3px;
-  margin: 3px 0 0;
-  color: #e0e0e0;
+  margin: 7px 0 8px;
+  padding: 4px 9px;
+  border-radius: 6px;
+  background: #f3f3f3;
+  color: #333;
   font-size: 13px;
+  line-height: 1.35;
 }
 
 .pure-home-volume-tiers > span { white-space: nowrap; }
-.pure-home-volume-tiers > span + span { border-inline-start: 1px solid #777; padding-inline-start: 10px; }
-.pure-home-volume-tiers strong { color: #fff; font-weight: 800; }
-.pure-home-volume-tiers small { color: #c8c8c8; font-size: 12px; }
+.pure-home-volume-tiers > span + span { border-inline-start: 1px solid #c8c8c8; padding-inline-start: 8px; }
+.pure-home-volume-tiers strong { color: var(--ap-ink); font-weight: 800; }
+.pure-home-volume-tiers small { color: #505050; font-size: 12px; }
+@media (min-width: 631px) {
+  .pure-home-volume-tiers small { margin-inline-start: auto; }
+}
 
 body.ap-site .pure-home-email {
   display: grid;
@@ -262,7 +259,7 @@ html:root body.ap-site .pure-home-faq .pure-faq-list summary { min-height: 52px;
   width: 100%;
   min-width: 0;
   min-height: 44px;
-  border: 1px solid #d1d1d1;
+  border: 1px solid #8a8a8a;
   border-radius: 8px;
   background: #fff;
   color: #111;
@@ -274,10 +271,8 @@ html:root body.ap-site .pure-home-faq .pure-faq-list summary { min-height: 52px;
   display: block;
   appearance: none;
   padding-inline: 10px 24px;
-  border-color: #8a8a8a;
-  background: #f5f5f5;
 }
-.pure-home-express-strength select:hover { border-color: #111; background: #eee; }
+.pure-home-express-strength select:hover { border-color: #111; background: #f7f7f7; }
 body.ap-site .pure-home-express-strength select:focus-visible { outline: 2px solid #111; outline-offset: 2px; }
 @media (forced-colors: active) {
   .pure-home-express-strength::after { content: none; }
@@ -287,15 +282,25 @@ body.ap-site .pure-home-express-strength select:focus-visible { outline: 2px sol
 .pure-home-express-quantity {
   grid-area: quantity;
   display: grid;
-  grid-template-columns: 43px 44px;
+  grid-template-columns: 44px 47px;
   align-items: center;
-  gap: 4px;
 }
 .pure-home-express-quantity :is(button,input) { padding: 0; text-align: center; }
-.pure-home-express-quantity button { border-color: #111; background: #111; color: #fff; cursor: pointer; }
-.pure-home-express-quantity button:hover:not(:disabled) { background: #303030; }
-.pure-home-express-quantity button:disabled { opacity: .38; cursor: default; }
-.pure-home-express-quantity input { appearance: textfield; }
+.pure-home-express-quantity button {
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+  border-inline-start: 0;
+  background: #f3f3f3;
+  font-weight: 750;
+}
+.pure-home-express-quantity button:hover:not(:disabled) { background: #e5e5e5; }
+.pure-home-express-quantity button:disabled { opacity: 1; color: #595959; cursor: default; }
+.pure-home-express-quantity input {
+  appearance: textfield;
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+}
+body.ap-site .pure-home-express-quantity :is(button,input):focus-visible { outline: 2px solid #111; outline-offset: -4px; }
 .pure-home-express-quantity input::-webkit-inner-spin-button { appearance: none; }
 
 .pure-home-express-price { grid-area: price; }
@@ -310,7 +315,7 @@ body.ap-site .pure-home-express-strength select:focus-visible { outline: 2px sol
 }
 .pure-home-express :is(del,del .pure-price-value) { color: #595959; text-decoration: line-through; }
 .pure-home-express :is(.pure-home-express-price,.pure-home-express-line-price) del { font-size: 12px; }
-.pure-home-express :is(.pure-home-express-price,.pure-home-express-line-price) strong { font-size: 14px; }
+.pure-home-express :is(.pure-home-express-price,.pure-home-express-line-price) strong { font-size: 14px; font-weight: 750; }
 
 .pure-home-express-summary { margin-top: 12px; padding-top: 12px; border-top: 1px solid #d9d9d9; }
 .pure-home-express-summary h3 { margin: 0 0 5px; font-size: 15px; }
@@ -355,6 +360,7 @@ body.ap-site .pure-home-express-summary .ap-button:disabled { opacity: .52; }
 @media (max-width: 365px) {
   .pure-home-volume-head { column-gap: 8px; }
   html:root body.ap-site .pure-home-volume-link { padding-inline: 7px; font-size: 12px; }
+  .pure-home-volume-tiers { padding-inline: 5px; }
   .pure-home-express-price { flex-wrap: wrap; gap: 1px 5px; }
   .pure-home-express-products h4 { font-size: 13px; }
 }
