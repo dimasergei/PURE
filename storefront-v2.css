@@ -196,9 +196,12 @@ body.ap-site .pure-bogo-cta {
   background: linear-gradient(105deg, #ffe88b, #ffce4c 51%, #f6ad21);
   box-shadow: inset 0 1px 0 #fffbca99, 0 0 15px #ffc22a4d, 0 6px 30px #ffb0206b;
   color: #17110b !important;
+  font-family: 'Archivo', Arial, sans-serif;
   font-size: 1rem;
   font-weight: 900;
+  letter-spacing: .055em;
   text-decoration: none;
+  text-transform: uppercase;
 }
 body.ap-site .pure-bogo-cta:hover { box-shadow: inset 0 1px 0 #fffbca99, 0 0 18px #ffc22a66, 0 6px 34px #ffb0208c; }
 body.ap-site .pure-bogo-cta:focus-visible { outline: 2px solid #fff; outline-offset: 4px; }
