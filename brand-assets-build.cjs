@@ -23,7 +23,7 @@ for(const file of fs.readdirSync(out,{recursive:true}).filter(f=>f.endsWith('.ht
   html=html.replace(/<link\b[^>]*href=["']\/pure-brand\.css[^"']*["'][^>]*>/gi,'');
   html=html.replace(/<link\b[^>]*href=["']https:\/\/fonts\.(?:googleapis|gstatic)\.com[^"']*["'][^>]*>/gi,'');
   const fontPreload=html.includes('href="/assets/fonts/archivo-latin-variable.woff"')?'':'<link rel="preload" href="/assets/fonts/archivo-latin-variable.woff" as="font" type="font/woff" crossorigin>';
-  html=html.replace('</head>',fontPreload+'<link rel="stylesheet" href="/pure-brand.css?v=20261126-cart-rewards"></head>');
+  html=html.replace('</head>',fontPreload+'<link rel="stylesheet" href="/pure-brand.css?v=20261126-mobile-testing"></head>');
   html=html.replace(/<link\b[^>]*\brel=["'](?:(?:shortcut )?icon|apple-touch-icon)["'][^>]*>/gi,'');
   html=html.replace(/<meta\b[^>]*\bname=["'](?:theme-color|altapure-promo-end)["'][^>]*>/gi,'');
   if(path.basename(file).startsWith('admin-')){
@@ -80,7 +80,8 @@ for(const file of fs.readdirSync(out,{recursive:true}).filter(f=>f.endsWith('.ht
   html=html.replace(/href="\/((?:pure-bulk-layout|pure-coa|reference-ui|supplier-coas|monthly-orders|subscribe-and-save)\.css)(?:\?[^"]*)?"/g,'href="/$1?v=20261126-builder-polish"');
   html=html.replace(/src="\/((?:workspace-v2|supplier-coas|monthly-orders)\.js)(?:\?[^"]*)?"/g,'src="/$1?v=20261126-builder-polish"');
   html=html.replace(/\b(src|href)="\/((?:storefront-v2|workspace-v2|reference-ui|conversion-ui|subscribe-and-save)\.(?:js|css)|(?:pure-bulk-layout|cart-reference)\.css)(?:\?[^"]*)?"/g,'$1="/$2?v=20261126-holiday-layout"');
-  html=html.replace(/\b(src|href)="\/(storefront-v2\.(?:js|css))(?:\?[^"]*)?"/g,'$1="/$2?v=20261126-home-bulk-approved"');
+  html=html.replace(/\b(src|href)="\/(storefront-v2\.(?:js|css))(?:\?[^"]*)?"/g,'$1="/$2?v=20261126-home-bulk-mobile"');
+  html=html.replace(/href="\/cart-reference\.css(?:\?[^"]*)?"/g,'href="/cart-reference.css?v=20261126-reward-glow"');
   if(file==='bulk-orders.html')html=html.replace(/\b(src|href)="\/(workspace-v2\.js|pure-bulk-layout\.css)(?:\?[^"\n]*)?"/g,'$1="/$2?v=20261126-bulk-coa-card"');
   if(file==='contact.html')html=html.replace(/href="\/reference-ui\.css(?:\?[^"]*)?"/g,'href="/reference-ui.css?v=20261126-contact-wordmark"');
   fs.writeFileSync(target,html);

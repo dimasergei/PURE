@@ -83,7 +83,8 @@ html[data-display-currency]:not([data-display-currency="USD"]) .nlc-price strong
 .nlc-quantity-row .ap-quantity{margin:0!important}
 /* The two markers share the same merchandise scale as the fill. */
 .nlc-rewards {
-  --reward-earned: #555;
+  --reward-earned: #16803d;
+  --reward-glow: #16a34a80;
   --reward-pending: #171717;
   position: relative;
   z-index: 2;
@@ -111,7 +112,6 @@ html[data-display-currency]:not([data-display-currency="USD"]) .nlc-price strong
   inset: 50% 0 auto;
   height: 5px;
   transform: translateY(-50%);
-  overflow: hidden;
   border-radius: 5px;
   background: var(--reward-pending);
 }
@@ -120,7 +120,11 @@ html[data-display-currency]:not([data-display-currency="USD"]) .nlc-price strong
   position: absolute;
   inset: 0 auto 0 0;
   width: var(--earned-width, 0%);
+  border-radius: inherit;
   background: var(--reward-earned);
+}
+.nlc-reward-rail:has(.nlc-reward-trigger[data-reached="true"]) .nlc-reward-meter::before {
+  box-shadow: 0 0 8px 1px var(--reward-glow);
 }
 .nlc-reward-meter > span {
   position: relative;
@@ -163,6 +167,7 @@ html[data-display-currency]:not([data-display-currency="USD"]) .nlc-price strong
 .nlc-reward-trigger[data-reached="true"] > span {
   background: var(--reward-earned);
   border-color: var(--reward-earned);
+  box-shadow: 0 0 0 2px #fff, 0 0 9px 4px var(--reward-glow);
 }
 .nlc-reward-trigger svg { width: 14px; height: 14px; }
 .nlc-reward-trigger:focus-visible { outline: none; }

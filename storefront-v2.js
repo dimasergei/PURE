@@ -141,11 +141,9 @@
   const products=featured.filter(p=>p.category!=='supplies').slice(0,3);
   return `<section class="ap-container pure-home-volume" aria-labelledby="pure-home-volume-title">
     <header class="pure-home-volume-intro">
-      <div class="pure-home-volume-head">
-        <h2 id="pure-home-volume-title">Bulk Orders</h2>
-        <a class="pure-home-volume-link" href="/bulk-orders">Build a Bulk Order</a>
-      </div>
+      <h2 id="pure-home-volume-title">Bulk Orders</h2>
       <p class="pure-home-volume-tiers">${tiers.map(tier=>`<span><strong>${tier.bps/100}% off</strong> at ${tier.min}+ units</span>`).join('')}<small>Per compound · mix strengths</small></p>
+      <a class="pure-home-volume-link" href="/bulk-orders">Build a Bulk Order</a>
     </header>
     ${tiers.length&&products.length?`<div class="pure-home-express" data-home-bulk>
       <div class="pure-home-express-products">${products.map(homeBulkProduct).join('')}</div>
@@ -312,8 +310,8 @@
  }
  function homePackaging(){
   return `<section class="ap-container pure-home-packaging" aria-labelledby="pure-packaging-title">
-    <img src="/assets/pure-packaging-studio.webp" alt="Black PURE carton and matching vial with white lettering on a white background" width="1344" height="816" loading="lazy">
-    <div><h2 id="pure-packaging-title">Packaging &amp; delivery</h2><p>Choose your shipping option at checkout. Look for tracking details in your shipment email after dispatch.</p><a class="ap-button" href="/shop">Shop now</a></div>
+    <img src="/assets/pure-packaging-studio.webp" alt="A PURE vial next to its black branded box" width="1344" height="816" loading="lazy">
+    <div><h2 id="pure-packaging-title">Packaging &amp; delivery</h2><p>Each vial comes in its own rigid PURE-branded box with a magnetic closure. Choose your shipping option at checkout. We’ll email you tracking details once your order ships.</p><a class="ap-button" href="/shop">Shop now</a></div>
   </section>`;
  }
  function homeEmailUpdates(){
