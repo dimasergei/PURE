@@ -1,7 +1,7 @@
 'use strict';
 const fs=require('node:fs'),path=require('node:path');
 const views=require('./reference-ui-functions.cjs'),out='public-build';
-const businessContact = require('./lib/business-contact.cjs');
+const { contactPage: businessContact } = require('./lib/business-contact.cjs');
 for(const [file,anchor,functions] of [['storefront-v2.js',' window.AltaStore=',views.store],['workspace-v2.js',' window.AltaWorkspace=',views.workspace]]){
  const p=path.join(out,file);let s=fs.readFileSync(p,'utf8');if(!s.includes(anchor))throw Error('Missing view integration point: '+file);
  const viewAssignments = Object.entries(functions).map(([name, fn]) => {
