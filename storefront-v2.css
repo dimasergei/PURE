@@ -310,7 +310,7 @@ body.ap-site:has([data-pure-home-pending], [data-pure-home-hero].pure-sale-cta-v
   }
 }
 
-body.ap-site .nl-featured .ap-section-head {
+body.ap-site .nl-featured:not(.ap-related) .ap-section-head {
   display: grid;
   grid-template-columns: 44px minmax(0, 1fr) 44px;
   align-items: center;
@@ -336,24 +336,30 @@ body.ap-site .nl-featured .ap-section-head .pure-home-featured-title {
   text-wrap: balance;
 }
 
+body.ap-site .ap-related .ap-section-head > .nl-related-title {
+  font-family: 'Archivo', Arial, sans-serif;
+  font-size: clamp(1.25rem, 5.5vw, 2rem);
+  font-weight: 900;
+  letter-spacing: -.045em;
+  line-height: 1.1;
+}
+body.ap-site .nl-detail .nl-document-link {
+  align-items: center;
+  justify-content: flex-start;
+  gap: 9px;
+}
+.nl-document-link .nl-document-icon {
+  flex: none;
+  width: 21px;
+  height: 21px;
+}
+
 body.ap-site .nl-editorial > div:first-child { text-align: center; }
 body.ap-site .nl-editorial > div:first-child > p { margin-inline: auto; }
 body.ap-site .nl-editorial .nl-capsule {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
   border-color: #000;
   background: #000;
   color: #fff;
-}
-body.ap-site .nl-editorial .nl-capsule::before {
-  box-sizing: border-box;
-  flex: none;
-  width: 6px;
-  height: 6px;
-  border: 3px solid currentColor;
-  border-radius: 50%;
-  content: '';
 }
 
 body.ap-site .pure-home-volume {
@@ -447,10 +453,9 @@ body.ap-site .pure-home-volume :is(select, a, button):focus-visible {
   gap: 6px;
   min-width: 0;
 }
-.pure-home-express-fields label::after {
+:is(.pure-home-express-fields label, .nl-shop-sort)::after {
   position: absolute;
   inset-inline-end: 14px;
-  bottom: 18px;
   width: 9px;
   height: 9px;
   border: solid currentColor;
@@ -460,6 +465,7 @@ body.ap-site .pure-home-volume :is(select, a, button):focus-visible {
   pointer-events: none;
   transform: scale(1.12, .78) rotate(45deg);
 }
+.pure-home-express-fields label::after { bottom: 18px; }
 body.ap-site .pure-home-express-fields select {
   width: 100%;
   min-width: 0;
@@ -547,7 +553,6 @@ body.ap-site .pure-home-email {
 }
 
 .pure-home-email-club {
-  display: inline-block;
   margin-bottom: 12px;
   padding: 5px 11px;
   border: 1px solid #777;

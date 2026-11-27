@@ -113,6 +113,8 @@ async function setup(route,campaign=null,quote=null){const errors=[];const conso
   assert.equal(d.querySelector('[data-pure-home-campaign]'),null,'no duplicate hero message');
   if(route.includes('/product/')){
    const reports=d.querySelector('.nl-document-link');
+   assert.ok(reports.firstElementChild.matches('svg.nl-document-icon[aria-hidden="true"]'));
+   assert.equal(d.querySelector('.nl-related-title').textContent,'RELATED PRODUCTS');
    const reportUrl=new URL(reports.href);
    assert.equal(reportUrl.pathname,'/coas');
    assert.equal(reportUrl.searchParams.get('product'),route.split('?')[0].split('/').at(-1));
@@ -177,6 +179,8 @@ async function setup(route,campaign=null,quote=null){const errors=[];const conso
   assert.equal(d.querySelector('.nl-featured').nextElementSibling,bulk,'bulk savings follow featured products');
   assert.equal(d.querySelector('[data-mx-membership-home]'),null);
   const testing=d.querySelector('.nl-editorial');
+  assert.equal(testing.querySelector('.nl-capsule.pure-glow-pill').textContent,'PURE DOCUMENTATION');
+  assert.equal(d.querySelector('#pure-packaging-title').textContent,'PACKAGING & DELIVERY');
   assert.deepEqual([...testing.querySelectorAll(':scope > div:first-child > p')].map(p=>p.textContent),['Request the certificate for your fulfilled lot when you order.']);
   const callout=testing.nextElementSibling;
   assert.ok(callout.matches('.pure-home-research'));
@@ -245,7 +249,7 @@ async function setup(route,campaign=null,quote=null){const errors=[];const conso
   assert.ok(faq.firstElementChild.nextElementSibling.matches('.pure-faq-list'));
   assert.equal(faq.querySelector('nav'),null);
   const club=d.querySelector('.pure-home-email');
-  assert.equal(club.querySelector('.pure-home-email-club').textContent,'PURE CLUB');
+  assert.equal(club.querySelector('.pure-home-email-club.pure-glow-pill').textContent,'PURE CLUB');
   assert.equal(club.querySelector('h2').textContent,'Get 10% off your first order.');
   assert.equal(club.querySelector('.pure-home-email-copy p').textContent,'New compounds, restocks, and COAs first. One code, straight to your inbox.');
   assert.equal(club.querySelector('button[type="submit"]').textContent.trim(),'Get my 10% off');
@@ -277,9 +281,10 @@ async function setup(route,campaign=null,quote=null){const errors=[];const conso
  }
  {const{dom,d,w}=await setup('/shop');
   assert.equal(d.querySelector('h1').textContent,'ALL PRODUCTS.');
+  assert.equal(d.querySelector('[data-pure-collection-intro]').textContent,'Exact strengths. Clear prices. One place.');
   assert.match(d.querySelector('.nl-shop-header p').textContent,/choose the precise strength/);
   assert.equal(d.querySelector('.nl-shop-sale'),null);assert.equal(d.querySelector('#ap-result-count'),null);
-  assert.deepEqual([...d.querySelectorAll('.nl-filter-pills button')].map(x=>x.textContent),['All Products','Peptides','Mist Applicators','Supplies']);
+  assert.deepEqual([...d.querySelectorAll('.nl-filter-pills button')].map(x=>x.textContent),['All','Peptides','Sprays','Supplies']);
   const cards=[...d.querySelectorAll('#ap-catalog-grid .ap-product-card')];assert.equal(cards.length,20);
   for(const card of cards){
    const p=w.AltaStore.product(card.dataset.product),photo=card.querySelector('a.ap-product-image'),url=new URL(photo.href);
@@ -296,6 +301,8 @@ async function setup(route,campaign=null,quote=null){const errors=[];const conso
   }
   const input=d.querySelector('#ap-catalog-query'),sort=d.querySelector('#ap-catalog-sort');
   assert.ok(input.closest('.nl-shop-controls')===sort.closest('.nl-shop-controls'));
+  assert.equal(input.placeholder,'Search products');
+  assert.equal(sort.querySelector('[value="popular"]').textContent,'Best Selling');
   assert.equal(d.querySelector('label[for="ap-catalog-sort"]').textContent,'Sort by:');
   d.querySelector('#ap-load-more').click();assert.ok(d.querySelectorAll('#ap-catalog-grid .ap-product-card').length>cards.length);
   input.value='BPC-157';input.dispatchEvent(new w.Event('input',{bubbles:true}));
@@ -325,24 +332,12 @@ async function setup(route,campaign=null,quote=null){const errors=[];const conso
  {const{dom,d,w}=await setup('/bulk-orders');
   assert.equal(d.querySelector('.nl-bulk-count'),null);assert.equal(d.querySelector('#ap-bulk-count'),null);
   const benefits=[...d.querySelectorAll('.nl-bulk-benefit')];
-  assert.equal(benefits.length,4);
-  assert.deepEqual(benefits.slice(0,2).map(benefit=>benefit.querySelector('.nl-bulk-benefit-rate').textContent),['50%','60%']);
-  assert.deepEqual(benefits.map(benefit=>benefit.querySelector('.nl-bulk-benefit-copy').textContent),['Off every unit at 10+','Off every unit at 50+','Certificates of Analysis','Free 2-day express shipping']);
-  assert.match(d.querySelector('.nl-bulk-benefit-shipping small').textContent,/U\.S\. bulk orders · after dispatch/);
-  assert.equal(benefits[2].getAttribute('href'),'/coas');
-  assert.equal(benefits[2].querySelector('.nl-bulk-coa-proof strong').textContent,'99%+ purity');
-  assert.equal(benefits[2].querySelector('.nl-bulk-coa-proof small').textContent,'In select HPLC + MS reports');
-  assert.equal(benefits[2].querySelector('.nl-bulk-coa-details small').textContent,'Lab reports · View COAs →');
-  const reportedResults=require('../data/coa-results.json');
-  const supplierReports=require('../data/supplier-coas.json').reports;
-  assert.ok(supplierReports.some(report=>{
-   const result=reportedResults[report.id];
-   return result?.document_sha256===report.sha256&&parseFloat(result.purity)>=99&&
-    result.methods?.some(method=>/HPLC/.test(method))&&result.methods.some(method=>/MS/.test(method));
-  }),'a linked supplier report supports the qualified purity badge');
+  assert.deepEqual(benefits.map(benefit=>benefit.querySelector('.nl-bulk-benefit-rate').textContent),['50%','60%']);
+  assert.deepEqual(benefits.map(benefit=>benefit.querySelector('.nl-bulk-benefit-copy').textContent),['Off every unit at 10+','Off every unit at 50+']);
   const hero=d.querySelector('.nl-bulk-hero');
-  assert.equal(hero.querySelector('.nl-capsule').textContent,'BULK ORDERS · SALE PRICING');
-  assert.equal(hero.querySelector('h1').textContent,'Buy in bulk. Save up to 60%.');
+  assert.equal(hero.querySelector('.nl-capsule.pure-glow-pill').textContent,'BULK ORDERS · SALE PRICING');
+  assert.equal(hero.querySelector('h1').textContent,'BUY IN BULK. SAVE UP TO 60%.');
+  assert.doesNotMatch(hero.textContent,/Start with 10 units per compound/);
   assert.match(hero.querySelector('p').textContent,/50% on every unit at 10\+ or 60% at 50\+, based on retail prices/);
   assert.equal(hero.querySelector('a,button'),null);
   assert.deepEqual([...d.querySelectorAll('[data-action="bulk-category"]')].map(button=>button.textContent),['All Products','Peptides','Mist Applicators','Supplies']);

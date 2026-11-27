@@ -15,7 +15,7 @@ const codeMinimum = dollars(affiliateMinimum);
 const payoutMinimum = dollars(partner.minimum_payout_cents);
 const description = `Refer laboratory research organizations to PURE. Earn ${firstRate} on a new customer’s first qualifying merchandise order and ${repeatRate} on later qualifying orders.`;
 const markup = `<section class="nl-wide-hero nl-partner-hero"><div class="ap-container">
-  <span class="nl-capsule">PURE PARTNER PROGRAM</span>
+  <span class="nl-capsule pure-glow-pill">PURE PARTNER PROGRAM</span>
   <h1>GOOD RESEARCH GROWS<br><em>THROUGH GOOD CONNECTIONS.</em></h1>
   <p>Introduce new research teams to PURE. Earn a commission on their first qualifying order and each qualifying order that follows.</p>
   <div class="nl-partner-actions"><a class="ap-button nl-primary" href="/account/partner">Join the partner program</a><a class="ap-button ap-button-secondary" href="/partner-terms.html">Read partner terms</a></div>

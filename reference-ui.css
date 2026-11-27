@@ -476,9 +476,10 @@ body.ap-site{font-family:Archivo,Arial,sans-serif;background:#fff;color:#111111}
 .ap-site .nl-shop-search svg{position:absolute;top:50%;left:20px;width:19px;height:19px;transform:translateY(-50%);fill:none;stroke:#777;stroke-width:1.7;pointer-events:none}
 .ap-site .nl-shop .nl-shop-search input{width:100%;max-width:none;height:54px;padding:13px 18px 13px 47px;border:1.5px solid #e5e5e5;border-radius:999px;background:#fafafa;color:#111111;font:400 15px/1.5 Archivo,sans-serif;box-shadow:none}
 .ap-site .nl-shop .nl-shop-search input:focus{outline:2px solid #d0d0d0;outline-offset:2px}
-.ap-site .nl-shop-sort{display:flex;align-items:center;gap:12px;margin-left:auto;white-space:nowrap}
+.ap-site .nl-shop-sort{position:relative;display:flex;align-items:center;gap:12px;margin-left:auto;white-space:nowrap}
+.ap-site .nl-shop-sort::after{top:calc(50% - 5px)}
 .ap-site .nl-shop-sort label{font-size:14px;font-weight:600;color:#666666}
-.ap-site .nl-shop .nl-shop-sort select{width:183px;height:46px;padding:10px 16px;border:1.5px solid #e5e5e5;border-radius:10px;background:#fff;color:#171717;font:600 14px/1.5 Archivo,sans-serif}
+.ap-site .nl-shop .nl-shop-sort select{appearance:none;width:183px;height:46px;padding:10px 16px;padding-inline-end:32px;border:1.5px solid #e5e5e5;border-radius:10px;background:#fff;color:#171717;font:600 14px/1.5 Archivo,sans-serif}
 .ap-site .nl-shop .nl-filter-pills{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 17px;padding:0;overflow:visible}
 .ap-site .nl-shop .nl-filter-pills button{min-width:0;min-height:52px;padding:13px 28px;border:1.5px solid #111111;border-radius:999px;background:#fff;color:#111111;font:700 15px/1.5 Archivo,sans-serif;box-shadow:none}
 .ap-site .nl-shop .nl-filter-pills button[aria-pressed=true]{background:#fff;color:#111111;box-shadow:none}
@@ -488,13 +489,13 @@ body.ap-site{font-family:Archivo,Arial,sans-serif;background:#fff;color:#111111}
  .ap-site .nl-shop-header{margin-bottom:22px}
  .ap-site .nl-shop-header h1{font-size:32px}
  .ap-site .nl-shop-header p{font-size:14px}
- .ap-site .nl-shop .nl-shop-controls{display:grid;grid-template-columns:minmax(0,1fr) 132px;align-items:center;gap:8px;margin-bottom:24px}
+ .ap-site .nl-shop .nl-shop-controls{display:grid;grid-template-columns:minmax(0,1fr) clamp(114px,34vw,132px);align-items:center;gap:8px;margin-bottom:24px}
  .ap-site .nl-shop-search{min-width:0;width:100%}
  .ap-site .nl-shop-search svg{left:13px;width:17px;height:17px}
- .ap-site .nl-shop .nl-shop-search input{box-sizing:border-box;min-width:0;height:46px;padding:9px 10px 9px 36px;font-size:16px}
+ .ap-site .nl-shop .nl-shop-search input{box-sizing:border-box;min-width:0;height:46px;padding:9px 8px 9px 34px;font-size:16px}
  .ap-site .nl-shop-sort{display:block;min-width:0;width:100%;margin-left:0}
  .ap-site .nl-shop-sort .nl-shop-sort-label{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
- .ap-site .nl-shop .nl-shop-sort select{box-sizing:border-box;min-width:0;width:100%;height:46px;padding:9px 10px}
+ .ap-site .nl-shop .nl-shop-sort select{box-sizing:border-box;min-width:0;width:100%;height:46px;padding:9px;padding-inline-end:28px;font-size:clamp(.8125rem,3.8vw,.875rem)}
  .ap-site .nl-shop .nl-filter-pills{flex-wrap:nowrap;overflow-x:auto;gap:10px;padding:2px 2px 12px;margin-bottom:12px}
  .ap-site .nl-shop .nl-filter-pills button{flex:none;min-height:44px;padding:10px 19px;font-size:12px}
 }
@@ -1079,10 +1080,10 @@ html[data-display-currency]:not([data-display-currency="USD"]) body.ap-site :is(
  .ap-site .pure-shop-page .pure-shop-hero { background:#fff; color:#111; }
  .ap-site .pure-shop-page .pure-shop-hero-inner { min-height:0; padding-block:20px 8px; }
  .ap-site .pure-shop-page .pure-shop-hero h1 { margin:0 0 5px; color:#111; font-size:clamp(29px,7vw,38px); }
- .ap-site .pure-shop-page .pure-shop-hero p { margin:0; color:#555; font-size:.9375rem; line-height:1.4; }
+ .ap-site .pure-shop-page .pure-shop-hero p { margin:0; color:#555; font-size:clamp(.8125rem,3.9vw,.9375rem); line-height:1.4; }
  .ap-site .pure-shop-page :is(.pure-shop-kicker,.pure-shop-watermark,.pure-shop-period,.nl-shop-header) { display:none; }
  .ap-site .pure-shop-page .nl-shop { padding-top:8px; }
- .ap-site .pure-shop-page .nl-shop .nl-filter-pills { flex-wrap:wrap; justify-content:center; gap:6px; padding:2px; }
- .ap-site .pure-shop-page .nl-shop .nl-filter-pills button { min-height:38px; }
+ .ap-site .pure-shop-page .nl-shop .nl-filter-pills { flex-wrap:nowrap; justify-content:safe center; gap:clamp(4px,1.4vw,8px); padding:4px; }
+ .ap-site .pure-shop-page .nl-shop .nl-filter-pills button { min-width:44px; min-height:44px; padding-inline:clamp(5px,calc(3.5vw - 6px),15px); font-size:clamp(.6875rem,3.2vw,.75rem); white-space:nowrap; }
  .ap-site .pure-shop-page #ap-catalog-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
 }

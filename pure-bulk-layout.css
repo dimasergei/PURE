@@ -7,9 +7,10 @@ html:root body.ap-site .nl-bulk-hero h1 {
   max-width: 1100px;
   margin: 14px 0 18px;
   font-size: clamp(40px, 5.6vw, 80px);
+  font-weight: 900;
   line-height: 1.04;
   letter-spacing: -.055em;
-  text-transform: none;
+  text-transform: uppercase;
   text-wrap: balance;
 }
 html:root body.ap-site .nl-bulk-hero h1 > strong { color: #d9d9d9; }
@@ -27,21 +28,21 @@ html:root body.ap-site .nl-bulk-hero .nl-capsule {
 }
 #ap-bulk-catalog { scroll-margin-top: var(--ap-workspace-sticky-top, 128px); }
 html:root body.ap-site .nl-bulk-benefits {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-auto-rows: 1fr;
   gap: 14px;
   margin-top: 26px;
   margin-bottom: 0;
 }
 html:root body.ap-site .nl-bulk-benefits > .nl-bulk-benefit {
-  min-height: 154px;
+  min-height: 128px;
   align-items: flex-start;
   justify-content: flex-start;
   padding: 16px clamp(12px, 1.8vw, 24px);
   gap: 4px;
   border-radius: 12px;
 }
-html:root body.ap-site .nl-bulk-benefits > :is([data-bulk-threshold="10"], .nl-bulk-benefit-shipping) {
+html:root body.ap-site .nl-bulk-benefits > [data-bulk-threshold="10"] {
   background: var(--ap-cream) !important;
 }
 html:root body.ap-site .nl-bulk-benefits > .nl-bulk-benefit-best {
@@ -95,69 +96,6 @@ html:root body.ap-site .nl-bulk-benefit > small {
   font-size: 13px;
   line-height: 1.35;
 }
-html:root body.ap-site .nl-bulk-benefits > .nl-bulk-benefit-coa {
-  padding-inline: clamp(13px, 1.45vw, 20px);
-  text-decoration: none;
-}
-html:root body.ap-site .nl-bulk-benefit .nl-bulk-coa-proof {
-  display: inline-flex;
-  align-items: center;
-  width: max-content;
-  max-width: 100%;
-  min-height: 43px;
-  margin: 0 0 12px;
-  padding: 6px 10px 6px 8px;
-  border: 1px solid var(--ap-line);
-  border-radius: 13px;
-  background: var(--ap-white);
-  white-space: normal;
-}
-html:root body.ap-site .nl-bulk-coa-proof > .nl-bulk-coa-check {
-  display: grid;
-  place-items: center;
-  flex: 0 0 26px;
-  width: 26px;
-  height: 26px;
-  margin: 0;
-  background: var(--ap-cream);
-  color: var(--ap-ink);
-  line-height: 1;
-}
-.nl-bulk-coa-proof > div { min-width: 0; }
-html:root body.ap-site .nl-bulk-coa-proof > div > strong {
-  font-size: 15px;
-  font-weight: 850;
-}
-html:root body.ap-site .nl-bulk-coa-proof > div > small {
-  display: block;
-  color: var(--ap-muted);
-  white-space: normal;
-}
-.nl-bulk-coa-details {
-  display: grid;
-  gap: 3px;
-  margin-top: auto;
-}
-html:root body.ap-site .nl-bulk-coa-details > .nl-bulk-benefit-copy { margin: 0; }
-.nl-bulk-coa-details > small { font-size: 13px; line-height: 1.35; }
-html:root body.ap-site .nl-bulk-coa-details > small > span {
-  display: inline;
-  margin: 0;
-}
-html:root body.ap-site .nl-bulk-benefit-shipping > .nl-bulk-shipping-icon {
-  display: grid;
-  place-items: center;
-  flex: none;
-  align-self: flex-start;
-  background: var(--ap-ink);
-  color: var(--ap-white);
-  box-shadow: none;
-}
-html:root body.ap-site .nl-bulk-benefit-shipping > .nl-bulk-benefit-copy { margin-top: auto !important; }
-html:root body.ap-site .nl-bulk-benefit-coa:hover {
-  border-color: #777 !important;
-}
-
 html:root body.ap-site .nl-bulk-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(300px, 28%);
@@ -594,7 +532,6 @@ html:root body.ap-site .nl-bulk-faq details p {
   }
   html:root body.ap-site .nl-bulk-hero > div > p { font-size: 15px; }
   html:root body.ap-site .nl-bulk-benefits {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
     margin-top: 16px;
   }
@@ -607,9 +544,6 @@ html:root body.ap-site .nl-bulk-faq details p {
   html:root body.ap-site .nl-bulk-tier-head .nl-bulk-best-value { padding-inline: 6px; font-size: 9px; }
   html:root body.ap-site .nl-bulk-benefit-copy { font-size: 13px !important; }
   html:root body.ap-site .nl-bulk-benefit > small { font-size: 12px; }
-  html:root body.ap-site .nl-bulk-benefit .nl-bulk-coa-proof { gap: 6px; padding-inline: 6px; }
-  html:root body.ap-site .nl-bulk-coa-proof > div > strong { font-size: 12px; }
-  .nl-bulk-coa-details > small { font-size: 12px; }
   html:root body.ap-site .nl-bulk-layout { padding-top: 16px; }
   html:root body.ap-site .nl-bulk-categories {
     gap: 8px;
