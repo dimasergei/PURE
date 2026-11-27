@@ -10,6 +10,13 @@ const {coupon,coupon_discount_bps:couponBps}=checkoutConfig.promotions;
 const views=require('../reference-ui-functions.cjs');
 const read=file=>fs.readFileSync(file,'utf8');
 const settle=()=>new Promise(resolve=>setTimeout(resolve,0));
+const assertCanadianPrice=price=>{
+ const cents=Number(price.dataset.usdCents);
+ assert.ok(Number.isSafeInteger(cents)&&cents>0);
+ const expected=new Intl.NumberFormat('en-CA',{style:'currency',currency:'CAD'}).format(cents*1.4/100);
+ assert.equal(price.textContent,expected);
+ assert.ok(price.getAttribute('aria-label').startsWith(expected+' CAD'));
+};
 
 function displayRates(){
  const now=Date.now();
@@ -64,7 +71,7 @@ test('local display refresh preserves product strength, quantity and canonical U
   assert.equal(d.getElementById('ap-detail-quantity'),input);
   assert.equal(input.value,'7');assert.equal(d.querySelector('h1'),heading);
   assert.equal(w.AltaStore.selections['bpc-157'],'10mg');
-  assert.match(d.querySelector('.ap-detail-price').textContent,/CA\$/);
+  assertCanadianPrice(d.querySelector('.ap-detail-price .pure-price'));
   assert.equal(d.querySelector('[data-mobile-total] [data-usd-cents]').getAttribute('data-usd-cents'),String(Math.round(unit*100)*7));
   await w.AltaLocale.setCurrency('JPY');await settle();
   assert.equal(input.value,'7');assert.match(d.querySelector('.ap-detail-price').textContent,/[¥￥]/);
@@ -86,7 +93,7 @@ test('local display refresh preserves bulk quantities, search and draft contents
   assert.equal(d.getElementById('ap-bulk-query'),search);assert.equal(search.value,'BPC');
   assert.equal(d.querySelector('[data-bulk-id="bpc-157"]'),input);assert.equal(input.value,'10');
   assert.equal(w.localStorage.getItem('ap-bulk-draft-v2'),before);
-  assert.match(d.querySelector('.nl-bulk-estimate-total').textContent,/CA\$/);
+  assertCanadianPrice(d.querySelector('.nl-bulk-estimate-total .pure-price'));
   await w.AltaLocale.setCurrency('USD');await settle();
   assert.equal(input.value,'10');assert.equal(w.localStorage.getItem('ap-bulk-draft-v2'),before);
   assert.doesNotMatch(d.querySelector('.nl-bulk-estimate-total').textContent,/CAD|≈/);
@@ -104,7 +111,7 @@ test('cart display currency changes preserve the coupon and exact quote request 
   const before=JSON.stringify(requests),savedCart=w.localStorage.getItem('pp-cart');
   await w.AltaLocale.setCurrency('CAD');await settle();
   assert.equal(root.querySelector('[name="nlc_coupon"]'),couponInput);assert.equal(couponInput.value,coupon);
-  assert.match(root.querySelector('.nlc-proceed').textContent,/CA\$/);
+  assertCanadianPrice(root.querySelector('.nlc-proceed .pure-price'));
   await w.AltaLocale.setCurrency('JPY');await settle();
   assert.equal(JSON.stringify(requests),before);assert.equal(w.localStorage.getItem('pp-cart'),savedCart);
   assert.ok(requests.every(body=>body.country==='US'&&body.method_id===null&&!('currency' in body)&&!('display_currency' in body)));
@@ -120,7 +127,7 @@ test('homepage free-shipping threshold follows display FX without changing the U
   const usd=checkoutConfig.free_shipping_threshold_cents/100;
   assert.ok(trust.textContent.includes('Free shipping over $'+usd));
   await w.AltaLocale.setCurrency('CAD');await settle();
-  assert.ok(trust.textContent.includes('Free shipping over CA$'+(usd*1.4).toFixed(2)));
+  assert.ok(trust.textContent.includes('Free shipping over $'+(usd*1.4).toFixed(2)));
   assert.doesNotMatch(trust.textContent,/≈|US shipping/);
   await w.AltaLocale.setCurrency('USD');await settle();
   assert.ok(trust.textContent.includes('Free shipping over $'+usd));

@@ -2,7 +2,8 @@
 (()=>{
  'use strict';
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
- const money=(n,currency='USD')=>new Intl.NumberFormat('en-US',{style:'currency',currency:currency||'USD'}).format((n||0)/100);
+ const money=(n,currency='USD',currencyDisplay='symbol')=>new Intl.NumberFormat('en-US',{style:'currency',currency:currency||'USD',currencyDisplay}).format((n||0)/100);
+ const checkoutMoney=(n,currency)=>money(n,currency,currency==='CAD'?'narrowSymbol':'symbol');
  const empty=(title,text)=>`<div class="rd-empty"><span aria-hidden="true">◇</span><h3>${title}</h3><p>${text}</p><a class="ap-button" href="/shop">Start Shopping</a></div>`;
  function walletButtons(c={}){return `<div class="rd-wallets" aria-label="Express checkout">${[['apple_pay','Apple Pay'],['google_pay','Google Pay']].map(([key,label])=>c[key]?`<a class="rd-wallet" href="/checkout?method=${encodeURIComponent(c.card_method_id)}&wallet=${key}">${label}</a>`:`<button type="button" class="rd-wallet" disabled data-unavailable="true" aria-label="${label} — awaiting activation">${label}<small>Awaiting activation</small></button>`).join('')}</div>`;}
  const cartKey=items=>'ap-v2-cart-extras:'+JSON.stringify(items.map(({id,size,qty})=>({id,size,qty})));
@@ -27,7 +28,7 @@
  function syncCheckoutPrices(form,aside,cart,data,quote){
   const method=(data.methods||[]).find(item=>item.id===form.elements.method_id?.value),currency=window.DirectCheckout.paymentKind(method)==='interac'?'CAD':'USD';
   const current=quote?.currency===currency?quote:null,fx=current?.pricing?.fx_ppm;
-  const fromUsd=value=>!Number.isSafeInteger(value)?'Unavailable':currency==='USD'?money(value):Number.isSafeInteger(fx)&&fx>0?money(Math.round(value*fx/1000000),'CAD'):'Calculating…';
+  const fromUsd=value=>!Number.isSafeInteger(value)?'Unavailable':currency==='USD'?money(value):Number.isSafeInteger(fx)&&fx>0?checkoutMoney(Math.round(value*fx/1000000),'CAD'):'Calculating…';
   const country=form.elements.country?.value||'US',rates=data.shipping_zones?.[country]||data.shipping_zones?.OTHER||Object.fromEntries((data.delivery_options||[]).filter(option=>option.kind==='shipping').map(option=>[option.id,option.price_cents]));
   const delivery=current?.pricing?.delivery;
   for(const target of form.querySelectorAll('[data-rd-shipping-price]')){
@@ -35,20 +36,20 @@
    const free=current?.free_shipping_remaining_cents===0&&(
     ['economy','standard'].includes(id)&&['US','CA'].includes(country)||id==='express'&&country==='US');
    if(!enabled||!Number.isSafeInteger(rates[id]))target.textContent='Unavailable';
-   else if(delivery?.selection?.shipping===id)target.textContent=delivery.shipping_cents===0?'FREE':money(delivery.shipping_cents,currency);
+   else if(delivery?.selection?.shipping===id)target.textContent=delivery.shipping_cents===0?'FREE':checkoutMoney(delivery.shipping_cents,currency);
    else target.textContent=free?'FREE':fromUsd(rates[id]);
   }
   for(const target of form.querySelectorAll('[data-rd-extra-price]')){
    const id=target.dataset.rdExtraPrice,extra=delivery?.extras?.find(item=>item.id===id),configured=(data.delivery_options||[]).find(item=>item.id===id);
-   target.textContent=extra?money(extra.amount_cents,currency):fromUsd(configured?.price_cents);
+   target.textContent=extra?checkoutMoney(extra.amount_cents,currency):fromUsd(configured?.price_cents);
   }
   for(const target of aside.querySelectorAll('[data-dc-line-price]')){
    const [id,size]=JSON.parse(target.dataset.dcLinePrice),item=cart.find(line=>line.id===id&&line.size===size),quoted=current?.pricing?.lines?.find(line=>line.id===id&&line.size===size&&line.qty===item?.qty);
-   target.textContent=Number.isSafeInteger(quoted?.gross_cents)?money(quoted.gross_cents,currency):currency==='USD'&&item?money(Math.round(item.price*100)*item.qty):'Calculating…';
+   target.textContent=Number.isSafeInteger(quoted?.gross_cents)?checkoutMoney(quoted.gross_cents,currency):currency==='USD'&&item?money(Math.round(item.price*100)*item.qty):'Calculating…';
    if(form.dataset.bulkOrder==='true'&&Number.isSafeInteger(quoted?.line_total_cents)&&quoted.line_total_cents<quoted.gross_cents){
     const retail=document.createElement('del');
-    retail.textContent=money(quoted.gross_cents,currency);
-    target.replaceChildren(retail,document.createTextNode(' '+money(quoted.line_total_cents,currency)));
+    retail.textContent=checkoutMoney(quoted.gross_cents,currency);
+    target.replaceChildren(retail,document.createTextNode(' '+checkoutMoney(quoted.line_total_cents,currency)));
    }
   }
   const heading=aside.querySelector('h2'),label=form.dataset.bulkOrder==='true'?'Bulk order summary':'Your order';
@@ -113,7 +114,7 @@
     if(q.pricing?.coupon_discount_cents>0)rows.push(['BLACKFRIDAY10 (10%)',-q.pricing.coupon_discount_cents]);
     if(q.pricing?.crypto_discount_cents>0)rows.push(['Crypto discount (5%)',-q.pricing.crypto_discount_cents]);
     rows.push(['Delivery & options',q.shipping_cents]);if(q.tax_cents)rows.push(['Tax',q.tax_cents]);rows.push([interac?'Total (CAD)':'Estimated total',q.total_cents]);
-    estimate.innerHTML=rows.map(([label,v])=>`<div class="dc-total-row"><span>${label}</span><strong>${money(v,q.currency)}</strong></div>`).join('')+(q.pricing?.discount_source==='coupon_crypto'?'<p class="dc-note">Your coupon is applied first, then an extra 5% Crypto discount on the remaining merchandise.</p>':'')+(interac?'<p class="dc-note">Your total is in CAD. Interac receiving details appear after you place the order. USD points and store credit cannot be applied to this payment.</p>':'<p class="dc-note">Existing points and store credit are applied when you review the final total.</p>');
+    estimate.innerHTML=rows.map(([label,v])=>`<div class="dc-total-row"><span>${label}</span><strong>${checkoutMoney(v,q.currency)}</strong></div>`).join('')+(q.pricing?.discount_source==='coupon_crypto'?'<p class="dc-note">Your coupon is applied first, then an extra 5% Crypto discount on the remaining merchandise.</p>':'')+(interac?'<p class="dc-note">Your total is in CAD. Interac receiving details appear after you place the order. USD points and store credit cannot be applied to this payment.</p>':'<p class="dc-note">Existing points and store credit are applied when you review the final total.</p>');
     syncDelivery(q);
    }catch(error){
     if(n===sequence){

@@ -57,11 +57,11 @@ test('a changed CAD exchange quote requires a second purchase click and uses the
  const env=await setup({respond:body=>{if(body.action==='quote'){quoteCount++;return price(body,{total:quoteCount===1?2779:2800,rate:quoteCount===1?1390000:1400700,version:quoteCount});}if(body.action==='place')return {id:body.id,currency:'CAD',total_cents:2800,manual_transfer:true};}});
  env.form.elements.country.value='CA';env.form.elements.country.dispatchEvent(new env.w.Event('change',{bubbles:true}));
  const interac=env.form.querySelector('[value="fixture-interac"]');interac.checked=true;interac.dispatchEvent(new env.w.Event('change',{bubbles:true}));
- await env.submit();assert.match(env.root.querySelector('.pm-final').textContent,/CA\$27\.79/);
+ await env.submit();assert.match(env.root.querySelector('.pm-final').textContent,/\$27\.79/);
  await env.root.querySelector('[data-pm-place]').onclick();
  assert.equal(env.calls.filter(call=>call?.action==='place').length,0);
  assert.match(env.root.querySelector('[data-pm-status]').textContent,/CAD total changed/);
- assert.match(env.root.querySelector('.pm-final').textContent,/CA\$28\.00/);
+ assert.match(env.root.querySelector('.pm-final').textContent,/\$28\.00/);
  assert.equal(env.root.querySelector('[data-pm-place]').disabled,false);
  await env.root.querySelector('[data-pm-place]').onclick();
  const order=env.calls.find(call=>call?.action==='place');assert.ok(order);assert.equal(order.fx_quote.fixture_version,3);assert.equal(order.quote,'fixture-quote-3');

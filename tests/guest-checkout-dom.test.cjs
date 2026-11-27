@@ -95,7 +95,7 @@ test('guest payment options include available Crypto and Canadian Interac',async
   assert.deepEqual([...root.querySelectorAll('[name=payment_choice]')].map(option=>option.value),country==='CA'?['card','crypto','interac']:['card','crypto']);
   if(country==='CA'){
    form.querySelector('[value=interac]').click();await settle();
-   assert.match(root.querySelector('[data-nlx-place]').textContent,/CA\$97\.00/);
+   assert.match(root.querySelector('[data-nlx-place]').textContent,/\$97\.00/);
   }
  }
 });

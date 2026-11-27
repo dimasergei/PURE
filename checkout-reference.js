@@ -1,7 +1,7 @@
 (()=>{
  'use strict';
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
- const money=(n,currency='USD')=>new Intl.NumberFormat('en-US',{style:'currency',currency}).format((Number(n)||0)/100);
+ const money=(n,currency='USD')=>new Intl.NumberFormat('en-US',{style:'currency',currency,currencyDisplay:currency==='CAD'?'narrowSymbol':'symbol'}).format((Number(n)||0)/100);
  const usd=n=>money(n,'USD');
  const view=(selector,base=document)=>base.querySelector(selector);
  const all=(selector,base=document)=>Array.from(base.querySelectorAll(selector));

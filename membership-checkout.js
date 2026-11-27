@@ -1,7 +1,7 @@
 (()=>{
  'use strict';
  const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
- const money=(value,currency='USD')=>new Intl.NumberFormat('en-US',{style:'currency',currency,currencyDisplay:'symbol'}).format(value/100);
+ const money=(value,currency='USD',currencyDisplay=currency==='CAD'?'narrowSymbol':'symbol')=>new Intl.NumberFormat('en-US',{style:'currency',currency,currencyDisplay}).format(value/100);
  const field=(label,name,value='',attributes='')=>'<label>'+label+'<input name="'+name+'" value="'+esc(value)+'" '+attributes+'></label>';
  function offer(root,quote,config,actions={}){
   if(!root)return;
@@ -34,7 +34,7 @@
    if(data.membership){root.innerHTML='<section class="pm-checkout pm-already"><span class="pm-eyebrow">YOUR MEMBERSHIP</span><h1>'+esc(data.membership.name)+'</h1><p>Your membership is already active through '+esc(new Date(data.membership.expires_at).toLocaleDateString())+'.</p><p>You can purchase a new term after it expires. Your current cart is ready whenever you are.</p><div class="pm-actions"><a class="ap-button" href="/checkout">Continue your cart</a><a class="ap-button ap-button-secondary" href="/account/membership">View benefits</a></div></section>';return;}
    if(data.membership_pending){
     const pending=data.membership_pending,name=pending.name||window.PureMemberships.displayName(pending.plan),needsReview=pending.expired===true||pending.requires_review===true;
-    const amount=Number.isSafeInteger(pending.total_cents)&&pending.total_cents>0&&['USD','CAD'].includes(pending.currency)?money(pending.total_cents,pending.currency):null;
+    const amount=Number.isSafeInteger(pending.total_cents)&&pending.total_cents>0&&['USD','CAD'].includes(pending.currency)?money(pending.total_cents,pending.currency,'symbol'):null;
     root.innerHTML='<section class="pm-checkout pm-pending"><span class="pm-eyebrow">MEMBERSHIP PAYMENT</span><h1>'+esc(name)+'</h1><span class="pm-pending-badge">'+(needsReview?'Needs attention':'Awaiting payment')+'</span><p>'+esc(amount?amount+' · ':'')+(pending.billing_period==='annual'?'One-year membership term.':'One-month membership term.')+'</p>'+(needsReview?'<p><strong>Unpaid membership needs attention.</strong> Open your saved order to check its status. If you have not sent payment, cancel the unpaid order before starting again. If you sent payment, contact PURE so it can be checked.</p>':'<p>Your membership purchase is already saved. Continue its payment to activate your benefits. Your product cart stays saved.</p>')+'<div class="pm-actions"><a class="ap-button" href="/account/purchases'+(pending.invoice_id?'?id='+encodeURIComponent(pending.invoice_id):'')+'">'+(needsReview?'Review membership order':'Continue payment')+'</a><a class="ap-button ap-button-secondary" href="/account/membership">View membership</a></div></section>';return;
    }
    const profile=user.user_metadata?.alta_profile||{},address=profile.shipping||{},countries=data.config.shipping_countries||['US'],countryNames=new Intl.DisplayNames(['en'],{type:'region'});

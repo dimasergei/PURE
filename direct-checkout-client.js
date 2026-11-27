@@ -1,7 +1,8 @@
 (() => {
  'use strict';
  const node=(tag,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=String(text);return e;};
- const money=(v,c='USD')=>new Intl.NumberFormat('en-US',{style:'currency',currency:c}).format(v/100);
+ const money=(v,c='USD',currencyDisplay='symbol')=>new Intl.NumberFormat('en-US',{style:'currency',currency:c,currencyDisplay}).format(v/100);
+ const checkoutMoney=(v,c)=>money(v,c,c==='CAD'?'narrowSymbol':'symbol');
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const USDC_NETWORKS={polygon_usdc:{label:'Polygon',gas:'POL'},base_usdc:{label:'Base',gas:'ETH'},ethereum_usdc:{label:'Ethereum',gas:'ETH'}};
  const usdcNetwork=provider=>Object.hasOwn(USDC_NETWORKS,provider)?USDC_NETWORKS[provider]:null;
@@ -79,7 +80,7 @@
   if(q.pricing?.coupon_discount_cents>0)rows.push(['BLACKFRIDAY10 (10%)',-q.pricing.coupon_discount_cents]);
   if(q.pricing?.crypto_discount_cents>0)rows.push(['Crypto discount (5%)',-q.pricing.crypto_discount_cents]);
   rows.push(['Delivery',q.shipping_cents],['Tax',q.tax_cents],['Points redeemed',-q.points_redeemed],['Store credit',-q.credit_redeemed_cents],[q.currency==='CAD'?'Total (CAD)':'Due now',q.total_cents]);
-  for(const [label,value] of rows){if(!value&&['Points redeemed','Store credit'].includes(label))continue;const row=node('div');row.className='dc-total-row'+(['Due now','Total (CAD)'].includes(label)?' dc-due':'');row.append(node('span',label),node('strong',money(value,q.currency)));totals.append(row);}
+  for(const [label,value] of rows){if(!value&&['Points redeemed','Store credit'].includes(label))continue;const row=node('div');row.className='dc-total-row'+(['Due now','Total (CAD)'].includes(label)?' dc-due':'');row.append(node('span',label),node('strong',checkoutMoney(value,q.currency)));totals.append(row);}
   box.append(totals);if(q.currency==='CAD')box.append(node('p','Send the CAD total above by Interac using the receiving details shown after you place your order.'));if(q.pricing?.crypto_discount_suppressed_for_balance)box.append(node('p','The extra 5% Crypto discount requires a remaining Crypto payment. Your selected account balance covers the discounted total, so the Crypto discount is removed. Any applied coupon is kept.'));if(q.pricing?.discount_source==='coupon_crypto')box.append(node('p','Your coupon is applied first, then an extra 5% Crypto discount on the remaining merchandise.'));if(q.pricing?.shipping_note)box.append(node('p',q.pricing.shipping_note));return box;
  }
  function cartSummary(cart){const box=node('aside');box.className='dc-summary';box.setAttribute('aria-label','Order summary');box.append(node('h2','Your order'));
@@ -206,7 +207,7 @@
      if(kind==='interac')body.fx_quote=q.fx_quote;
      window.ReadinessUI.syncCheckoutPrices?.(form,aside,cart,data,q);
      estimate.hidden=true;review.replaceChildren(summary(q));review.scrollIntoView({behavior:'auto',block:'nearest'});status.textContent=kind==='interac'?'Your total is in CAD. Place your order to see the Interac payment details.':'Review the final total, then place your order.';
-     const place=node('button',kind==='interac'?'Place order · '+money(q.total_cents,'CAD'):q.total_cents===0?'Place order using account balance':kind==='card'?'Place order & pay by card':'Place order & pay with crypto');place.type='button';place.className='ap-button';review.append(place);
+     const place=node('button',kind==='interac'?'Place order · '+checkoutMoney(q.total_cents,'CAD'):q.total_cents===0?'Place order using account balance':kind==='card'?'Place order & pay by card':'Place order & pay with crypto');place.type='button';place.className='ap-button';review.append(place);
      if(kind==='card'){const note=node('p','Your order is priced in USD. The payment provider displays its fees, conversion rate and final charge before you pay. Identity verification and country or device restrictions may apply.');note.className='dc-note';review.append(note);}
      place.onclick=async()=>{if(busy)return;busy=true;place.disabled=true;button.disabled=true;for(const x of form.elements)x.disabled=true;status.textContent='Saving your order. Please wait…';
       let savedOrder;
@@ -218,7 +219,7 @@
         const changed=['subtotal_cents','discount_cents','shipping_cents','tax_cents','total_cents'].some(key=>refreshed[key]!==q[key])||refreshed.pricing.fx_ppm!==q.pricing.fx_ppm;
         q=refreshed;body.fx_quote=q.fx_quote;form.dataset.fxQuote=q.fx_quote;
         window.ReadinessUI.syncCheckoutPrices?.(form,aside,cart,data,q);
-        review.querySelector('.dc-review-summary').replaceWith(summary(q));place.textContent='Place order · '+money(q.total_cents,'CAD');
+        review.querySelector('.dc-review-summary').replaceWith(summary(q));place.textContent='Place order · '+checkoutMoney(q.total_cents,'CAD');
         if(changed){
          status.textContent='Your CAD price has updated. Review the total above, then choose Place order to continue.';
          busy=false;place.disabled=false;for(const control of form.elements)control.disabled=control.dataset.unavailable==='true';return;

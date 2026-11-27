@@ -37,9 +37,9 @@ test('selected membership is shown once in order item list, not duplicated in up
  const env=render({...quote,pricing:{membership_addon:{plan:'vip',period:'monthly',fee_cents:1999}}});
  try{assert.equal(env.box.hidden,true);assert.equal(env.box.textContent,'');}finally{env.dom.window.close();}
 });
-test('Canadian checkout shows CA$ for membership fees without US$ prefixes',()=>{
+test('Canadian checkout shows $ for membership fees without US$ prefixes',()=>{
  const env=render({...quote,currency:'CAD',pricing:{fx_ppm:1400000}}, {}, {plan:'vip',period:'monthly'});
- try{assert.match(env.box.querySelector('[data-pm-add]').textContent,/CA\$27\.99/);assert.doesNotMatch(env.box.textContent,/US\$/);}finally{env.dom.window.close();}
+ try{assert.match(env.box.querySelector('[data-pm-add]').textContent,/\$27\.99/);assert.doesNotMatch(env.box.textContent,/US\$/);}finally{env.dom.window.close();}
 });
 test('active paid member sees no membership add-on prompt',()=>{
  const env=render({...quote,membership:{plan:'vip',name:'PURE WHITE'}});

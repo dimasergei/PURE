@@ -222,15 +222,15 @@ test('Canadian Interac checkout shows actual CAD totals, preserves coupons, and 
   change(f,f.root.querySelector('[name=payment_choice][value=interac]'),true);await tick();
   f.root.querySelector('[name=sidebar_coupon]').value='BLACKFRIDAY10';f.root.querySelector('[data-nlx-coupon]').click();await tick();
   assert.match(f.root.querySelector('.nlx-summary-head h2').textContent,/CAD/);
-  assert.match(f.root.querySelector('[data-nlx-totals]').textContent,/Coupon savings.*CA\$28\.00.*Total \(CAD\)/);
+  assert.match(f.root.querySelector('[data-nlx-totals]').textContent,/Coupon savings.*\$28\.00.*Total \(CAD\)/);
   assert.doesNotMatch(f.root.querySelector('[data-nlx-totals]').textContent,/Crypto discount|USD/);
-  assert.equal(f.root.querySelector('.nlx-product-price').textContent,'CA$280.00');assert.equal(f.root.querySelector('.nlx-protection-price').textContent,'CA$7.00');
-  assert.equal(f.root.querySelector('[data-nlx-confirm-shipping-price]').textContent,'CA$20.93');
+  assert.equal(f.root.querySelector('.nlx-product-price').textContent,'$280.00');assert.equal(f.root.querySelector('.nlx-protection-price').textContent,'$7.00');
+  assert.equal(f.root.querySelector('[data-nlx-confirm-shipping-price]').textContent,'$20.93');
   assert.match(f.root.querySelector('[data-nlx-points]').textContent,/USD points and store credit cannot be applied/);
   assert.equal(f.root.querySelector('[data-nlx-points] a'),null);
   assert.match(f.root.querySelector('[name=payment_choice][value=interac]').closest('.nlx-payment-choice').textContent,/final CAD total is shown before you place the order/);
   assert.doesNotMatch(f.root.textContent,/invoice|request a|USD estimate/i);
-  const place=f.root.querySelector('[data-nlx-place]');assert.equal(place.textContent,'PLACE ORDER · CA$279.93');assert.equal(place.disabled,true);
+  const place=f.root.querySelector('[data-nlx-place]');assert.equal(place.textContent,'PLACE ORDER · $279.93');assert.equal(place.disabled,true);
   consent(f);place.click();place.click();await tick();await tick();
   const placed=f.requests.find(r=>r.body.action==='place').body;
   assert.equal(placed.method_id,interacMethod.id);assert.equal(placed.points,0);assert.equal(placed.credit_cents,0);assert.equal(placed.coupon,'BLACKFRIDAY10');
@@ -251,9 +251,9 @@ test('Interac waits for CAD pricing instead of relabeling USD and leaves the car
   change(f,f.root.querySelector('[name=payment_choice][value=interac]'),true);
   assert.equal(f.root.querySelector('.nlx-product-price').textContent,'Calculating…');assert.equal(f.root.querySelector('.nlx-protection-price').textContent,'Calculating…');
   assert.equal(f.root.querySelector('[data-nlx-confirm-shipping-price]').textContent,'Calculating…');assert.match(f.root.querySelector('[data-nlx-place]').textContent,/Calculating/);
-  assert.equal(f.root.querySelector('[data-nlx-place]').disabled,true);assert.doesNotMatch(f.root.querySelector('[data-nlx-totals]').textContent,/CA\$200/);
+  assert.equal(f.root.querySelector('[data-nlx-place]').disabled,true);assert.doesNotMatch(f.root.querySelector('[data-nlx-totals]').textContent,/\$200/);
   await new Promise(resolve=>setTimeout(resolve,180));
-  assert.equal(f.root.querySelector('.nlx-product-price').textContent,'CA$275.30','The product total uses per-unit CAD rounding from the server');
+  assert.equal(f.root.querySelector('.nlx-product-price').textContent,'$275.30','The product total uses per-unit CAD rounding from the server');
   assert.equal(f.w.localStorage.getItem('pp-cart'),before);assert.equal(f.w.AltaStore.cart[0].price,100);assert.equal(f.w.sessionStorage.getItem('ap-checkout-protection'),protection);
   change(f,f.root.querySelector('[name=payment_choice][value=card]'),true);await tick();
   assert.equal(f.root.querySelector('.nlx-product-price').textContent,'$200.00');assert.equal(f.root.querySelector('.nlx-protection-price').textContent,'$5.00');
@@ -265,13 +265,13 @@ test('a preferred Interac route converts cross-sells, all shipping choices, prio
  const f=fixture({country:'CA',interacReady:true,query:'?method='+interacMethod.id});
  try{
   f.w.AltaStore.catalog.push({id:'extra',name:'Extra compound',variants:[{size:'5mg',price:30}]});await f.open();
-  assert.equal(f.root.querySelector('[data-nlx-cross-sell-price]').textContent,'CA$42.00');
+  assert.equal(f.root.querySelector('[data-nlx-cross-sell-price]').textContent,'$42.00');
   f.root.querySelector('[data-nlx-next]').click();await tick();
   const prices=[...f.root.querySelectorAll('.nlx-delivery-price')].map(target=>target.textContent);
-  assert.deepEqual(prices,['CA$20.93','CA$34.93','CA$69.93','CA$90.93']);assert.equal(f.root.querySelector('[data-nlx-extra-price=priority]').textContent,'CA$13.99');
-  assert.equal(f.root.querySelector('.nlx-protection-price').textContent,'CA$7.00');
+  assert.deepEqual(prices,['$20.93','$34.93','$69.93','$90.93']);assert.equal(f.root.querySelector('[data-nlx-extra-price=priority]').textContent,'$13.99');
+  assert.equal(f.root.querySelector('.nlx-protection-price').textContent,'$7.00');
   change(f,f.root.querySelector('[data-nlx-extra=priority]'),true);await new Promise(resolve=>setTimeout(resolve,230));
-  assert.match(f.root.querySelector('[data-nlx-totals]').textContent,/Priority ProcessingCA\$13\.99/);
+  assert.match(f.root.querySelector('[data-nlx-totals]').textContent,/Priority Processing\$13\.99/);
   assert.equal(f.requests.at(-1).body.fx_quote,f.fx.token);
  }finally{f.dom.window.close();}
 });
@@ -300,7 +300,7 @@ test('Interac is destination-restricted and switching back restores Card or Cryp
    await f.open();await f.paymentStep();
    const input=f.root.querySelector('[name=payment_choice][value=interac]');assert.equal(input.disabled,country!=='CA');
    if(country==='CA'){
-    change(f,input,true);await tick();assert.equal(f.root.querySelector('[data-nlx-place]').textContent,'PLACE ORDER · CA$307.93');
+    change(f,input,true);await tick();assert.equal(f.root.querySelector('[data-nlx-place]').textContent,'PLACE ORDER · $307.93');
     change(f,f.root.querySelector('[name=payment_choice][value=crypto]'),true);await tick();
     assert.match(f.root.querySelector('[data-nlx-totals]').textContent,/Crypto discount \(5%\)/);
     assert.match(f.root.querySelector('[data-nlx-place]').textContent,/CONTINUE TO CRYPTO PAYMENT/);
@@ -348,11 +348,11 @@ test('balance and bulk checkout disable USD redemptions and show every amount in
    assert.equal(form.elements.points.value,'0');assert.equal(form.elements.credit.value,'0');assert.equal(form.elements.points.disabled,true);assert.equal(form.elements.credit.disabled,true);
    assert.match(form.querySelector('[data-dc-balance-note]').textContent,/held in USD and cannot be applied/);
    await new Promise(resolve=>setTimeout(resolve,230));
-   const expected=mode==='bulk'?'CA$707.00':'CA$307.93';
+   const expected=mode==='bulk'?'$707.00':'$307.93';
    assert.ok(f.root.querySelector('.dc-totals').textContent.includes('Total (CAD)'+expected));
-   assert.equal(f.root.querySelector('[data-dc-line-price]').textContent,mode==='bulk'?'CA$1,400.00 CA$700.00':'CA$280.00');
-   assert.equal(form.querySelector('[data-rd-shipping-price=standard]').textContent,mode==='bulk'?'FREE':'CA$34.93');
-   assert.equal(form.querySelector('[data-rd-extra-price=protection]').textContent,'CA$7.00');
+   assert.equal(f.root.querySelector('[data-dc-line-price]').textContent,mode==='bulk'?'$1,400.00 $700.00':'$280.00');
+   assert.equal(form.querySelector('[data-rd-shipping-price=standard]').textContent,mode==='bulk'?'FREE':'$34.93');
+   assert.equal(form.querySelector('[data-rd-extra-price=protection]').textContent,'$7.00');
    assert.match(f.root.querySelector('.dc-totals').textContent,/USD points and store credit cannot be applied/);
    form.elements.research_use.checked=true;form.elements.consent.checked=true;await form.onsubmit({preventDefault(){}});
    assert.match(f.root.querySelector('.dc-review-summary').textContent,/ORDER TOTAL · CAD/);
@@ -387,7 +387,7 @@ test('bulk placement with an expired changed rate shows the new CAD price and re
   await f.open();const form=f.root.querySelector('form');form.querySelector('[data-step-next="0"]').click();form.querySelector('[data-step-next="1"]').click();form.elements.research_use.checked=true;form.elements.consent.checked=true;
   await form.onsubmit({preventDefault(){}});const place=f.root.querySelector('.dc-summary button');await place.onclick();
   assert.equal(f.requests.filter(r=>r.body.action==='place').length,0);assert.match(f.root.textContent,/CAD price has updated/);
-  assert.equal(place.textContent,'Place order · CA$757.50');assert.equal(place.disabled,false);assert.equal(f.root.querySelector('[data-dc-line-price]').textContent,'CA$1,500.00 CA$750.00');
+  assert.equal(place.textContent,'Place order · $757.50');assert.equal(place.disabled,false);assert.equal(f.root.querySelector('[data-dc-line-price]').textContent,'$1,500.00 $750.00');
   assert.equal(f.root.querySelector('a[href^="/account/purchases?id="]'),null);assert.notEqual(f.w.localStorage.getItem('ap-bulk-draft-v2'),null);
   await place.onclick();assert.equal(f.requests.filter(r=>r.body.action==='place').length,1);assert.equal(f.requests.find(r=>r.body.action==='place').body.fx_quote,'new-rate-token');assert.equal(f.w.localStorage.getItem('ap-bulk-draft-v2'),null);
  }finally{f.dom.window.close();}

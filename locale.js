@@ -309,23 +309,23 @@
   }
   function formatValue(usdCents, code, {showCode=true,trimWhole=false}={}){
     const amount=usdCents*(code==="USD"?1:rateData.rates[code])/100;
-    // Display $ for USD; use unambiguous localized symbols for other supported currencies
-    // (CA$, A$, €, £) instead of a USD prefix or three-letter code.
-    const options={style:"currency",currency:code,currencyDisplay:"symbol"};
+    const options={style:"currency",currency:code,currencyDisplay:code==="CAD"?"narrowSymbol":"symbol"};
     if(code==="USD"&&trimWhole&&usdCents%100===0){options.minimumFractionDigits=0;options.maximumFractionDigits=0;}
     return new Intl.NumberFormat("en-US",options).format(amount).replace(/[\u00a0\u202f]/g," ");
   }
   function priceParts(cents, options={}){
     const code=effectiveCurrency(),base=formatValue(cents,"USD"),local=code!=="USD";
-    return {code,base,local,value:formatValue(cents,code,options)};
+    const value=formatValue(cents,code,options);
+    const title=local?copy("base")+": "+base:"";
+    const label=code==="CAD"?`${value} CAD; ${title} USD`:`${value}; ${title}`;
+    return {base,local,value,title,label};
   }
   function price(usdCents, options={}){
     if(!Number.isSafeInteger(usdCents))return "—";
     const showCode=options.showCode!==false,showBase=options.showBase===true,compact=options.compact===true,trimWhole=options.trimWhole===true;
     const parts=priceParts(usdCents,{showCode,trimWhole});
     const classes="pure-price"+(compact?" pure-price-compact":"")+(options.className?" "+String(options.className):"");
-    const title=parts.local?copy("base")+": "+parts.base:"";
-    return '<span class="'+escape(classes)+'" data-usd-cents="'+usdCents+'" data-price-code="'+showCode+'" data-price-base="'+showBase+'" data-price-trim-whole="'+trimWhole+'"'+(title?' title="'+escape(title)+'" aria-label="'+escape(parts.value+"; "+title)+'"':'')+'><span class="pure-price-value">'+escape(parts.value)+'</span>'+(showBase&&parts.local?'<small class="pure-price-base">'+escape(parts.base)+'</small>':'')+'</span>';
+    return '<span class="'+escape(classes)+'" data-usd-cents="'+usdCents+'" data-price-code="'+showCode+'" data-price-base="'+showBase+'" data-price-trim-whole="'+trimWhole+'"'+(parts.local?' title="'+escape(parts.title)+'" aria-label="'+escape(parts.label)+'"':'')+'><span class="pure-price-value">'+escape(parts.value)+'</span>'+(showBase&&parts.local?'<small class="pure-price-base">'+escape(parts.base)+'</small>':'')+'</span>';
   }
   const currencyCode = () => '<span class="pure-currency-code" data-display-currency="code">'+escape(effectiveCurrency())+'</span>';
   const estimateNote = () => '<span class="pure-currency-note" data-display-currency="note">'+escape(noteText())+'</span>';
@@ -337,8 +337,7 @@
       const parts=priceParts(cents,{showCode:node.dataset.priceCode!=="false",trimWhole:node.dataset.priceTrimWhole==="true"});
       const content='<span class="pure-price-value">'+escape(parts.value)+'</span>'+(node.dataset.priceBase==="true"&&parts.local?'<small class="pure-price-base">'+escape(parts.base)+'</small>':'');
       if(node.innerHTML!==content)node.innerHTML=content;
-      const title=parts.local?copy("base")+": "+parts.base:"";
-      if(title){if(node.title!==title)node.title=title;const label=parts.value+"; "+title;if(node.getAttribute("aria-label")!==label)node.setAttribute("aria-label",label);}
+      if(parts.local){if(node.title!==parts.title)node.title=parts.title;if(node.getAttribute("aria-label")!==parts.label)node.setAttribute("aria-label",parts.label);}
       else{node.removeAttribute("title");node.removeAttribute("aria-label");}
     }else{
       const text=node.dataset.displayCurrency==="code"?effectiveCurrency():noteText();

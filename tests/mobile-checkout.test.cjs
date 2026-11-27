@@ -146,7 +146,7 @@ test('phone payment updates the displayed amount from the signed-in CAD quote', 
   await delay(0);
   assert.equal(requestBodies.at(-1).method_id, interac.id);
   assert.equal(root.querySelector('[data-nlx-action-currency]').textContent, 'Total · CAD');
-  assert.equal(root.querySelector('[data-nlx-action-amount]').textContent, 'CA$83.93');
+  assert.equal(root.querySelector('[data-nlx-action-amount]').textContent, '$83.93');
   assert.equal(root.querySelector('[data-nlx-place]').textContent, 'PLACE ORDER');
 });
 

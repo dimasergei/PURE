@@ -82,8 +82,8 @@ test('Automatic uses the coarse server suggestion and verified rates without cha
   const {w,requests}=env,L=w.AltaLocale;const host=markup(env);
   assert.equal(L.preference,'auto');assert.equal(L.country,'CA');assert.equal(L.currency,'CAD');assert.equal(L.effectiveCurrency,'CAD');
   assert.deepEqual([...L.supportedCurrencies],supported);assert.equal(w.document.documentElement.dataset.displayCurrency,'CAD');
-  assert.match(host.textContent,/CA\$27\.99/);assert.equal(host.querySelector('.pure-price').dataset.usdCents,'1999');assert.equal(host.querySelector('.pure-price-base'),null);
-  assert.match(host.querySelector('.pure-price').getAttribute('aria-label'),/\$19\.99/);
+  assert.equal(host.querySelector('.pure-price-value').textContent,'$27.99');assert.equal(host.querySelector('.pure-price').dataset.usdCents,'1999');assert.equal(host.querySelector('.pure-price-base'),null);
+  assert.equal(host.querySelector('.pure-price').getAttribute('aria-label'),'$27.99 CAD; Base price: $19.99 USD');
   assert.match(w.document.getElementById('currency-display-status').textContent,/ECB rates dated/);
   assert.equal(w.localStorage.getItem('ap-currency'),null,'automatic detection is not a manual preference');
   assert.deepEqual(requests.map(request=>request.url),['/api/customer-config?display_locale=country','/api/customer-config?display_locale=rates']);
@@ -179,6 +179,7 @@ test('formatting respects exact USD cents, native currency minor units, optional
  const env=await initialized();
  try{
   const L=env.w.AltaLocale,host=markup(env,1999,{className:'" onmouseover="bad'});
+  await L.setCurrency('CAD');assert.equal(L.formatMoney(19.99),'$27.99');assert.equal(env.w.document.getElementById('currency-select').value,'CAD');
   assert.equal(host.querySelector('[onmouseover]'),null);assert.equal(host.querySelector('.pure-price-base'),null);
   assert.match(L.price(1999,{showBase:true}),/pure-price-base/);assert.equal(L.price(1.5),'—');assert.equal(L.price(Infinity),'—');
   await L.setCurrency('USD');host.innerHTML=L.price(10000,{trimWhole:true})+L.price(10001,{trimWhole:true});
@@ -194,8 +195,8 @@ test('dynamic marked prices update in place while authoritative unmarked checkou
  const env=await initialized();
  try{
   const {w}=env,host=markup(env);const priceNode=host.querySelector('.pure-price'),codeNode=host.querySelector('.pure-currency-code');
-  priceNode.dataset.usdCents='12345';await tick();assert.match(priceNode.textContent,/CA\$172\.83/);
-  const dynamic=w.document.createElement('div');dynamic.innerHTML='<span data-usd-cents="10000">USD 100.00</span>';w.document.querySelector('main').append(dynamic);await tick();assert.equal(dynamic.textContent,'CA$140.00');
+  priceNode.dataset.usdCents='12345';await tick();assert.equal(priceNode.textContent,'$172.83');
+  const dynamic=w.document.createElement('div');dynamic.innerHTML='<span data-usd-cents="10000">USD 100.00</span>';w.document.querySelector('main').append(dynamic);await tick();assert.equal(dynamic.textContent,'$140.00');
   await w.AltaLocale.setCurrency('EUR');assert.strictEqual(host.querySelector('.pure-price'),priceNode);assert.strictEqual(host.querySelector('.pure-currency-code'),codeNode);assert.equal(codeNode.textContent,'EUR');assert.match(priceNode.textContent,/€111\.11/);
   assert.equal(w.document.getElementById('checkout-usd').textContent,'USD 119.99');assert.equal(w.document.getElementById('checkout-cad').textContent,'CAD 168.42');assertDocumentIntact(env);
  }finally{env.dom.window.close();}

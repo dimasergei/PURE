@@ -169,7 +169,7 @@ test('a temporarily unavailable quote keeps the saved coupon and allows retrying
 
 for(const example of [
  {country:'US',currency:'USD',rate:1,zone:'Domestic',shipping:'$7.95',total:'$172.95',cents:17295},
- {country:'CA',currency:'CAD',rate:1.4,zone:'Domestic',shipping:'CA$20.93',total:'CA$251.93',cents:17995},
+ {country:'CA',currency:'CAD',rate:1.4,zone:'Domestic',shipping:'$20.93',total:'$251.93',cents:17995},
  {country:'GB',currency:'GBP',rate:.8,zone:'International',shipping:'£31.96',total:'£163.96',cents:20495}
 ])test('cart uses the detected '+example.country+' location without a destination picker',async()=>{
  const f=fixture('cart');
