@@ -63,7 +63,9 @@
  function bulkResults(){
   const root=$('#ap-bulk-rows');if(!root)return;
   const list=bulkCatalog.filter(p=>(bulkGroup==='All'||A.categoryOf(p)===bulkGroup)&&(p.name+' '+p.group+' '+A.categoryOf(p)).toLowerCase().includes(bulkQuery.toLowerCase()));
-  root.innerHTML=list.map(p=>{
+  root.innerHTML=list.map(bulkCard).join('')||empty('No matching products','Try a different name or category.');
+ }
+ function bulkCard(p){
    const existing=bulk.filter(x=>x.id===p.id);
    const saved=bulkSizes[p.id],hint=linkedVariant?.id===p.id?linkedVariant.size:undefined;
    const size=(p.variants.some(x=>x.size===saved)?saved:existing[0]?.size)||hint;
@@ -72,10 +74,9 @@
    const badge=bulkImageBadge(qty);
    return `<article class="nl-bulk-product" data-bulk-product="${esc(p.id)}" data-selected="${qty>0}">
     <a class="nl-bulk-image" href="/product/${encodeURIComponent(p.id)}?size=${encodeURIComponent(v.size)}"><img src="${esc(image(p,v.size))}" alt="${esc(p.name+' '+v.size)}" loading="lazy"><span class="nl-bulk-photo-discount" data-bulk-photo-discount ${badge?'':'hidden'}>${badge}</span></a>
-    <div class="nl-bulk-product-body"><span class="ap-eyebrow">${esc(p.group)}</span><h3><a href="/product/${encodeURIComponent(p.id)}?size=${encodeURIComponent(v.size)}">${esc(p.name)}</a></h3>
+    <div class="nl-bulk-product-body"><h3><a href="/product/${encodeURIComponent(p.id)}?size=${encodeURIComponent(v.size)}">${esc(p.name)}</a></h3><span class="ap-eyebrow">${esc(p.group)}</span>
     <div class="nl-bulk-sizes" role="group" aria-label="Choose a strength for ${esc(p.name)}">${variants.map(x=>`<button type="button" data-action="bulk-size" data-id="${esc(p.id)}" data-size="${esc(x.size)}" aria-pressed="${x.size===v.size}"><span>${esc(x.size)}</span><span class="nl-bulk-prices">${bulkPriceInfo(x.price,units,existing.find(line=>line.size===x.size)?.qty)}</span></button>`).join('')}</div>
     <div class="nl-bulk-product-foot"><div class="nl-bulk-quantity-controls">${quantityControls(p.id,v.size,qty,p.name,true)}</div></div></article>`;
-  }).join('')||empty('No matching products','Try a different name or category.');
  }
  function quantityControls(id,size,qty,name,addTen=false){
   return `<button type="button" class="nl-bulk-qty-step" data-action="bulk-qty" data-id="${esc(id)}" data-size="${esc(size)}" data-delta="-1" aria-label="Decrease ${esc(name+' '+size)}" ${qty<=0?'disabled':''}>−</button>
@@ -103,7 +104,7 @@
   root.dataset.empty=String(units===0);
   const retail=priceMarkup(subtotal);
   const savings=tierSavingsCents>0?`<div class="nl-bulk-tier-savings"><span>Bulk savings</span><strong>−${priceMarkup(tierSavingsCents/100)}</strong></div>`:'';
-  const shipping=canCheckout?'<div class="nl-bulk-included-shipping"><span>Free 2-Day Express Shipping<small>U.S. orders after dispatch</small></span><strong>FREE</strong></div>':'';
+  const shipping=canCheckout?'<div class="nl-bulk-included-shipping"><span>Free 2-Day Express Shipping</span><strong>FREE</strong></div>':'';
   const selection=ids.length?ids.map(id=>{
    const p=product(id),lines=bulk.filter(x=>x.id===id),count=bulkUnits(id);
    const rate=window.PureQuantityPricing?.bulkRate(count)||0;
@@ -117,9 +118,8 @@
    ${units?'':'<button type="button" class="ap-button nl-bulk-add-products" data-action="bulk-add-products">ADD PRODUCTS</button>'}
    <div class="nl-bulk-summary-scroll" aria-label="Selected products">${selection}</div>
    <div class="nl-bulk-totals"><div class="nl-bulk-estimate-total"><span>Retail value</span><strong>${tierSavingsCents>0?`<del>${retail}</del>`:retail}</strong></div>${savings}${shipping}${tierSavingsCents>0?`<div class="nl-bulk-net"><span>After bulk savings</span><strong>${priceMarkup(tierNet)}</strong></div>`:''}</div>
-   ${units?`<div class="nl-bulk-tier-key"><span data-tier-active="${rates.has(5000)}">10+ units · 50% off</span><span data-tier-active="${rates.has(6000)}">50+ units · 60% off</span><small>Strengths of each product count together.</small></div>`:''}
-   <button class="ap-button" data-action="bulk-checkout" ${canCheckout?'':'disabled'}>Checkout · ${priceMarkup(tierNet)}</button>
-   <p class="ap-fine nl-bulk-checkout-note">Your regular cart stays saved separately.</p>`;
+   ${units?`<div class="nl-bulk-tier-key"><span data-tier-active="${rates.has(5000)}">10+ units · 50% off</span><span data-tier-active="${rates.has(6000)}">50+ units · 60% off</span></div>`:''}
+   <button class="ap-button" data-action="bulk-checkout" ${canCheckout?'':'disabled'}>Checkout · ${priceMarkup(tierNet)}</button>`;
   const scroll=root.querySelector('.nl-bulk-summary-scroll');
   if(scroll)scroll.scrollTop=listScroll;
   if(focused){
@@ -218,7 +218,18 @@
   if(action==='bulk-close-summary'){$('#nl-bulk-sheet')?.close();return;}
   if(action==='bulk-add-products'){const sheet=$('#nl-bulk-sheet');if(sheet?.open)sheet.close();const query=$('#ap-bulk-query');if(query){query.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});query.focus({preventScroll:true});}return;}
   if(action==='bulk-qty'){const current=bulk.find(x=>x.id===button.dataset.id&&x.size===button.dataset.size)?.qty||0;setBulkQuantity(button.dataset.id,button.dataset.size,current+Number(button.dataset.delta));}
-  if(action==='bulk-size'){const p=product(button.dataset.id),v=p?.variants.find(x=>x.size===button.dataset.size);if(p&&v){bulkSizes[p.id]=v.size;A.write(bulkSizeKey,bulkSizes);bulkResults();$$('[data-action="bulk-size"]').find(row=>row.dataset.id===p.id&&row.dataset.size===v.size)?.focus({preventScroll:true});}}
+  if(action==='bulk-size'){
+   const p=product(button.dataset.id),v=p?.variants.find(x=>x.size===button.dataset.size);
+   if(!v||button.getAttribute('aria-pressed')==='true')return;
+   const card=button.closest('[data-bulk-product]'),scroll=button.parentElement.scrollTop;
+   bulkSizes[p.id]=v.size;
+   A.write(bulkSizeKey,bulkSizes);
+   card.outerHTML=bulkCard(p);
+   const replacement=$$('[data-bulk-product]').find(node=>node.dataset.bulkProduct===p.id);
+   const strengths=replacement.querySelector('.nl-bulk-sizes');
+   strengths.scrollTop=scroll;
+   strengths.querySelector('[aria-pressed="true"]').focus({preventScroll:true});
+  }
   if(action==='bulk-category'){bulkGroup=button.dataset.group||'All';$$('[data-action="bulk-category"]').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.group===bulkGroup)));bulkResults();}
   if(action==='bulk-export')A.exportLines(bulk,'PURE-bulk-request.csv');
   if(action==='bulk-cart'){try{A.addItems(simpleLines(bulk));}catch(e){A.toast(e.message);}}

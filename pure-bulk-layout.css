@@ -4,7 +4,7 @@ html:root body.ap-site .nl-bulk-hero {
   background: radial-gradient(ellipse at 86% 110%, #373737 0, #191919 28%, #111111 61%) !important;
 }
 html:root body.ap-site .nl-bulk-hero h1 {
-  max-width: 940px;
+  max-width: 1100px;
   margin: 14px 0 18px;
   font-size: clamp(40px, 5.6vw, 80px);
   line-height: .98;
@@ -114,6 +114,7 @@ html:root body.ap-site .nl-bulk-categories button {
 }
 html:root body.ap-site .nl-bulk-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-rows: 1fr;
   align-items: stretch;
   gap: 14px;
   margin: 0 0 32px;
@@ -161,6 +162,8 @@ html:root body.ap-site .nl-bulk-product .nl-bulk-product-body {
   text-align: center;
 }
 html:root body.ap-site .nl-bulk-product-body > .ap-eyebrow {
+  min-height: 2.6em;
+  margin-block-end: 6px;
   text-align: center;
   font-size: 10px;
   line-height: 1.3;
@@ -171,7 +174,7 @@ html:root body.ap-site .nl-bulk-product .nl-bulk-product-body h3 {
   display: grid;
   align-content: center;
   min-height: 2.4em;
-  margin: 3px 0 8px;
+  margin: 0 0 3px;
   font-size: clamp(16px, 1.3vw, 19px);
   line-height: 1.2;
   text-align: center;
@@ -180,6 +183,8 @@ html:root body.ap-site .nl-bulk-product .nl-bulk-product-body h3 {
 html:root body.ap-site .nl-bulk-product .nl-bulk-sizes {
   display: grid;
   grid-template-columns: minmax(0,1fr);
+  grid-auto-rows: 48px;
+  align-content: start;
   gap: 4px;
   margin: 0;
 }
@@ -191,7 +196,7 @@ html:root body.ap-site .nl-bulk-product .nl-bulk-sizes button {
   width: 100%;
   min-height: 44px;
   padding: 6px 9px;
-  border-radius: 7px;
+  border-radius: 9px;
   font-size: 11px;
   line-height: 1.15;
   text-align: left;
@@ -211,8 +216,6 @@ html:root body.ap-site .nl-bulk-product .nl-bulk-prices strong {
 }
 html:root body.ap-site .nl-bulk-prices small { font-weight: 500; text-transform: none; }
 html:root body.ap-site .nl-bulk-product .nl-bulk-prices del { font-size: 10px; }
-html:root body.ap-site .nl-bulk-product button[aria-pressed="true"] del,
-html:root body.ap-site .nl-bulk-product button[aria-pressed="true"] del .pure-price-value { color: #e5e5e5; }
 .nl-bulk-photo-discount {
   position: absolute;
   inset-block-start: 9px;
@@ -226,25 +229,28 @@ html:root body.ap-site .nl-bulk-product button[aria-pressed="true"] del .pure-pr
 }
 html:root body.ap-site .nl-bulk-product-foot {
   display: block;
-  margin-top: 9px;
-  padding-top: 0;
+  margin-top: auto;
+  padding-top: 10px;
 }
 html:root body.ap-site .nl-bulk-product-foot .nl-bulk-quantity-controls {
   justify-content: center;
   gap: 4px;
-  flex-wrap: wrap;
+}
+html:root body.ap-site .nl-bulk-product[data-selected="true"] .nl-bulk-product-foot .nl-bulk-quantity-controls {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 44px));
 }
 html:root body.ap-site .nl-bulk-product-foot .nl-bulk-qty-step {
   flex: 0 0 40px;
   width: 40px;
-  height: 40px;
+  height: 44px;
   padding: 0;
   font-size: 18px;
 }
 html:root body.ap-site .nl-bulk-product-foot .nl-bulk-quantity-controls input {
   flex: 0 0 40px;
   width: 40px;
-  height: 40px;
+  height: 44px;
   margin: 0;
   padding: 4px 2px;
   font-size: 16px;
@@ -257,14 +263,15 @@ html:root body.ap-site .nl-bulk-quantity-controls input::-webkit-outer-spin-butt
   margin: 0;
 }
 html:root body.ap-site .nl-bulk-product-foot .nl-bulk-plus-ten {
-  min-height: 40px;
-  height: auto;
+  min-height: 44px;
+  height: 44px;
   font-size: 12px;
 }
-html:root body.ap-site .nl-bulk-product[data-selected="true"] .nl-bulk-plus-ten {
-  flex: 0 0 44px;
-  width: 44px;
-  padding: 0 4px;
+html:root body.ap-site .nl-bulk-product[data-selected="true"] .nl-bulk-product-foot .nl-bulk-quantity-controls > :is(button,input) {
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  padding-inline: 0;
 }
 
 /* Keep a short order short; only a long list needs an internal scrollbar. */
@@ -407,13 +414,6 @@ html:root body.ap-site .nl-bulk-summary #ap-bulk-summary > .ap-button {
   padding: 12px 16px;
   font-size: 13px;
 }
-html:root body.ap-site .nl-bulk-summary .nl-bulk-checkout-note {
-  margin: 0;
-  padding-top: 10px;
-  font-size: 13px;
-  line-height: 1.45;
-  text-align: left;
-}
 html:root body.ap-site .nl-bulk-faq summary {
   min-height: 52px;
   padding: 15px 44px 15px 18px;
@@ -472,7 +472,7 @@ html:root body.ap-site .nl-bulk-faq details p {
   }
   html:root body.ap-site .nl-bulk-summary #ap-bulk-summary[data-empty="true"] :is(
     .nl-bulk-total-units, .nl-bulk-summary-scroll, .nl-bulk-totals,
-    [data-action="bulk-checkout"], .nl-bulk-checkout-note
+    [data-action="bulk-checkout"]
   ) { display: none; }
   html:root body.ap-site .nl-bulk-summary #ap-bulk-summary[data-empty="true"] > .nl-bulk-add-products {
     display: flex;
@@ -525,6 +525,12 @@ html:root body.ap-site .nl-bulk-faq details p {
   }
   html:root body.ap-site .nl-bulk-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   html:root body.ap-site .nl-bulk-product .nl-bulk-image { height: 128px; }
+  html:root body.ap-site .nl-bulk-product .nl-bulk-sizes {
+    block-size: 152px;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+  }
+  html:root body.ap-site .nl-bulk-product .nl-bulk-sizes button:focus-visible { outline-offset: -4px; }
   html:root body.ap-site .ap-summary.nl-bulk-summary { padding: 16px !important; }
   html:root body.ap-site .nl-bulk-summary-heading h2 {
     margin-bottom: 10px;
@@ -607,11 +613,6 @@ html:root body.ap-site .nl-bulk-menu-product-head:has(.nl-bulk-rate-badge) {
   flex-wrap: wrap;
   gap: 5px;
   margin: 6px 0 14px;
-}
-.nl-bulk-tier-key small {
-  flex-basis: 100%;
-  color: #555;
-  font-size: 13px;
 }
 .nl-bulk-included-shipping { display: flex; justify-content: space-between; margin: 5px 0; font-size: 13px; }
 @media (max-width: 1050px) {
@@ -704,11 +705,14 @@ html:root body.ap-site :is(.nl-bulk-menu-line-price, .nl-bulk-estimate-total, .n
 }
 html:root body.ap-site .nl-bulk-menu-line-price del { font-size: 12px; }
 html:root body.ap-site .nl-bulk-estimate-total strong:has(del) { font-size: 15px; }
+html:root body.ap-site .nl-bulk-product .nl-bulk-sizes button[aria-pressed="true"] .nl-bulk-prices strong { color: #fff !important; }
+html:root body.ap-site .nl-bulk-product .nl-bulk-sizes button[aria-pressed="true"] .nl-bulk-prices :is(small, del) { color: #e5e5e5; }
 html:root body.ap-site .nl-bulk-totals > :is(.nl-bulk-tier-savings, .nl-bulk-included-shipping) {
-  align-items: flex-start;
+  align-items: baseline;
+  gap: 8px;
   margin: 0;
-  padding: 7px 9px;
-  background: #edf8f0;
+  padding: 3px 0;
+  background: transparent;
   color: #176536;
   font-size: 13px;
   font-weight: 750;
@@ -717,10 +721,6 @@ html:root body.ap-site .nl-bulk-totals > :is(.nl-bulk-tier-savings, .nl-bulk-inc
   color: inherit;
   white-space: nowrap;
 }
-.nl-bulk-tier-savings { border-radius: 6px; }
-.nl-bulk-tier-savings:has(+ .nl-bulk-included-shipping) { border-radius: 6px 6px 0 0; }
-.nl-bulk-included-shipping { border-radius: 0 0 6px 6px; border-top: 1px solid #d5e9db; }
-.nl-bulk-included-shipping small { display: block; font-size: 11px; font-weight: 550; }
 html:root body.ap-site .nl-bulk-totals > .nl-bulk-net { font-size: 14px; }
 html:root body.ap-site .nl-bulk-totals > .nl-bulk-net strong {
   font-size: 20px;
