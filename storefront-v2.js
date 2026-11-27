@@ -135,24 +135,28 @@
  }
  const homeBulkDraft=[];
  const homeBulkSizes=new Map();
+ let activeHomeBulkProduct;
  function homeBulkPromo(featured){
   const pricing=window.PureQuantityPricing;
   const tiers=(pricing?.TIERS||[]).filter(tier=>tier.bps>0).slice().reverse();
   const products=featured.filter(p=>p.category!=='supplies').slice(0,3);
+  const active=products.some(p=>p.id===activeHomeBulkProduct)?activeHomeBulkProduct:products[0]?.id;
+  const browse='<a class="pure-home-express-more" href="/bulk-orders">View all bulk products <span aria-hidden="true">→</span></a>';
   return `<section class="ap-container pure-home-volume" aria-labelledby="pure-home-volume-title">
-    <h2 id="pure-home-volume-title">Bulk Orders</h2>
-    <p class="pure-home-volume-tiers">${tiers.map(tier=>`<span><strong>${tier.bps/100}% off</strong> at ${tier.min}+ units</span>`).join('')}</p>
+    <header class="pure-home-volume-offer">
+      <h2 id="pure-home-volume-title">Bulk Orders</h2>
+      <p class="pure-home-volume-tiers">${tiers.map(tier=>`<span><strong>${tier.bps/100}% off</strong> at ${tier.min}+ units per compound</span>`).join('')}</p>
+    </header>
     ${tiers.length&&products.length?`<div class="pure-home-express" data-home-bulk>
-      <div class="pure-home-express-navigation">
-        <button type="button" data-home-bulk-slide="-1" aria-label="Previous bulk item" aria-controls="pure-home-bulk-track" aria-disabled="true">‹</button>
-        <button type="button" data-home-bulk-slide="1" aria-label="Next bulk item" aria-controls="pure-home-bulk-track">›</button>
+      <div class="pure-home-express-navigation" role="group" aria-label="Choose a bulk product">
+        ${products.map(p=>`<button type="button" data-home-bulk-tab="${esc(p.id)}" aria-controls="pure-home-bulk-${esc(p.id)}" aria-pressed="${p.id===active}">${esc(p.name)}</button>`).join('')}
       </div>
-      <div class="pure-home-express-products" id="pure-home-bulk-track" role="group" aria-label="Bulk products" tabindex="0">
-        ${products.map(homeBulkProduct).join('')}
-        <div class="pure-home-express-more"><a class="ap-button" href="/bulk-orders">View More</a></div>
+      <div class="pure-home-express-products">
+        ${products.map(p=>homeBulkProduct(p,p.id===active)).join('')}
       </div>
       <aside class="pure-home-express-summary" aria-label="Bulk order summary" ${homeBulkDraft.length?'':'hidden'}>${homeBulkSummary()}</aside>
-    </div>`:''}
+      ${browse}
+    </div>`:browse}
   </section>`;
  }
  function homeBulkPrices(retail,net){
@@ -169,15 +173,15 @@
   const retail=Math.round(price*100);
   const gross=retail*units;
   const net=Math.round((gross-pricing.bulkDiscountCents(gross,Math.max(minimum,count)))/units);
-  return homeBulkPrices(retail,net);
+  return homeBulkPrices(retail,net)+'<small>/ unit</small>';
  }
- function homeBulkProduct(p){
+ function homeBulkProduct(p,active){
   const variants=p.variants.slice().sort((a,b)=>(parseFloat(a.size)-parseFloat(b.size))||a.size.localeCompare(b.size));
   const variant=variants.find(v=>v.size===homeBulkSizes.get(p.id))||variants[0];
   const {size,price}=variant;
   const quantity=homeBulkDraft.find(line=>line.id===p.id&&line.size===size)?.qty||0;
-  return `<article data-home-bulk-product="${esc(p.id)}">
-    <div class="pure-home-express-image"><img src="${esc(image(p,size))}" alt="" loading="lazy" width="400" height="500"></div>
+  return `<article id="pure-home-bulk-${esc(p.id)}" data-home-bulk-product="${esc(p.id)}" ${active?'':'hidden'}>
+    <div class="pure-home-express-image"><img src="${esc(image(p,size))}" alt="" loading="lazy" width="56" height="72"></div>
     <div class="pure-home-express-meta">
       <h3>${esc(p.name)}</h3>
       <div class="pure-home-express-price">${homeBulkUnitPrice(p.id,price,quantity)}</div>
@@ -189,7 +193,7 @@
     <small class="pure-home-express-count" data-home-bulk-count aria-live="polite">${quantity?`${quantity} selected`:''}</small>
   </article>`;
  }
- function homeBulkSummary(){
+ function homeBulkSummary(expanded=false){
   const pricing=window.PureQuantityPricing;
   const counts=new Map();
   for(const line of homeBulkDraft)counts.set(line.id,(counts.get(line.id)||0)+line.qty);
@@ -202,16 +206,18 @@
    retail+=gross;savings+=discount;
    return `<li><span><strong>${esc(p.name)}</strong><small>${esc(line.size)} · ${line.qty} units</small></span><span class="pure-home-express-line-price">${homeBulkPrices(gross,gross-discount)}</span><button type="button" data-home-bulk-remove="${esc(line.id)}" data-size="${esc(line.size)}" aria-label="Remove ${esc(p.name+' '+line.size)}">×</button></li>`;
   }).join('');
-  return `<h3>Your bulk order</h3>
-   <ul>${lines}</ul>
-   <div class="pure-home-express-purchase">
+  const units=[...counts.values()].reduce((sum,quantity)=>sum+quantity,0);
+  return `<div class="pure-home-express-purchase">
     <div class="pure-home-express-total">
      <div class="pure-home-express-estimate"><span>Estimated total</span><span class="pure-home-express-line-price">${homeBulkPrices(retail,retail-savings)}</span></div>
      ${savings?`<div class="pure-order-savings"><span>Bulk savings</span><strong>−${priceMarkup(savings/100)}</strong></div>`:''}
     </div>
     <button class="ap-button" type="button" data-home-bulk-checkout ${ready?'':'disabled'}>Checkout</button>
-    <p data-home-bulk-notice>${ready?'':'Add at least 10 units per compound.'}</p>
-   </div>`;
+    <p role="status" data-home-bulk-notice>${ready?'':'Add at least 10 units per compound.'}</p>
+   </div>
+   <details class="pure-home-express-selection" ${expanded?'open':''}>
+    <summary>${units} units selected</summary><ul>${lines}</ul>
+   </details>`;
  }
  function refreshHomeBulkProduct(card){
   const id=card.dataset.homeBulkProduct,p=product(id);
@@ -239,17 +245,11 @@
   const builder=root.querySelector('[data-home-bulk]');
   if(!builder)return;
   const summary=builder.querySelector('.pure-home-express-summary');
-  const track=builder.querySelector('.pure-home-express-products');
-  const [previous,next]=builder.querySelectorAll('[data-home-bulk-slide]');
-  const currentSlide=()=>Math.round(track.scrollLeft/(track.children[1].offsetLeft||1));
-  track.addEventListener('scroll',()=>{
-   const index=currentSlide();
-   previous.setAttribute('aria-disabled',String(index===0));
-   next.setAttribute('aria-disabled',String(index===track.children.length-1));
-  },{passive:true});
+  const tabs=[...builder.querySelectorAll('[data-home-bulk-tab]')];
+  const cards=[...builder.querySelectorAll('[data-home-bulk-product]')];
   const updateSummary=()=>{
    summary.hidden=!homeBulkDraft.length;
-   summary.innerHTML=homeBulkSummary();
+   summary.innerHTML=homeBulkSummary(summary.querySelector('details')?.open);
   };
   builder.addEventListener('change',event=>{
    if(!event.target.matches('[data-home-bulk-size]'))return;
@@ -260,9 +260,10 @@
   builder.addEventListener('click',async event=>{
    const button=event.target.closest('button');
    if(!button)return;
-   if(button.hasAttribute('data-home-bulk-slide')&&button.getAttribute('aria-disabled')!=='true'){
-    const slide=track.children[currentSlide()+Number(button.dataset.homeBulkSlide)];
-    if(slide)track.scrollTo({left:slide.offsetLeft,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
+   if(button.hasAttribute('data-home-bulk-tab')){
+    activeHomeBulkProduct=button.dataset.homeBulkTab;
+    for(const tab of tabs)tab.setAttribute('aria-pressed',String(tab===button));
+    for(const card of cards)card.hidden=card.dataset.homeBulkProduct!==activeHomeBulkProduct;
    }
    if(button.hasAttribute('data-home-bulk-step')){
     const card=button.closest('[data-home-bulk-product]');
@@ -274,10 +275,10 @@
    }
    if(button.hasAttribute('data-home-bulk-remove')){
     setHomeBulkQuantity(button.dataset.homeBulkRemove,button.dataset.size,0);
-    const card=builder.querySelector(`[data-home-bulk-product="${button.dataset.homeBulkRemove}"]`);
+    const card=cards.find(product=>product.dataset.homeBulkProduct===button.dataset.homeBulkRemove);
     refreshHomeBulkProduct(card);
     updateSummary();
-    (summary.querySelector('[data-home-bulk-remove]')||card.querySelector('[data-home-bulk-size]')).focus();
+    (summary.querySelector('details[open] [data-home-bulk-remove]')||builder.querySelector('[aria-pressed="true"]'))?.focus();
    }
    if(button.hasAttribute('data-home-bulk-checkout')&&!button.disabled){
     const chosen=homeBulkDraft.map(line=>({...line}));

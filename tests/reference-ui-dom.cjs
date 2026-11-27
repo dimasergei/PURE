@@ -23,6 +23,9 @@ async function setup(route,campaign=null,quote=null){const errors=[];const conso
   const set=d.querySelector('.pure-promo-set:not(.pure-promo-repeat)');
   const [christmas,divider,blackFriday,shipping]=set.children;
   assert.equal(christmas.querySelector('time').dateTime,ends_at);
+  const countdown=christmas.querySelector('time span').textContent;
+  assert.match(countdown,/^14d \d\d:\d\d:\d\d$/);
+  for(const copy of d.querySelectorAll('.pure-promo-repeat time span'))assert.equal(copy.textContent,countdown);
   assert.ok(divider.matches('.pure-promo-divider[aria-hidden="true"]'));
   assert.equal(divider.textContent,'❄');
   assert.equal(blackFriday.querySelector('[data-copy-offer]').dataset.copyOffer,'BLACKFRIDAY10');
@@ -135,18 +138,21 @@ async function setup(route,campaign=null,quote=null){const errors=[];const conso
   assert.equal(bulk.querySelector('h2').textContent,'Bulk Orders');
   assert.doesNotMatch(bulk.textContent,/BOGO|monthly auto.?billing/i);
   const tiers=[...bulk.querySelectorAll('.pure-home-volume-tiers > span')];
-  assert.deepEqual(tiers.map(tier=>tier.textContent),['50% off at 10+ units','60% off at 50+ units']);
+  assert.deepEqual(tiers.map(tier=>tier.textContent),['50% off at 10+ units per compound','60% off at 50+ units per compound']);
   assert.doesNotMatch(bulk.textContent,/Bulk prices per unit|Free U\.S\. 2-day express after dispatch/);
   assert.doesNotMatch(bulk.textContent,/mix strengths/i);
   const bulkSummary=bulk.querySelector('.pure-home-express-summary');
   assert.equal(bulkSummary.hidden,true);
-  const rail=bulk.querySelector('#pure-home-bulk-track');
-  const bulkRows=[...rail.querySelectorAll('[data-home-bulk-product]')];
+  const bulkRows=[...bulk.querySelectorAll('[data-home-bulk-product]')];
   assert.equal(bulkRows.length,3);
-  assert.equal(rail.children.length,bulkRows.length+1);
-  assert.equal(rail.lastElementChild.querySelector('a[href="/bulk-orders"]').textContent,'View More');
-  assert.equal(bulk.querySelector('[data-home-bulk-slide="-1"]').getAttribute('aria-disabled'),'true');
-  assert.equal(bulk.querySelector('[data-home-bulk-slide="1"]').getAttribute('aria-controls'),rail.id);
+  assert.equal(bulk.querySelector('a.pure-home-express-more[href="/bulk-orders"]').textContent.trim(),'View all bulk products');
+  const choices=[...bulk.querySelectorAll('[data-home-bulk-tab]')];
+  assert.deepEqual(choices.map(choice=>choice.getAttribute('aria-controls')),bulkRows.map(row=>row.id));
+  assert.deepEqual(bulkRows.map(row=>row.hidden),[false,true,true]);
+  choices[1].click();
+  assert.deepEqual(bulkRows.map(row=>row.hidden),[true,false,true]);
+  assert.equal(choices[1].getAttribute('aria-pressed'),'true');
+  choices[0].click();
   assert.equal(bulk.querySelector('input,[data-home-bulk-adjust]'),null);
   for(const row of bulkRows){
    const p=w.AltaStore.product(row.dataset.homeBulkProduct);
@@ -154,7 +160,7 @@ async function setup(route,campaign=null,quote=null){const errors=[];const conso
    assert.deepEqual(strengths,[...p.variants].sort((a,b)=>(parseFloat(a.size)-parseFloat(b.size))||a.size.localeCompare(b.size)).map(v=>v.size));
    assert.ok(row.querySelector('.pure-home-express-image img[src]'));
    assert.equal(row.querySelector('h3').textContent,p.name);
-   assert.deepEqual([...row.querySelector('.pure-home-express-price').children].map(child=>child.tagName),['DEL','STRONG']);
+   assert.deepEqual([...row.querySelector('.pure-home-express-price').children].map(child=>child.tagName),['DEL','STRONG','SMALL']);
   }
   const row=bulkRows[0],id=row.dataset.homeBulkProduct;
   const select=row.querySelector('[data-home-bulk-size]');
@@ -171,6 +177,8 @@ async function setup(route,campaign=null,quote=null){const errors=[];const conso
   step.click();
   step.click();
   assert.equal(bulkSummary.hidden,false);
+  assert.equal(bulkSummary.querySelector('details').open,false);
+  assert.equal(bulkSummary.querySelector('summary').textContent,'20 units selected');
   assert.equal(count.textContent,'20 selected');
   chooseStrength(1);
   assert.equal(count.textContent,'');

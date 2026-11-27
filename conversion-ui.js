@@ -194,11 +194,10 @@
    if(!viewport.contains(event.relatedTarget))viewport.scrollLeft=0;
   });
   announcement.append(pause);
-  announcement.classList.add('pure-promo-loop');
-  let copies=[];
-  function sizeLoop(){
-   const width=set.getBoundingClientRect().width;
-   const needed=width?Math.max(1,Math.ceil(viewport.clientWidth/width)):1;
+  let copies=[],width=0,duration=0;
+  function sizeLoop(removedWidth=0){
+   const nextWidth=set.getBoundingClientRect().width;
+   const needed=nextWidth?Math.max(1,Math.ceil(viewport.clientWidth/nextWidth)):1;
    while(copies.length>needed)copies.pop().remove();
    while(copies.length<needed){
     const repeat=set.cloneNode(true);
@@ -215,85 +214,104 @@
     copies.push(repeat);
     track.append(repeat);
    }
+   if(nextWidth===width)return;
+   const animation=track.getAnimations?.().find(item=>item.animationName==='pure-promo-scroll');
+   const elapsed=animation?.currentTime;
+   const offset=duration&&Number.isFinite(elapsed)?elapsed%duration/duration*width:null;
+   width=nextWidth;
+   duration=Math.max(6000,width*1000/64);
    track.style.setProperty('--promo-distance',-width+'px');
-   track.style.setProperty('--promo-duration',Math.max(6,width/64)+'s');
+   track.style.setProperty('--promo-duration',duration+'ms');
+   if(offset!==null&&width){
+    // Keep the same pixels in view when fonts, viewport width or the offer set changes.
+    animation.currentTime=Math.max(0,offset-removedWidth)%width/width*duration;
+   }
   }
-  function refresh(){
+  function refresh(removedWidth){
    copies.forEach(copy=>copy.remove());
    copies=[];
+   sizeLoop(removedWidth);
+  }
+  function start(){
+   announcement.classList.add('pure-promo-loop');
+   const resize=()=>sizeLoop();
+   if(window.ResizeObserver){
+    const observer=new ResizeObserver(resize);
+    observer.observe(viewport);
+    observer.observe(set);
+   }else window.addEventListener('resize',resize);
    sizeLoop();
   }
-  if(window.ResizeObserver){
-   const observer=new ResizeObserver(sizeLoop);
-   observer.observe(viewport);
-   observer.observe(set);
-  }else window.addEventListener('resize',sizeLoop);
-  sizeLoop();
-  return {set,track,refresh};
+  return {set,track,refresh,start};
  }
  // Midnight at the start of Christmas Day in Toronto (EST).
  const christmas=Date.parse('2026-12-25T00:00:00-05:00');
- async function mountChristmasOffer(loop,campaign){
+ async function readChristmasOffer(campaign){
   const end=Date.parse(campaign?.ends_at),serverTime=Date.parse(campaign?.server_time);
   const key=campaign?.eligible_variants?.[0],separator=typeof key==='string'?key.indexOf(':'):-1;
-  if(!loop||!Number.isFinite(serverTime)||end!==christmas||serverTime>=end||separator<=0)return false;
+  if(!Number.isFinite(serverTime)||end!==christmas||serverTime>=end||separator<=0)return null;
   const offset=serverTime-Date.now();
   const id=key.slice(0,separator),size=key.slice(separator+1);
   // Read the estimate from the same pricing engine used by checkout.
   const quote=await request('checkout=cart',{items:[{id,size,qty:1}],country:'US',coupon:'BLACKFRIDAY10'}).catch(()=>null);
   const bonus=quote?.pricing?.bogo_campaign;
   if(!(quote?.pricing?.coupon_discount_cents>0)||bonus?.ends_at!==campaign.ends_at||
-     !bonus.free_units?.some(item=>item.id===id&&item.size===size&&item.qty===1))return false;
+     !bonus.free_units?.some(item=>item.id===id&&item.size===size&&item.qty===1))return null;
+  return {end,offset};
+ }
+ function mountChristmasOffer(loop,{end,offset}){
   const slide=document.createElement('a'),countdown=document.createElement('time'),snowflake=document.createElement('span');
   slide.className='pure-offer-trigger pure-christmas-slide';
   slide.href='/shop';
   slide.innerHTML='<span class="pure-christmas-snowflake" aria-hidden="true">❄</span><span class="pure-offer-buy pure-christmas-title"><i class="pure-christmas-hat" aria-hidden="true"></i>Christmas</span><strong class="pure-offer-free"><span>BOGO Sale</span></strong>';
   countdown.dateTime=new Date(end).toISOString();
   countdown.title='Ends at the end of December 24, Toronto time';
+  countdown.append(document.createElement('span'));
   slide.append(countdown);
   snowflake.className='pure-christmas-snowflake pure-promo-divider';
   snowflake.setAttribute('aria-hidden','true');
   snowflake.textContent='❄';
   loop.set.prepend(slide,snowflake);
-  loop.refresh();
   function tick(){
    const remaining=Math.ceil((end-Date.now()-offset)/1000);
    if(remaining<=0){
     clearInterval(clock);
+    const removedWidth=slide.getBoundingClientRect().width+snowflake.getBoundingClientRect().width;
     if(document.activeElement===slide)loop.set.querySelector('[data-copy-offer]')?.focus();
     slide.remove();
     snowflake.remove();
-    loop.refresh();
+    if(loop.track.isConnected&&loop.track.closest('.pure-promo-loop'))loop.refresh(removedWidth);
     return;
    }
    const days=Math.floor(remaining/86400);
    const time=[Math.floor(remaining/3600)%24,Math.floor(remaining/60)%60,remaining%60].map(value=>String(value).padStart(2,'0')).join(':');
-   for(const display of loop.track.querySelectorAll('.pure-christmas-slide time'))display.textContent=(days?days+'d ':'')+time;
+   for(const display of loop.track.querySelectorAll('.pure-christmas-slide time span'))display.textContent=(days?days+'d ':'')+time;
   }
   const clock=setInterval(tick,1000);
   tick();
-  return true;
  }
  async function mountCampaignStrip(){
   const announcement=document.querySelector('.ap-announcement');
   const fallback=announcement?.querySelector('[data-default-offer]');
+  const campaign=await readCampaign().catch(()=>null);
+  const holiday=fallback&&await readChristmasOffer(campaign);
+  const offer=holiday?null:secondUnitOffer(campaign);
+  const percent=offer?offer.discount_bps/100:0;
+  const active=fallback?.contains(document.activeElement)?document.activeElement:null;
+  // Keep the static coupon visible until the complete initial offer set can move together.
   const loop=fallback&&mountPromoLoop(announcement,fallback);
-  let campaign;
-  try{campaign=await readCampaign();}catch{publishCampaign('unavailable');return;}
-  if(await mountChristmasOffer(loop,campaign)){publishCampaign('inactive');return;}
-  const offer=secondUnitOffer(campaign);
-  if(!offer){publishCampaign('inactive');return;}
-  const percent=offer.discount_bps/100;
-  publishCampaign('active',offer.eligible_variants,percent);
-  if(!fallback)return;
-
-  const trigger=document.createElement('a');
-  trigger.href='/shop?offer=second-unit';
-  trigger.className='pure-offer-trigger';
-  trigger.textContent=percent+'% off the second unit on eligible pairs';
-  announcement.classList.add('pure-offer-active');
-  fallback.replaceWith(trigger);
-  loop.refresh();
+  if(holiday)mountChristmasOffer(loop,holiday);
+  if(offer&&fallback){
+   const trigger=document.createElement('a');
+   trigger.href='/shop?offer=second-unit';
+   trigger.className='pure-offer-trigger';
+   trigger.textContent=percent+'% off the second unit on eligible pairs';
+   announcement.classList.add('pure-offer-active');
+   fallback.replaceWith(trigger);
+  }
+  loop?.start();
+  if(active?.isConnected)active.focus({preventScroll:true});
+  publishCampaign(campaign?(offer?'active':'inactive'):'unavailable',offer?.eligible_variants,percent);
  }
  async function mountCountdown(root){
   if(!root)return;

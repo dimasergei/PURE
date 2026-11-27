@@ -373,6 +373,10 @@ body.ap-site .nl-detail [data-campaign-product]:not([hidden]) {
 }
 .pure-promo-track, .pure-promo-set { display: flex; inline-size: max-content; height: 100%; }
 .pure-promo-track { animation: pure-promo-scroll var(--promo-duration, 22s) linear infinite; }
+html:root body.ap-site .ap-announcement.pure-promo-loop::before {
+  display: none !important;
+  animation: none !important;
+}
 .pure-promo-set { flex: none; }
 .ap-announcement.pure-promo-loop .pure-promo-set .pure-offer-trigger {
   position: static;
@@ -394,7 +398,10 @@ body.ap-site .nl-detail [data-campaign-product]:not([hidden]) {
 @media (hover: hover) {
   .pure-promo-window:hover .pure-promo-track { animation-play-state: paused; }
 }
-@keyframes pure-promo-scroll { to { transform: translateX(var(--promo-distance, 0px)); } }
+@keyframes pure-promo-scroll {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(var(--promo-distance, 0px), 0, 0); }
+}
 .pure-promo-window:has(:focus-visible) { overflow-x: auto; }
 .pure-promo-window:has(:focus-visible) .pure-promo-track { animation: none; }
 .pure-promo-window:has(:focus-visible) .pure-promo-repeat { display: none; }
@@ -416,6 +423,8 @@ html:root body.ap-site .pure-promo-loop :is(a,button):focus-visible { outline: 2
 
 .pure-christmas-slide time {
   min-width: 10ch;
+  display: grid;
+  place-items: center;
   padding: 4px 5px;
   border: 1px solid #999;
   border-radius: 4px;
@@ -425,6 +434,12 @@ html:root body.ap-site .pure-promo-loop :is(a,button):focus-visible { outline: 2
   text-align: center;
   white-space: nowrap;
 }
+.pure-christmas-slide time::after {
+  content: '00d 00:00:00';
+  visibility: hidden;
+  grid-area: 1 / 1;
+}
+.pure-christmas-slide time span { grid-area: 1 / 1; }
 .pure-christmas-snowflake { font-size: 1.05rem; color: #fff; }
 .pure-christmas-title { position: relative; }
 .pure-christmas-hat {
