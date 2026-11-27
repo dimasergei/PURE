@@ -109,10 +109,30 @@ test('phone checkout keeps contact, delivery and the current USD total in a two-
   assert.equal(pay.disabled, true, 'Payment still requires consent');
   assert.equal(pay.closest('.nlx-mobile-actions').querySelector('[data-nlx-action-amount]').textContent, '$79.94');
   assert.equal(pay.textContent, 'CONTINUE TO CARD PAYMENT');
+  const reviews = [...root.querySelectorAll('.nlx-confirm-details')];
+  assert.equal(reviews.length, 3);
+  assert.equal(reviews[0].firstElementChild.textContent, 'guest@example.test');
+  assert.match(reviews[1].textContent, /100 Main St/);
+  const delivery = reviews[2];
+  assert.equal(delivery.querySelector('b').textContent, 'Standard Tracked · $24.95');
+  const date = delivery.querySelector('time.nlx-arrival-date');
+  assert.match(date.dateTime, /^\d{4}-\d{2}-\d{2}$/);
+  assert.match(date.textContent, /^[A-Z][a-z]{2}, [A-Z][a-z]{2} \d{1,2}$/);
+  assert.equal(date.parentElement.textContent, 'Estimated arrival '+date.textContent);
+  assert.equal(delivery.querySelector('.nlx-protection-confirm').textContent, '✓ Shipping Protection');
   root.querySelector('[data-nlx-edit="1"]').click();
   assert.equal(form.elements.email.value, 'guest@example.test');
   assert.equal(form.elements.note.value, 'Fixture note');
   assert.equal(form.elements.delivery_speed.value, 'standard');
+  const nextDay = form.querySelector('[name="delivery_speed"][value="next_day"]');
+  assert.match(nextDay.closest('label').textContent, /Next business day after dispatch/);
+  assert.equal(nextDay.closest('label').querySelector('time'), null);
+  nextDay.click();
+  await delay(240);
+  root.querySelector('[data-nlx-next]').click();
+  const nextDayArrival = root.querySelector('.nlx-arrival-confirm');
+  assert.equal(nextDayArrival.textContent, 'Next business day after dispatch');
+  assert.equal(nextDayArrival.querySelector('time'), null);
 });
 
 test('desktop checkout retains its Delivery step and a resize preserves the address, note and selected rate', async t => {

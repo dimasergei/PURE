@@ -447,13 +447,18 @@
     while(days>0){date.setUTCDate(date.getUTCDate()+1);if(![0,6].includes(date.getUTCDay()))days--;}
     return date;
   }
-  const arrivalLabel=id=>id==='next_day'?'Next business day after dispatch':'Estimated arrival '+new Intl.DateTimeFormat('en-US',{timeZone:'UTC',weekday:'short',month:'short',day:'numeric'}).format(arrivalDate(id));
+  const arrivalFormatter=new Intl.DateTimeFormat('en-US',{timeZone:'UTC',weekday:'short',month:'short',day:'numeric'});
+  function arrivalMarkup(id){
+   if(id==='next_day')return 'Next business day after dispatch';
+   const date=arrivalDate(id);
+   return 'Estimated arrival <time class="nlx-arrival-date" datetime="'+date.toISOString().slice(0,10)+'">'+esc(arrivalFormatter.format(date))+'</time>';
+  }
   function deliveryCards(){
    const rates=data.shipping_zones||{};
    const country=shippingCountry();const map=rates[country]||rates.OTHER||{};
    const options=['economy','standard','express','next_day'].map((id,i)=>{const x=optionsById[id];if(!x)return'';
     const regularAmount=map[id],eligible=x.enabled&&Number.isSafeInteger(regularAmount);const amount=['economy','standard'].includes(id)&&['US','CA'].includes(country)&&currentPreview?.free_shipping_remaining_cents===0?0:regularAmount;
-    return '<label class="nlx-delivery-card '+(state.shipping===id?'nlx-chosen':'')+(eligible?'':' nlx-disabled')+'"><input type="radio" name="delivery_speed" value="'+id+'" '+(state.shipping===id?'checked ':'')+(eligible?'':'disabled')+'><span class="nlx-delivery-desc"><strong>'+esc(x.label)+'</strong><small>'+esc(arrivalLabel(id))+'</small></span><span class="nlx-delivery-price">'+(eligible?deliveryDisplay(id,amount):'Unavailable')+'</span></label>';
+    return '<label class="nlx-delivery-card '+(state.shipping===id?'nlx-chosen':'')+(eligible?'':' nlx-disabled')+'"><input type="radio" name="delivery_speed" value="'+id+'" '+(state.shipping===id?'checked ':'')+(eligible?'':'disabled')+'><span class="nlx-delivery-desc"><strong>'+esc(x.label)+'</strong><small>'+arrivalMarkup(id)+'</small></span><span class="nlx-delivery-price">'+(eligible?deliveryDisplay(id,amount):'Unavailable')+'</span></label>';
    }).join('');
    const extra=(data.membership?.benefits?.priority_fulfillment?[]:['priority']).map(id=>{const x=optionsById[id];if(!x)return'';
     const target='nlx-disclose-priority';
@@ -590,10 +595,18 @@
       billing_line1:bill.line1,billing_city:bill.city,billing_region:bill.region,billing_postal:bill.postal_code,
       billing_country:bill.country,billing_same:state.billingSame?'true':'false'})
       .map(([k,v])=>'<input type="hidden" name="'+esc(k)+'" value="'+esc(v||'')+'">').join('');
-    form.innerHTML=hidden+'<div class="nlx-step-payment"><div class="nlx-confirm"><div><strong>CONTACT</strong><span>'+esc(state.email)+'<br>'+esc(state.phone||'')+'</span><button type="button" data-nlx-edit="0">Edit</button></div>'
-      +'<div><strong>SHIP TO</strong><span class="nlx-address-lines">'+displayAddress()+'</span><button type="button" data-nlx-edit="0">Edit</button></div>'
-      +'<div><strong>DELIVERY</strong><span>'+esc(optionsById[state.shipping]?.label||'Standard delivery')+' · <span data-nlx-confirm-shipping-price>'+currentMoney(currentPreview?.pricing?.delivery?.shipping_cents)+'</span> · <strong class="nlx-arrival-confirm">'+esc(arrivalLabel(state.shipping))+'</strong>'+(state.extras.has('protection')?' <em class="nlx-protection-confirm">✓ Shipping Protection</em>':'')+'</span><button type="button" data-nlx-edit="1">Edit</button></div></div>'
-      +paymentLayout()+'</div>';
+    const phone=state.phone?'<span>'+esc(state.phone)+'</span>':'';
+    const shippingName=esc(optionsById[state.shipping]?.label||'Standard delivery');
+    const shippingPrice=currentMoney(currentPreview?.pricing?.delivery?.shipping_cents);
+    const protection=state.extras.has('protection')?'<span class="nlx-protection-confirm"><span aria-hidden="true">✓</span> Shipping Protection</span>':'';
+    form.innerHTML=hidden+`<div class="nlx-step-payment"><div class="nlx-confirm">
+      <div><strong>CONTACT</strong><div class="nlx-confirm-details"><span>${esc(state.email)}</span>${phone}</div><button type="button" data-nlx-edit="0" aria-label="Edit contact">Edit</button></div>
+      <div><strong>SHIP TO</strong><div class="nlx-confirm-details nlx-address-lines">${displayAddress()}</div><button type="button" data-nlx-edit="0" aria-label="Edit shipping address">Edit</button></div>
+      <div><strong>DELIVERY</strong><div class="nlx-confirm-details">
+        <b>${shippingName} <span class="nlx-confirm-price">· <span data-nlx-confirm-shipping-price>${shippingPrice}</span></span></b>
+        <span class="nlx-arrival-confirm">${arrivalMarkup(state.shipping)}</span>${protection}
+      </div><button type="button" data-nlx-edit="1" aria-label="Edit delivery">Edit</button></div>
+    </div>${paymentLayout()}</div>`;
     all('[data-nlx-edit]',form).forEach(x=>x.addEventListener('click',()=>showStep(Number(x.dataset.nlxEdit))));
     all('[name=payment_choice]',form).forEach(control=>control.addEventListener('change',()=>{
      if(control.disabled||onePayment||lastPlaced)return;state.paymentKind=control.value;state.wallet=null;invalidate();updatePayment();renderSummary();void refresh();

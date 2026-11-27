@@ -82,10 +82,12 @@ body.ap-checkout-page #account-root{box-shadow:none!important;border:0!important
 .nlx-order-note textarea{width:100%;padding:12px;border:1px solid var(--nx-border);border-radius:10px;margin-top:11px;min-height:86px}
 .nlx-shipping-terms{font-size:11px;color:#666;line-height:1.65}
 .nlx-confirm{border:1px solid var(--nx-border);border-radius:15px;overflow:hidden;background:#f5f5f5;margin-bottom:26px}
-.nlx-confirm>div{display:grid;grid-template-columns:100px 1fr auto;align-items:start;gap:12px;border-bottom:1px solid var(--nx-border);padding:14px 17px;font-size:12px}
+.nlx-confirm>div{display:grid;grid-template-columns:100px minmax(0,1fr) auto;align-items:start;gap:12px;border-bottom:1px solid var(--nx-border);padding:14px 17px;font-size:12px}
 .nlx-confirm>div:last-child{border-bottom:0}
-.nlx-confirm strong{color:#111;font-size:11px;letter-spacing:.08em}
-.nlx-confirm span{color:#111;line-height:1.5}
+.nlx-confirm>div>strong{color:#111;font-size:11px;letter-spacing:.08em}
+.nlx-confirm-details{display:grid;gap:3px;min-width:0;color:#111;line-height:1.5;overflow-wrap:anywhere}
+.nlx-arrival-date,.nlx-confirm-price{white-space:nowrap}
+.nlx-arrival-confirm{color:#555}
 .nlx-payment h2{margin-bottom:26px}
 .nlx-express-label{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
 .nlx-express-label strong{font-size:12px;font-weight:800;letter-spacing:.045em;color:#111}
@@ -150,7 +152,14 @@ body.ap-checkout-page #account-root{box-shadow:none!important;border:0!important
 .nlx-quote-note{font-size:10px;line-height:1.5;color:#666;margin:14px 0 0}
 .nlx-empty,.nlx-error{color:#111}
 @media(max-width:1080px){.nlx-columns{grid-template-columns:minmax(0,1.3fr) minmax(290px,1fr);gap:17px}.nlx-left{padding:22px}.nlx-summary{padding-inline:16px}.nlx-summary-head{margin-inline:-16px;padding-inline:16px}}
-@media(max-width:770px){body.ap-checkout-page .account-page{padding:16px 13px 48px!important}.nlx-columns{grid-template-columns:1fr;gap:18px}.nlx-right{grid-row:2}.nlx-summary{position:static}.nlx-left{border-radius:16px;padding:18px}.nlx-two{grid-template-columns:1fr}.nlx-progress{gap:6px}.nlx-progress button{gap:6px;font-size:11px}.nlx-progress button:not(:last-child):after{min-width:4px;margin-left:0}.nlx-confirm>div{grid-template-columns:62px 1fr auto}.nlx-summary-head{padding-block:15px}}
+@media(max-width:770px){body.ap-checkout-page .account-page{padding:16px 13px 48px!important}.nlx-columns{grid-template-columns:1fr;gap:18px}.nlx-right{grid-row:2}.nlx-summary{position:static}.nlx-left{border-radius:16px;padding:18px}.nlx-two{grid-template-columns:1fr}.nlx-progress{gap:6px}.nlx-progress button{gap:6px;font-size:11px}.nlx-progress button:not(:last-child):after{min-width:4px;margin-left:0}.nlx-confirm>div{grid-template-columns:62px minmax(0,1fr) auto}.nlx-summary-head{padding-block:15px}}
+
+@media(max-width:480px){
+ .nlx-confirm>div{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"label edit" "details details";row-gap:6px}
+ .nlx-confirm>div>strong{grid-area:label}
+ .nlx-confirm-details{grid-area:details}
+ .nlx-confirm>div>button{grid-area:edit}
+}
 
 .nlx-points-text{display:flex;align-items:center;gap:7px;min-width:0}.nlx-points-text svg{flex:none}.nlx-shield-svg{display:block}
 .nlx-cross-sell{margin-top:18px;padding-top:14px;border-top:1px solid #e5e5e5}.nlx-cross-sell>div{display:grid;gap:8px}
@@ -177,7 +186,7 @@ body.ap-checkout-page #account-root{box-shadow:none!important;border:0!important
 .nlx-address-lines{display:flex!important;flex-direction:column;gap:3px;color:#111;line-height:1.45;font-size:13px}
 .nlx-address-lines b{color:#111;font-weight:800}
 .nlx-address-confirm{align-items:start}.nlx-address-confirm .nlx-address-lines{flex:1}
-.nlx-protection-confirm{display:inline-block;background:#f5f5f5;color:#111;border-radius:20px;padding:3px 9px;font-style:normal;font-weight:800;margin-left:7px}
+.nlx-protection-confirm{font-weight:650}
 .nlx-product{grid-template-columns:18px 60px minmax(0,1fr) auto;gap:9px}
 .nlx-product>img{width:60px;height:68px}.nlx-product-name strong{font-size:14px;line-height:1.35}.nlx-product-name small{font-size:12px}
 .nlx-remove{align-self:center;border:0;background:none;color:#666;font-size:19px;cursor:pointer;padding:0}
@@ -316,8 +325,6 @@ body.ap-checkout-page #account-root{box-shadow:none!important;border:0!important
 .nlx-progress button{font-weight:800!important;color:#111!important}
 .nlx-progress button:not(:last-child)::after{background:#111!important;height:2px!important}
 .nlx-delivery-desc small{font-size:11px!important;color:#666;text-decoration:underline;text-underline-offset:2px}
-.nlx-arrival-confirm{font-weight:800;color:#111;white-space:nowrap}
-.nlx-confirm>div:last-child>span{font-weight:650}
 .nlx-extra-priority{background:#f5f5f5!important;border-color:#111!important;color:#111!important}
 .nlx-extra-box{min-height:62px;padding:12px 15px!important;border-width:2px!important}
 .nlx-extra-box strong{font-size:14px!important;font-weight:800!important}
@@ -340,7 +347,7 @@ body.ap-checkout-page #account-root{box-shadow:none!important;border:0!important
 .nlx-bank-logos .nlx-more-mark{height:35px!important;min-width:55px!important;font-size:11px!important;padding:3px 5px!important}
 .nlx-bank-logos{gap:6px!important}
 .nlx-payment-option .nlx-bank-symbol{width:20px!important;height:20px!important;stroke-width:2.4!important}
-@media(max-width:520px){.nlx-member-actions{grid-template-columns:95px minmax(0,1fr)!important;gap:8px!important}.nlx-member-actions .nlx-member-unavailable{font-size:11px!important}.nlx-member-offer h3{font-size:22px!important}.nlx-arrival-confirm{white-space:normal}}
+@media(max-width:520px){.nlx-member-actions{grid-template-columns:95px minmax(0,1fr)!important;gap:8px!important}.nlx-member-actions .nlx-member-unavailable{font-size:11px!important}.nlx-member-offer h3{font-size:22px!important}}
 
 /* Dedicated wallet brand lockups; do not inherit global SVG outlines. */
 .nlx-wallets .nlx-wallet-button .nlx-wallet-lockup{display:inline-flex!important;justify-content:center!important;align-items:center!important;gap:2px!important;line-height:1!important;white-space:nowrap}
@@ -449,6 +456,7 @@ body.ap-checkout-page #account-root{box-shadow:none!important;border:0!important
 .nlx-checkout-root .nlx-membership-line .nlx-membership-period{font-size:12px;line-height:1.4;font-weight:500;color:#666;white-space:nowrap}
 .nlx-checkout-root .nlx-membership-line .nlx-product-price{grid-column:3;justify-self:end;text-align:right}
 .nlx-checkout-root .nlx-quote-note:empty{display:none}
+.nlx-checkout-root .pm-offer{text-align:center}
 .nlx-checkout-root .pm-add-to-order{width:100%;text-align:center}
 .nlx-checkout-root .pm-offer-added .pm-offer-actions{display:flex;justify-content:space-between;align-items:center;gap:10px}
 .nlx-checkout-root .pm-offer-added .pm-offer-actions button{max-width:140px}
