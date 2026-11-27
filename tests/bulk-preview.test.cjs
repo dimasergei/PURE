@@ -59,7 +59,8 @@ test('bulk quantities stay in a separate draft and checkout requires ten units p
     assert.equal(document.querySelector('.nl-bulk-estimate-total del').textContent,line.querySelector('del').textContent);
     assert.match(document.querySelector('.nl-bulk-tier-savings strong').textContent,/^−/);
     assert.equal(document.querySelector('.nl-bulk-included-shipping strong').textContent,'FREE');
-    assert.match(document.querySelector('.nl-bulk-included-shipping small').textContent,/U\.S\./);
+    assert.equal(document.querySelector('.nl-bulk-included-shipping small'),null);
+    assert.match(document.querySelector('.nl-bulk-faq').textContent,/US bulk orders include free two-day express shipping after dispatch/);
     assert.deepEqual(JSON.parse(window.localStorage.getItem('ap-bulk-draft-v2')),[
       {id:'bpc-157',size:input.dataset.bulkSize,qty:10}
     ]);
