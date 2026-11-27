@@ -121,7 +121,7 @@ for(const file of fs.readdirSync(out,{recursive:true}).filter(f=>f.endsWith('.ht
   html=html.replace(/\b(src|href)="\/(conversion-ui\.(?:js|css))(?:\?[^"\n]*)?"/g,'$1="/$2?v=20261126-sale-loop"');
   html=html.replace(/\b(src|href)="\/(conversion-ui\.(?:js|css))(?:\?[^"\n]*)?"/g,'$1="/$2?v=20261127-account-workspace"');
   html=html.replace(/\b(src|href)="\/((?:storefront-navigation\.(?:js|css)|mobile-parity\.css|cart-reference\.css))(?:\?[^"\n]*)?"/g,'$1="/$2?v=20261126-header-cart"');
-  html=html.replace(/href="\/storefront-navigation\.css(?:\?[^"\n]*)?"/g,'href="/storefront-navigation.css?v=20261127-mobile-menu-type"');
+  html=html.replace(/href="\/storefront-navigation\.css(?:\?[^"\n]*)?"/g,'href="/storefront-navigation.css?v=20261127-centered-footer"');
   html=html.replace(/href="\/cart-reference\.css(?:\?[^"\n]*)?"/g,'href="/cart-reference.css?v=20261126-quick-add-contrast"');
   fs.writeFileSync(target,html);
   count++;
