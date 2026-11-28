@@ -213,7 +213,7 @@ async function setup(route,campaign=null,quote=null,Observer=null){const errors=
   assert.equal(packaging.querySelector('p').textContent,'A rigid magnetic-close case with a fitted insert that holds every vial in place. Sealed and protected from our lab to yours, included free with every order at no extra cost.');
   assert.deepEqual(
     [...packaging.querySelectorAll('img')].map(img=>img.getAttribute('src')),
-    ['/assets/pure-packaging-display.webp']
+    ['/assets/pure-packaging-display-v2.webp']
   );
   assert.deepEqual([...testing.querySelectorAll(':scope > div:first-child > p')].map(p=>p.textContent),['Request the certificate for your fulfilled lot when you order.']);
   const callout=testing.nextElementSibling;

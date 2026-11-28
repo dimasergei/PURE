@@ -263,7 +263,7 @@
       <h2 id="pure-packaging-title">Every order ships in the box.</h2>
       <p>A rigid magnetic-close case with a fitted insert that holds every vial in place. Sealed and protected from our lab to yours, included free with every order at no extra cost.</p>
     </header>
-    <img class="pure-home-packaging-media" src="/assets/pure-packaging-display.webp" alt="PURE packaging mockup with a black carton on the left, a vial behind it, and four vials in an open magnetic case on the right" width="1536" height="1024" loading="lazy" decoding="async">
+    <img class="pure-home-packaging-media" src="/assets/pure-packaging-display-v2.webp" alt="PURE packaging mockup with a carton, a standalone vial, and a level open case holding vials labeled Retatrutide, Tirzepatide, BPC-157 and GHK-Cu" width="1536" height="1024" loading="lazy" decoding="async">
     <a class="ap-button" href="/shop">Shop now</a>
   </section>`;
  }
