@@ -112,7 +112,46 @@ const pages = {
 const schemaContext = 'https://schema.org';
 const brandArtwork = '/assets/pure-packaging-studio.webp';
 const noindex = new Set(['/404', '/spin-and-save']);
-const pixelRoutes = new Set(['/', '/shop', '/privacy-policy']);
+const pixelRoutes = new Set(['/', '/shop', '/bulk-orders', '/coas', '/about']);
+const pixelPageViewTag = String.raw`<script id="pure-meta-pixel">
+(function () {
+  'use strict';
+  const pixelId = '967677362888639';
+  const routes = new Set(${JSON.stringify([...pixelRoutes])});
+  function eligiblePage(url) {
+    const route = url.pathname.replace(/\.html$/, '').replace(/\/$/, '') || '/';
+    return routes.has(route) && !url.hash && Array.from(url.searchParams).every(([key, value]) =>
+      key === 'fbclid' && /^[A-Za-z0-9_-]{1,300}$/.test(value));
+  }
+  if (location.origin !== 'https://getpurelabs.com' || !eligiblePage(new URL(location.href)) ||
+      navigator.globalPrivacyControl === true || navigator.doNotTrack === '1' || window.doNotTrack === '1') return;
+  if (document.referrer) {
+    const referrer = new URL(document.referrer);
+    if (referrer.origin === location.origin && !eligiblePage(referrer)) return;
+  }
+
+  if (!window.fbq) {
+    const pixel = function () {
+      if (pixel.callMethod) pixel.callMethod.apply(pixel, arguments);
+      else pixel.queue.push(arguments);
+    };
+    pixel.push = pixel;
+    pixel.loaded = true;
+    pixel.version = '2.0';
+    pixel.disablePushState = true;
+    pixel.queue = [];
+    window.fbq = window._fbq = pixel;
+
+    const script = document.createElement('script');
+    script.async = true;
+    script.src = 'https://connect.facebook.net/en_US/fbevents.js';
+    document.head.appendChild(script);
+  }
+  window.fbq('set', 'autoConfig', false, pixelId);
+  window.fbq('init', pixelId);
+  window.fbq('trackSingle', pixelId, 'PageView');
+}());
+</script>`;
 const entities = {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'};
 const escape = value => String(value).replace(/[&<>"']/g, character => entities[character]);
 const textOf = element => (element?.textContent || '').replace(/\s+/g, ' ').trim();
@@ -211,7 +250,6 @@ function buildHeadSEO(out, site) {
   const indexed = new Set();
   if (!fs.existsSync(path.join(out, brandArtwork))) throw new Error('Missing release social artwork ' + brandArtwork);
   const meta = (attr, key, value) => '<meta ' + attr + '="' + key + '" content="' + escape(value) + '">';
-  fs.copyFileSync(path.join(__dirname, 'meta-pixel.js'), path.join(out, 'meta-pixel.js'));
 
   for (const relative of fs.readdirSync(out, {recursive: true}).filter(file => file.endsWith('.html'))) {
     const route = relative === 'index.html' ? '/' : '/' + relative.replace(/\/index\.html$/, '').replace(/\.html$/, '');
@@ -264,7 +302,7 @@ function buildHeadSEO(out, site) {
         tags.push('<style data-pure-coa-space>#ap-main{min-block-size:100vh}</style>');
       }
       if (pixelRoutes.has(route) && !document.head.querySelector('#pure-meta-pixel')) {
-        tags.push('<script id="pure-meta-pixel" src="/meta-pixel.js" defer></script>');
+        tags.push(pixelPageViewTag);
       }
       fs.writeFileSync(file, applyHead(source, dom, tags.join('')));
     } finally {
