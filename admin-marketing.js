@@ -167,6 +167,7 @@
         const b=elem('button',label);b.type='button';b.addEventListener('click',func);wrap.append(b);
       }
       if(lead.url){const a=elem('a','Profile');a.href=lead.url;a.target='_blank';a.rel='noopener noreferrer';a.className='mk-secondary';wrap.append(a);}
+      platform.dataset.caption="Platform"; followers.dataset.caption="Followers"; follow.dataset.caption="Follow-up";
       actions.append(wrap);tr.append(name,platform,followers,stageCell,follow,actions);tbody.append(tr);
     }
     $('mk-count').textContent=leads.length+' of '+data.leads.length+' records';
@@ -203,8 +204,10 @@
     $('mk-id').value=lead?.id||'';
     for(const f of fields){const input=$('mk-'+f);if(input)input.value=lead?.[f]??(['stage'].includes(f)?'New':f==='platform'?'Instagram':'');}
     $('mk-delete').hidden=!lead;
+    $('mk-profile-details').open=false;
     $('mk-editor').showModal();
   }
+  $('mk-profile-details').addEventListener('invalid',event=>{event.currentTarget.open=true;},true);
   function saveLead(ev){
     ev.preventDefault();
     const id=$('mk-id').value,existing=find(id);

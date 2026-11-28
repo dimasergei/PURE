@@ -54,7 +54,7 @@ test('Marketing has a real 2-level workbench and retained interactive prospect a
   assert.ok(app.querySelector('.ap-marketing-workarea > .ap-marketing-sections'));
   const panels=[...app.querySelectorAll('.ap-marketing-panel-container > .mk-panel')].map(e=>e.id);
   assert.deepEqual(panels,['mk-panel-pipeline','mk-panel-conversations','mk-panel-instagram','mk-panel-insights','mk-panel-settings']);
-  assert.ok(d.querySelector('#mk-panel-pipeline .ap-content-heading h2'));
+  assert.ok(d.querySelector('#mk-panel-pipeline .workspace-filters #mk-filter'));
   assert.equal(d.querySelector('#mk-panel-instagram').hidden,true);
   for(const id of ['mk-lead-form','mk-import-button','mk-add-button','mk-ig-connect','mk-ig-send','mk-draft-dialog']){
     assert.ok(d.getElementById(id),id+' must be preserved');

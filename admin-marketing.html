@@ -17,6 +17,7 @@
   <link rel="stylesheet" href="/admin-experience.css?v=20261117b">
   <link rel="stylesheet" href="/admin-violet.css?v=20261117b">
 <link rel="icon" type="image/svg+xml" sizes="any" href="/favicon-pure.svg?v=20261117b"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-pure-16.png?v=20261117b"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-pure-32.png?v=20261117b"><link rel="icon" type="image/png" sizes="96x96" href="/favicon-pure-96.png?v=20261117b"><link rel="shortcut icon" type="image/x-icon" href="/favicon-pure-20261117b.ico"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=20261117b"><meta name="theme-color" content="#ffffff">
+<link rel="stylesheet" href="/admin-compact.css?v=20261128">
 </head>
 <body class="mk-body">
 <main class="admin-page">
@@ -68,13 +69,14 @@
       <p id="mk-alert" class="mk-alert" role="status" aria-live="polite"></p>
 
 
-      <div class="mk-metrics" aria-label="Marketing snapshot">
+      <details class="workspace-summary"><summary>Pipeline overview</summary><div class="mk-metrics" aria-label="Marketing snapshot">
         <article><span>Prospects</span><strong id="mk-total">0</strong><small>Tracked profiles</small></article>
         <article><span>Contacted</span><strong id="mk-contacted">0</strong><small>Outreach recorded</small></article>
         <article><span>Replied</span><strong id="mk-replied">0</strong><small>Interested or responded</small></article>
         <article><span>Due follow-ups</span><strong id="mk-due">0</strong><small>Today or earlier</small></article>
       </div>
 
+      </details>
       <div class="mk-subnav" role="tablist" aria-label="Marketing sections">
         <button type="button" class="mk-subtab is-active" role="tab" aria-selected="true" data-panel="pipeline">Prospects</button>
         <button type="button" class="mk-subtab" role="tab" aria-selected="false" data-panel="conversations">Conversations</button>
@@ -85,9 +87,9 @@
 
       <section id="mk-panel-pipeline" class="mk-panel">
         <div class="mk-toolbar">
-          <label><span class="mk-sr">Search prospects</span><input id="mk-search" type="search" placeholder="Search name, handle, niche or notes…"></label>
-          <label><span class="mk-sr">Filter by status</span><select id="mk-filter"><option value="">All stages</option><option>New</option><option>Qualified</option><option>Drafted</option><option>Contacted</option><option>Replied</option><option>Negotiating</option><option>Partner</option><option>Dormant</option></select></label>
-          <label><span class="mk-sr">Sort prospects</span><select id="mk-sort"><option value="followup">Next follow-up</option><option value="recent">Last updated</option><option value="followers">Followers</option><option value="name">Name</option></select></label>
+          <label><span class="mk-sr">Search prospects</span><input id="mk-search" type="search" placeholder="Search prospects"></label>
+          <details class="workspace-filters"><summary>Filters</summary><div><label><span>Stage</span><select id="mk-filter"><option value="">All stages</option><option>New</option><option>Qualified</option><option>Drafted</option><option>Contacted</option><option>Replied</option><option>Negotiating</option><option>Partner</option><option>Dormant</option></select></label>
+          <label><span >Sort</span><select id="mk-sort"><option value="followup">Next follow-up</option><option value="recent">Last updated</option><option value="followers">Followers</option><option value="name">Name</option></select></label></div></details>
         </div>
         <div class="mk-table-wrap"><table class="mk-table"><thead><tr><th>Creator</th><th>Platform</th><th>Followers</th><th>Stage</th><th>Follow-up</th><th>Actions</th></tr></thead><tbody id="mk-leads"><tr><td colspan="6">Add your first prospect or import a CSV.</td></tr></tbody></table></div>
         <div class="mk-bottom-tools"><span id="mk-count">0 records</span><button id="mk-export-csv" type="button">Export CSV</button><button id="mk-export-json" type="button">Backup JSON</button><label class="mk-text-link">Restore JSON<input id="mk-import-json" type="file" accept="application/json,.json" hidden></label><input id="mk-import-csv" type="file" accept="text/csv,.csv" hidden></div>
@@ -152,16 +154,20 @@
     <div class="mk-form-grid">
       <label>Creator name<input id="mk-name" required maxlength="150"></label>
       <label>Instagram handle<input id="mk-handle" maxlength="80" placeholder="@handle"></label>
+      <label>Stage<select id="mk-stage"><option>New</option><option>Qualified</option><option>Drafted</option><option>Contacted</option><option>Replied</option><option>Negotiating</option><option>Partner</option><option>Dormant</option></select></label>
+      <label>Next follow-up<input id="mk-followup" type="date"></label>
+      <label>Business email<input id="mk-email" type="email" maxlength="254" placeholder="optional"></label>
+    </div>
+    <details id="mk-profile-details" class="workspace-summary"><summary>Profile details &amp; notes</summary>
+      <div class="mk-form-grid">
       <label>Platform<select id="mk-platform"><option>Instagram</option><option>TikTok</option><option>YouTube</option><option>Other</option></select></label>
       <label>Followers<input id="mk-followers" type="number" min="0" max="1000000000"></label>
       <label>Average views<input id="mk-views" type="number" min="0" max="1000000000"></label>
-      <label>Stage<select id="mk-stage"><option>New</option><option>Qualified</option><option>Drafted</option><option>Contacted</option><option>Replied</option><option>Negotiating</option><option>Partner</option><option>Dormant</option></select></label>
-      <label>Business email<input id="mk-email" type="email" maxlength="254" placeholder="optional"></label>
-      <label>Next follow-up<input id="mk-followup" type="date"></label>
       <label class="mk-wide">Profile or contact URL<input id="mk-url" type="url" maxlength="1000" placeholder="https://..."></label>
       <label class="mk-wide">Niche<input id="mk-niche" maxlength="180" placeholder="Bodybuilding, fitness, science..."></label>
       <label class="mk-wide">Research notes<textarea id="mk-notes" rows="4" maxlength="3000" placeholder="Recent content, actual audience fit, public contact source..."></textarea></label>
-    </div>
+      </div>
+    </details>
     <div class="mk-dialog-actions"><button id="mk-delete" class="mk-danger" type="button">Delete</button><button class="mk-button" type="submit">Save prospect</button></div>
   </form>
 </dialog>
@@ -179,7 +185,7 @@
   </form>
 </dialog>
 <script src="/admin-auth.js?v=20261117-inventory1" defer></script>
-<script src="/admin-marketing.js?v=20261125-mobile" defer></script>
-  <script src="/admin-experience.js?v=20261117b" defer></script>
+<script src="/admin-marketing.js?v=20261128-workspace" defer></script>
+  <script src="/admin-experience.js?v=20261128-marketing" defer></script>
 </body>
 </html>

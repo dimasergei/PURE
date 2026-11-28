@@ -179,7 +179,8 @@
         }
       }
       actionWrap.append(button(item.archived?'Restore':'Archive',event=>archiveItem(item.id,!item.archived,event.currentTarget),'iv-archive-action',(item.archived?'Restore ':'Archive ')+displayName(item)));
-      actions.append(actionWrap); tr.append(identity,sku,count,unit,minimum,location,status,actions); target.append(tr);
+      actions.append(actionWrap); tr.append(identity,sku,count,unit,minimum,location,status,actions); for(const [cell,caption] of [[sku,'SKU'],[count,'Quantity'],[unit,'Unit'],[minimum,'Minimum'],[location,'Location']]) cell.dataset.caption=caption;
+      target.append(tr);
     }
     $('iv-record-count').textContent=filtered.length ? (page*PAGE_SIZE+1)+'–'+Math.min((page+1)*PAGE_SIZE,filtered.length)+' of '+numberFormat.format(filtered.length)+' items' : '0 items';
     $('iv-page-label').textContent='Page '+(page+1)+' of '+pages; $('iv-prev').disabled=page===0; $('iv-next').disabled=page>=pages-1;

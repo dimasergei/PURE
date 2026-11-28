@@ -178,16 +178,6 @@
     const content=el('div','ap-marketing-panel-container');
     area.append(content);
     for(const p of panels)content.append(p);
-    const pipeline=content.querySelector('#mk-panel-pipeline');
-    if(pipeline){
-      const head=el('div','ap-content-heading');
-      const copy=el('div','ap-content-heading-copy');
-      copy.append(el('span','ap-content-kicker','CREATOR DISCOVERY'));
-      copy.append(el('h2','','Creator pipeline'));
-      copy.append(el('p','','Search and qualify prospects, track next steps, and prepare tailored outreach.'));
-      head.append(copy);
-      pipeline.prepend(head);
-    }
     const score=body.querySelector('.mk-metrics');
     if(score){
       score.classList.add('ap-marketing-overview');
