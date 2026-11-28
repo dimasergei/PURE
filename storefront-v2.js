@@ -263,10 +263,7 @@
       <h2 id="pure-packaging-title">Every order ships in the box.</h2>
       <p>A rigid magnetic-close case with a fitted insert that holds every vial in place. Sealed and protected from our lab to yours, included free with every order at no extra cost.</p>
     </header>
-    <div class="pure-home-packaging-media">
-      <img src="/assets/pure-packaging-studio.webp" alt="A PURE vial next to its black branded box" width="1344" height="816" loading="lazy" decoding="async">
-      <img src="/assets/pure-four-vial-case.webp" alt="Mockup of the open PURE magnetic case with four branded vials seated in its fitted insert" width="1536" height="1024" loading="lazy" decoding="async">
-    </div>
+    <img class="pure-home-packaging-media" src="/assets/pure-packaging-display.webp" alt="PURE packaging mockup with a black carton on the left, a vial behind it, and four vials in an open magnetic case on the right" width="1536" height="1024" loading="lazy" decoding="async">
     <a class="ap-button" href="/shop">Shop now</a>
   </section>`;
  }

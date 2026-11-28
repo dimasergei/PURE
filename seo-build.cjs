@@ -111,6 +111,13 @@ const pages = {
 
 const schemaContext = 'https://schema.org';
 const brandArtwork = '/assets/pure-packaging-studio.webp';
+const homeShare = {
+  title: 'PURE - Premium Research Peptides | ≥99% COA-Tested USA',
+  image: '/assets/pure-link-preview.jpeg',
+  alt: 'White PURE wordmark and three-slash logo on black',
+  width: 1024,
+  height: 1024
+};
 const noindex = new Set(['/404', '/spin-and-save']);
 const pixelRoutes = new Set(['/', '/shop', '/bulk-orders', '/coas', '/about']);
 const pixelPageViewTag = String.raw`<script id="pure-meta-pixel">
@@ -248,7 +255,9 @@ function buildHeadSEO(out, site) {
   const images = new Map(manifest.map(image => [image.product_id + ':' + image.size, '/' + image.file]));
   const searchRoute = require('./vercel.json').rewrites?.some(rule => rule.source === '/shop/browse');
   const indexed = new Set();
-  if (!fs.existsSync(path.join(out, brandArtwork))) throw new Error('Missing release social artwork ' + brandArtwork);
+  for (const artwork of [brandArtwork, homeShare.image]) {
+    if (!fs.existsSync(path.join(out, artwork))) throw new Error('Missing release social artwork ' + artwork);
+  }
   const meta = (attr, key, value) => '<meta ' + attr + '="' + key + '" content="' + escape(value) + '">';
 
   for (const relative of fs.readdirSync(out, {recursive: true}).filter(file => file.endsWith('.html'))) {
@@ -283,15 +292,22 @@ function buildHeadSEO(out, site) {
       if (route !== '/404') tags.push('<link rel="canonical" href="' + escape(canonical) + '">');
       if (noindex.has(route)) tags.push(meta('name', 'robots', 'noindex, follow'));
       else indexed.add(route);
-      const imageURL = origin + brandArtwork;
-      const openGraph = {
-        'og:type': product ? 'product' : 'website', 'og:url': canonical, 'og:title': title,
-        'og:description': description, 'og:site_name': site.name, 'og:image': imageURL,
-        'og:image:alt': 'Black PURE packaging on a white background'
+      const share = route === '/' ? homeShare : {
+        title, image: brandArtwork, alt: 'Black PURE packaging on a white background'
       };
+      const imageURL = origin + share.image;
+      const openGraph = {
+        'og:type': product ? 'product' : 'website', 'og:url': canonical, 'og:title': share.title,
+        'og:description': description, 'og:site_name': site.name, 'og:image': imageURL,
+        'og:image:alt': share.alt
+      };
+      if (share === homeShare) Object.assign(openGraph, {
+        'og:image:type': 'image/jpeg', 'og:image:width': share.width, 'og:image:height': share.height
+      });
       for (const [key, value] of Object.entries(openGraph)) tags.push(meta('property', key, value));
       for (const [key, value] of Object.entries({
-        'twitter:card': 'summary_large_image', 'twitter:title': title, 'twitter:description': description, 'twitter:image': imageURL
+        'twitter:card': 'summary_large_image', 'twitter:title': share.title,
+        'twitter:description': description, 'twitter:image': imageURL, 'twitter:image:alt': share.alt
       })) tags.push(meta('name', key, value));
       if (graph.length) {
         const schema = JSON.stringify({'@context': schemaContext, '@graph': graph}).replace(/</g, '\\u003c');
