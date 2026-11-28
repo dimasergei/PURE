@@ -38,12 +38,54 @@
     login.append(left,main);
   }
 
-  function mobileNav(root){
+  function mobileNav(root, sidebar, body, toggle){
     const backdrop=el('button','ap-nav-backdrop');
     backdrop.type='button';
     backdrop.setAttribute('aria-label','Close admin navigation');
-    backdrop.addEventListener('click',()=>root.classList.remove('ap-navigation-open'));
     root.append(backdrop);
+    if(!isOrders){
+      toggle.onclick=()=>root.classList.toggle('ap-navigation-open');
+      backdrop.onclick=()=>root.classList.remove('ap-navigation-open');
+      return;
+    }
+
+    const mobile=window.matchMedia?.('(max-width: 840px)');
+    const dismiss=el('button','ap-nav-dismiss','Close');
+    dismiss.type='button';
+    sidebar.prepend(dismiss);
+    sidebar.id='orders-navigation';
+    toggle.setAttribute('aria-controls',sidebar.id);
+    backdrop.tabIndex=-1;
+
+    function setOpen(requested, returnFocus=false){
+      const open=Boolean(requested && mobile?.matches);
+      root.classList.toggle('ap-navigation-open',open);
+      toggle.setAttribute('aria-expanded',String(open));
+      sidebar.inert=Boolean(mobile?.matches && !open);
+      body.inert=open;
+      if(open)dismiss.focus();
+      else if(returnFocus && mobile?.matches)toggle.focus();
+    }
+    toggle.onclick=()=>setOpen(true);
+    backdrop.onclick=dismiss.onclick=()=>setOpen(false,true);
+    sidebar.addEventListener('click',event=>{
+      if(event.target.closest('.admin-nav-link, .admin-icon-button'))setOpen(false,true);
+    });
+    sidebar.addEventListener('keydown',event=>{
+      if(!root.classList.contains('ap-navigation-open'))return;
+      if(event.key==='Escape'){
+        event.preventDefault();
+        setOpen(false,true);
+      }else if(event.key==='Tab'){
+        const controls=[...sidebar.querySelectorAll('button:not(:disabled),a[href]')].filter(node=>node.getClientRects().length);
+        const first=controls[0],last=controls[controls.length-1];
+        if(event.shiftKey && document.activeElement===first){event.preventDefault();last?.focus();}
+        if(!event.shiftKey && document.activeElement===last){event.preventDefault();first?.focus();}
+      }
+    });
+    window.addEventListener('pure-admin-auth-change',event=>{if(!event.detail?.authenticated)setOpen(false);});
+    mobile?.addEventListener('change',()=>setOpen(false));
+    setOpen(false);
   }
 
   function workspaceLayout(){
@@ -67,7 +109,7 @@
       for(const link of originalNav.querySelectorAll('.admin-nav-link')){
         if(link.textContent.trim()==='Orders')link.dataset.apIcon='orders';
         if(link.textContent.trim()==='Marketing')link.dataset.apIcon='marketing';
-        link.addEventListener('click',()=>root.classList.remove('ap-navigation-open'));
+        if(!isOrders)link.addEventListener('click',()=>root.classList.remove('ap-navigation-open'));
       }
     }
     const header=sidebar.querySelector('.admin-header-left');
@@ -81,32 +123,35 @@
     sidebar.append(foot);
     const top=el('div','ap-workspace-topbar');
     const context=el('div','ap-workspace-context');
-    const crumb=el('div','ap-breadcrumb');
-    crumb.append(el('span','','ADMINISTRATION'));
-    crumb.append(el('span','ap-breadcrumb-divider','/'));
-    crumb.append(el('strong','',isOrders?'ORDERS':'MARKETING'));
-    context.append(crumb);
+    if(isOrders){
+      const logo=el('span','orders-top-brand pure-wordmark','PURE');
+      context.append(logo,el('span','orders-admin-label','Admin'));
+    }else{
+      const crumb=el('div','ap-breadcrumb');
+      crumb.append(el('span','','ADMINISTRATION'),el('span','ap-breadcrumb-divider','/'),el('strong','','MARKETING'));
+      context.append(crumb);
+    }
     const controls=el('div','ap-workspace-top-actions');
     const site=document.createElement('a');
     site.href='/';site.className='ap-workspace-store-link';
-    site.textContent='View storefront';
+    site.textContent=isOrders?'Storefront':'View storefront';
     site.setAttribute('aria-label','Open PURE storefront');
     const toggle=el('button','ap-sidebar-toggle');
     toggle.type='button';
     toggle.setAttribute('aria-label','Open admin navigation');
-    toggle.textContent='☰';
-    toggle.addEventListener('click',()=>root.classList.toggle('ap-navigation-open'));
-    controls.append(site,toggle);
-    top.append(context,controls);
+    if(isOrders){
+      toggle.append(el('span','orders-menu-icon'));
+      top.append(toggle,context,site);
+    }else{
+      toggle.textContent='☰';
+      controls.append(site,toggle);
+      top.append(context,controls);
+    }
     body.prepend(top);
-    mobileNav(root);
+    mobileNav(root,sidebar,body,toggle);
     const pageHead=body.querySelector(isOrders?'.admin-section-heading':'.mk-title');
     if(pageHead){
       pageHead.classList.add('ap-page-intro');
-      const copy=pageHead.querySelector('h1');
-      if(copy && isOrders){
-        copy.before(el('div','ap-section-eyebrow','COMMERCE OPERATIONS'));
-      }
     }
     if(isOrders)ordersWorkarea(body);
     if(isMarketing)marketingWorkarea(body);
@@ -117,14 +162,8 @@
     if(!hub)return;
     const surface=el('section','ap-orders-console');
     surface.setAttribute('aria-label','Order queue');
-    const label=el('div','ap-content-heading');
-    const title=el('div','ap-content-heading-copy');
-    title.append(el('span','ap-content-kicker','WORK QUEUE'));
-    title.append(el('h2','','Orders console'));
-    title.append(el('p','','Review payments, inspect order details, and manage fulfillment in one place.'));
-    label.append(title);
     section.insertBefore(surface,hub);
-    surface.append(label,hub);
+    surface.append(hub);
     section.classList.add('ap-orders-section');
   }
   function marketingWorkarea(body){

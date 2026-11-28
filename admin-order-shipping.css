@@ -1,0 +1,161 @@
+/* Order editor: fulfillment tasks share one list; only the active editor takes space. */
+.uc-dialog .uc-shipment,
+.uc-dialog .psl-section {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  background: #fff;
+  border: 0;
+  border-radius: 0;
+}
+.uc-dialog .uc-shipping-task {
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  border: 0;
+  border-bottom: 1px solid #e6e6e6;
+}
+.uc-dialog .uc-shipping-task > summary,
+body .uc-dialog button.psl-open {
+  box-sizing: border-box;
+  display: flex;
+  width: 100%;
+  min-height: 48px;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 10px 2px !important;
+  margin: 0 !important;
+  text-align: left;
+  font-size: .9375rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: #111;
+  list-style: none;
+  cursor: pointer;
+}
+body .uc-dialog button.psl-open {
+  background: #fff !important;
+  border: 0 !important;
+  border-bottom: 1px solid #e6e6e6 !important;
+  border-radius: 0 !important;
+  font-size: .9375rem !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+}
+.uc-dialog .uc-shipping-task > summary::-webkit-details-marker {display: none}
+.uc-dialog .uc-shipping-task > summary > small {
+  min-width: 0;
+  margin-left: auto;
+  color: #666;
+  font-size: .8125rem;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+.uc-dialog .uc-shipping-task > summary::after,
+.uc-dialog button.psl-open::after {
+  content: "";
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  margin: -3px 5px 0 auto;
+  border: solid currentColor;
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg);
+}
+.uc-dialog .uc-shipping-task > summary:has(small)::after {margin-left: 3px}
+.uc-dialog .uc-shipping-task[open] > summary::after,
+.uc-dialog button.psl-open[aria-expanded="true"]::after {transform: rotate(225deg); margin-top: 4px}
+.uc-dialog .uc-shipping-task summary:focus-visible,
+.uc-dialog button.psl-open:focus-visible {outline: 2px solid #111; outline-offset: -2px}
+.uc-dialog .uc-shipping-task .uc-shipping-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: end;
+  gap: 10px;
+  margin: 0;
+  padding: 4px 0 14px;
+  border: 0;
+}
+.uc-dialog .uc-shipping-form > *,
+.uc-dialog .uc-shipping-quote .uc-pilot-inputs > * {min-width: 0}
+.uc-dialog .uc-shipping-form > button,
+.uc-dialog .uc-shipping-form > p,
+.uc-dialog .uc-shipping-form > label:has([name="line1"],[name="line2"],[name="note"],[name="packed_variant"]),
+.uc-dialog [data-shipping-task="status"] label:has([name="tracking"]),
+.uc-dialog [data-shipping-task="lots"] label:has([name="lot_number"]) {grid-column: 1 / -1}
+.uc-dialog [data-shipping-task="lots"] form > button {grid-column: auto}
+.uc-dialog .uc-shipping-form p,
+.uc-dialog .uc-shipment > .uc-hint,
+.uc-dialog .psl-section .uc-hint,
+.uc-dialog .uc-shipping-quote > p {margin: 6px 0 10px; line-height: 1.45}
+.uc-dialog .uc-shipment .uc-input-field,
+.uc-dialog .psl-section .psl-field {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  min-width: 0;
+  font-size: .8125rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.uc-dialog .uc-shipment .uc-input-field input,
+.uc-dialog .uc-shipment .uc-input-field select,
+.uc-dialog .psl-section .psl-field input,
+.uc-dialog .psl-section .psl-field select {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 10px;
+  font-size: 1rem !important;
+  line-height: 1.25;
+}
+.uc-dialog .uc-shipment .uc-input-field select,
+.uc-dialog .psl-section .psl-field select {
+  appearance: none;
+  padding-right: 30px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='m1 1.5 5 5 5-5' fill='none' stroke='%23333' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
+  background-position: right 10px center !important;
+  background-repeat: no-repeat !important;
+}
+.uc-dialog .uc-shipment .uc-input-field input[readonly] {background: #f5f5f5 !important; color: #545454 !important}
+.uc-dialog .uc-shipment button,
+.uc-dialog .psl-section button,
+.uc-dialog .psl-section .psl-link {
+  min-height: 44px;
+  max-width: 100%;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.uc-dialog .uc-shipping-quote {padding-bottom: 5px}
+.uc-dialog .uc-shipment .uc-pilot-inputs {grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px}
+.uc-dialog .uc-shipment .uc-pilot {margin: 0 0 14px}
+.uc-dialog .uc-shipment .uc-pilot-form {gap: 10px}
+.uc-dialog .psl-panel {min-width: 0; margin-top: 6px}
+.uc-dialog .psl-billing[open] {padding-bottom: 12px}
+.uc-dialog .psl-section .psl-postage-record {grid-template-columns: minmax(0,.9fr) minmax(0,1.4fr); gap: 7px 10px}
+.uc-dialog .psl-postage-record dd {margin: 0; text-align: right}
+.uc-dialog .psl-section .psl-form fieldset {margin: 12px 0; padding: 10px; gap: 10px}
+.uc-dialog .psl-section .psl-preference-fields,
+.uc-dialog .psl-section .psl-customs-item,
+.uc-dialog .psl-section .psl-rate-controls,
+.uc-dialog .psl-section .psl-weight-controls {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: end;
+  gap: 8px;
+}
+.uc-dialog .psl-section .psl-field-wide {grid-column: 1 / -1}
+.uc-dialog .psl-section .psl-toolbar {flex-direction: row; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px}
+.uc-dialog .psl-section .psl-toolbar > button {width: auto}
+.uc-dialog .psl-section .psl-rate {padding: 10px; gap: 6px 10px}
+.uc-dialog .psl-section .psl-preference-actions {flex-flow: row wrap; gap: 6px}
+.uc-dialog .psl-preference-actions > button {flex: 1 1 140px; width: auto}
+.uc-dialog .psl-section .psl-form legend {padding-inline: 4px}
+.uc-dialog .psl-panel .psl-result {padding: 12px; margin: 10px 0}
+.uc-dialog .psl-panel .psl-address {margin: 4px 0 8px; line-height: 1.4}
+@media (max-width: 359px) {
+  .uc-dialog [data-shipping-task="lots"] form > button,
+  .uc-dialog .psl-section .psl-customs-item > .psl-field {grid-column: 1 / -1}
+}

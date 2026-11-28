@@ -1,0 +1,237 @@
+/* Keep navigation fixed while the active order section scrolls. */
+body:has(dialog.uc-order-editor[open]) { overflow: hidden; }
+body dialog.uc-order-editor {
+  --order-gutter: clamp(16px, 3vw, 28px);
+  --order-rule: #e5e5e5;
+  width: min(680px, calc(100% - 40px)) !important;
+  max-width: 100%;
+  height: min(700px, 88dvh);
+  max-height: 88dvh !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  font: 1rem/1.4 "Archivo", Arial, sans-serif;
+  overscroll-behavior: contain;
+}
+body dialog.uc-order-editor[open] { display: flex; flex-direction: column; }
+.uc-order-editor .uc-dialog-head {
+  flex: none;
+  padding: 18px var(--order-gutter) 12px;
+  align-items: center;
+  background: white;
+  overflow-wrap: anywhere;
+}
+.uc-order-editor .uc-editor-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px 9px;
+  font-size: .813rem;
+  color: #555;
+}
+.uc-order-editor .uc-editor-status {
+  padding-inline-start: 9px;
+  border-inline-start: 1px solid #bbb;
+  color: #111;
+  font-weight: 700;
+}
+body dialog.uc-order-editor .uc-dialog-head h2 {
+  margin: 2px 0 0;
+  font-size: clamp(1.5rem, 4vw, 2rem) !important;
+  letter-spacing: -.045em;
+  line-height: 1.14;
+}
+body dialog.uc-order-editor .uc-editor-close {
+  flex: none;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid #ddd;
+  border-radius: 100px;
+  font-size: .75rem;
+}
+.uc-order-editor .uc-edit-tabs {
+  flex: none;
+  display: flex;
+  margin: 0 var(--order-gutter) 10px;
+  padding: 3px;
+  border-radius: 12px;
+  background: #f1f1f1;
+}
+.uc-order-editor .uc-edit-tabs[hidden],
+.uc-order-editor .uc-edit-pane[hidden] { display: none !important; }
+body dialog.uc-order-editor .uc-edit-tabs button {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: 5px;
+  border: 0 !important;
+  border-radius: 9px;
+  background: transparent !important;
+  box-shadow: none;
+  font-size: .813rem;
+  line-height: 1.2;
+}
+body dialog.uc-order-editor .uc-edit-tabs button[aria-selected="true"] {
+  background: #111 !important;
+  color: #fff !important;
+}
+.uc-order-editor :is(button,summary,input,select,a,textarea,[role="tabpanel"]):focus-visible {
+  outline: 2px solid #555;
+  outline-offset: 2px;
+}
+.uc-order-editor > .uc-message:empty { display: none; }
+.uc-order-editor > .uc-message {
+  flex: none;
+  min-height: auto;
+  margin: 0 var(--order-gutter) 10px;
+  padding: 8px 12px;
+  border-left: 3px solid #333;
+  background: #f5f5f5;
+  font-size: .875rem;
+  overflow-wrap: anywhere;
+}
+.uc-order-editor .uc-edit-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border-top: 1px solid var(--order-rule);
+}
+.uc-order-editor .uc-edit-pane {
+  padding: 14px var(--order-gutter) 24px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.uc-order-editor .uc-placed-at > bdi { white-space: nowrap; }
+.uc-order-editor .uc-edit-pane .uc-info {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+  margin: 0;
+  border: 0;
+  padding: 0 0 16px;
+}
+.uc-order-editor .uc-editor-contact {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 16px;
+}
+.uc-order-editor .uc-info .uc-field { gap: 2px; align-content: start; }
+.uc-order-editor .uc-field span { font-size: .8125rem; }
+.uc-order-editor .uc-field strong { font-size: .938rem; font-weight: 650; line-height: 1.3; }
+.uc-order-editor .uc-items,
+.uc-order-editor .uc-destination { border-top: 1px solid var(--order-rule); }
+body dialog.uc-order-editor .uc-edit-pane :is(h3,h4) {
+  font-family: "Archivo", Arial, sans-serif;
+  margin: 0;
+  font-size: .94rem;
+  line-height: 1.3;
+  letter-spacing: -.018em;
+}
+body dialog.uc-order-editor .uc-items h3 { padding: 12px 0 3px; }
+.uc-order-editor .uc-items .uc-item { padding: 8px 0; font-size: .94rem; border: 0; }
+.uc-order-editor .uc-items .uc-item + .uc-item { border-top: 1px solid var(--order-rule); }
+.uc-order-editor .uc-item strong { flex: none; font-variant-numeric: tabular-nums; }
+.uc-order-editor .uc-order-breakdown,
+body dialog.uc-order-editor details.uc-history {
+  margin: 0;
+  border-block-start: 1px solid var(--order-rule);
+  padding: 0;
+}
+.uc-order-editor :is(.uc-order-breakdown,.uc-history) > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  list-style: none;
+  cursor: pointer;
+  font-size: .94rem;
+  font-weight: 700;
+}
+.uc-order-editor :is(.uc-order-breakdown,.uc-history) > summary::-webkit-details-marker { display: none; }
+.uc-order-editor :is(.uc-order-breakdown,.uc-history) > summary::after {
+  content: "";
+  flex: none;
+  width: 7px;
+  height: 7px;
+  margin: -3px 3px 0 auto;
+  border: solid currentColor;
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg);
+}
+.uc-order-editor :is(.uc-order-breakdown,.uc-history)[open] > summary::after { transform: rotate(225deg); margin-top: 3px; }
+.uc-order-editor .uc-order-breakdown > summary strong { margin-left: auto; font-variant-numeric: tabular-nums; }
+.uc-order-editor .uc-order-breakdown > summary::after { margin-left: 4px; }
+.uc-order-editor .uc-total { padding: 0 0 14px; gap: 5px; border: 0; }
+.uc-order-editor .uc-total .uc-field strong { font-weight: 600; }
+.uc-order-editor .uc-destination { padding: 8px 0 12px; }
+.uc-order-editor .uc-destination-head { display: flex; align-items: center; justify-content: space-between; }
+body dialog.uc-order-editor button.uc-address-edit {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 4px;
+  border: 0;
+  background: transparent !important;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-size: .813rem;
+}
+.uc-order-editor .uc-address { margin: 2px 0 0; font-size: .94rem; line-height: 1.4; }
+.uc-order-editor .uc-history-item { gap: 3px; padding: 9px 0; font-size: .875rem; }
+.uc-order-editor .uc-history-item small { font-size: .8125rem; }
+.uc-order-editor .uc-hint { margin: 6px 0 10px; font-size: .875rem; line-height: 1.45; }
+.uc-order-editor .uc-export, .uc-order-editor .uc-payment {
+  display: flex;
+  align-items: flex-start;
+  flex-flow: row wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0 0 14px;
+  border: 0;
+  border-radius: 0;
+}
+.uc-order-editor .uc-export { margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--order-rule); }
+.uc-order-editor :is(.uc-export,.uc-payment) > :is(h3,h4,p,section,form,details) { flex: 0 0 100%; min-width: 0; }
+.uc-order-editor :is(.uc-export,.uc-payment) > .uc-hint { margin: 0; }
+.uc-order-editor .uc-export .uc-button-row { gap: 8px; }
+.uc-order-editor .uc-edit-pane button { min-height: 44px; max-width: 100%; }
+.uc-order-editor .uc-payment .uc-action-form { margin: 0; border: 0; padding: 0; }
+.uc-order-editor .uc-edit-pane .uc-input-field :is(input,select),
+.uc-order-editor .uc-edit-pane .pica-field :is(input,select,textarea) {
+  min-width: 0;
+  width: 100%;
+  min-height: 44px;
+  box-sizing: border-box;
+  font-size: 1rem;
+}
+body dialog.uc-order-editor .uc-edit-pane .uc-danger { color: #9c1f23 !important; border-color: #d7a9aa !important; }
+body dialog.uc-order-editor .uc-edit-pane .uc-danger:hover { color: white !important; background: #8b191e !important; }
+@media (max-width: 640px) {
+  .uc-order-editor .uc-editor-contact { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .uc-order-editor .uc-contact-email strong { font-weight: 500; }
+  .uc-order-editor .uc-contact-email > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  body dialog.uc-order-editor {
+    --order-gutter: max(16px, env(safe-area-inset-right), env(safe-area-inset-left));
+    width: 100% !important;
+    height: 100%;
+    height: 100dvh;
+    max-height: 100dvh !important;
+    max-width: 100%;
+    margin: 0;
+    border: 0 !important;
+    border-radius: 0 !important;
+  }
+  .uc-order-editor .uc-dialog-head { padding-top: max(12px, env(safe-area-inset-top)); }
+  .uc-order-editor .uc-edit-pane { padding-bottom: max(24px, env(safe-area-inset-bottom)); }
+}
+body dialog.uc-order-editor .uc-edit-tabs button[aria-selected="true"]:is(:hover,:focus,:active) {
+  background: #111 !important;
+  color: white !important;
+}

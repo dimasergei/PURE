@@ -19,16 +19,56 @@ const physical=o=>selectable(o)&&o.kind!=='membership';
 const lotus=(view,more='')=>'/api/customer-config?lotus=admin&view='+view+more;
 const send=(url,body,method='POST')=>api(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
 const write=b=>send(lotus('write'),b);
-function msg(text,bad=false){const x=(dlg?.open?dlg:root)?.querySelector('[data-unified-message]');if(x){x.textContent=text;x.classList.toggle('failed',bad)}}
-function btn(text,action,cls='ghost'){const x=el('button',text,cls);x.type='button';x.onclick=async()=>{x.disabled=true;try{await action()}catch(e){msg(e.message,true)}finally{x.disabled=false}};return x}
+let orderSession=null,pendingOpenVersion=0;
+function showNotice(host,text,bad=false){
+ const notice=host?.querySelector('[data-unified-message]');
+ if(notice){notice.textContent=text;notice.classList.toggle('failed',bad)}
+}
+function msg(text,bad=false){showNotice(root,text,bad)}
+function controlFeedback(control){
+ return control.closest('.uc-order-editor')?orderSession.notice:msg;
+}
+function btn(text,action,cls='ghost'){
+ const x=el('button',text,cls);
+ x.type='button';
+ x.onclick=async()=>{
+  const notify=controlFeedback(x);
+  x.disabled=true;
+  try{await action()}catch(e){notify(e.message,true)}finally{x.disabled=false}
+ };
+ return x;
+}
 function field(k,v){const x=el('div',undefined,'uc-field');x.append(el('span',k),el('strong',v===undefined||v===null||v===''?'—':v));return x}
 function input(f,title,name,value='',required=false){const label=el('label',title,'uc-input-field'),x=el('input');x.name=name;x.value=value??'';x.required=required;label.append(x);f.append(label);return x}
 function select(f,title,name,options,value){const label=el('label',title,'uc-input-field'),x=el('select');x.name=name;for(const [key,text]of options){const o=el('option',text);o.value=key;x.append(o)}if(value!==undefined)x.value=value;label.append(x);f.append(label);return x}
 function form(title,host){const f=el('form',undefined,'uc-action-form');f.append(el('h4',title));host.append(f);return f}
-function submit(f,text,action){const x=el('button',text,'primary');x.type='submit';f.append(x);f.onsubmit=async ev=>{ev.preventDefault();x.disabled=true;try{await action()}catch(e){msg(e.message,true)}finally{x.disabled=false}}}
+function submit(f,text,action){const x=el('button',text,'primary');x.type='submit';f.append(x);f.onsubmit=async ev=>{ev.preventDefault();const notify=controlFeedback(f);x.disabled=true;try{await action()}catch(e){notify(e.message,true)}finally{x.disabled=false}}}
 const when=t=>t?new Date(t).toLocaleString():'—';
 const address=a=>[a?.line1,a?.line2,[a?.city,a?.region||a?.state,a?.postal_code].filter(Boolean).join(', '),a?.country].filter(Boolean).join(' · ');
-function close(){window.PureBulkLabels?.close();epoch++;clearInterval(poll);clearTimeout(timer);dlg?.remove();dlg=null;root?.replaceChildren();root=null;api=null;orders=[];chosen.clear()}
+function close() {
+ window.PureBulkLabels?.close();
+ epoch++;
+ detailVersion++;
+ pendingOpenVersion=0;
+ clearInterval(poll);
+ clearTimeout(timer);
+ poll = timer = null;
+ if (dlg?.open) dlg.close();
+ dlg?.remove();
+ dlg = orderSession = null;
+ root?.replaceChildren();
+ const count = document.getElementById('orders-message');
+ if (count) count.textContent = '';
+ root = api = null;
+ orders = [];
+ paging = {};
+ chosen.clear();
+ page = 1;
+ query = '';
+ sort = 'fulfillment_priority';
+ filter = 'all';
+ archiveView = 'current';
+}
 function toggleOrder(order,selected){
  const key=orderKey(order);
  if(selected&&!chosen.has(key)&&chosen.size>=selectionLimit){msg('Select up to '+selectionLimit+' orders at a time.',true);return false;}
@@ -60,7 +100,9 @@ async function downloadSelectedSheet(format){
 }
 function selectionBar(){
  const host=root?.querySelector('[data-order-selection]');if(!host)return;
+ const restoreFocus = host.contains(document.activeElement);
  host.replaceChildren();
+ if (!orders.length && !chosen.size) return;
  const visible=orders.filter(selectable),items=selectedOrders(),restoring=archiveView==='archived';
  const label=el('label',undefined,'uc-select-page'),all=el('input');all.type='checkbox';all.setAttribute('aria-label','Select all orders on this page');
  const visibleCount=visible.filter(o=>chosen.has(orderKey(o))).length;
@@ -73,6 +115,10 @@ function selectionBar(){
  };
  label.append(all,el('span','Select page'));
  const count=el('strong',items.length+' selected');count.setAttribute('aria-live','polite');host.append(label,count);
+ if (restoreFocus) {
+  const target = all.disabled ? root.querySelector('.uc-queue-search input') : all;
+  target?.focus({preventScroll:true});
+ }
  if(!items.length)return;
  const actions=el('div',undefined,'uc-button-row');
  const archiveCount=items.filter(o=>restoring?o.archived:o.archive_eligible).length;
@@ -90,54 +136,363 @@ function selectionBar(){
  }
  actions.append(btn('Clear selection',()=>{chosen.clear();rows();selectionBar()}));host.append(actions);
 }
-function rows(){const host=root?.querySelector('[data-unified-list]');if(!host)return;host.replaceChildren();const list=orders;
- if(!list.length){host.append(el('p','No matching checkout orders or subscriptions.','uc-empty'));return}
- for(const o of list){const card=el('article',undefined,'uc-order-row'),identity=el('div',undefined,'uc-order-identity'),sum=el('div',undefined,'uc-order-total');
-  identity.append(el('strong',ref(o)),el('small',type(o)+' · '+when(o.created_at)),el('span',o.customer_name||o.customer_email||'Unknown customer'));
-  if(priorityOrder(o))identity.append(priorityBadge());
-  const pendingCad=interacRequest(o),estimate=requestEstimate(o);
-  sum.append(el('strong',pendingCad?'CAD quote pending':cash(o.total_cents,o.currency)+(o.source==='research_subscription'?'/mo':'')),el('small',pendingCad&&Number.isSafeInteger(estimate?.total_cents)?cash(estimate.total_cents,'USD')+' USD estimate':orderState(o,o.source==='research_subscription'?o.research_status:o.source==='commerce'?o.commerce_status:o.fulfillment_status)));
-  const slot=el('span',undefined,'uc-order-select');
-  if(selectable(o)){
-   const box=el('input');box.type='checkbox';box.checked=chosen.has(orderKey(o));box.setAttribute('aria-label','Select order '+ref(o));
-   box.onchange=()=>{if(!toggleOrder(o,box.checked))box.checked=chosen.has(orderKey(o));selectionBar()};slot.append(box);
-  }
-  card.append(slot,identity,sum,btn(o.source==='research_subscription'?'View subscription':pendingCad?'Review CAD order':'Manage order',()=>detail(o),'primary'));host.append(card)}
-}
-async function load(){if(!api||!root)return;const ticket=++epoch,params=new URLSearchParams({status:archiveView,page:String(page),page_size:'25',sort,search:query,type:filter});
- try{const result=await api('/api/admin-orders?'+params);if(ticket!==epoch)return;orders=result.orders||[];for(const order of orders){const key=orderKey(order);if(chosen.has(key))chosen.set(key,order)}paging=result.pagination||{};const count=document.getElementById('orders-message');if(count)count.textContent=(paging.total||0)+' orders · use Manage order for payment and fulfillment';root.replaceChildren();
-  const head=el('div',undefined,'uc-header');head.append(el('h2','Orders'));const actions=el('div',undefined,'uc-button-row');
-  actions.append(btn('Refresh',load));head.append(actions);root.append(head);
-  const tools=el('div',undefined,'uc-search'),q=el('input');q.type='search';q.placeholder='Search orders or customers';q.setAttribute('aria-label','Search orders');q.value=query;
-  q.oninput=()=>{query=q.value;page=1;clearTimeout(timer);timer=setTimeout(()=>{const focused=document.activeElement===q,pos=q.selectionStart;load().then(()=>{if(focused){const replacement=root?.querySelector('.uc-search input');replacement?.focus();replacement?.setSelectionRange(pos,pos)}})},300)};
-  const sorting=el('select');for(const [v,t]of [['fulfillment_priority','Fulfillment priority'],['newest','Newest first'],['oldest','Oldest first'],['highest_total','Highest total']]){const option=el('option',t);option.value=v;sorting.append(option)}sorting.value=sort;sorting.setAttribute('aria-label','Sort orders');sorting.onchange=()=>{sort=sorting.value;page=1;load()};
-  const types=el('select');for(const [v,t]of [['all','All types'],['goods','Product orders'],['bulk','Bulk orders'],['membership','Membership purchases']]){const option=el('option',t);option.value=v;types.append(option)}types.value=filter;types.setAttribute('aria-label','Filter order type');types.onchange=()=>{filter=types.value;page=1;load()};
-  const scope=el('select');for(const [v,t]of [['current','Active orders'],['archived','Archived orders']]){const option=el('option',t);option.value=v;scope.append(option)}scope.value=archiveView;scope.setAttribute('aria-label','Order archive view');scope.onchange=()=>{archiveView=scope.value;chosen.clear();page=1;load()};
-  tools.append(q,sorting,types,scope);root.append(tools);const notice=el('p','','uc-message');notice.setAttribute('data-unified-message','');notice.setAttribute('role','status');root.append(notice);
-  const selections=el('div',undefined,'uc-selection');selections.setAttribute('data-order-selection','');root.append(selections);selectionBar();
-  const list=el('div',undefined,'uc-list');list.setAttribute('data-unified-list','');root.append(list);rows();
-  const pager=el('div',undefined,'uc-pager'),prev=btn('Previous',()=>{page--;return load()}),next=btn('Next',()=>{page++;return load()});prev.disabled=!paging.has_previous;next.disabled=!paging.has_next;
-  pager.append(prev,el('span',`Page ${page} · ${paging.total||0} records`),next);root.append(pager);
- }catch(e){if(ticket===epoch){root.replaceChildren(el('p',e.message,'uc-message failed'),btn('Retry',load))}}}
-async function reload(o){await load();await detail(o.id)}
-async function detail(record){const openVersion=++detailVersion;let row=typeof record==='object'?record:orders.find(o=>o.id===record);
- if(!row){const result=await api('/api/admin-orders?'+new URLSearchParams({status:'all',search:String(record),page_size:'5'}));row=result.orders?.find(o=>o.id===record)}
- if(!row)throw Error('Order unavailable. Refresh the list.');const ticket=epoch;
- const data=row.source==='commerce'?await api(lotus('detail','&id='+encodeURIComponent(row.id))):{order:row,allocations:[],jobs:[]};
- if(data.manual_pilot_eligible){
-  try{data.manual_pilot=await api(lotus('manual_pilot','&id='+encodeURIComponent(row.id)))}
-  catch{data.manual_pilot=null}
+const queueDateFormat = new Intl.DateTimeFormat(undefined, {month:'short', day:'numeric', year:'numeric'});
+
+function rows() {
+ const host = root?.querySelector('[data-unified-list]');
+ if (!host) return;
+ host.replaceChildren();
+ if (!orders.length) {
+  host.append(el('p', query || filter !== 'all' ? 'No matching orders.' : 'No orders in this view.', 'uc-empty'));
+  return;
  }
- if(ticket!==epoch||openVersion!==detailVersion)return;const o=data.order;
- if(!dlg){dlg=el('dialog');dlg.className='fh-dialog uc-dialog';document.body.append(dlg)}dlg.replaceChildren();
- const head=el('div',undefined,'uc-dialog-head'),title=el('div');title.append(el('h2',ref(row)),el('small',type(row)+' · '+orderState(o,o.status||row.research_status||row.fulfillment_status)));if(priorityOrder({...row,...o,commerce_status:o.status||row.commerce_status}))title.append(priorityBadge());head.append(title,btn('Close',()=>dlg.close()));dlg.append(head);
- const notice=el('p','','uc-message');notice.setAttribute('data-unified-message','');notice.setAttribute('role','status');dlg.append(notice);
- const pendingCad=interacRequest(o),estimate=requestEstimate(o);
- const info=el('section',undefined,'uc-info');info.append(field('Customer',o.customer_name||row.customer_name),field('Email',o.customer_email||row.customer_email),field('Payment',pendingCad?'CAD order review pending':orderState(o,row.payment_status)),field('Fulfillment',row.source==='research_subscription'?state(row.research_status):orderState(o,o.status||row.fulfillment_status)),field(pendingCad?'USD request estimate':'Total',pendingCad?(Number.isSafeInteger(estimate?.total_cents)?cash(estimate.total_cents,'USD')+' USD':'Awaiting CAD quote'):cash(o.total_cents??row.total_cents,o.currency||row.currency)+(row.source==='research_subscription'?'/mo':'')),field('Placed',when(o.created_at||row.created_at)));
+ for (const order of orders) {
+  const card = el('article', undefined, 'uc-order-row');
+  const identity = el('div', undefined, 'uc-order-identity');
+  const customer = el('span', order.customer_name || order.customer_email || 'Unknown customer', 'uc-row-customer');
+  const metadata = el('small', undefined, 'uc-row-meta');
+  metadata.append(el('span', type(order)));
+  const created = new Date(order.created_at);
+  if (order.created_at && Number.isFinite(created.getTime())) {
+   const date = el('time', queueDateFormat.format(created));
+   date.dateTime = created.toISOString();
+   date.title = when(order.created_at);
+   metadata.append(date);
+  }
+  identity.append(el('strong', ref(order)), customer, metadata);
+  if (priorityOrder(order)) identity.append(priorityBadge());
+
+  const pendingCad = interacRequest(order);
+  const estimate = requestEstimate(order);
+  const subscription = order.source === 'research_subscription';
+  const status = subscription ? order.research_status : order.source === 'commerce' ? order.commerce_status : order.fulfillment_status;
+  const sum = el('div', undefined, 'uc-order-total');
+  const amount = pendingCad ? 'CAD quote pending' : cash(order.total_cents, order.currency) + (subscription ? '/mo' : '');
+  const summary = pendingCad && Number.isSafeInteger(estimate?.total_cents)
+   ? cash(estimate.total_cents, 'USD') + ' USD estimate'
+   : orderState(order, status);
+  sum.append(el('strong', amount), el('small', summary, 'uc-row-status'));
+
+  const slot = el(selectable(order) ? 'label' : 'span', undefined, 'uc-order-select');
+  if (selectable(order)) {
+   const box = el('input');
+   box.type = 'checkbox';
+   box.checked = chosen.has(orderKey(order));
+   box.setAttribute('aria-label', 'Select order ' + ref(order));
+   box.onchange = () => {
+    if (!toggleOrder(order, box.checked)) box.checked = chosen.has(orderKey(order));
+    selectionBar();
+   };
+   slot.append(box);
+  }
+  const title = subscription ? 'View subscription' : pendingCad ? 'Review CAD order' : 'Manage order';
+  const open = btn(title, () => detail(order), 'uc-open-order');
+  open.title = title;
+  open.dataset.openOrder = orderKey(order);
+  open.setAttribute('aria-label', title + ' ' + ref(order));
+  open.setAttribute('aria-haspopup', 'dialog');
+  card.append(slot, identity, sum, open);
+  host.append(card);
+ }
+}
+
+function queueIcon(path) {
+ const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+ svg.setAttribute('viewBox', '0 0 24 24');
+ svg.setAttribute('aria-hidden', 'true');
+ svg.setAttribute('focusable', 'false');
+ const line = document.createElementNS(svg.namespaceURI, 'path');
+ line.setAttribute('d', path);
+ svg.append(line);
+ return svg;
+}
+
+function mountQueue() {
+ const toolbar = el('div', undefined, 'uc-queue-toolbar');
+ const search = el('label', undefined, 'uc-queue-search');
+ const q = el('input');
+ q.type = 'search';
+ q.placeholder = 'Search';
+ q.setAttribute('aria-label', 'Search orders or customers');
+ q.value = query;
+ q.oninput = () => {
+  query = q.value;
+  page = 1;
+  clearTimeout(timer);
+  timer = setTimeout(load, 300);
+ };
+ search.append(queueIcon('M15.5 15.5 21 21 M18 10.5a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z'), q);
+ const filters = el('div', undefined, 'uc-queue-filters');
+ filters.id = 'uc-queue-filters';
+ filters.hidden = true;
+ const toggle = el('button', undefined, 'uc-filter-toggle');
+ toggle.type = 'button';
+ toggle.setAttribute('aria-expanded', 'false');
+ toggle.setAttribute('aria-controls', filters.id);
+ const toggleLabel = el('span');
+ toggle.append(queueIcon('M3 7h7m4 0h7M3 17h11m4 0h3M10 4v6m6 4v6'), toggleLabel);
+ toggle.onclick = () => {
+  filters.hidden = !filters.hidden;
+  toggle.setAttribute('aria-expanded', String(!filters.hidden));
+ };
+ function updateFilters() {
+  const count = Number(sort !== 'fulfillment_priority') + Number(filter !== 'all') + Number(archiveView !== 'current');
+  toggleLabel.textContent = count ? 'Filters (' + count + ')' : 'Filters';
+  toggle.classList.toggle('uc-filter-active', Boolean(count));
+ }
+ function filterControl(title, name, options, value, change) {
+  const label = el('label', title);
+  const pick = el('select');
+  pick.setAttribute('aria-label', name);
+  for (const [key, text] of options) {
+   const option = el('option', text);
+   option.value = key;
+   pick.append(option);
+  }
+  pick.value = value;
+  pick.onchange = () => {
+   clearTimeout(timer);
+   change(pick.value);
+   updateFilters();
+   page = 1;
+   load();
+  };
+  label.append(pick);
+  filters.append(label);
+ }
+ filterControl('Sort by', 'Sort orders', [['fulfillment_priority','Fulfillment priority'],['newest','Newest first'],['oldest','Oldest first'],['highest_total','Highest total']], sort, value => {sort = value;});
+ filterControl('Order type', 'Filter order type', [['all','All types'],['goods','Product orders'],['bulk','Bulk orders'],['membership','Membership purchases'],['research_subscription','Research subscriptions']], filter, value => {filter = value;});
+ filterControl('View', 'Order archive view', [['current','Active orders'],['archived','Archived orders']], archiveView, value => {archiveView = value; chosen.clear();});
+ updateFilters();
+ const refresh = btn('Refresh',load);
+ refresh.className = 'uc-refresh-orders';
+ refresh.title = 'Refresh orders';
+ refresh.setAttribute('aria-label', refresh.title);
+ refresh.replaceChildren(queueIcon('M20 8a8 8 0 1 0 .3 7M20 3v5h-5'));
+ toolbar.append(search, toggle, refresh);
+ const message = el('p', '', 'uc-message');
+ message.setAttribute('data-unified-message', '');
+ message.setAttribute('role', 'status');
+ const selection = el('div', undefined, 'uc-selection');
+ selection.setAttribute('data-order-selection', '');
+ const list = el('div', undefined, 'uc-list');
+ list.setAttribute('data-unified-list', '');
+ const pager = el('nav', undefined, 'uc-pager');
+ pager.setAttribute('aria-label', 'Order pages');
+ root.replaceChildren(toolbar, filters, message, selection, list, pager);
+}
+
+async function load() {
+ if (!api || !root) return;
+ if (!root.querySelector('[data-unified-list]')) mountQueue();
+ const ticket = ++epoch;
+ const params = new URLSearchParams({status:archiveView, page:String(page), page_size:'25', sort, search:query, type:filter});
+ const list = root.querySelector('[data-unified-list]');
+ const selection = root.querySelector('[data-order-selection]');
+ const pager = root.querySelector('.uc-pager');
+ list.inert = selection.inert = pager.inert = true;
+ list.setAttribute('aria-busy', 'true');
+ if (!list.hasChildNodes()) list.append(el('p', 'Loading orders…', 'uc-empty'));
+ try {
+  const result = await api('/api/admin-orders?' + params);
+  if (ticket !== epoch) return;
+  orders = result.orders || [];
+  for (const order of orders) {
+   const key = orderKey(order);
+   if (chosen.has(key)) chosen.set(key, order);
+  }
+  paging = result.pagination || {};
+  const count = document.getElementById('orders-message');
+  const total = paging.total ?? orders.length;
+  if (count && !root.closest('[hidden]')) count.textContent = total + (total === 1 ? ' order' : ' orders');
+  const message = root.querySelector('[data-unified-message]');
+  message.textContent = '';
+  message.classList.remove('failed');
+  selectionBar();
+  rows();
+  pager.replaceChildren();
+  if (paging.has_previous || paging.has_next) {
+   const previous = btn('Previous', () => { page--; return load(); });
+   const next = btn('Next', () => { page++; return load(); });
+   previous.disabled = !paging.has_previous;
+   next.disabled = !paging.has_next;
+   pager.append(previous, el('span', 'Page ' + page), next);
+  }
+ } catch (error) {
+  if (ticket !== epoch) return;
+  orders = [];
+  const count = document.getElementById('orders-message');
+  if (count && !root.closest('[hidden]')) count.textContent = '';
+  selection.replaceChildren();
+  pager.replaceChildren();
+  list.replaceChildren(btn('Retry', load));
+  const message = root.querySelector('[data-unified-message]');
+  message.textContent = error.message;
+  message.classList.add('failed');
+ } finally {
+  if (ticket === epoch) {
+   list.inert = selection.inert = pager.inert = false;
+   list.removeAttribute('aria-busy');
+  }
+ }
+}
+// An action may finish after the operator has closed or switched orders.
+function newOrderSession(row){
+ const owner=root.querySelector('.uc-queue-toolbar');
+ const isCurrent=()=>orderSession===session&&dlg?.open;
+ const session={
+  notice(text,bad=false){if(isCurrent())showNotice(dlg,text,bad)},
+  async refresh(){
+   if(!owner?.isConnected)return;
+   const version=detailVersion;
+   await load();
+   if(isCurrent()&&!pendingOpenVersion&&version===detailVersion)await detail(row.id,session);
+  },
+  async finish(message){
+   if(!owner?.isConnected)return;
+   const current=isCurrent();
+   if(current)dlg.close();
+   await load();
+   if(current&&owner.isConnected&&!pendingOpenVersion&&!dlg?.open)msg(message);
+  }
+ };
+ return session;
+}
+
+function orderDialog(){
+ if(dlg)return dlg;
+ dlg=el('dialog',undefined,'fh-dialog uc-dialog uc-order-editor');
+ dlg.setAttribute('aria-labelledby','uc-editor-title');
+ dlg.addEventListener('close',event=>{
+  if(event.currentTarget!==dlg||dlg.open||pendingOpenVersion)return;
+  const opener=[...root?.querySelectorAll('[data-open-order]')||[]].find(button=>button.dataset.openOrder===dlg.dataset.orderKey);
+  (opener||root?.querySelector('.uc-queue-search input'))?.focus({preventScroll:true});
+ });
+ document.body.append(dlg);
+ return dlg;
+}
+
+// Keep the panels mounted so switching sections preserves unsaved form input.
+function orderPanels(dialog,names,initial){
+ const navigation=el('div',undefined,'uc-edit-tabs'),body=el('div',undefined,'uc-edit-body'),panes={},tabs=[];
+ navigation.setAttribute('role','tablist');
+ navigation.setAttribute('aria-label','Order sections');
+ function show(name,focus=false){
+  for(const tab of tabs){
+   const selected=tab.dataset.panel===name;
+   tab.setAttribute('aria-selected',String(selected));
+   tab.tabIndex=selected?0:-1;
+   panes[tab.dataset.panel].hidden=!selected;
+   if(selected&&focus)tab.focus({preventScroll:true});
+  }
+  dialog.dataset.panel=name;
+  body.scrollTop=0;
+ }
+ for(const name of names){
+  const panel=el('section',undefined,'uc-edit-pane'),tab=el('button',name);
+  tab.type='button';
+  tab.id='uc-tab-'+name;
+  tab.dataset.panel=name;
+  panel.id='uc-panel-'+name;
+  tab.setAttribute('role','tab');
+  tab.setAttribute('aria-controls',panel.id);
+  panel.setAttribute('role','tabpanel');
+  panel.setAttribute('aria-labelledby',tab.id);
+  panel.tabIndex=0;
+  tab.onclick=()=>show(name);
+  tab.onkeydown=event=>{
+   const index=names.indexOf(name),last=names.length-1;
+   const targets={ArrowRight:(index+1)%names.length,ArrowLeft:(index+last)%names.length,Home:0,End:last};
+   if(!Object.hasOwn(targets,event.key))return;
+   event.preventDefault();
+   show(names[targets[event.key]],true);
+  };
+  panes[name]=panel;
+  tabs.push(tab);
+  navigation.append(tab);
+  body.append(panel);
+ }
+ if(names.length===1){
+  navigation.hidden=true;
+  panes[names[0]].removeAttribute('aria-labelledby');
+  panes[names[0]].setAttribute('aria-label',names[0]);
+ }
+ dialog.append(navigation,body);
+ show(names.includes(initial)?initial:names[0]);
+ return {panes,show};
+}
+async function detail(record,origin=null){
+ const openVersion=++detailVersion;
+ if(!origin)pendingOpenVersion=openVersion;
+ const isCurrent=()=>openVersion===detailVersion&&(!origin||(origin===orderSession&&dlg?.open));
+ let row=typeof record==='object'?record:orders.find(o=>o.id===record),data;
+ try{
+  if(!row){
+   const result=await api('/api/admin-orders?'+new URLSearchParams({status:'all',search:String(record),page_size:'5'}));
+   row=result.orders?.find(o=>o.id===record);
+  }
+  if(!row)throw Error('Order unavailable. Refresh the list.');
+  data=row.source==='commerce'?await api(lotus('detail','&id='+encodeURIComponent(row.id))):{order:row,allocations:[],jobs:[]};
+  if(data.manual_pilot_eligible){
+   try{data.manual_pilot=await api(lotus('manual_pilot','&id='+encodeURIComponent(row.id)))}
+   catch{data.manual_pilot=null}
+  }
+ }catch(error){
+  if(!isCurrent())return;
+  throw error;
+ }finally{
+  if(pendingOpenVersion===openVersion)pendingOpenVersion=0;
+ }
+ if(!isCurrent())return;
+ const o=data.order,dialog=orderDialog(),key=orderKey(row),refresh=dialog.open&&dialog.dataset.orderKey===key;
+ if(!refresh)orderSession=newOrderSession(row);
+ const initial=refresh?dialog.dataset.panel:'Summary';
+ const openTasks=refresh?[...dialog.querySelectorAll('details[data-shipping-task][open]')].map(node=>node.dataset.shippingTask):[];
+ dialog.dataset.orderKey=key;
+ dialog.replaceChildren();
+ const head=el('header',undefined,'uc-dialog-head'),title=el('div');
+ const label=el('div',undefined,'uc-editor-meta');
+ label.append(el('span',type(row)),el('span',orderState(o,o.status||row.research_status||row.fulfillment_status),'uc-editor-status'));
+ const heading=el('h2',ref(row));heading.id='uc-editor-title';
+ title.append(label,heading);
+ if(priorityOrder({...row,...o,commerce_status:o.status||row.commerce_status}))title.append(priorityBadge());
+ const closeButton=el('button','Close','uc-editor-close');
+ closeButton.type='button';closeButton.onclick=()=>dialog.close();
+ head.append(title,closeButton);
+ const notice=el('p','','uc-message');notice.setAttribute('data-unified-message','');notice.setAttribute('role','status');
+ dialog.append(head,notice);
+ const names=['Summary'];
+ if(row.source==='commerce')names.push('Payment');
+ if(row.source==='store'||(row.source==='commerce'&&o.kind==='goods'))names.push('Shipping');
+ const {panes,show}=orderPanels(dialog,names,initial);
+ if(row.source==='commerce')commerceActions(panes.Payment,row,data,panes.Shipping);
+ if(row.source==='store')legacyActions(panes.Shipping,row);
+ const pendingCad=interacRequest(o),estimate=requestEstimate(o),research=row.source==='research_subscription',currency=o.currency||row.currency;
+ const total=pendingCad?(Number.isSafeInteger(estimate?.total_cents)?cash(estimate.total_cents,'USD')+' USD':'Awaiting CAD quote'):
+  cash(o.total_cents??row.total_cents,currency)+(research?'/mo':'');
+ const info=el('section',undefined,'uc-info');
+ const contact=el('div',undefined,'uc-editor-contact');
+ const email=field('Email',o.customer_email||row.customer_email);
+ email.classList.add('uc-contact-email');
+ contact.append(field('Customer',o.customer_name||row.customer_name),email);
+ info.append(contact);
+ info.append(field('Payment',pendingCad?'CAD order review pending':orderState(o,row.payment_status)));
+ if(row.kind!=='membership')info.append(field('Fulfillment',research?state(row.research_status):orderState(o,row.fulfillment_status||o.status)));
  if(row.organization)info.append(field('Organization',row.organization));
  if(row.source==='commerce'&&o.payment_snapshot?.label)info.append(field('Payment method',o.payment_snapshot.label));
  if(row.kind==='membership')info.append(field('Membership plan',({vip:'PURE WHITE',elite:'PURE BLACK'})[o.plan||row.plan]||'Membership'),field('Term',o.request_data?.billing_period==='annual'?'12 months prepaid':o.request_data?.billing_period==='monthly'?'1 month prepaid':'View purchase terms'));
- if(row.source==='research_subscription')info.append(field('Paid cycles',row.paid_cycles),field('Next billing',when(row.next_billing_at)));dlg.append(info);
+ if(research)info.append(field('Paid cycles',row.paid_cycles),field('Next billing',when(row.next_billing_at)));
+ const placedAt=o.created_at||row.created_at;
+ const placed=field('Placed');
+ if(placedAt){
+  const timestamp=new Date(placedAt),date=el('time');
+  date.dateTime=placedAt;
+  date.className='uc-placed-at';
+  date.append(el('bdi',timestamp.toLocaleDateString()),' ',el('bdi',timestamp.toLocaleTimeString()));
+  placed.querySelector('strong').replaceChildren(date);
+ }
+ info.append(placed);
+ panes.Summary.append(info);
  const items=el('section',undefined,'uc-items');items.append(el('h3',row.source==='research_subscription'?'Subscription items':'Order items'));
  const recorded=o.pricing?.lines||o.request_data?.items||[];
  const physical=data.physical_items?.map(item=>{
@@ -149,24 +504,59 @@ async function detail(record){const openVersion=++detailVersion;let row=typeof r
  for(const line of lines){const item=el('div',undefined,'uc-item'),name=line.name||line.product_name||line.id||'Product',size=line.size||line.variant_size||'',qty=line.qty||line.quantity||1;
   const description=[name+(size?' · '+size:'')+' × '+qty+(line.free?(line.purchased===0?' (free gift)':' ('+line.purchased+' paid + '+line.free+' free)'):''),row.source==='store'&&line.lot_number?'Lot: '+line.lot_number:''].filter(Boolean).join(' — ');
   item.append(el('span',description));const cents=line.line_total_cents??line.gross_cents??(line.unit_price_cents!=null?line.unit_price_cents*(line.purchased??qty):pendingCad&&Number.isSafeInteger(line.unit_price_usd_cents)?line.unit_price_usd_cents*(line.purchased??qty):null);if(cents!==null)item.append(el('strong',cash(cents,pendingCad?'USD':o.currency||row.currency)+(pendingCad?' USD':'')));items.append(item);
- }dlg.append(items);
- if(row.source!=='research_subscription'&&!pendingCad){const totals=el('section',undefined,'uc-total');totals.append(field('Subtotal',cash(o.subtotal_cents??row.subtotal_cents,o.currency||row.currency)),field('Discounts','−'+cash(o.discount_cents??row.discount_cents,o.currency||row.currency)),field('Shipping',cash(o.shipping_cents??row.shipping_cents,o.currency||row.currency)),field('Tax',cash(o.tax_cents??row.tax_cents,o.currency||row.currency)),field('Total',cash(o.total_cents??row.total_cents,o.currency||row.currency)));dlg.append(totals)}
- const addr=row.source==='commerce'?o.kind==='goods'?o.request_data?.address:null:row.shipping_address;if(addr&&Object.keys(addr).length)dlg.append(el('p','Ship to: '+address(addr),'uc-address'));
- if(o.tracking_number||row.tracking_number)dlg.append(el('p','Tracking: '+(o.tracking_carrier||row.tracking_carrier||'')+' '+(o.tracking_number||row.tracking_number),'uc-address'));
- if(row.source==='store'&&Array.isArray(row.internal_status_history)&&row.internal_status_history.length){
-  const history=el('section',undefined,'uc-history');history.append(el('h3','Status history'));
+ }
+ if(lines.length||data.quantity_error)panes.Summary.append(items);
+ if(!research&&!pendingCad){
+  const breakdown=el('details',undefined,'uc-order-breakdown'),summary=el('summary');
+  summary.append(el('span','Order total'),el('strong',total));
+  const totals=el('div',undefined,'uc-total');
+  for(const [label,key] of [['Subtotal','subtotal_cents'],['Discounts','discount_cents'],['Shipping','shipping_cents'],['Tax','tax_cents']]){
+   totals.append(field(label,(label==='Discounts'?'−':'')+cash(o[key]??row[key],currency)));
+  }
+  breakdown.append(summary,totals);
+  panes.Summary.append(breakdown);
+ }else info.append(field(pendingCad?'USD request estimate':'Monthly total',total));
+ const addr=row.source==='commerce'?o.kind==='goods'?o.request_data?.address:null:row.shipping_address;
+ if(addr&&Object.keys(addr).length){
+  const destination=el('section',undefined,'uc-destination'),heading=el('div',undefined,'uc-destination-head');
+  heading.append(el('h3','Ship to'));
+  const task=panes.Shipping?.querySelector('details[data-shipping-task="address"]');
+  if(task){
+   const edit=el('button','Edit','uc-address-edit');
+   edit.type='button';edit.setAttribute('aria-label','Edit shipping address');
+   edit.onclick=()=>{
+    show('Shipping');
+    task.open=true;
+    task.querySelector('summary')?.focus();
+   };
+   heading.append(edit);
+  }
+  destination.append(heading,el('p',address(addr),'uc-address'));
+  panes.Summary.append(destination);
+ }
+ if(o.tracking_number||row.tracking_number)panes.Summary.append(field('Tracking',[o.tracking_carrier||row.tracking_carrier,o.tracking_number||row.tracking_number].filter(Boolean).join(' ')));
+ if(row.source==='store'&&row.internal_status_history?.length){
+  const history=el('details',undefined,'uc-history');history.append(el('summary','Status history'));
   for(const change of row.internal_status_history)history.append(el('p',`${state(change.from)} → ${state(change.to)} · ${when(change.at)}`,'uc-hint'));
-  dlg.append(history)}
- const actions=el('section',undefined,'uc-actions');actions.append(el('h3',row.source==='research_subscription'?'Subscription record':'Manage order'));dlg.append(actions);
- if(row.source==='commerce')commerceActions(actions,row,data);else if(row.source==='store')legacyActions(actions,row);else actions.append(el('p','Read-only record. Recurring checkout is unavailable; no new subscription can be purchased. Saved research lists are not orders.','uc-hint'));
- if(row.source==='commerce')historySection(dlg,data.history||[]);if(!dlg.open)dlg.showModal()}
+  panes.Summary.append(history);
+ }
+ if(row.source==='commerce')historySection(panes.Summary,data.history||[]);
+ if(research)panes.Summary.append(el('p','Read-only record. Recurring checkout is unavailable. Saved research lists are not orders.','uc-hint'));
+ for(const task of dialog.querySelectorAll('details[data-shipping-task]')){
+  if(openTasks.includes(task.dataset.shippingTask))task.open=true;
+ }
+ if(!dialog.open)dialog.showModal();
+ const activeTab=dialog.querySelector('.uc-edit-tabs:not([hidden]) [aria-selected="true"]');
+ (activeTab||closeButton).focus({preventScroll:true});
+}
 async function downloadSheet(row,format){
+ const session=orderSession;
  const params=new URLSearchParams({view:'fulfillment-sheet',id:row.id,source:row.source,format});
  const file=await api('/api/admin-orders?'+params,{responseType:'blob'}),url=URL.createObjectURL(file),a=el('a');
  a.href=url;a.download='fulfillment-'+ref(row)+'.'+format;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
- msg('Fulfillment sheet downloaded. The order status is unchanged.');
+ session.notice('Fulfillment sheet downloaded. The order status is unchanged.');
 }
-function exportSection(host,row,o){const box=el('section',undefined,'uc-export');box.append(el('h4','Fulfillment sheet'),el('p','Download the order reference, recipient, products, quantities, and delivery details in a reusable PURE template.','uc-hint'));
+function exportSection(host,row,o){const box=el('section',undefined,'uc-export');box.append(el('h4','Fulfillment sheet'));
  if(!['paid','processing'].includes(o.status||row.payment_status))box.append(el('p','This sheet is marked HOLD / DO NOT SHIP until the order is ready for fulfillment.','uc-hint'));
  const buttons=el('div',undefined,'uc-button-row');buttons.append(btn('Download PDF',()=>downloadSheet(row,'pdf'),'primary'),btn('Download CSV',()=>downloadSheet(row,'csv')));box.append(buttons);host.append(box)}
 function historySection(host,changes){const box=el('details',undefined,'uc-history');box.append(el('summary','Activity history'));
@@ -185,10 +575,11 @@ function reportLink(host,report){
  link.href=url.href;link.target='_blank';link.rel='noopener noreferrer';host.append(link);
 }
 function pilotReconciliation(host,row,data){
+ const session=orderSession;
  const pilot=data.manual_pilot, o=data.order;
  if(!pilot?.eligible){
   const notice=el('p','The packing record could not be loaded. Refresh before dispatch.','uc-hint');
-  host.append(notice,btn('Reload packing record',()=>detail(row)));
+  host.append(notice,btn('Reload packing record',session.refresh));
   return;
  }
  const record=pilot.record, lots=pilot.lots||[];
@@ -282,12 +673,28 @@ function pilotReconciliation(host,row,data){
    }
    body.cost_reference=reference.value.trim();if(!body.cost_reference)throw Error('Enter the cost record reference.');
   }
-  await write(body);await reload(row);msg('Packing record saved.');
+  await write(body);await session.refresh();session.notice('Packing record saved.');
  });
 }
+function shippingTask(host,key,title,context=''){
+ const group=el('details',undefined,'uc-shipping-task'),summary=el('summary');
+ group.dataset.shippingTask=key;
+ summary.append(el('span',title));
+ if(context)summary.append(el('small',context));
+ group.append(summary);host.append(group);
+ return group;
+}
+function shippingForm(host,key,title,context,formTitle=title){
+ const group=shippingTask(host,key,title,context);
+ const f=form(formTitle,group);
+ f.classList.add('uc-shipping-form');
+ f.setAttribute('aria-label',formTitle);
+ f.querySelector('h4').hidden=true;
+ return f;
+}
 function fulfillmentQuote(host,id){
- const box=el('details',undefined,'uc-history'),content=el('div');
- box.append(el('summary','Check fulfillment quote'),content);host.append(box);
+ const box=shippingTask(host,'quote','Check fulfillment quote'),content=el('div',undefined,'uc-shipping-quote');
+ box.append(content);
  let loading=false;
  box.addEventListener('toggle',async()=>{
   if(!box.open||loading)return;
@@ -332,6 +739,7 @@ function fulfillmentQuote(host,id){
  });
 }
 function cardActions(pay,row,data){
+ const session=orderSession;
  const order=data.order,id=order.id,version=order.version,attempt=data.card_attempt;
  const statusMessages={awaiting_payment:'Stripe reports that payment is still pending.',paid:'Stripe payment verified.',
   canceled:'Stripe payment and PURE order canceled.',refund_pending:'Stripe is processing this refund.',
@@ -339,9 +747,9 @@ function cardActions(pay,row,data){
   review:'The Stripe payment needs review before PURE can update the order.'};
  const run=async body=>{
   const result=await write(body);
-  await reload(row);
+  await session.refresh();
   const status=result.payment_state||(result.status==='void'?'canceled':result.status==='refunded'?'refunded':null);
-  msg(statusMessages[status]||'Payment record refreshed.');
+  session.notice(statusMessages[status]||'Payment record refreshed.');
  };
  if(attempt?.error_code==='pure_gateway_test_payment')
   pay.append(el('p','This payment was created in Stripe test mode. It needs sandbox verification before the order can be closed.','uc-hint'));
@@ -359,10 +767,10 @@ function cardActions(pay,row,data){
   },'uc-danger'));
 }
 
-function commerceActions(host,row,data){const o=data.order,id=o.id,allocations=data.allocations||[],job=data.jobs?.[0];
+function commerceActions(host,row,data,shippingPane){const session=orderSession,o=data.order,id=o.id,allocations=data.allocations||[],job=data.jobs?.[0];
  const pay=el('section',undefined,'uc-payment');pay.append(el('h3','Payment'));
  if(interacRequest(o)){
-  if(window.PureInteracInvoiceAdmin)window.PureInteracInvoiceAdmin.mount({host:pay,order:o,api,onRefresh:()=>reload(row),onIssued:async()=>{await reload(row);msg('CAD order total prepared. The customer must accept it before viewing Interac payment instructions.')}});
+  if(window.PureInteracInvoiceAdmin)window.PureInteracInvoiceAdmin.mount({host:pay,order:o,api,onRefresh:()=>session.refresh(),onIssued:async()=>{await session.refresh();session.notice('CAD order total prepared. The customer must accept it before viewing Interac payment instructions.')}});
   else pay.append(el('p','CAD order review is unavailable. Refresh the Orders page and try again.','uc-hint'));
  }
  else if(data.manual_payment_allowed){const f=form('Confirm received bank payment',pay);f.append(el('p',o.kind==='membership'?'Verify that the full amount has arrived before confirming payment and activating this prepaid membership.':'Verify that the full amount has arrived before confirming payment and preparing this order for fulfillment.','uc-hint'));
@@ -370,59 +778,104 @@ function commerceActions(host,row,data){const o=data.order,id=o.id,allocations=d
   const reference=input(f,'Bank transaction reference','bank_reference','',true);reference.minLength=8;reference.maxLength=150;
   const check=el('label',undefined,'uc-check'),yes=el('input');yes.type='checkbox';yes.required=true;check.append(yes,el('span','I verified the full amount has arrived in the receiving account.'));f.append(check);
   const receipt=crypto.randomUUID();submit(f,'Mark payment received',async()=>{if(!yes.checked)throw Error('Verify received funds first.');if(!window.confirm('Confirm '+cash(data.settlement?.amount_cents??o.total_cents,data.settlement?.currency??o.currency)+' was received? '+(o.kind==='membership'?'This activates the prepaid membership.':'This makes the order available for fulfillment.')))return;
-   const result=await write({action:'record_payment',id,expected_version:o.version,method_id:o.method_id,receipt_id:receipt,external_reference:reference.value,confirm_funds_received:true});await reload(row);msg(o.kind==='membership'?'Payment recorded. The prepaid membership is active.':'Payment recorded. The fulfillment sheet is ready to review.')})}
+   const result=await write({action:'record_payment',id,expected_version:o.version,method_id:o.method_id,receipt_id:receipt,external_reference:reference.value,confirm_funds_received:true});await session.refresh();session.notice(o.kind==='membership'?'Payment recorded. The prepaid membership is active.':'Payment recorded. The fulfillment sheet is ready to review.')})}
  else if(['accepted','requested','issued'].includes(o.status))pay.append(el('p',o.kind==='membership'?'Awaiting confirmed payment. Membership benefits stay inactive until payment is verified.':'Awaiting confirmed payment. Shipping stays on hold until this payment is reconciled through its provider.','uc-hint'));
  else pay.append(el('p',o.paid_at?'Payment received '+when(o.paid_at)+'.':state(o.status)+'.','uc-hint'));
  if(o.cancellation_status==='pending')pay.append(el('p','Cancellation requested. Checkout and fulfillment are on hold while the wallet authorization expires and payment is checked automatically. Do not send payment.','uc-hint'));
  if(o.cancellation_status==='review')pay.append(el('p','A crypto transfer was received after cancellation was requested. Fulfillment remains on hold. Review the verified payment and arrange any refund before resolving this order.','uc-hint'));
  if(data.card_reversals)cardActions(pay,row,data);
- else if(o.status==='accepted'&&o.cancellation_status!=='review')pay.append(btn(o.cancellation_status==='pending'?'Check cancellation':'Cancel unpaid order',async()=>{if(!o.cancellation_status&&!window.confirm('Cancel '+ref(row)+'? Verify no payment was sent.'))return;const result=await write({action:'cancel_order',id,confirm_unpaid:true});if(result.status==='void'){dlg.close();await load();msg(ref(row)+' canceled. No refund was issued.')}else if(['pending','review'].includes(result.cancellation_status)){await reload(row);msg(result.cancellation_status==='pending'?'Cancellation requested. Payment checks continue automatically; do not send payment.':'Payment received. Cancellation needs review; fulfillment remains on hold.')}else throw Error('Cancellation was not confirmed.')},'uc-danger'));
+ else if(o.status==='accepted'&&o.cancellation_status!=='review')pay.append(btn(o.cancellation_status==='pending'?'Check cancellation':'Cancel unpaid order',async()=>{if(!o.cancellation_status&&!window.confirm('Cancel '+ref(row)+'? Verify no payment was sent.'))return;const result=await write({action:'cancel_order',id,confirm_unpaid:true});if(result.status==='void'){await session.finish(ref(row)+' canceled. No refund was issued.')}else if(['pending','review'].includes(result.cancellation_status)){await session.refresh();session.notice(result.cancellation_status==='pending'?'Cancellation requested. Payment checks continue automatically; do not send payment.':'Payment received. Cancellation needs review; fulfillment remains on hold.')}else throw Error('Cancellation was not confirmed.')},'uc-danger'));
  host.append(pay);
  if(o.kind==='goods'){
-  exportSection(host,row,o);
-  const shipment=el('section',undefined,'uc-shipment');shipment.append(el('h3','Shipping and delivery'));
-  const manual=allocations.length>0&&allocations.every(a=>a.route==='manual'),remote=!!(job?.supplier_id||job?.has_payload||['working','submitted','shipped'].includes(job?.status)),unresolved=remote&&!(job?.status==='cancelled'&&job?.provider_status==='cancelled');
-  if(['paid','processing','shipped','delivered'].includes(o.status)&&!o.cancellation_status)fulfillmentQuote(shipment,id);
-  if(data.manual_pilot_eligible&&(data.manual_pilot?.eligible||!['refunded','void'].includes(o.status)))pilotReconciliation(shipment,row,data);
+  const shipment=el('section',undefined,'uc-shipment');
+  shipment.setAttribute('aria-label','Fulfillment tasks');
+  const manual=allocations.length>0&&allocations.every(a=>a.route==='manual');
+  const remote=!!(job?.supplier_id||job?.has_payload||['working','submitted','shipped'].includes(job?.status));
+  const unresolved=remote&&!(job?.status==='cancelled'&&job?.provider_status==='cancelled');
+  const options=[];
+  if(o.status==='paid')options.push(['processing','Processing']);
+  if(manual&&!unresolved&&(!data.manual_pilot_eligible||data.manual_pilot?.ready_to_ship===true)&&['paid','processing'].includes(o.status))options.push(['shipped','Shipped']);
+  if(o.status==='shipped')options.push(['delivered','Delivered']);
+  if(options.length){
+   const f=shippingForm(shipment,'status','Update fulfillment',state(o.status),'Update complete order');
+   const next=select(f,'Next status','status',options),carrier=input(f,'Carrier','carrier',o.tracking_carrier);
+   const tracking=input(f,'Tracking number','tracking',o.tracking_number),note=input(f,'Audit note','note','',true);
+   note.minLength=8;
+   const requireTracking=()=>{carrier.required=tracking.required=next.value==='shipped'};
+   next.addEventListener('change',requireTracking);requireTracking();
+   submit(f,'Save fulfillment status',async()=>{
+    if(next.value==='shipped'&&(!carrier.value.trim()||!tracking.value.trim()))throw Error('Carrier and tracking required before shipment.');
+    await write({action:'update_order',id,version:o.version,status:next.value,note:note.value,tracking_carrier:carrier.value,tracking_number:tracking.value});
+    await session.refresh();session.notice('Fulfillment status saved.');
+   });
+  }
+  if(manual&&['shipped','delivered'].includes(o.status)){
+   const f=shippingForm(shipment,'tracking','Correct shipment tracking',o.tracking_carrier);
+   const carrier=input(f,'Carrier','carrier',o.tracking_carrier,true),tracking=input(f,'Tracking number','tracking',o.tracking_number,true);
+   const note=input(f,'Reason for correction','note','',true);note.minLength=8;
+   submit(f,'Save tracking correction',async()=>{
+    await write({action:'update_tracking',id,version:o.version,tracking_carrier:carrier.value,tracking_number:tracking.value,note:note.value});
+    await session.refresh();session.notice('Shipment tracking saved.');
+   });
+  }
+  if(!allocations.length)shipment.append(el('p','Shipment controls become available after payment is confirmed.','uc-hint'));
+  else if(!manual&&!['shipped','delivered','void','refunded'].includes(o.status))shipment.append(el('p','An existing fulfillment record needs review. Resolve it before recording another shipment.','uc-hint'));
+  if(['paid','processing'].includes(o.status)&&!remote){
+   const addr=o.request_data?.address||{},fields={};
+   const f=shippingForm(shipment,'address','Edit shipping address',[addr.city,addr.region||addr.state].filter(Boolean).join(', '));
+   for(const [title,key]of [['Street','line1'],['Address line 2','line2'],['City','city'],['State / province','region'],['Postal code','postal_code'],['Country code','country']]){
+    fields[key]=input(f,title,key,addr[key]||(key==='region'?addr.state:'')||'',key!=='line2');
+   }
+   fields.country.readOnly=true;
+   const note=input(f,'Reason for address change','note','',true);note.minLength=8;
+   submit(f,'Save address',async()=>{
+    const address=Object.fromEntries(Object.entries(fields).map(([key,control])=>[key,control.value]));
+    await write({action:'edit_shipping',id,version:o.version,address,note:note.value});
+    await session.refresh();session.notice('Shipping address saved.');
+   });
+  }else if(remote&&['paid','processing'].includes(o.status))shipment.append(el('p','Fulfillment has already started. Review the existing shipment before changing its destination.','uc-hint'));
+  if(data.manual_pilot_eligible&&(data.manual_pilot?.eligible||!['refunded','void'].includes(o.status))){
+   const group=shippingTask(shipment,'pilot','Manual packing record');
+   pilotReconciliation(group,row,data);
+  }
   if(!data.manual_pilot_eligible&&allocations.length&&['paid','processing','shipped','delivered'].includes(o.status)){
-   const f=form('Packed lot certificates',shipment);
+   const f=shippingForm(shipment,'lots','Packed lot certificates');
    for(const packed of data.packed_lots||[]){
-    const allocation=allocations.find(a=>a.variant_key===packed.variant_key);
-    const lotNumber=packed.enterprise_inventory_lots?.lot_number;
+    const allocation=allocations.find(a=>a.variant_key===packed.variant_key),lotNumber=packed.enterprise_inventory_lots?.lot_number;
     if(allocation&&lotNumber)f.append(el('p',(allocation.item?.name?allocation.item.name+' · '+allocation.item.size:allocation.variant_key)+' — Lot '+lotNumber));
    }
    const variant=select(f,'Fulfilled item','packed_variant',allocations.map(a=>[a.variant_key,a.item?.name?a.item.name+' · '+a.item.size:a.variant_key]));
    const lot=input(f,'Packed lot number','lot_number','',true);lot.maxLength=120;
-   submit(f,'Link packed lot',async()=>{await write({action:'record_packed_lot',id,variant_key:variant.value,lot_number:lot.value});await reload(row);msg('Packed lot linked. Verified reports appear in the customer account after shipping.');});
-   f.append(btn('Remove packed lot link',async()=>{if(!lot.value.trim())throw Error('Enter the exact lot number to remove.');await write({action:'record_packed_lot',id,variant_key:variant.value,lot_number:lot.value,remove:true});await reload(row);msg('Packed lot link removed.');}));
+   submit(f,'Link packed lot',async()=>{await write({action:'record_packed_lot',id,variant_key:variant.value,lot_number:lot.value});await session.refresh();session.notice('Packed lot linked. Verified reports appear in the customer account after shipping.');});
+   f.append(btn('Remove packed lot link',async()=>{if(!lot.value.trim())throw Error('Enter the exact lot number to remove.');await write({action:'record_packed_lot',id,variant_key:variant.value,lot_number:lot.value,remove:true});await session.refresh();session.notice('Packed lot link removed.');}));
   }
-  const options=[];if(o.status==='paid')options.push(['processing','Processing']);
-  if(manual&&!unresolved&&(!data.manual_pilot_eligible||data.manual_pilot?.ready_to_ship===true)&&['paid','processing'].includes(o.status))options.push(['shipped','Shipped']);
-  if(o.status==='shipped')options.push(['delivered','Delivered']);
-  if(options.length){const f=form('Update complete order',shipment),next=select(f,'Next status','status',options),carrier=input(f,'Carrier','carrier',o.tracking_carrier),tracking=input(f,'Tracking number','tracking',o.tracking_number),note=input(f,'Audit note','note','',true);note.minLength=8;
-   submit(f,'Save fulfillment status',async()=>{if(next.value==='shipped'&&(!carrier.value.trim()||!tracking.value.trim()))throw Error('Carrier and tracking required before shipment.');await write({action:'update_order',id,version:o.version,status:next.value,note:note.value,tracking_carrier:carrier.value,tracking_number:tracking.value});await reload(row)})}
-  if(manual&&['shipped','delivered'].includes(o.status)){const f=form('Correct shipment tracking',shipment),carrier=input(f,'Carrier','carrier',o.tracking_carrier,true),tracking=input(f,'Tracking number','tracking',o.tracking_number,true),note=input(f,'Reason for correction','note','',true);note.minLength=8;
-   submit(f,'Save tracking correction',async()=>{await write({action:'update_tracking',id,version:o.version,tracking_carrier:carrier.value,tracking_number:tracking.value,note:note.value});await reload(row)})}
-  if(!allocations.length)shipment.append(el('p','Shipment controls become available after payment is confirmed.','uc-hint'));
-  else if(!manual&&!['shipped','delivered','void','refunded'].includes(o.status))shipment.append(el('p','An existing fulfillment record needs review. Resolve it before recording another shipment.','uc-hint'));
-  if(['paid','processing'].includes(o.status)&&!remote){const f=form('Edit shipping address',shipment),addr=o.request_data?.address||{},fields={};
-   for(const [title,key]of [['Street','line1'],['Address line 2','line2'],['City','city'],['State / province','region'],['Postal code','postal_code'],['Country code','country']])fields[key]=input(f,title,key,addr[key]||'',key!=='line2');
-   fields.country.readOnly=true;const note=input(f,'Reason for address change','note','',true);note.minLength=8;
-   submit(f,'Save address',async()=>{const address=Object.fromEntries(Object.entries(fields).map(([key,control])=>[key,control.value]));await write({action:'edit_shipping',id,version:o.version,address,note:note.value});await reload(row)})}
-  else if(remote&&['paid','processing'].includes(o.status))shipment.append(el('p','Fulfillment has already started. Review the existing shipment before changing its destination.','uc-hint'));host.append(shipment);window.PureShippingLabels?.mount({host,row,api})}
+  if(['paid','processing','shipped','delivered'].includes(o.status)&&!o.cancellation_status)fulfillmentQuote(shipment,id);
+  shippingPane.append(shipment);window.PureShippingLabels?.mount({host:shippingPane,row,api});exportSection(shippingPane,row,o)}
  if(!data.card_reversals&&['paid','processing','shipped','delivered'].includes(o.status)){const advanced=el('details',undefined,'uc-history');advanced.append(el('summary','Refund management'));host.append(advanced);const f=form('Record a completed full refund',advanced);f.append(el('p','Complete and verify the refund with the provider first. This records it; it does not return funds.','uc-hint'));
   if(data.settlement)f.append(field('Amount refunded',cash(data.settlement.amount_cents,data.settlement.currency)));
   const transaction=input(f,'Provider refund transaction ID','external_reference','',true);transaction.minLength=8;const check=el('label',undefined,'uc-check'),yes=el('input');yes.type='checkbox';yes.required=true;check.append(yes,el('span','I verified the full external refund.'));f.append(check);
-  submit(f,'Record verified refund',async()=>{if(!window.confirm('Record the completed external refund? This does not send money.'))return;await write({action:'record_verified_refund',id,version:o.version,confirm_external_refund:true,external_reference:transaction.value});await reload(row)})}
+  submit(f,'Record verified refund',async()=>{if(!window.confirm('Record the completed external refund? This does not send money.'))return;await write({action:'record_verified_refund',id,version:o.version,confirm_external_refund:true,external_reference:transaction.value});await session.refresh()})}
  if(o.status==='void')host.append(el('p','Canceled. Reconcile any late payment before refund or fulfillment.','uc-hint'));
  if(o.status==='refunded')host.append(el('p',data.card_gateway?'Full card refund confirmed.':'Full external refund recorded.','uc-hint'));
  if(o.kind==='membership'&&o.status==='paid')host.append(el('p','Membership purchase recorded. No shipping workflow applies.','uc-hint'))}
-function legacyActions(host,o){exportSection(host,o,o);window.PureShippingLabels?.mount({host,row:o,api});host.append(el('p','Earlier store order. Canceling fulfillment does not issue a refund or stop a provider payment.','uc-hint'));
+function legacyActions(host,o){const session=orderSession;host.append(el('p','Earlier store order. Canceling fulfillment does not issue a refund or stop a provider payment.','uc-hint'));
  const transitions={unfulfilled:['processing','awaiting_supplier','canceled'],processing:['awaiting_supplier','partially_shipped','shipped'],awaiting_supplier:['processing','partially_shipped','shipped'],partially_shipped:['shipped'],shipped:['delivered']};
  const allowed=(transitions[o.fulfillment_status]||[]).filter(x=>!['processing','awaiting_supplier','partially_shipped','shipped','delivered'].includes(x)||['paid','partially_refunded'].includes(o.payment_status));
  const f=form('Update order details',host),next=select(f,'Fulfillment status','fulfillment_status',[[o.fulfillment_status,state(o.fulfillment_status)],...allowed.map(x=>[x,state(x)])]),priority=select(f,'Priority','priority',[['low','Low'],['normal','Normal'],['high','High']],o.priority||'normal'),carrier=input(f,'Carrier','tracking_carrier',o.tracking_carrier||''),tracking=input(f,'Tracking number','tracking_number',o.tracking_number||''),notes=input(f,'Internal notes','admin_notes',o.admin_notes||'');
  submit(f,'Save order',async()=>{if(next.value==='canceled'&&!window.confirm('Cancel fulfillment for '+ref(o)+'? No refund or payment cancellation will be issued.'))return;
-  const result=await send('/api/admin-orders',{action:'update',order_id:o.id,fulfillment_status:next.value,priority:priority.value,tracking_carrier:carrier.value,tracking_number:tracking.value,admin_notes:notes.value},'PATCH');await load();await detail(result.order?.id||o.id);
-  if(result.notification?.status==='failed')msg(result.notification.error||'Order saved, but customer notification failed.',true)})}
-window.AltaFulfillment={manage:detail,mount(fn){api=fn;root=document.getElementById('fulfillment-hub');clearInterval(poll);poll=setInterval(()=>{if(root&&!document.hidden&&!dlg?.open&&!root.contains(document.activeElement))load()},60000);load()},refresh:load,clear:close,openPayments(){},paymentDesk(){}};
+  const result=await send('/api/admin-orders',{action:'update',order_id:o.id,fulfillment_status:next.value,priority:priority.value,tracking_carrier:carrier.value,tracking_number:tracking.value,admin_notes:notes.value},'PATCH');await session.refresh();
+  if(result.notification?.status==='failed')session.notice(result.notification.error||'Order saved, but customer notification failed.',true)});
+ window.PureShippingLabels?.mount({host,row:o,api});exportSection(host,o,o)}
+function mount(fn) {
+ const hub = document.getElementById('fulfillment-hub');
+ if (!hub) return;
+ if (root && (root !== hub || api !== fn)) close();
+ root = hub;
+ api = fn;
+ if (!poll) poll = setInterval(() => {
+  if (root && !document.hidden && !root.closest('[hidden]') && !dlg?.open && !root.contains(document.activeElement)) load();
+ }, 60000);
+ return load();
+}
+window.AltaFulfillment={manage:detail,mount,refresh:load,clear:close,openPayments(){},paymentDesk(){}};
 })();

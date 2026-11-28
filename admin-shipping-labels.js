@@ -19,12 +19,13 @@
   function mount({ host, row, api }) {
     if (!['commerce', 'store'].includes(row.source) || ['membership', 'research_subscription'].includes(row.kind)) return;
     const section = el('section', undefined, 'uc-section psl-section');
-    section.append(el('h3', 'Shipping'), el('p', 'Compare carrier rates before payment, buy a label once payment is confirmed, and view or print the 4 × 6 PDF here. Buying a label does not mark the order shipped.', 'uc-hint'));
+    section.setAttribute('aria-label', 'Postage');
     const open = el('button', 'Get rates & manage labels', 'ghost psl-open'), panel = el('div', undefined, 'psl-panel'); open.type = 'button'; panel.hidden = true;
     panel.id = 'psl-' + row.source + '-' + row.id; open.setAttribute('aria-controls', panel.id); open.setAttribute('aria-expanded', 'false');
     section.append(open, panel); host.append(section);
-    const billing = el('aside', undefined, 'psl-billing');
-    billing.append(el('h4', 'Postage billing'), el('p', 'Buy postage here using your Shippo or connected carrier billing setup. Your own carrier may bill postage directly. Label purchase records appear here; Shippo invoices, billing payment status, and payment method changes are managed in Shippo.', 'uc-hint'));
+    const billing = el('details', undefined, 'psl-billing uc-shipping-task');
+    billing.dataset.shippingTask = 'billing';
+    billing.append(el('summary', 'Postage billing'), el('p', 'Postage is billed through Shippo or your connected carrier. Purchase records appear here. Manage invoices, payment status and payment methods in Shippo.', 'uc-hint'));
     link(billing, 'Manage Shippo billing', 'https://apps.goshippo.com/settings/account/billing').title = 'Opens Shippo billing in a new tab';
     section.append(billing);
     const identity = { id: row.id, source: row.source };
@@ -164,7 +165,7 @@
       panel.append(box);
     }
     async function render(state) {
-      panel.replaceChildren();
+      panel.replaceChildren(el('p', 'Compare rates, then buy or print a 4 × 6 label after payment. Buying a label does not mark the order shipped.', 'uc-hint'));
       const toolbar = el('div', undefined, 'psl-toolbar'), refresh = el('button', 'Refresh shipping details', 'ghost'); refresh.type = 'button';
       refresh.addEventListener('click', () => perform(refresh, async () => { await render(await get()); }));
       toolbar.append(el('span', state.payment_confirmed === true ? 'Payment confirmed' : state.payment_confirmed === false ? 'Awaiting payment' : 'Shipping workspace', 'psl-payment-state'), refresh); panel.append(toolbar);
@@ -200,6 +201,8 @@
       const editSender = el('button', 'Edit return address', 'ghost'); editSender.type = 'button';
       senderSummary.append(senderCaption, senderAddress, senderContact, editSender);
       for (const [key, title, required] of [['name', 'Sender name', true], ['company', 'Company', false], ['street1', 'Street address', true], ['street2', 'Address line 2', false], ['city', 'City', true], ['state', 'State / province', true], ['zip', 'Postal code', true], ['country', 'Country code (US, CA, etc.)', true], ['phone', 'Sender phone', true], ['email', 'Sender email', true]]) sender[key] = field(senderEditor, title, draftSender[key] || '', required, key === 'email' ? 'email' : 'text');
+      for (const key of ['street1', 'street2', 'email']) sender[key].parentElement.classList.add('psl-field-wide');
+      sender.phone.type = 'tel';
       sender.country.maxLength = 2; sender.country.pattern = '[A-Za-z]{2}';
       const senderActions = el('div', undefined, 'psl-preference-actions');
       const saveSender = el('button', 'Save PURE return address', 'ghost'), useSender = el('button', 'Use this return address', 'ghost'), applySender = el('button', 'Use saved return address', 'ghost');

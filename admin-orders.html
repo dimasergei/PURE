@@ -976,9 +976,14 @@
 .quick-cancel:hover{background:#111}
 .quick-cancel:focus-visible{outline:2px solid #111}
 @media(max-width:640px){.order-head{grid-template-columns:18px minmax(0,1fr);gap:7px}.quick-cancel{grid-column:2;justify-self:end;margin:0 11px 10px 0}.order-toggle{padding-bottom:7px}}
-</style>  <link rel="stylesheet" href="/admin-ui-polish.css?v=20261117b">
+</style>  <link rel="stylesheet" href="/admin-shipping-labels.css?v=20261117d">
+  <link rel="stylesheet" href="/admin-ui-polish.css?v=20261117b">
   <link rel="stylesheet" href="/admin-experience.css?v=20261125-order-rows">
   <link rel="stylesheet" href="/admin-violet.css?v=20261117b">
+  <link rel="stylesheet" href="/admin-orders-shell.css?v=20261128-orders">
+  <link rel="stylesheet" href="/admin-orders-queue.css?v=20261128-orders">
+  <link rel="stylesheet" href="/admin-order-detail.css?v=20261128-orders">
+  <link rel="stylesheet" href="/admin-order-shipping.css?v=20261128-orders">
 <link rel="icon" type="image/svg+xml" sizes="any" href="/favicon-pure.svg?v=20261117b"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-pure-16.png?v=20261117b"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-pure-32.png?v=20261117b"><link rel="icon" type="image/png" sizes="96x96" href="/favicon-pure-96.png?v=20261117b"><link rel="shortcut icon" type="image/x-icon" href="/favicon-pure-20261117b.ico"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=20261117b"><meta name="theme-color" content="#ffffff">
 </head>
 
@@ -1360,10 +1365,9 @@
   </main>
 
   <script src="/admin-auth.js?v=20261117-inventory1"></script>
-  <link rel="stylesheet" href="/admin-shipping-labels.css?v=20261117d">
-  <script src="/admin-shipping-labels.js?v=20261117d"></script>
+  <script src="/admin-shipping-labels.js?v=20261128-orders"></script>
   <script src="/admin-bulk-labels.js?v=20261126-bulk"></script>
-  <script src="/admin-fulfillment.js?v=20261126-bulk"></script>
+  <script src="/admin-fulfillment.js?v=20261128-orders"></script>
   <script src="/admin-unified-notifications.js"></script>
   <script>
     const $ = (selector) => document.querySelector(selector);
@@ -1409,13 +1413,20 @@
       if(view==='lotus'&&!$('#lotus-embedded').getAttribute('src'))$('#lotus-embedded').src='/admin-supplier.html';
       const copy = {
         lotus: ['Lotus', 'Catalog mappings, supplier status and exceptions.'],
-        orders: ['Orders', 'Review payments and manage fulfillment.'],
+        orders: ['Orders', 'Loading…'],
         batches: ['Batches', 'Manage supplier batches and supplier records.'],
         notifications: ['Notifications', 'Review customer email delivery and retries.']
       }[view];
       heading.textContent = copy[0];
       subtitle.textContent = copy[1];
-      if(view==='notifications'&&window.PureAdminAuth.authenticated)window.AltaUnifiedNotifications?.mount(api);
+      if (window.PureAdminAuth.authenticated) {
+        if (view === 'batches') loadSupplierData();
+        if (view === 'notifications') {
+          loadNotifications();
+          window.AltaUnifiedNotifications?.mount(api);
+        }
+        if (view === 'orders') window.AltaFulfillment.refresh();
+      }
     }
 
     document.querySelectorAll('[data-admin-view]').forEach((button) => {
@@ -2627,8 +2638,10 @@
     function openAdminWorkspace() {
       if (workspaceOpening) return workspaceOpening;
       const task = (async () => {
-        await loadOrders();
-        if (window.PureAdminAuth.authenticated) await Promise.all([loadSupplierData(), loadNotifications()]);
+        loginView.hidden = true;
+        ordersView.hidden = false;
+        ordersMessage.textContent = 'Loading…';
+        await window.AltaFulfillment.mount(api);
       })().finally(() => { if (workspaceOpening === task) workspaceOpening = null; });
       workspaceOpening = task;
       return task;
@@ -2662,8 +2675,7 @@
       refreshButton.title = 'Refreshing orders';
 
       try {
-        await loadOrders();
-        setNotice('Orders refreshed.');
+        await window.AltaFulfillment.refresh();
       } catch (error) {
         setNotice(error.message, true);
       } finally {
@@ -3866,6 +3878,6 @@
     });
 
   </script>
-  <script src="/admin-experience.js?v=20261117b" defer></script>
+  <script src="/admin-experience.js?v=20261128-orders" defer></script>
 </body>
 </html>

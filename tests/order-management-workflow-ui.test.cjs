@@ -8,12 +8,12 @@ function fixture(status='accepted',overrides={}){
  const order={...row,status,version:7,checkout_version:2,method_id:'wire-us',pricing:{lines:[{name:'BPC-157',size:'10mg',qty:4,line_total_cents:10800}]},request_data:{items:[{id:'bpc-157',size:'10mg',qty:4}],address:{line1:'123 Example Street',city:'Miami',region:'FL',postal_code:'33101',country:'US'}},tracking_carrier:status==='shipped'?'UPS':'',tracking_number:status==='shipped'?'TRACK-EXISTING':''};
  return{row,detail:{order,allocations:[],jobs:[],mappings:[],supplier_enabled:false,manual_payment_allowed:false,history:[],...overrides}};
 }
-async function setup(t,{row,detail},writeImpl){
+async function setup(t,{row,detail,fetchDetail},writeImpl){
  const dom=new JSDOM('<p id="orders-message"></p><div id="fulfillment-hub"></div>',{url:'https://altapurelabs.com/admin-orders.html',runScripts:'outside-only'}),w=dom.window,calls=[],downloads=[],objectURLs=[];
  w.HTMLDialogElement.prototype.showModal=function(){this.open=true};w.HTMLDialogElement.prototype.close=function(){this.open=false};w.confirm=()=>true;
  w.URL.createObjectURL=blob=>{objectURLs.push(blob);return'blob:fixture-'+objectURLs.length};w.URL.revokeObjectURL=()=>{};
  w.HTMLAnchorElement.prototype.click=function(){downloads.push({name:this.download,href:this.href})};
- w.eval(source);w.AltaFulfillment.mount(async(url,options)=>{calls.push({url,options});if(options?.body)return writeImpl?writeImpl(JSON.parse(options.body),calls):{saved:true};if(options?.responseType==='blob')return new w.Blob(['fixture document']);if(url.includes('view=fulfillment_quote'))return detail.quoteBasis;if(url.includes('view=manual_pilot')){if(detail.pilotResult instanceof Error)throw detail.pilotResult;return detail.pilotResult}if(url.includes('view=detail'))return detail;return{orders:[row],pagination:{page:1,total:1}}});
+ w.eval(source);w.AltaFulfillment.mount(async(url,options)=>{calls.push({url,options});if(options?.body)return writeImpl?writeImpl(JSON.parse(options.body),calls):{saved:true};if(options?.responseType==='blob')return new w.Blob(['fixture document']);if(url.includes('view=fulfillment_quote'))return detail.quoteBasis;if(url.includes('view=manual_pilot')){if(detail.pilotResult instanceof Error)throw detail.pilotResult;return detail.pilotResult}if(url.includes('view=detail'))return fetchDetail?fetchDetail(url):detail;return{orders:[row],pagination:{page:1,total:1}}});
  t.after(()=>{w.AltaFulfillment.clear();w.close()});await tick();await w.AltaFulfillment.manage(row);
  return{w,calls,downloads,objectURLs,form:title=>[...w.document.querySelectorAll('dialog form')].find(f=>f.querySelector('h4')?.textContent===title),button:title=>[...w.document.querySelectorAll('dialog button')].find(b=>b.textContent===title),writes:()=>calls.filter(c=>c.options?.body).map(c=>JSON.parse(c.options.body))};
 }
@@ -200,4 +200,89 @@ test('a paid order opens one private quote check with explicit costs, a whole-ce
  set('reserve','');assert.doesNotMatch(box.textContent,/projected profit|No qualifying quote/);
  assert.equal(ctx.writes().length,0);
  const unpaid=await setup(t,fixture('accepted'));assert.doesNotMatch(unpaid.w.document.querySelector('dialog').textContent,/Check fulfillment quote/);
+});
+
+test('order sections preserve draft inputs and keep an address edit in context after saving',async t=>{
+ const data=fixture('paid',{allocations:manual()});
+ const ctx=await setup(t,data,body=>{
+  if(body.action==='edit_shipping')data.detail.order.request_data.address=body.address;
+  return {saved:true};
+ });
+ const dialog=ctx.w.document.querySelector('dialog');
+ const tab=name=>dialog.querySelector('#uc-tab-'+name);
+ const panel=name=>dialog.querySelector('#uc-panel-'+name);
+ assert.equal(tab('Summary').getAttribute('aria-selected'),'true');
+ assert.equal(panel('Shipping').hidden,true);
+ dialog.querySelector('[aria-label="Edit shipping address"]').click();
+ const task=panel('Shipping').querySelector('[data-shipping-task="address"]');
+ assert.equal(task.open,true);
+ assert.equal(ctx.w.document.activeElement,task.querySelector('summary'));
+ assert.equal(panel('Shipping').hidden,false);
+ const form=task.querySelector('form');
+ field(form,'city','Tampa');
+ tab('Payment').click();
+ assert.equal(panel('Shipping').hidden,true);
+ tab('Payment').dispatchEvent(new ctx.w.KeyboardEvent('keydown',{key:'ArrowRight'}));
+ assert.equal(ctx.w.document.activeElement,tab('Shipping'));
+ assert.equal(form.elements.namedItem('city').value,'Tampa');
+ field(form,'note','Customer confirmed address');
+ await submit(form);
+ assert.equal(ctx.writes()[0].action,'edit_shipping');
+ assert.equal(tab('Shipping').getAttribute('aria-selected'),'true');
+ assert.equal(panel('Shipping').querySelector('[data-shipping-task="address"]').open,true);
+ tab('Summary').click();
+ assert.match(panel('Summary').querySelector('.uc-address').textContent,/Tampa/);
+ assert.equal(ctx.writes().length,1);
+});
+
+test('a completed payment action cannot reopen an order or notify a different order',async t=>{
+ let finish;
+ const ctx=await setup(t,fixture('paid',{card_reversals:true,card_attempt:{state:'paid'}}),()=>new Promise(resolve=>{finish=resolve}));
+ const dialog=ctx.w.document.querySelector('dialog');
+ ctx.button('Payment').click();
+ const pending=ctx.button('Issue full card refund').onclick();
+ dialog.close();
+ const second={id:'record-b',source:'store',order_number:'P-SECOND',kind:'goods',currency:'USD',payment_status:'paid',fulfillment_status:'unfulfilled'};
+ await ctx.w.AltaFulfillment.manage(second);
+ finish({status:'refunded',payment_state:'refunded'});
+ await pending;
+ assert.equal(dialog.open,true);
+ assert.equal(dialog.querySelector('h2').textContent,'P-SECOND');
+ assert.equal(dialog.querySelector('[data-unified-message]').textContent,'');
+});
+
+
+test('a queued close event allows the next requested order to open',async t=>{
+ const data=fixture('paid'),next=fixture('accepted');
+ next.row.id=next.detail.order.id='order-b';
+ next.row.order_number=next.detail.order.order_number='P-SECOND';
+ let resolveNext;
+ data.fetchDetail=url=>url.endsWith('id=order-b')?new Promise(resolve=>{resolveNext=resolve}):data.detail;
+ const ctx=await setup(t,data);
+ const dialog=ctx.w.document.querySelector('dialog');
+ dialog.close();
+ const opening=ctx.w.AltaFulfillment.manage(next.row);
+ dialog.dispatchEvent(new ctx.w.Event('close'));
+ resolveNext(next.detail);
+ await opening;
+ assert.equal(dialog.open,true);
+ assert.equal(dialog.querySelector('h2').textContent,'P-SECOND');
+});
+
+test('an action refresh finishing before the queued close event keeps the order closed',async t=>{
+ const data=fixture('accepted',{card_gateway:true,card_reversals:true,card_attempt:{state:'redirected'}});
+ let delayRefresh=false,resolveRefresh;
+ data.fetchDetail=()=>delayRefresh?new Promise(resolve=>{resolveRefresh=resolve}):data.detail;
+ const ctx=await setup(t,data,()=>({status:'accepted',payment_state:'awaiting_payment'}));
+ const dialog=ctx.w.document.querySelector('dialog');
+ delayRefresh=true;
+ const refreshing=ctx.button('Sync Stripe status').onclick();
+ await tick();
+ assert.equal(typeof resolveRefresh,'function');
+ dialog.close();
+ resolveRefresh(data.detail);
+ await refreshing;
+ assert.equal(dialog.open,false);
+ dialog.dispatchEvent(new ctx.w.Event('close'));
+ assert.equal(dialog.open,false);
 });
